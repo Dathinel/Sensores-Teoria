@@ -1,0 +1,36 @@
+# --- Entorno del sistema operativo ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# --- Editores / IDEs ---
+.vscode/
+.idea/
+*.swp
+
+# --- PlatformIO ---
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# --- Arduino IDE ---
+build/
+*.hex
+*.bin
+*.elf
+*.map
+
+# --- ESP-IDF ---
+sdkconfig
+sdkconfig.old
+managed_components/
+
+# --- Python / MicroPython (por si se usa a futuro) ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# --- Archivos temporales generales ---
+*.log
+*.tmp
