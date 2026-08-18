@@ -140,6 +140,17 @@ python deteccion_pc.py
 
 Se va a abrir una ventana mostrando la cámara con los cuadros de detección dibujados encima, y en cuanto aparezca una silla o un celular frente a la cámara el LED correspondiente en la protoboard debería encenderse casi al instante.
 
+## Problemas de compatibilidad
+
+Estas son las trabas más probables al repetir este proyecto en Windows, todas relacionadas con las versiones específicas de las librerías que usa:
+
+- **Ultralytics instala PyTorch como dependencia**, y ese paquete pesa varios cientos de megabytes, así que la primera instalación tarda bastante y puede fallar a mitad de camino con una conexión lenta o inestable; si eso pasa, basta con volver a correr `pip install ultralytics` para que retome la descarga.
+- **`yolov8n.pt` se descarga solo la primera vez** que se corre el script, si el archivo no está ya en la carpeta del proyecto, así que la primera ejecución necesita internet aunque las detecciones posteriores no.
+- **Versiones muy nuevas de Python** pueden no tener todavía wheels precompilados de PyTorch en PyPI, igual que le pasó a pyaudio en el proyecto del chatbot con Python 3.14; si `pip install ultralytics` intenta compilar algo desde código fuente en vez de bajar un wheel ya armado, es señal de que conviene usar una versión de Python un poco más antigua y probada, como 3.11 o 3.12.
+- **`cv2.VideoCapture(0)` puede abrir la cámara equivocada** en computadoras con más de una cámara conectada (por ejemplo una integrada y una USB), o puede tardar varios segundos en inicializar en Windows; si la ventana no aparece o aparece en negro, vale la pena probar con `cv2.VideoCapture(0, cv2.CAP_DSHOW)` para forzar el backend DirectShow.
+- **El puerto serial solo lo puede tener abierto un programa a la vez**: si Thonny se queda con la conexión activa al ESP32, `serial.Serial(...)` en `deteccion_pc.py` falla con un error de acceso denegado al puerto, incluso si el puerto elegido es el correcto.
+- **Si el proyecto vive dentro de una carpeta sincronizada por OneDrive**, como en este repositorio, la sincronización en tiempo real puede interferir con instalaciones de pip que escriben muchos archivos pequeños de golpe (algo que también pasó instalando las librerías del chatbot), dejando algún paquete a medio instalar; si aparece un `ModuleNotFoundError` para algo que se acaba de instalar, reinstalar ese paquete puntual suele bastar.
+
 ## Demostración en funcionamiento
 
 Así se ve el montaje corriendo de principio a fin, desde la computadora reconociendo la silla haciendo que los LEDs enciednan reaccionando en la protoboard.

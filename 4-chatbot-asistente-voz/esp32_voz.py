@@ -1,9 +1,9 @@
 # Guardar este archivo en el ESP32 con el nombre main.py
 # para que se ejecute automaticamente al encender o reiniciar el chip.
 #
-# A diferencia del proyecto de YOLO, aca los LEDs mantienen su estado
-# hasta que llegue una orden nueva, no se apagan solos por falta de
-# mensajes, porque el control es por voz y no por deteccion continua.
+# Los LEDs mantienen su estado hasta que llegue una orden nueva, no se
+# apagan solos por falta de mensajes, porque el control es por voz
+# puntual y no por deteccion continua de una camara.
 #
 # Lineas esperadas por el puerto serial:
 #   "10"   enciende el led rojo, apaga el azul

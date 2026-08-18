@@ -56,6 +56,13 @@ Con el ESP32 conectado por USB, se abre el archivo correspondiente, pez3_esp32.p
 
 El cableado hacia el osciloscopio va así, el pin GPIO25 del ESP32 a la punta del canal 1, usado como eje X, el pin GPIO26 a la punta del canal 2, usado como eje Y, y el GND del ESP32 a cualquiera de las referencias de tierra del osciloscopio. Con las dos puntas conectadas, el osciloscopio necesita quedar puesto en modo XY en vez de su modo normal contra el tiempo, algo que en el menú de Pantalla del equipo aparece como la opción Formato, alternando entre YT, el modo normal, y XY. Sin ese cambio de modo, lo único que se ve en pantalla son dos señales normales subiendo y bajando, no la figura.
 
+## Problemas de compatibilidad
+
+- **El módulo `DAC` de MicroPython solo existe en el ESP32 "clásico"**, el mismo que se usa en el resto de este repositorio. Variantes más nuevas como el ESP32-S3, el ESP32-C3 o el ESP32-C6 no traen conversor digital a analógico en el silicio, así que `from machine import DAC` directamente no existe ahí y el script no puede correr sin cambios en esas placas. Antes de reutilizar este código en otra placa conviene confirmar en la hoja de datos que tenga DAC.
+- **Los pines del DAC están fijos en GPIO25 y GPIO26** en el ESP32 clásico, no se pueden mover a otro pin como sí pasa con la mayoría de periféricos digitales del chip, así que el cableado hacia el osciloscopio tiene que respetar exactamente esos dos pines.
+- **La velocidad del bucle depende del firmware de MicroPython instalado**, no solo del código: versiones más viejas del firmware pueden ejecutar `dac.write()` más lento, lo que se nota como una figura más titilante o con más ruido en el trazo. Si el pez se ve inestable, vale la pena confirmar que el firmware esté razonablemente actualizado antes de sospechar del script.
+- **`utime.sleep_us` no garantiza precisión de microsegundos exacta**, porque MicroPython sigue teniendo que atender otras tareas internas del intérprete entre instrucción e instrucción; con `DRAW_US` en 1 esto no suele notarse a simple vista, pero en osciloscopios más exigentes o con la persistencia de pantalla activada sí puede verse como un trazo ligeramente irregular.
+
 ## Demostración en funcionamiento
 
 Este fue uno de los primeros intentos, todavía sin la figura bien resuelta, mientras se ajustaba la escala y el desplazamiento.

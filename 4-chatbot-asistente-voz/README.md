@@ -5,22 +5,93 @@
 Este proyecto enciende y apaga dos LEDs conectados a un ESP32 a partir de comandos hablados. Una persona habla frente al micrófono de la computadora, lo que dice se transcribe a texto, ese texto se le manda a un modelo de lenguaje a través de la API de DeepSeek, el modelo interpreta qué se le está pidiendo, y la computadora traduce esa interpretación en una orden concreta que le manda al ESP32 por cable USB.
 
 ```mermaid
-flowchart LR
-    Microfono[Microfono] --> Transcripcion[Reconocimiento de voz]
-    Transcripcion -->|texto| DeepSeek[API de DeepSeek]
-    DeepSeek -->|intencion en JSON| PC[Script en Python]
-    PC -->|Cable USB, puerto serial| ESP32[ESP32 con MicroPython]
-    ESP32 --> LedRojo[LED rojo]
-    ESP32 --> LedAzul[LED azul]
+flowchart TD
+    subgraph PC["En la computadora — comando_voz.py"]
+        Mic["Micrófono<br/>sr.Microphone()"] --> Graba["Graba audio<br/>ajusta ruido ambiente"]
+        Graba --> STT["Google Speech API<br/>recognize_google(es-CO)"]
+        STT -->|"texto en español"| DeepSeek["API de DeepSeek<br/>modelo deepseek-chat"]
+        DeepSeek -->|"JSON: led_rojo / led_azul / show"| Estado["Actualiza el estado local<br/>guardado en el script"]
+        Estado --> Armado["Arma el mensaje:<br/>'10' / '01' / '11' / '00' / 'SHOW'"]
+    end
+
+    Armado -->|"puerto serial USB<br/>115200 baudios"| Escucha
+
+    subgraph ESP["En el ESP32 — main.py"]
+        Escucha["select.poll()<br/>sobre sys.stdin"] --> Decide{"¿Qué llegó?"}
+        Decide -->|"'10' '01' '11' '00'"| Pines["Pin(25) / Pin(26)<br/>.value() directo"]
+        Decide -->|"'SHOW'"| Show["hacer_show()<br/>guarda estado, parpadea,<br/>restaura estado"]
+    end
+
+    Pines --> LedRojo["LED rojo<br/>GPIO25"]
+    Pines --> LedAzul["LED azul<br/>GPIO26"]
+    Show --> LedRojo
+    Show --> LedAzul
+```
+
+Vista de forma dinámica, así se comporta un comando de voz típico a lo largo del tiempo, incluyendo la rama donde el comando pedido es el show de luces:
+
+```mermaid
+sequenceDiagram
+    participant P as Persona
+    participant Mic as Micrófono
+    participant G as Google Speech API
+    participant DS as API de DeepSeek
+    participant PC as comando_voz.py
+    participant ESP as ESP32 (main.py)
+    participant LEDs as LEDs
+
+    P->>Mic: habla el comando
+    Mic->>G: audio grabado
+    G-->>PC: texto transcrito
+    PC->>DS: texto + prompt del sistema
+    DS-->>PC: JSON con la intención
+
+    alt el JSON trae led_rojo o led_azul
+        PC->>PC: actualiza el estado guardado
+        PC->>ESP: "10" / "01" / "11" / "00"
+        ESP->>LEDs: enciende o apaga<br/>segun cada caracter
+    else el JSON trae show
+        PC->>ESP: "SHOW"
+        ESP->>ESP: guarda el estado actual de los LEDs
+        ESP->>LEDs: alterna rojo y azul 6 veces
+        ESP->>LEDs: restaura el estado guardado
+    else el JSON llega vacío
+        PC->>PC: no manda nada al ESP32
+    end
 ```
 
 La API de DeepSeek vive en un servidor en la nube, así que llamarla siempre necesita internet en ese momento puntual. El ESP32 en cambio no necesita ninguna conexión inalámbrica propia, se queda escuchando el cable USB todo el tiempo sin saber ni necesitar saber de dónde viene la orden que recibe.
 
 ## El armado físico
 
-Se necesitan dos LEDs, dos resistencias de 220 ohmios, una protoboard y algunos cables. El LED rojo se conecta a GPIO25 y el LED azul a GPIO26, ambos pines de propósito general del ESP32 sin restricciones especiales de arranque ni de memoria flash. En cada LED, la pata larga, el ánodo, va conectada a través de su resistencia hacia el pin del ESP32 correspondiente, y la pata corta, el cátodo, va directamente a GND.
+Se necesitan dos LEDs, dos resistencias de 220 ohmios, una protoboard, el propio ESP32 y algunos cables macho a macho o macho a hembra según el tipo de protoboard que se use.
 
-El valor de 220 ohmios sale de calcular cuánta corriente puede pasar sin forzar ni al LED ni al pin del ESP32. El chip trabaja a 3.3 voltios, un LED típico cae alrededor de 2 voltios cuando está encendido, y con esa resistencia la corriente resultante queda cerca de los 6 miliamperios, un valor bajo y seguro tanto para el LED como para el pin.
+| Pin del ESP32 | Va hacia | A través de | Qué controla |
+|---|---|---|---|
+| GPIO25 | Ánodo (pata larga) del LED rojo | Resistencia de 220 Ω | `LED_ROJO` en `esp32_voz.py` |
+| GPIO26 | Ánodo (pata larga) del LED azul | Resistencia de 220 Ω | `LED_AZUL` en `esp32_voz.py` |
+| GND | Cátodo (pata corta) de ambos LEDs | Directo, sin resistencia | Retorno común de la corriente |
+| USB | — | Cable de datos y de energía | Alimentación del chip y comunicación serial con la PC |
+
+Ambos GPIO son pines de propósito general del ESP32, sin restricciones especiales de arranque ni de memoria flash, así que son una elección segura para esta clase de proyecto. En cada LED, la pata larga, el ánodo, va conectada a través de su resistencia hacia el pin del ESP32 correspondiente, y la pata corta, el cátodo, va directamente a GND. La resistencia puede ir antes o después del LED dentro de esa misma línea, el orden no afecta el resultado porque están en serie.
+
+El valor de 220 ohmios sale de calcular cuánta corriente puede pasar sin forzar ni al LED ni al pin del ESP32. El chip trabaja a 3.3 voltios, un LED típico cae alrededor de 2 voltios cuando está encendido, así que quedan aproximadamente 1.3 voltios por repartir en la resistencia, y con esa resistencia la corriente resultante queda cerca de los 6 miliamperios, un valor bajo y seguro tanto para el LED como para el pin, que en el ESP32 no debería superar los 20 miliamperios de forma sostenida.
+
+### Alimentación
+
+Todo el circuito se alimenta desde el mismo cable USB que lleva los comandos: la computadora le manda 5 voltios al ESP32 por ese cable, y el regulador que trae integrado la placa los convierte a los 3.3 voltios con los que en realidad trabaja el chip por dentro. No hace falta ninguna fuente externa ni batería, porque tanto el ESP32 como los dos LEDs, que consumen apenas unos miliamperios cada uno, quedan cómodamente dentro de lo que cualquier puerto USB puede entregar. Los LEDs no se alimentan desde una fuente aparte, sino directamente desde los pines GPIO25 y GPIO26 puestos en alto por el propio ESP32.
+
+```mermaid
+flowchart TD
+    USB["Puerto USB de la PC<br/>5V"] --> REG["Regulador de la placa ESP32<br/>5V a 3.3V"]
+    REG --> ESP["Chip ESP32<br/>3.3V"]
+    ESP -->|"GPIO25 en alto"| R1["Resistencia 220Ω"]
+    R1 --> L1["LED rojo"]
+    L1 --> GND1["GND"]
+    ESP -->|"GPIO26 en alto"| R2["Resistencia 220Ω"]
+    R2 --> L2["LED azul"]
+    L2 --> GND2["GND"]
+```
 
 ## Por qué usar un modelo de lenguaje en vez de simplemente buscar palabras clave
 
@@ -35,6 +106,38 @@ Otro detalle importante del diseño es que el modelo solo incluye en su respuest
 Si el comando de voz incluye algo como haz un show de luces o pon un espectáculo, el modelo devuelve la clave show en vez de las claves de los LEDs individuales, y el script en la computadora le manda al ESP32 la palabra SHOW en vez de las dos cifras que normalmente indican el estado de cada LED.
 
 Del lado del ESP32, antes de arrancar la secuencia de parpadeo, el programa guarda en qué estado estaba cada LED en ese momento. Después hace alternar el LED rojo y el azul varias veces seguidas, con una pequeña pausa entre cada cambio, y al terminar la secuencia devuelve ambos LEDs exactamente al estado en el que estaban antes del show, en vez de dejarlos apagados. Esto importa porque si el rojo ya estaba encendido antes de pedir el show, se espera que siga encendido después de que termine el espectáculo, no que se apague solo porque el show terminó.
+
+## El código, paso a paso
+
+### El único puerto que se usa: el serial
+
+Todo el proyecto habla por un solo puerto, el serial que expone el cable USB del ESP32 (`PUERTO_SERIAL = "COM7"` en `comando_voz.py`, aunque en cada computadora puede tocar otro número, y `BAUDIOS = 115200` en ambos lados para que hablen a la misma velocidad). No hay ningún otro puerto ni protocolo de por medio entre la computadora y el ESP32: no hay WiFi, Bluetooth ni un servidor corriendo en el chip. La única conexión de red del proyecto es la que hace la computadora hacia afuera, primero hacia los servidores de reconocimiento de voz de Google y después hacia la API de DeepSeek; el ESP32 nunca sabe que esos servicios existen, solo recibe texto corto por ese puerto serial.
+
+### Las tres claves posibles del JSON que devuelve DeepSeek
+
+El modelo solo puede responder con un objeto JSON que incluya, como máximo, estas tres claves, cada una opcional:
+
+| Clave | Cuándo aparece | Qué hace el script con ella |
+|---|---|---|
+| `led_rojo` | El comando menciona el LED rojo | Actualiza `estado["led_rojo"]` a `true` o `false` según pida encenderlo o apagarlo |
+| `led_azul` | El comando menciona el LED azul | Actualiza `estado["led_azul"]` a `true` o `false` de la misma forma |
+| `show` | El comando pide un show de luces | Si viene en `true`, se ignoran las otras claves y se manda directamente `"SHOW"` al ESP32 |
+
+Si ninguna de las tres aparece, la respuesta es un JSON vacío, `aplicar_comando` no encuentra nada que hacer y el script sigue esperando el siguiente comando sin tocar el puerto serial.
+
+### `comando_voz.py`, función por función
+
+- **`escuchar_comando()`**: abre el micrófono con `sr.Microphone()`, ajusta el umbral de ruido ambiente con `adjust_for_ambient_noise` y graba con `listen()` hasta que detecta que la persona dejó de hablar. Manda ese audio a `recognize_google(audio, language="es-CO")`, que lo transcribe usando el servicio gratuito de Google. Si no logra entender nada devuelve `None`, y si el servicio no responde por falta de conexión, también.
+- **`interpretar_comando(texto)`**: arma la petición a la API de DeepSeek con dos mensajes, el `PROMPT_SISTEMA` fijo que define las reglas del JSON y el texto transcrito como mensaje del usuario, usando `response_format={"type": "json_object"}` para forzar una respuesta en JSON válido. Devuelve ese JSON ya convertido a diccionario de Python con `json.loads`.
+- **`aplicar_comando(datos)`**: revisa primero si vino `show`; si sí, manda `"SHOW"` y termina ahí. Si no, actualiza el diccionario `estado` solo con las claves que sí llegaron, arma la línea de dos caracteres a partir de ese estado completo y la manda por el puerto serial.
+- **El bucle en `if __name__ == "__main__"`**: queda esperando que se presione Enter para grabar, permite escribir `salir` para terminar, y encadena las tres funciones anteriores una detrás de otra en cada vuelta.
+
+### `esp32_voz.py`, guardado como `main.py` en el ESP32
+
+- **Configuración de pines** (`Pin(25, Pin.OUT)`, `Pin(26, Pin.OUT)`): declara los dos GPIO como salidas y los apaga de entrada, para no arrancar con un estado indefinido.
+- **`select.poll()` sobre `sys.stdin`**: igual que revisar un buzón sin quedarse pegado esperando, `sondeo.poll(100)` pregunta cada 100 milisegundos si llegó algo nuevo por el puerto serial, sin bloquear el resto del programa mientras no hay nada.
+- **`hacer_show()`**: lee el valor actual de cada pin con `.value()` y lo guarda, alterna rojo y azul seis veces con una pausa de 0.2 segundos entre cada cambio usando `time.sleep(0.2)`, y al final vuelve a poner cada pin en el valor que tenía guardado, para no perder el estado previo.
+- **El bucle principal**: por cada línea que llega revisa primero si es exactamente `"SHOW"`, y si no, si tiene el formato de dos caracteres `"0"`/`"1"` esperado; cualquier otra cosa se ignora en silencio, sin intentar interpretar mensajes corruptos o incompletos.
 
 ## Preparar el entorno
 
