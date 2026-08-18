@@ -67,17 +67,19 @@ Se va a abrir una ventana mostrando la cámara con los cuadros de detección dib
 
 ## Demostración en funcionamiento
 
-Así se ve el montaje corriendo de principio a fin, desde la computadora reconociendo los objetos hasta los LEDs reaccionando en la protoboard.
+Así se ve el montaje corriendo de principio a fin, desde la computadora reconociendo la silla haciendo que los LEDs enciednan reaccionando en la protoboard.
 
 ![Vista general del montaje con la detección corriendo en pantalla](demo-montaje-1.gif)
 
+Así se ve el montaje corriendo de principio a fin, desde la computadora reconociendo la telefono haciendo que los LEDs enciednan reaccionando en la protoboard.
+
 ![Vista general del montaje desde otro ángulo](demo-montaje-2.gif)
 
-La ventana de detección marcando los objetos que YOLO reconoce frente a la cámara, junto con la puntuación de confianza de cada uno:
+La ventana de detección marcando los objetos que YOLO reconoce frente a la cámara, junto con la puntuación de confianza de cada uno, reconociendo la silla y el "telefono":
 
 ![Ventana de detección reconociendo persona, silla y mesa](demo-deteccion.gif)
 
-La protoboard en reposo, sin ningún objeto objetivo frente a la cámara, con los dos LEDs apagados:
+La protoboard en reposo, reconociendo la silla con una sensibilidad muy alta:
 
 ![Protoboard con los LEDs apagados en reposo](demo-protoboard-reposo.gif)
 
