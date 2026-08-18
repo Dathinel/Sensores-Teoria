@@ -16,6 +16,9 @@ Un modelo YOLO detecta objetos (silla, celular) desde la cámara de la computado
 ### [asistente-voz-leds](./asistente-voz-leds)
 Comandos de voz que encienden y apagan LEDs en el ESP32: la voz se transcribe a texto, un modelo de lenguaje vía la API de DeepSeek interpreta la intención y la computadora le manda la orden al ESP32 por puerto serial. Incluye el armado del circuito, el manejo seguro de la API key y gifs de la demo funcionando.
 
+### [peces-osciloscopio](./peces-osciloscopio)
+El ESP32 usa sus dos salidas DAC para dibujar peces en un osciloscopio puesto en modo XY, combinando elipses, líneas y curvas Bezier para armar la figura. Incluye dos versiones del script (un pez o tres) y gifs mostrando la figura trazándose en pantalla.
+
 ---
 
 Más carpetas se irán agregando a medida que se asignen nuevos temas en clase.
