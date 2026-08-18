@@ -1,4 +1,4 @@
-# Thonny, MicroPython y la elección del lenguaje
+# Lenguajes: por qué Thonny
 
 ## Qué es Thonny
 

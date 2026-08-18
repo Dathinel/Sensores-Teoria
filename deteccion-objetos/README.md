@@ -1,4 +1,4 @@
-# Detección de objetos con YOLO encendiendo LEDs en el ESP32
+# Detección de objetos
 
 ## Qué es YOLO
 
@@ -34,7 +34,7 @@ El valor de 220 ohmios sale de calcular cuánta corriente puede pasar sin forzar
 
 ## Instalación del entorno en la computadora
 
-Todo el proyecto vive en una sola carpeta, que puede llamarse por ejemplo yolo-deteccion-fisica, la misma que contiene este README junto con los dos scripts.
+Todo el proyecto vive en una sola carpeta, que puede llamarse por ejemplo deteccion-objetos, la misma que contiene este README junto con los dos scripts.
 
 Dentro de esa carpeta se crea un entorno virtual de Python, para mantener las librerías de este proyecto separadas de cualquier otra cosa instalada en el sistema. En Windows, desde PowerShell y parado dentro de la carpeta del proyecto, esto se hace con:
 

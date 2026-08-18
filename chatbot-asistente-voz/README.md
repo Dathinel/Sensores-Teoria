@@ -1,4 +1,4 @@
-# Control de LEDs por voz usando la API de DeepSeek
+# Chatbot: asistente de voz
 
 ## La idea general
 
