@@ -52,3 +52,9 @@ Acá la comparación sí es directa, porque ambos corren en el mismo tipo de har
 | Caso de uso típico | Proyectos donde el tiempo de respuesta importa mucho, o donde se necesita exprimir al máximo el chip | Aprendizaje, prototipado rápido, proyectos donde la velocidad de desarrollo importa más que la eficiencia bruta |
 
 En resumen, C++ le exige más al chip pero saca más rendimiento de él, mientras que MicroPython le pide al chip que cargue con el peso de un intérprete pero a cambio permite escribir, probar y corregir código muchísimo más rápido, algo especialmente útil al momento de aprender cómo funciona un sensor o un periférico nuevo sin perder tiempo compilando cada intento.
+
+Para ver esta diferencia de velocidad en la práctica basta un montaje simple: tres LEDs (rojo, amarillo y verde) conectados al ESP32, cada uno a un pin distinto.
+
+![Circuito con tres LEDs conectados al ESP32](./circuito-comparacion-leds.png)
+
+Corriendo la misma secuencia de encendido y apagado sobre este circuito, primero escrita en MicroPython y luego en C/C++ vía Arduino, se nota la demora extra que mete el intérprete de MicroPython frente al binario nativo que produce C/C++: el mismo proceso, el mismo hardware, pero un tiempo de respuesta distinto según el lenguaje.
