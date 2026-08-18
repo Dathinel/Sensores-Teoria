@@ -34,3 +34,6 @@ venv/
 # --- Archivos temporales generales ---
 *.log
 *.tmp
+
+# --- Secretos / variables de entorno ---
+.env
