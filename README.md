@@ -13,6 +13,9 @@ Qué es Thonny, cómo se conecta con MicroPython, y por qué programar el ESP32 
 ### [yolo-deteccion-fisica](./yolo-deteccion-fisica)
 Un modelo YOLO detecta objetos (silla, celular) desde la cámara de la computadora y le avisa al ESP32 por puerto serial para encender LEDs físicos en una protoboard. Incluye el armado del circuito, el protocolo de comunicación y gifs de la demo funcionando.
 
+### [asistente-voz-leds](./asistente-voz-leds)
+Comandos de voz que encienden y apagan LEDs en el ESP32: la voz se transcribe a texto, un modelo de lenguaje vía la API de DeepSeek interpreta la intención y la computadora le manda la orden al ESP32 por puerto serial. Incluye el armado del circuito, el manejo seguro de la API key y gifs de la demo funcionando.
+
 ---
 
 Más carpetas se irán agregando a medida que se asignen nuevos temas en clase.
