@@ -1,6 +1,12 @@
 # Chatbot: asistente de voz
 
-Basado en [chatbot.py](https://github.com/dialejobv/U_Militar/blob/main/3%29%20chatbot/chatbot.py), un cliente básico de línea de comandos para la API de DeepSeek. La instrucción sobre esa base fue: teniendo presente ese repositorio, generar un chatbot domótico orientado a encender y apagar un LED por medio de comandos de voz. Este proyecto extiende esa idea original a dos LEDs sobre un ESP32, agregando reconocimiento de voz, interpretación de intención en JSON y un show de luces como comando adicional.
+Basado en [chatbot.py](https://github.com/dialejobv/U_Militar/blob/main/3%29%20chatbot/chatbot.py), un cliente básico de línea de comandos para la API de DeepSeek. La instrucción sobre esa base fue: teniendo presente ese repositorio, generar un chatbot domótico orientado a encender y apagar un LED por medio de comandos de voz.
+
+## Qué es un LLM y qué es DeepSeek
+
+Un LLM, o modelo de lenguaje grande, es una red neuronal entrenada con cantidades enormes de texto para predecir, palabra por palabra, cuál es la continuación más probable de una frase. De ese entrenamiento tan masivo surge, casi como efecto secundario, la capacidad de entender la intención detrás de una instrucción escrita en lenguaje natural, sin que nadie tenga que programar a mano reglas gramaticales ni listas de sinónimos. Es la misma familia de tecnología detrás de asistentes como ChatGPT, solo que aquí se usa un modelo distinto, más barato de consultar por API, para resolver un problema mucho más acotado que sostener una conversación libre: decidir si una frase pide encender o apagar un LED.
+
+DeepSeek es una compañía china que desarrolla sus propios LLM y los expone a través de una API de pago por uso, con un diseño deliberadamente compatible con el mismo formato de peticiones que usa la API de OpenAI. Gracias a eso, este proyecto puede usar la librería oficial `openai` sin modificarla, apuntándola a la dirección del servidor de DeepSeek y a una clave de API de DeepSeek en vez de una de OpenAI, y todo lo demás, los mensajes, los roles, el formato de la respuesta, funciona exactamente igual. El modelo puntual usado aquí es `deepseek-chat`, sin necesidad de correr nada de forma local ni de tener una GPU propia, porque todo el cómputo pesado ocurre en los servidores de DeepSeek y la computadora del proyecto solo manda una petición HTTP y espera la respuesta.
 
 ## La idea general
 
@@ -144,6 +150,19 @@ Si ninguna de las tres aparece, la respuesta es un JSON vacío, `aplicar_comando
 - **`select.poll()` sobre `sys.stdin`**: igual que revisar un buzón sin quedarse pegado esperando, `sondeo.poll(100)` pregunta cada 100 milisegundos si llegó algo nuevo por el puerto serial, sin bloquear el resto del programa mientras no hay nada.
 - **`hacer_show()`**: lee el valor actual de cada pin con `.value()` y lo guarda, alterna rojo y azul seis veces con una pausa de 0.2 segundos entre cada cambio usando `time.sleep(0.2)`, y al final vuelve a poner cada pin en el valor que tenía guardado, para no perder el estado previo.
 - **El bucle principal**: por cada línea que llega revisa primero si es exactamente `"SHOW"`, y si no, si tiene el formato de dos caracteres `"0"`/`"1"` esperado; cualquier otra cosa se ignora en silencio, sin intentar interpretar mensajes corruptos o incompletos.
+
+## Qué se modificó frente al material original
+
+El script base, [chatbot.py](https://github.com/dialejobv/U_Militar/blob/main/3%29%20chatbot/chatbot.py), es un cliente de línea de comandos que arma manualmente la petición HTTP a la API de DeepSeek con la librería `requests`, recibe una respuesta en texto libre y la imprime tal cual, sin ningún hardware de por medio. A partir de esa base, este proyecto cambia casi todo menos la idea de fondo de hablar con la API de DeepSeek:
+
+- Se reemplazó `requests` a mano por la librería oficial `openai`, aprovechando que la API de DeepSeek es compatible con ese mismo formato, para no tener que armar ni parsear el JSON de la petición manualmente.
+- Se agregó reconocimiento de voz con `SpeechRecognition` y `pyaudio`, así que la entrada ya no es texto escrito con `input()` sino audio capturado del micrófono y transcrito con la API gratuita de Google.
+- Se forzó la respuesta del modelo a un JSON estructurado con `response_format={"type": "json_object"}` y un prompt de sistema que define exactamente qué claves puede devolver, en vez de aceptar una respuesta en lenguaje natural libre como hace el script original, porque un programa no puede actuar de forma segura sobre una frase como "listo, ya encendí el rojo".
+- Se agregó el estado guardado (`estado["led_rojo"]`, `estado["led_azul"]`) para que el script recuerde cómo quedó cada LED entre un comando y el siguiente, algo que no existe en el original porque ahí cada respuesta es independiente y no hay ningún estado físico que mantener.
+- Se agregó por completo la comunicación serial hacia el ESP32 y el firmware `esp32_voz.py`, que no existen en el material original, encargados de traducir ese estado en algo que de verdad prenda o apague un LED.
+- Se agregó el comando adicional de show de luces, una funcionalidad que no tiene ninguna relación con el script original y que se apoya en la misma infraestructura de JSON estructurado para distinguirlo de los comandos normales.
+
+En resumen, el original se queda en "preguntarle algo a la API y mostrar la respuesta en texto"; este proyecto le agrega la voz como entrada, una salida restringida a JSON en vez de texto libre, y hardware real reaccionando del otro lado.
 
 ## Preparar el entorno
 

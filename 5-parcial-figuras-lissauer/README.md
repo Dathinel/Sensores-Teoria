@@ -15,6 +15,12 @@ flowchart LR
     Osciloscopio --> Figura[Figura del pez en pantalla]
 ```
 
+## De las figuras de Lissajous a una figura libre
+
+El modo XY de un osciloscopio es precisamente el que hace posible las figuras de Lissajous, descritas por primera vez por el físico francés Jules Antoine Lissajous en 1857, y que resultan de mandar una onda senoidal pura a cada canal. Cuando las dos frecuencias son iguales el resultado es una línea diagonal o una elipse, según la diferencia de fase entre ambas, y cuando las frecuencias son distintas, sobre todo si guardan una proporción sencilla entre sí como 2:3 o 3:4, aparecen patrones entrelazados cada vez más complejos. Antes de que existieran los osciloscopios digitales, comparar la figura resultante en pantalla contra patrones ya conocidos era un método real para medir con precisión la relación entre dos frecuencias sin más instrumental que un osciloscopio.
+
+Este proyecto usa el mismo modo XY y el mismo principio de fondo, dos señales continuas moviendo un punto en dos ejes a la vez, pero no manda dos senoidales puras a los canales. En vez de eso calcula de antemano la lista completa de coordenadas que forman el contorno de un pez y se las entrega al DAC punto por punto, así que la figura resultante no es una Lissajous en el sentido estricto del término, no nace de combinar dos frecuencias, sino que aprovecha el mismo hardware y el mismo modo del osciloscopio para trazar una forma arbitraria en vez de limitarse a los patrones que produce una onda senoidal.
+
 ## Por qué se ve como una figura sólida y no como puntos sueltos
 
 Los DAC del ESP32 no dibujan nada de golpe, van punto por punto, y entre un punto y el siguiente hay una pausa mínima antes de pasar al de después. Lo que hace que el ojo humano vea una figura completa en vez de un punto brincando por la pantalla es la persistencia de la visión, el mismo principio detrás del cine o de una bombilla que parpadea demasiado rápido para notarlo. El script recorre todos los puntos del pez una y otra vez dentro de un bucle infinito, y mientras ese recorrido sea lo bastante rápido, el ojo funde todos esos puntos en una sola forma continua.
@@ -28,6 +34,17 @@ En vez de dibujar el pez a mano punto por punto, el script arma la figura combin
 Una función crea elipses, dado un centro y dos radios, y sirve tanto para el cuerpo ovalado como para el ojo, la pupila y la boca, esta última usando solo un arco de la elipse en vez del óvalo completo. Otra función crea líneas rectas entre dos puntos, usada para armar los tres lados de la cola triangular. Y una tercera función crea curvas Bezier cuadráticas, que permiten una curva suave entre dos puntos con un tercer punto de control que jala la curva hacia un lado, usada para las dos mitades de la aleta.
 
 Cada una de esas piezas, cuerpo, cola, ojo, pupila, boca y aleta, se genera por separado como una lista de coordenadas, y la función que arma el pez completo simplemente las dibuja una detrás de otra en ese orden, moviendo el punto del osciloscopio de una pieza a la siguiente antes de volver a empezar todo el ciclo desde el cuerpo.
+
+## El código, función por función
+
+- **Los objetos DAC** (`dac_x = DAC(Pin(25))`, `dac_y = DAC(Pin(26))`): envuelven los dos pines DAC fijos del ESP32 clásico, y su método `.write(valor)` espera siempre un entero entre 0 y 255.
+- **`limitar(valor)`**: recorta cualquier coordenada normalizada para que se quede entre 0 y 1, evitando que un punto que se pase un poco del contorno calculado termine mandando al DAC un valor fuera de rango.
+- **`convertir_x`, `convertir_y` y `convertir_punto`**: aplican en orden el desplazamiento global de la figura, el recorte de `limitar`, la inversión de eje opcional, y por último reescalan ese valor de 0-1 al rango recortado de `DAC_MIN` a `DAC_MAX`. Es el único lugar del script donde una coordenada deja el mundo normalizado 0-1 para convertirse en el número real que entiende el DAC.
+- **`crear_elipse`, `crear_linea` y `crear_bezier`**: los tres generadores geométricos. Cada uno recorre `puntos + 1` pasos de un parámetro `t` entre 0 y 1 (o entre dos ángulos, en el caso de la elipse) y devuelve la lista de coordenadas resultante, ya convertida al rango del DAC en `pez3_esp32.py`, o todavía en el modelo base sin convertir en `pez5_esp32.py`, donde esa conversión se pospone hasta `transformar`.
+- **`transformar(trayectoria, centro_x, centro_y, escala)`**, solo en `pez5_esp32.py`: toma una trayectoria del modelo base sin posición fija, la escala y la traslada hacia un centro dado, y ahí sí llama a `convertir_punto` para dejarla lista para el DAC. Es la función que le permite a `crear_pez` reutilizar exactamente las mismas seis piezas base para los tres peces, cambiando solo el centro y la escala en cada llamada en vez de recalcular las coordenadas de cada pieza.
+- **`dibujar(trayectoria, velocidad)`**: recorre una lista de puntos ya convertidos, escribiendo cada coordenada en `dac_x` y `dac_y` y esperando `velocidad` microsegundos entre punto y punto con `utime.sleep_us`. El primer punto se escribe sin esperar antes, porque esa espera representa el tiempo que tarda el trazo en llegar al siguiente punto, no en aparecer el primero.
+- **`dibujar_pez()` en `pez3_esp32.py` y `dibujar_un_pez(pez)` en `pez5_esp32.py`**: dibujan las seis piezas de un pez en el mismo orden fijo, cuerpo, cola, ojo, pupila, boca y aleta, llamando a `dibujar` una vez por pieza. La pupila se dibuja con una velocidad distinta a la del resto (180 en `pez3_esp32.py`, 40 en `pez5_esp32.py`) porque al ser la pieza más pequeña necesita pocos puntos para verse sólida, y dejarla a la misma velocidad que el resto la haría ver más débil que las demás piezas dentro del mismo ciclo.
+- **El bucle `while True` final**: en `pez3_esp32.py` llama una y otra vez a `dibujar_pez()`; en `pez5_esp32.py` llama a `dibujar_tres_peces()`, que a su vez dibuja `pez1`, `pez2` y `pez3` uno detrás de otro en cada vuelta. Ninguno de los dos scripts corta ese ciclo por su cuenta, así que la figura se mantiene en pantalla mientras el ESP32 tenga energía.
 
 ## Las dos versiones del script
 
