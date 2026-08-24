@@ -1,5 +1,7 @@
 # Chatbot: asistente de voz
 
+Basado en [chatbot.py](https://github.com/dialejobv/U_Militar/blob/main/3%29%20chatbot/chatbot.py), un cliente básico de línea de comandos para la API de DeepSeek. La instrucción sobre esa base fue: teniendo presente ese repositorio, generar un chatbot domótico orientado a encender y apagar un LED por medio de comandos de voz. Este proyecto extiende esa idea original a dos LEDs sobre un ESP32, agregando reconocimiento de voz, interpretación de intención en JSON y un show de luces como comando adicional.
+
 ## La idea general
 
 Este proyecto enciende y apaga dos LEDs conectados a un ESP32 a partir de comandos hablados. Una persona habla frente al micrófono de la computadora, lo que dice se transcribe a texto, ese texto se le manda a un modelo de lenguaje a través de la API de DeepSeek, el modelo interpreta qué se le está pidiendo, y la computadora traduce esa interpretación en una orden concreta que le manda al ESP32 por cable USB.
@@ -65,6 +67,10 @@ La API de DeepSeek vive en un servidor en la nube, así que llamarla siempre nec
 ## El armado físico
 
 Se necesitan dos LEDs, dos resistencias de 220 ohmios, una protoboard, el propio ESP32 y algunos cables macho a macho o macho a hembra según el tipo de protoboard que se use.
+
+![Diagrama de referencia del circuito: dos LEDs con resistencia hacia el ESP32](diagrama-circuito.png)
+
+El diagrama de arriba es un esquema genérico del tipo de circuito, dos LEDs con su resistencia en serie yendo hacia un par de pines del ESP32 y GND compartido. En el armado real de este proyecto los pines usados y los colores de LED son los que muestra la tabla siguiente, no los del diagrama.
 
 | Pin del ESP32 | Va hacia | A través de | Qué controla |
 |---|---|---|---|
