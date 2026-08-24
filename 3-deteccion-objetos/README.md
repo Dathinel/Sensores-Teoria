@@ -107,6 +107,16 @@ El script base con el que arrancó este proyecto es el que aparece en la explica
 
 En resumen, el original se queda en "ver y mostrar en pantalla"; este proyecto le agrega la mitad de "avisar y actuar" sobre hardware real.
 
+## Sobre la directiva de detectar un carro y una moto de juguete
+
+Además de la [explicación de la arquitectura de YOLO](../README.md) usada como base de este proyecto, existe otra guía del mismo estilo, la [explicación de arquitectura YOLO del repositorio aplicacion_sistemas_embebidos](https://github.com/dialejobv/aplicacion_sistemas_embebidos/blob/main/2%29%20LABORATORIO/Explicaci%C3%B3n_Arq_YOLO.md), acompañada de esta directiva puntual: integrar YOLO con la detección de un carro de juguete y una moto de juguete, de modo que al detectar el carro se encienda un LED rojo y al detectar la moto se encienda un LED verde.
+
+![Circuito de referencia de la directiva: dos botones y LED rojo/verde sobre el ESP32](diagrama-circuito-carro-moto.png)
+
+El circuito de arriba es el esquema de referencia que acompaña esa directiva, pensado para simular en Wokwi la salida de cada detección con un LED rojo y uno verde, apoyado en dos pulsadores para probar cada estado manualmente sin depender de la cámara. Este proyecto no adoptó ese circuito ni cambió el código para detectar un carro y una moto de juguete en su lugar; `deteccion_pc.py` y `esp32_leds.py` se dejaron tal como están, detectando los objetos definidos en `OBJETIVOS`.
+
+La razón es la cámara y la iluminación realmente disponibles para grabar este proyecto: un carro y una moto de juguete son objetos pequeños, y el modelo nano de YOLOv8 usado aquí (elegido, como se explica más arriba, para poder correr en tiempo real sin GPU dedicada) pierde confianza de detección con objetos así de chicos apenas la luz del cuarto baja un poco o la webcam pierde foco, algo que pasa seguido con una cámara integrada de laptop y luz ambiente no controlada. Los objetos que sí se dejaron configurados ocupan mucho más espacio en el cuadro y tienen bastante más contraste contra el fondo, así que el modelo los reconoce de forma confiable bajo las mismas condiciones de cámara e iluminación con las que de verdad se grabó la demostración de este proyecto, en vez de arriesgar detecciones inconsistentes por perseguir un objeto más fiel a la directiva pero más difícil de detectar con el equipo disponible.
+
 ## Instalación del entorno en la computadora
 
 Todo el proyecto vive en una sola carpeta, que puede llamarse por ejemplo 3-deteccion-objetos, la misma que contiene este README junto con los dos scripts.

@@ -59,6 +59,20 @@ Para ver esta diferencia de velocidad en la práctica basta un montaje simple: t
 
 Corriendo la misma secuencia de encendido y apagado sobre este circuito, primero escrita en MicroPython y luego en C/C++ vía Arduino, se nota la demora extra que mete el intérprete de MicroPython frente al binario nativo que produce C/C++: el mismo proceso, el mismo hardware, pero un tiempo de respuesta distinto según el lenguaje.
 
+## El mismo circuito en Wokwi: C/C++ contra MicroPython
+
+Para ver la diferencia de sintaxis lado a lado, sin depender de tener el hardware físico a mano, [Wokwi](https://wokwi.com) permite simular un ESP32 completo en el navegador, cableado incluido. El montaje de referencia es un display de siete segmentos, con sus siete resistencias de por medio, conectado a siete pines GPIO del ESP32 (17, 16, 32, 33, 25, 14 y 12), uno por cada segmento del display.
+
+Escribiendo exactamente la misma lógica, encender los segmentos necesarios para dibujar el número ocho, en los dos lenguajes que ya se compararon arriba, la diferencia de sintaxis salta a la vista:
+
+![Simulación en Wokwi del mismo circuito programado en C/C++ vía Arduino](wokwi-arduino-c.png)
+
+En C/C++ vía Arduino cada pin se declara como una constante con `const int`, se configura como salida dentro de `setup()` con `pinMode(pin, OUTPUT)`, y se escribe con `digitalWrite(pin, HIGH)` o `digitalWrite(pin, LOW)`. Todo ese código se compila una sola vez y el resultado corre dentro de `loop()`, que el propio Arduino ya se encarga de repetir sin que haga falta escribir un bucle explícito.
+
+![Simulación en Wokwi del mismo circuito programado en MicroPython](wokwi-micropython.png)
+
+En MicroPython cada pin se declara directamente como un objeto `Pin(numero, Pin.OUT)` importado desde el módulo `machine`, y se escribe con `.value(1)` o `.value(0)` en vez de una función aparte como `digitalWrite`. Como no hay compilación previa que repita el código por su cuenta, hace falta un `while True:` explícito para que el estado de los segmentos se siga manteniendo en el tiempo. Es la misma idea de fondo, prender y apagar pines digitales, pero se nota de inmediato que MicroPython pide menos ceremonia para declarar cada pin y que el control del bucle principal queda en manos de quien escribe el código en vez de quedar oculto dentro del framework de Arduino.
+
 ## Qué se modificó frente al material original
 
 La guía enlazada desde el [README principal del repositorio](../README.md) es una guía de instalación para el NodeMCU V3, una placa con chip ESP8266, y se limita a los pasos de línea de comandos para borrar la flash y grabar el firmware de MicroPython con `esptool`, sin entrar en comparaciones de lenguajes ni en código de ejemplo. A partir de esa base, este README cambia el enfoque de varias formas:
@@ -67,6 +81,7 @@ La guía enlazada desde el [README principal del repositorio](../README.md) es u
 - Se agregó toda la parte conceptual que la guía original no cubre: qué es Thonny, de dónde viene, por qué existe MicroPython como reimplementación de Python y no el Python normal de una computadora.
 - Se agregó la comparación directa contra programar en C/C++ vía Arduino, con el diagrama de los dos caminos posibles y la tabla de ventajas y desventajas de cada uno, algo que la guía original no menciona porque solo se ocupa de dejar el firmware instalado.
 - Se armó el montaje físico de los tres LEDs y se documentó como ejemplo práctico de la diferencia de velocidad entre ambos lenguajes, algo que tampoco existe en el material original.
+- Se agregó una simulación en Wokwi de un display de siete segmentos, con el mismo circuito programado una vez en C/C++ vía Arduino y otra vez en MicroPython, para mostrar la diferencia de sintaxis lado a lado sin depender del hardware físico.
 
 En resumen, la guía original resuelve un problema puntual, dejar MicroPython grabado en una placa distinta; este README parte de ahí para explicar el porqué detrás de esa elección y para generalizarla al ESP32.
 
