@@ -6,6 +6,7 @@ import os
 import json
 import serial
 import speech_recognition as sr
+
 from openai import OpenAI
 from dotenv import load_dotenv
 

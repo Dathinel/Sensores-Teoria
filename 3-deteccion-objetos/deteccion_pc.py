@@ -10,11 +10,11 @@ import serial
 import time
 from ultralytics import YOLO
 
-PUERTO_SERIAL = "COM5"
+PUERTO_SERIAL = "COM7"
 BAUDIOS = 115200
 
 # Nombres exactos de las clases dentro del dataset COCO que usa YOLOv8
-OBJETIVOS = ["chair", "cell phone"]
+OBJETIVOS = ["laptop", "cell phone"]
 
 model = YOLO('yolov8n.pt')
 
@@ -22,8 +22,8 @@ ser = serial.Serial(PUERTO_SERIAL, BAUDIOS, timeout=1)
 time.sleep(2)  # da tiempo a que el ESP32 termine de reiniciar tras abrir el puerto
 
 cap = cv2.VideoCapture(0)
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1902)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
 if not cap.isOpened():
     print("Error al abrir la camara")
