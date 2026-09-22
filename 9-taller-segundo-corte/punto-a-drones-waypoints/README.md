@@ -1,6 +1,8 @@
 # Punto a) Drones: mover entre 3 puntos A, B y C
 
-Basado en la idea de [gym-pybullet-drones](https://github.com/utiasDSL/gym-pybullet-drones) (ver `enunciado-actividad.png`): mover un dron entre los puntos A, B y C, controlado desde el ESP32. En vez de usar esa librería completa (que trae de dependencia `gymnasium` y `stable-baselines3`, pensadas para entrenar redes neuronales de control de vuelo, no para un mando manual), el dron es un cuerpo **cinemático**: su posición se fija directamente cada cuadro (sin motor de físicas de vuelo real), que alcanza de sobra para lo que pide el taller — la consola de mandos desde el ESP32, no un simulador aerodinámico.
+Basado en la idea de [gym-pybullet-drones](https://github.com/utiasDSL/gym-pybullet-drones): mover un dron entre los puntos A, B y C, controlado desde el ESP32. En vez de usar esa librería completa (que trae de dependencia `gymnasium` y `stable-baselines3`, pensadas para entrenar redes neuronales de control de vuelo, no para un mando manual), el dron es un cuerpo **cinemático**: su posición se fija directamente cada cuadro (sin motor de físicas de vuelo real), que alcanza de sobra para lo que pide el taller — la consola de mandos desde el ESP32, no un simulador aerodinámico.
+
+![Enunciado del punto a)](enunciado-actividad.png)
 
 ## Qué es un dron cinemático y por qué no hace falta un modelo de vuelo real
 

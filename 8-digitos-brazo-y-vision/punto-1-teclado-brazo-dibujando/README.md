@@ -1,6 +1,8 @@
 # Punto 1: Teclado I2C + brazo robótico dibujando en PyBullet
 
-Basado en el `brazo.urdf` compartido en el repositorio [U_Militar](https://github.com/dialejobv/U_Militar/blob/main/8%29%20Brazo_URDF/brazo.urdf) (ver `enunciado-actividad.png`). Un teclado matricial 4x4 y una pantalla LCD, los dos por I2C, dejan elegir un dígito del 0 al 9; el ESP32 lo muestra en la LCD y se lo manda al PC, que mueve el brazo simulado en PyBullet para "dibujarlo".
+Basado en el `brazo.urdf` compartido en el repositorio [U_Militar](https://github.com/dialejobv/U_Militar/blob/main/8%29%20Brazo_URDF/brazo.urdf). Un teclado matricial 4x4 y una pantalla LCD, los dos por I2C, dejan elegir un dígito del 0 al 9; el ESP32 lo muestra en la LCD y se lo manda al PC, que mueve el brazo simulado en PyBullet para "dibujarlo".
+
+![Enunciado de la actividad](enunciado-actividad.png)
 
 ## Qué es I2C y por qué dos dispositivos comparten el mismo bus
 

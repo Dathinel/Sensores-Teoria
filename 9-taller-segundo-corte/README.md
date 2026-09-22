@@ -1,6 +1,8 @@
 # Taller segundo corte: consolas de mando con ESP32 para simulaciones en PyBullet
 
-Taller de tres puntos asignado por el profesor (ver `enunciado-entrega.png`, y el enunciado de cada punto dentro de su propia carpeta), usando como base los repositorios que compartió: [gym-pybullet-drones](https://github.com/utiasDSL/gym-pybullet-drones) para el punto a) y [pybullet_robots](https://github.com/erwincoumans/pybullet_robots) (`baxter_ik_demo.py` y `laikago.py`) para los puntos b) y c).
+Taller de tres puntos asignado por el profesor (el enunciado de cada punto está dentro de su propia carpeta), usando como base los repositorios que compartió: [gym-pybullet-drones](https://github.com/utiasDSL/gym-pybullet-drones) para el punto a) y [pybullet_robots](https://github.com/erwincoumans/pybullet_robots) (`baxter_ik_demo.py` y `laikago.py`) para los puntos b) y c).
+
+![Enunciado de la entrega](enunciado-entrega.png)
 
 **Un solo teclado matricial 4x4** (el mismo módulo I2C reutilizado en los temas 7 y 8) controla las tres simulaciones de este taller. El firmware del ESP32 (`esp32_teclado.py`) es idéntico para las tres: no sabe nada de drones, brazos ni patas, solo manda por serial la tecla que esté presionada en cada instante (`TECLA:8`, `TECLA:-`, etc). La "configuración" — qué hace cada tecla — vive del lado del PC, en cada script de Python, así que **no hay que reprogramar el ESP32 para pasar de un punto al otro**, solo correr el script que corresponda.
 

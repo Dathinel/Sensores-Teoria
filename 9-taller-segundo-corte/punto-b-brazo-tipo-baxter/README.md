@@ -1,6 +1,8 @@
 # Punto b) Brazo robótico tipo Baxter: mover, posicionar y coger un objeto
 
-Basado en [baxter_ik_demo.py](https://github.com/erwincoumans/pybullet_robots/blob/master/baxter_ik_demo.py) (ver `enunciado-actividad.png`): una consola de mandos con el ESP32 para un movimiento fluido y con posicionamiento real, donde el robot pueda coger y mover un objeto. Por qué el brazo real que se usa acá es un KUKA IIWA + pinza en vez de Baxter (las mallas 3D de Baxter no vienen ni en ese repositorio ni en `pybullet_data`, y agregarlas son ~50 MB fuera de lugar en este repositorio de apuntes) está explicado en el README del taller. El punto c) del enunciado (locomoción con las 4 patas) es un robot y un problema de control distintos — está resuelto aparte, en [`punto-c-locomocion-laikago`](../punto-c-locomocion-laikago).
+Basado en [baxter_ik_demo.py](https://github.com/erwincoumans/pybullet_robots/blob/master/baxter_ik_demo.py): una consola de mandos con el ESP32 para un movimiento fluido y con posicionamiento real, donde el robot pueda coger y mover un objeto. Por qué el brazo real que se usa acá es un KUKA IIWA + pinza en vez de Baxter (las mallas 3D de Baxter no vienen ni en ese repositorio ni en `pybullet_data`, y agregarlas son ~50 MB fuera de lugar en este repositorio de apuntes) está explicado en el README del taller. El punto c) del enunciado (locomoción con las 4 patas) es un robot y un problema de control distintos — está resuelto aparte, en [`punto-c-locomocion-laikago`](../punto-c-locomocion-laikago).
+
+![Enunciado del punto b)](enunciado-actividad.png)
 
 ## Qué es la cinemática inversa (IK) y por qué hace falta para este brazo
 

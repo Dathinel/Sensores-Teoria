@@ -1,6 +1,8 @@
 # Control de iluminación por gestos
 
-Actividad asignada por la cátedra (Actividad 4, ver `enunciado-actividad.png`): usando la librería [MediaPipe Gesture Recognizer](https://google-ai-edge.github.io/mediapipe-samples-web/#/vision/gesture_recognizer), desarrollar un sistema de control de iluminación basado en gestos de la mano.
+Actividad asignada por la cátedra (Actividad 4): usando la librería [MediaPipe Gesture Recognizer](https://google-ai-edge.github.io/mediapipe-samples-web/#/vision/gesture_recognizer), desarrollar un sistema de control de iluminación basado en gestos de la mano.
+
+![Enunciado de la Actividad 4](enunciado-actividad.png)
 
 ## Qué es MediaPipe y qué es Web Serial
 

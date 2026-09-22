@@ -1,6 +1,8 @@
 # Punto c) Locomoción real con las 4 patas (cuadrúpedo Laikago)
 
-Basado en [laikago.py](https://github.com/erwincoumans/pybullet_robots/blob/master/laikago.py) del repositorio que compartió el profesor (ver `enunciado-actividad.png`): el mismo robot (`laikago_toes.urdf`, ya incluido en `pybullet_data`) caminando con **física real** — nada de animaciones ni de teletransportar el cuerpo, el motor de físicas de PyBullet es el que efectivamente lo empuja hacia adelante a través del contacto real entre las patas y el piso.
+Basado en [laikago.py](https://github.com/erwincoumans/pybullet_robots/blob/master/laikago.py) del repositorio que compartió el profesor: el mismo robot (`laikago_toes.urdf`, ya incluido en `pybullet_data`) caminando con **física real** — nada de animaciones ni de teletransportar el cuerpo, el motor de físicas de PyBullet es el que efectivamente lo empuja hacia adelante a través del contacto real entre las patas y el piso.
+
+![Enunciado del punto c)](enunciado-actividad.png)
 
 ## Por qué este punto es aparte del punto b)
 

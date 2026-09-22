@@ -1,6 +1,8 @@
 # Brazo robótico: control por teclado (jog) + simulación URDF
 
-Basado en el archivo compartido por la cátedra [brazo.urdf](https://github.com/dialejobv/U_Militar/blob/main/8%29%20Brazo_URDF/brazo.urdf), que define un brazo de 2 grados de libertad con pinza de dos dedos. La actividad asignada (ver `enunciado-actividad.png`) pide: programar el ESP32 para leer sensores y enviar los datos, desarrollar un script en Python que reciba esos datos por UART y controle el robot, probar el movimiento de las articulaciones y la apertura/cierre de la pinza, y validar la comunicación en tiempo real.
+Basado en el archivo compartido por la cátedra [brazo.urdf](https://github.com/dialejobv/U_Militar/blob/main/8%29%20Brazo_URDF/brazo.urdf), que define un brazo de 2 grados de libertad con pinza de dos dedos. La actividad asignada pide: programar el ESP32 para leer sensores y enviar los datos, desarrollar un script en Python que reciba esos datos por UART y controle el robot, probar el movimiento de las articulaciones y la apertura/cierre de la pinza, y validar la comunicación en tiempo real.
+
+![Enunciado de la actividad](enunciado-actividad.png)
 
 ## Qué es un URDF y qué es PyBullet
 

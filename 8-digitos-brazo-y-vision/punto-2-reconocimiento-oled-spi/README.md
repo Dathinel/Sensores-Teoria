@@ -1,6 +1,9 @@
 # Punto 2: Reconocimiento de dígitos con OpenCV + CNN + OLED
 
-Basado en el ejemplo de visión computacional con OpenCV compartido en el repositorio [U_Militar](https://github.com/dialejobv/U_Militar/blob/main/10%29%20Open_Cv) (`entrenar_modelo.py` y `reconocer_digito.py`, ver `enunciado-actividad.png` y `enunciado-actividad-2.png`). Un dígito escrito a mano en un papel, mostrado a la cámara del PC, se reconoce con una CNN entrenada sobre MNIST; el resultado se manda por serial al ESP-A, que se lo reenvía al ESP-B por **dos caminos a la vez** (UART2 y SPI real), y este lo muestra en una pantalla OLED.
+Basado en el ejemplo de visión computacional con OpenCV compartido en el repositorio [U_Militar](https://github.com/dialejobv/U_Militar/blob/main/10%29%20Open_Cv) (`entrenar_modelo.py` y `reconocer_digito.py`). Un dígito escrito a mano en un papel, mostrado a la cámara del PC, se reconoce con una CNN entrenada sobre MNIST; el resultado se manda por serial al ESP-A, que se lo reenvía al ESP-B por **dos caminos a la vez** (UART2 y SPI real), y este lo muestra en una pantalla OLED.
+
+![Enunciado de la actividad, parte 1](enunciado-actividad.png)
+![Enunciado de la actividad, parte 2](enunciado-actividad-2.png)
 
 ## Qué es una CNN y por qué MNIST
 
