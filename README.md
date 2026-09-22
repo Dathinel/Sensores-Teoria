@@ -1,6 +1,31 @@
-# Sensores - Teoría 2026-2
+# Sensores · Teoría 2026-2
+
+![ESP32](https://img.shields.io/badge/ESP32-MicroPython%20%2B%20Arduino-4A7EBB?style=for-the-badge)
+![PyBullet](https://img.shields.io/badge/PyBullet-simulaci%C3%B3n%20f%C3%ADsica-E8935B?style=for-the-badge)
+![Visión y CNN](https://img.shields.io/badge/Visi%C3%B3n-YOLO%20%7C%20OpenCV%20%7C%20CNN-6BAE75?style=for-the-badge)
+![Temas](https://img.shields.io/badge/temas-9-8B8FA8?style=for-the-badge)
+
+![Último commit](https://img.shields.io/github/last-commit/Dathinel/Sensores-Teoria?style=flat-square&label=último%20commit)
+![Tamaño del repo](https://img.shields.io/github/repo-size/Dathinel/Sensores-Teoria?style=flat-square&label=tamaño)
+![Licencia](https://img.shields.io/github/license/Dathinel/Sensores-Teoria?style=flat-square)
+
+![Tecnologías usadas](https://skillicons.dev/icons?i=py,arduino,cpp,js,html,opencv,tensorflow)
 
 Repositorio con las investigaciones y proyectos de la materia de Sensores, semestre 2026-2. Cada tema tratado en clase vive en su propia carpeta, con su propio README explicando de qué se trata. Varios temas están basados en el repositorio [U_Militar](https://github.com/dialejobv/U_Militar/blob/main/README.md).
+
+## Índice
+
+| # | Tema | Tecnología principal |
+|---|---|---|
+| 1 | [esp32-investigacion](./1-esp32-investigacion) | — (investigación) |
+| 2 | [Lenguajes: por qué Thonny](./2-lenguajes-thonny) | MicroPython vs. Arduino/C++ |
+| 3 | [Detección de objetos](./3-deteccion-objetos) | YOLO + OpenCV |
+| 4 | [Chatbot: asistente de voz](./4-chatbot-asistente-voz) | LLM (DeepSeek) |
+| 5 | [parcial-figuras-lissauer](./5-parcial-figuras-lissauer) | DAC + osciloscopio |
+| 6 | [Control de iluminación por gestos](./6-control-de-led-mediante-gestos) | MediaPipe + Web Serial |
+| 7 | [Brazo robótico: control por teclado (jog) + simulación URDF](./7-brazo-robotico-urdf) | PyBullet + I2C |
+| 8 | [Dígitos: brazo que dibuja + visión que reconoce](./8-digitos-brazo-y-vision) | CNN (MNIST) + PyBullet + UART2/SPI |
+| 9 | [Taller segundo corte](./9-taller-segundo-corte) | PyBullet (IK, CPG, cinemática) |
 
 ## Temas
 
