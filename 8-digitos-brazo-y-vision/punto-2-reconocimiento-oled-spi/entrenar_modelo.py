@@ -8,6 +8,10 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
+import random
+
+import cv2
+import numpy as np
 import tensorflow as tf
 
 # 1. Cargar MNIST: 70,000 imagenes de digitos (0-9) escritos a mano,
@@ -64,19 +68,50 @@ modelo.compile(optimizer='adam',
                loss='sparse_categorical_crossentropy',
                metrics=['accuracy'])
 
-# 5. Entrenar con data augmentation (rotaciones y traslaciones leves):
-# en vez de entrenar siempre con las mismas 60,000 imagenes tal cual,
-# ImageDataGenerator le aplica variaciones aleatorias chiquitas
-# (rotar hasta 10°, correr hasta 10% en x/y, hacer zoom hasta 10%) a
-# cada imagen en cada epoca. Esto simula que el digito escrito a mano
-# frente a la camara nunca va a estar perfectamente centrado ni
-# perfectamente derecho como en MNIST original, asi que la red se
+# 5. Entrenar con data augmentation (rotaciones, traslaciones y ahora
+# tambien grosor de trazo): en vez de entrenar siempre con las mismas
+# 60,000 imagenes tal cual, ImageDataGenerator le aplica variaciones
+# aleatorias chiquitas (rotar hasta 10°, correr hasta 10% en x/y, hacer
+# zoom hasta 10%, y de yapa variar_grosor_trazo de aqui abajo) a cada
+# imagen en cada epoca. Esto simula que el digito escrito a mano frente
+# a la camara nunca va a estar perfectamente centrado, derecho, ni con
+# el mismo grosor de lapiz que en MNIST original, asi que la red se
 # curte para reconocerlo igual.
+def variar_grosor_trazo(img):
+    """Engrosa o adelgaza el trazo al azar (dilatar/erosionar en OpenCV).
+    MNIST tiene trazos siempre finos y parejos (lapiz digital), pero un
+    digito real frente a la camara puede venir escrito con marcador
+    grueso o mostrado en una fuente de celular en negrita — mucho mas
+    grueso que cualquier cosa que la red haya visto entrenando. En vez
+    de perseguir esto solo con el preprocesamiento del lado de la
+    camara (fragil: cada ajuste ahi arregla un caso y rompe otro), se
+    le enseña a la propia red a reconocer un rango de grosores desde el
+    entrenamiento, igual que ya se le enseñan rotaciones/corrimientos.
+    ImageDataGenerator llama a esta funcion con cada imagen ya rotada/
+    corrida/con zoom (por eso va como preprocessing_function, que
+    corre DESPUES de esas transformaciones)."""
+    img_u8 = (img[:, :, 0] * 255).astype(np.uint8)
+    r = random.random()
+    if r < 0.35:
+        # Engrosar (35% de las veces): simula marcador/fuente en negrita.
+        kernel = np.ones((random.choice([2, 3]), random.choice([2, 3])), np.uint8)
+        img_u8 = cv2.dilate(img_u8, kernel, iterations=1)
+    elif r < 0.50:
+        # Adelgazar (15% de las veces): simula un lapiz muy fino o un
+        # trazo que el umbral de la camara dejo mas delgado de lo normal.
+        kernel = np.ones((2, 2), np.uint8)
+        img_u8 = cv2.erode(img_u8, kernel, iterations=1)
+    # El 50% restante queda igual: la mayoria de los trazos reales SI
+    # se parecen al grosor de MNIST, no hay que exagerar la variacion.
+    return (img_u8.astype(np.float32) / 255.0).reshape(28, 28, 1)
+
+
 datagen = tf.keras.preprocessing.image.ImageDataGenerator(
     rotation_range=10,
     width_shift_range=0.1,
     height_shift_range=0.1,
     zoom_range=0.1,
+    preprocessing_function=variar_grosor_trazo,
 )
 
 # epochs=10: 10 pasadas completas por las 60,000 imagenes de
