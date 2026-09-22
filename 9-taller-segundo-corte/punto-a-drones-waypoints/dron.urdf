@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<!--
+  Dron simplificado: un solo link (sin articulaciones) porque en
+  drones_pybullet.py se mueve de forma cinematica -- resetBasePositionAndOrientation
+  cada cuadro -- en vez de simularse con fisica de vuelo real. Cuerpo
+  central + 4 brazos en cruz + 4 helices, solo geometria visual (no hace
+  falta <collision> porque el dron nunca choca con nada en esta actividad).
+-->
+<robot name="dron">
+  <link name="cuerpo">
+    <visual>
+      <origin xyz="0 0 0"/>
+      <geometry><box size="0.10 0.10 0.04"/></geometry>
+      <material name="cuerpo_color"><color rgba="0.85 0.15 0.15 1"/></material>
+    </visual>
+    <!-- 4 brazos en cruz -->
+    <visual><origin xyz="0.14 0.14 0" rpy="0 0 0.7854"/><geometry><box size="0.26 0.02 0.015"/></geometry><material name="brazo"><color rgba="0.2 0.2 0.2 1"/></material></visual>
+    <visual><origin xyz="-0.14 0.14 0" rpy="0 0 -0.7854"/><geometry><box size="0.26 0.02 0.015"/></geometry><material name="brazo"/></visual>
+    <visual><origin xyz="0.14 -0.14 0" rpy="0 0 -0.7854"/><geometry><box size="0.26 0.02 0.015"/></geometry><material name="brazo"/></visual>
+    <visual><origin xyz="-0.14 -0.14 0" rpy="0 0 0.7854"/><geometry><box size="0.26 0.02 0.015"/></geometry><material name="brazo"/></visual>
+    <!-- 4 helices (discos delgados en la punta de cada brazo) -->
+    <visual><origin xyz="0.24 0.24 0.015"/><geometry><cylinder radius="0.05" length="0.005"/></geometry><material name="helice"><color rgba="0.1 0.1 0.1 0.6"/></material></visual>
+    <visual><origin xyz="-0.24 0.24 0.015"/><geometry><cylinder radius="0.05" length="0.005"/></geometry><material name="helice"/></visual>
+    <visual><origin xyz="0.24 -0.24 0.015"/><geometry><cylinder radius="0.05" length="0.005"/></geometry><material name="helice"/></visual>
+    <visual><origin xyz="-0.24 -0.24 0.015"/><geometry><cylinder radius="0.05" length="0.005"/></geometry><material name="helice"/></visual>
+    <inertial>
+      <mass value="0.1"/>
+      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+    </inertial>
+  </link>
+</robot>

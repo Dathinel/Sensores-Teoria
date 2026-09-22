@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de iluminación por gestos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1013;
+    --panel: #15191d;
+    --panel-border: #262b31;
+    --text: #e7e9ec;
+    --text-muted: #8b929b;
+    --amarillo: #e8b930;
+    --azul: #4f8fce;
+    --rojo: #d9534f;
+    --modo: #9b7fd1;
+    --verde-ok: #4caf7d;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Space Grotesk", system-ui, sans-serif;
+  }
+
+  body {
+    padding: 1.1rem 1.4rem;
+    min-height: 100vh;
+  }
+
+  .encabezado {
+    max-width: 1760px;
+    margin: 0 auto 0.9rem;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .encabezado h1 { font-size: 1.25rem; font-weight: 600; margin: 0; letter-spacing: 0.01em; }
+  .encabezado p { margin: 0.15rem 0 0; color: var(--text-muted); font-size: 0.8rem; }
+
+  button#btnConectar {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--panel-border);
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.76rem;
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+
+  button#btnConectar:hover { border-color: var(--verde-ok); color: var(--verde-ok); }
+
+  .rejilla {
+    max-width: 1760px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(320px, 400px) minmax(280px, 340px) 1fr;
+    gap: 0.9rem;
+    align-items: start;
+    transition: grid-template-columns 0.2s ease;
+  }
+
+  body.modo-enfocado .rejilla {
+    grid-template-columns: minmax(560px, 900px) minmax(260px, 320px) 1fr;
+  }
+
+  @media (max-width: 1300px) {
+    .rejilla, body.modo-enfocado .rejilla { grid-template-columns: 1fr 1fr; }
+  }
+
+  @media (max-width: 780px) {
+    .rejilla, body.modo-enfocado .rejilla { grid-template-columns: 1fr; }
+  }
+
+  .columna { display: flex; flex-direction: column; gap: 0.9rem; }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 0.85rem 1.05rem;
+  }
+
+  .panel h2 { font-size: 0.8rem; font-weight: 600; margin: 0 0 0.6rem; color: var(--text-muted); }
+
+  .camara-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.6rem;
+  }
+
+  .camara-header h2 { margin: 0; }
+
+  .botones-camara { display: flex; gap: 0.4rem; }
+
+  .btn-toggle {
+    background: transparent;
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    padding: 0.32rem 0.55rem;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: border-color 0.1s ease, color 0.1s ease;
+  }
+
+  .btn-toggle:hover { color: var(--text); }
+  .btn-toggle.activo { color: var(--verde-ok); border-color: var(--verde-ok); }
+
+  .segmentado {
+    display: flex;
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.6rem;
+  }
+
+  .seg-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--panel-border);
+    padding: 0.4rem 0.3rem;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .seg-btn:last-child { border-right: none; }
+  .seg-btn:hover { color: var(--text); }
+  .seg-btn.activo { color: var(--text); background: rgba(255, 255, 255, 0.06); }
+
+  .visor {
+    height: 260px;
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--panel-border);
+    background: #000;
+    transition: height 0.2s ease;
+  }
+
+  body.modo-enfocado .visor { height: 560px; }
+
+  #canvas, #canvas3d {
+    max-width: 100%;
+    max-height: 100%;
+    flex: 1;
+    object-fit: contain;
+    display: block;
+  }
+
+  .fila-dato {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0.3rem 0;
+    border-bottom: 1px solid var(--panel-border);
+    font-size: 0.79rem;
+    gap: 0.75rem;
+  }
+
+  .fila-dato:last-child { border-bottom: none; }
+  .fila-dato .etiqueta { color: var(--text-muted); }
+
+  .fila-dato .valor {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.79rem;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .punto {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+    background: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .punto.pendiente { background: var(--text-muted); }
+  .punto.listo { background: var(--verde-ok); }
+
+  .leyenda { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.6rem; }
+  .leyenda-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.76rem; color: var(--text-muted); }
+  .leyenda-color { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+
+  .col-amarillo { background: var(--amarillo); }
+  .col-azul { background: var(--azul); }
+  .col-rojo { background: var(--rojo); }
+  .col-modo { background: var(--modo); }
+
+  #estado { margin-top: 0.6rem; font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; color: var(--verde-ok); }
+
+  .log-lista {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 260px;
+    overflow-y: auto;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.76rem;
+  }
+
+  .log-lista li { padding: 0.28rem 0; border-bottom: 1px solid var(--panel-border); color: var(--text-muted); }
+  .log-lista li:first-child { color: var(--text); }
+
+  .selector-modo { margin-top: 0.8rem; padding-top: 0.7rem; border-top: 1px solid var(--panel-border); }
+
+  .opcion-modo {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-size: 0.76rem;
+    color: var(--text-muted);
+    padding: 0.28rem 0;
+    cursor: pointer;
+  }
+
+  .opcion-modo input { accent-color: var(--verde-ok); margin: 0; flex-shrink: 0; }
+  .opcion-modo:has(input:checked) { color: var(--text); }
+
+  .grilla-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; }
+
+  .btn-manual {
+    background: transparent;
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    padding: 0.55rem 0.5rem;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.71rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    text-align: left;
+    user-select: none;
+    transition: border-color 0.1s ease, color 0.1s ease, background 0.1s ease;
+  }
+
+  .btn-manual:hover { color: var(--text); }
+  .btn-amarillo:hover { border-color: var(--amarillo); color: var(--amarillo); }
+  .btn-azul:hover { border-color: var(--azul); color: var(--azul); }
+  .btn-rojo:hover { border-color: var(--rojo); color: var(--rojo); }
+  .btn-modo:hover { border-color: var(--modo); color: var(--modo); }
+  .btn-manual.presionado { background: rgba(255, 255, 255, 0.06); }
+
+  .btn-detener { grid-column: 1 / -1; border-color: #6b2b28; color: #d9534f; }
+  .btn-detener:hover { background: #2a1414; border-color: #d9534f; }
+
+  .nota-manual { margin: 0.55rem 0 0; font-size: 0.7rem; color: var(--text-muted); line-height: 1.35; }
+
+  /* Elementos que se ocultan al agrandar la cámara, para dejarle espacio */
+  body.modo-enfocado .colapsable { display: none; }
+</style>
+</head>
+<body>
+
+<div class="encabezado">
+  <div>
+    <h1>Control de iluminación por gestos</h1>
+    <p>ESP32 · MediaPipe Gesture Recognizer · Web Serial</p>
+  </div>
+  <button id="btnConectar">Conectar ESP32</button>
+</div>
+
+<div class="rejilla">
+
+  <div class="columna">
+    <div class="panel">
+      <div class="camara-header">
+        <h2>Cámara</h2>
+        <div class="botones-camara">
+          <button class="btn-toggle" id="btnLandmarks">Landmarks</button>
+          <button class="btn-toggle" id="btnAgrandar">Agrandar</button>
+        </div>
+      </div>
+
+      <div class="segmentado" id="selectorVista">
+        <button class="seg-btn activo" data-vista="camara">Cámara</button>
+        <button class="seg-btn" data-vista="3d">3D</button>
+        <button class="seg-btn" data-vista="ambas">Cámara + 3D</button>
+      </div>
+
+      <div class="visor" id="visor">
+        <video id="video" autoplay playsinline style="display:none;"></video>
+        <canvas id="canvas" width="480" height="360"></canvas>
+        <canvas id="canvas3d" width="480" height="360" style="display:none;"></canvas>
+      </div>
+
+      <div id="estado">Presiona "Conectar ESP32" y permite el acceso a la cámara</div>
+      <div class="fila-dato colapsable" style="margin-top:0.55rem;">
+        <span class="etiqueta">Dispositivo</span>
+        <span class="valor" id="dispositivoCamaraSpan">-</span>
+      </div>
+
+      <div class="leyenda colapsable">
+        <div class="leyenda-item"><span class="leyenda-color col-amarillo"></span>Puño cerrado → 30% de intensidad</div>
+        <div class="leyenda-item"><span class="leyenda-color col-azul"></span>Victoria → 70% de intensidad</div>
+        <div class="leyenda-item"><span class="leyenda-color col-rojo"></span>Ambas manos abiertas → 100% de intensidad</div>
+        <div class="leyenda-item"><span class="leyenda-color col-modo"></span>Pulgar abajo / arriba → Modo 1 / Modo 2</div>
+      </div>
+
+      <div class="selector-modo">
+        <h2>Modo de apagado por cámara</h2>
+        <label class="opcion-modo">
+          <input type="radio" name="modoApagado" value="persistente" checked>
+          Persistente — el LED se apaga repitiendo el mismo gesto
+        </label>
+        <label class="opcion-modo">
+          <input type="radio" name="modoApagado" value="automatico">
+          Automático — el LED se apaga al bajar la mano
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="columna">
+    <div class="panel colapsable">
+      <h2>Puerto serial ESP32</h2>
+      <div class="fila-dato">
+        <span class="etiqueta">Estado</span>
+        <span class="valor" id="estadoPuertoSpan">sin conectar</span>
+      </div>
+      <div class="fila-dato">
+        <span class="etiqueta">Vendor / Product ID</span>
+        <span class="valor" id="vidPidSpan">-</span>
+      </div>
+      <div class="fila-dato">
+        <span class="etiqueta">Baud rate</span>
+        <span class="valor" id="baudRateSpan">-</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Control manual</h2>
+      <div class="grilla-botones">
+        <button class="btn-manual btn-amarillo" id="btnManualFist">Puño — 30%</button>
+        <button class="btn-manual btn-azul" id="btnManualVictory">Victoria — 70%</button>
+        <button class="btn-manual btn-rojo" id="btnManualOpen2">Manos abiertas — 100%</button>
+        <button class="btn-manual btn-modo" id="btnManualModo1">Modo 1</button>
+        <button class="btn-manual btn-modo" id="btnManualModo2">Modo 2</button>
+        <button class="btn-manual btn-detener" id="btnManualDetener">Detener todo</button>
+      </div>
+      <p class="nota-manual colapsable">Siguen el modo de la izquierda: en persistente un clic alterna, en automático hay que mantenerlos presionados. Detener todo es siempre de un solo clic.</p>
+    </div>
+
+    <div class="panel">
+      <h2>Conexión con MediaPipe</h2>
+      <div class="fila-dato">
+        <span class="etiqueta"><span class="punto pendiente" id="puntoWasm"></span>Runtime WebAssembly</span>
+        <span class="valor" id="estadoWasmSpan">pendiente</span>
+      </div>
+      <div class="fila-dato">
+        <span class="etiqueta"><span class="punto pendiente" id="puntoModelo"></span>gesture_recognizer.task</span>
+        <span class="valor" id="estadoModeloSpan">pendiente</span>
+      </div>
+      <div class="fila-dato">
+        <span class="etiqueta">Estado general</span>
+        <span class="valor" id="estadoMediaPipeSpan">sin iniciar</span>
+      </div>
+      <div class="fila-dato colapsable">
+        <span class="etiqueta">Versión del runtime</span>
+        <span class="valor">tasks-vision 0.10.14</span>
+      </div>
+      <div class="fila-dato colapsable">
+        <span class="etiqueta">Precisión del modelo</span>
+        <span class="valor">float16</span>
+      </div>
+      <div class="fila-dato colapsable">
+        <span class="etiqueta">Manos máximas / landmarks</span>
+        <span class="valor">2 · 21 c/u</span>
+      </div>
+      <div class="fila-dato colapsable">
+        <span class="etiqueta">Umbral de confianza propio</span>
+        <span class="valor">65%</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="columna">
+    <div class="panel">
+      <h2>Lectura en vivo</h2>
+      <div class="fila-dato colapsable">
+        <span class="etiqueta">Resolución de captura</span>
+        <span class="valor" id="resolucionSpan">-</span>
+      </div>
+      <div class="fila-dato colapsable">
+        <span class="etiqueta">Manos detectadas ahora</span>
+        <span class="valor" id="manosDetectadasSpan">-</span>
+      </div>
+      <div class="fila-dato colapsable">
+        <span class="etiqueta">Lateralidad detectada</span>
+        <span class="valor" id="lateralidadSpan">-</span>
+      </div>
+      <div class="fila-dato colapsable">
+        <span class="etiqueta">Latencia de inferencia</span>
+        <span class="valor" id="latenciaSpan">-</span>
+      </div>
+      <div class="fila-dato colapsable">
+        <span class="etiqueta">FPS de inferencia</span>
+        <span class="valor" id="fpsInferenciaSpan">-</span>
+      </div>
+      <div class="fila-dato colapsable">
+        <span class="etiqueta">Tiempo activo</span>
+        <span class="valor" id="tiempoActivoSpan">-</span>
+      </div>
+      <div class="fila-dato colapsable">
+        <span class="etiqueta">Gesto crudo (este frame)</span>
+        <span class="valor" id="gestoFrameSpan">-</span>
+      </div>
+      <div class="fila-dato colapsable">
+        <span class="etiqueta">Confianza del frame</span>
+        <span class="valor" id="confianzaFrameSpan">-</span>
+      </div>
+      <div class="fila-dato colapsable">
+        <span class="etiqueta">Dominio en la ventana</span>
+        <span class="valor" id="proporcionVentanaSpan">-</span>
+      </div>
+      <div class="fila-dato colapsable">
+        <span class="etiqueta">Confianza promedio (ventana)</span>
+        <span class="valor" id="confianzaVentanaSpan">-</span>
+      </div>
+      <div class="fila-dato">
+        <span class="etiqueta">Gesto confirmado (80%)</span>
+        <span class="valor" id="gestoConfirmadoSpan">-</span>
+      </div>
+    </div>
+
+    <div class="panel colapsable">
+      <h2>Registro de comandos enviados</h2>
+      <ul class="log-lista" id="listaLog"></ul>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+import { GestureRecognizer, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const canvas3d = document.getElementById("canvas3d");
+const ctx = canvas.getContext("2d");
+const ctx3d = canvas3d.getContext("2d");
+const visor = document.getElementById("visor");
+const estadoDiv = document.getElementById("estado");
+const btnConectar = document.getElementById("btnConectar");
+const gestoFrameSpan = document.getElementById("gestoFrameSpan");
+const gestoConfirmadoSpan = document.getElementById("gestoConfirmadoSpan");
+const listaLog = document.getElementById("listaLog");
+const estadoMediaPipeSpan = document.getElementById("estadoMediaPipeSpan");
+const estadoWasmSpan = document.getElementById("estadoWasmSpan");
+const estadoModeloSpan = document.getElementById("estadoModeloSpan");
+const confianzaFrameSpan = document.getElementById("confianzaFrameSpan");
+const proporcionVentanaSpan = document.getElementById("proporcionVentanaSpan");
+const confianzaVentanaSpan = document.getElementById("confianzaVentanaSpan");
+const puntoWasm = document.getElementById("puntoWasm");
+const puntoModelo = document.getElementById("puntoModelo");
+const resolucionSpan = document.getElementById("resolucionSpan");
+const manosDetectadasSpan = document.getElementById("manosDetectadasSpan");
+const lateralidadSpan = document.getElementById("lateralidadSpan");
+const latenciaSpan = document.getElementById("latenciaSpan");
+const fpsInferenciaSpan = document.getElementById("fpsInferenciaSpan");
+const tiempoActivoSpan = document.getElementById("tiempoActivoSpan");
+const dispositivoCamaraSpan = document.getElementById("dispositivoCamaraSpan");
+const estadoPuertoSpan = document.getElementById("estadoPuertoSpan");
+const vidPidSpan = document.getElementById("vidPidSpan");
+const baudRateSpan = document.getElementById("baudRateSpan");
+const btnManualFist = document.getElementById("btnManualFist");
+const btnManualVictory = document.getElementById("btnManualVictory");
+const btnManualOpen2 = document.getElementById("btnManualOpen2");
+const btnManualModo1 = document.getElementById("btnManualModo1");
+const btnManualModo2 = document.getElementById("btnManualModo2");
+const btnManualDetener = document.getElementById("btnManualDetener");
+const btnLandmarks = document.getElementById("btnLandmarks");
+const btnAgrandar = document.getElementById("btnAgrandar");
+
+// Conexiones estándar de los 21 landmarks de una mano (ver diagrama del enunciado)
+const CONEXIONES_MANO = [
+  [0,1],[1,2],[2,3],[3,4],
+  [0,5],[5,6],[6,7],[7,8],
+  [5,9],[9,10],[10,11],[11,12],
+  [9,13],[13,14],[14,15],[15,16],
+  [13,17],[17,18],[18,19],[19,20],
+  [0,17]
+];
+
+function dibujarEsqueleto(contexto, puntos, colorPunto, colorLinea) {
+  contexto.strokeStyle = colorLinea;
+  contexto.lineWidth = 2;
+  for (const [a, b] of CONEXIONES_MANO) {
+    if (!puntos[a] || !puntos[b]) continue;
+    contexto.beginPath();
+    contexto.moveTo(puntos[a].x, puntos[a].y);
+    contexto.lineTo(puntos[b].x, puntos[b].y);
+    contexto.stroke();
+  }
+  contexto.fillStyle = colorPunto;
+  for (const p of puntos) {
+    if (!p) continue;
+    contexto.beginPath();
+    contexto.arc(p.x, p.y, 3, 0, Math.PI * 2);
+    contexto.fill();
+  }
+}
+
+// --- Botón de landmarks sobre la cámara ---
+let mostrarLandmarks = false;
+btnLandmarks.addEventListener("click", () => {
+  mostrarLandmarks = !mostrarLandmarks;
+  btnLandmarks.classList.toggle("activo", mostrarLandmarks);
+});
+
+// --- Botón de agrandar cámara ---
+btnAgrandar.addEventListener("click", () => {
+  const activo = document.body.classList.toggle("modo-enfocado");
+  btnAgrandar.textContent = activo ? "Reducir" : "Agrandar";
+  btnAgrandar.classList.toggle("activo", activo);
+});
+
+// --- Selector de vista: cámara, 3D, o ambas ---
+let vistaActual = "camara";
+function actualizarVisibilidadVistas() {
+  canvas.style.display = vistaActual === "3d" ? "none" : "block";
+  canvas3d.style.display = vistaActual === "camara" ? "none" : "block";
+}
+document.querySelectorAll(".seg-btn").forEach((boton) => {
+  boton.addEventListener("click", () => {
+    document.querySelectorAll(".seg-btn").forEach((b) => b.classList.remove("activo"));
+    boton.classList.add("activo");
+    vistaActual = boton.dataset.vista;
+    actualizarVisibilidadVistas();
+  });
+});
+actualizarVisibilidadVistas();
+
+let anguloRotacion3D = 0;
+function dibujar3D(resultado) {
+  ctx3d.fillStyle = "#000";
+  ctx3d.fillRect(0, 0, canvas3d.width, canvas3d.height);
+
+  const mundos = resultado.worldLandmarks;
+  if (!mundos || mundos.length === 0) return;
+
+  anguloRotacion3D += 0.015;
+  const centroX = canvas3d.width / 2;
+  const centroY = canvas3d.height / 2;
+  const escala = Math.min(canvas3d.width, canvas3d.height) * 2.6;
+  const colores = ["#e8b930", "#4f8fce"];
+  // worldLandmarks viene centrado en la muñeca de cada mano por separado,
+  // así que sin este desplazamiento las dos manos caen una sobre la otra
+  const separacionHorizontal = [-0.09, 0.09];
+
+  mundos.forEach((puntosMano, indice) => {
+    const desplazamiento = separacionHorizontal[indice % separacionHorizontal.length];
+    const proyectados = puntosMano.map((p) => {
+      const xDesplazado = p.x + desplazamiento;
+      const xr = xDesplazado * Math.cos(anguloRotacion3D) - p.z * Math.sin(anguloRotacion3D);
+      const zr = xDesplazado * Math.sin(anguloRotacion3D) + p.z * Math.cos(anguloRotacion3D);
+      const perspectiva = 1.6 / (1.6 + zr);
+      return {
+        x: centroX + xr * escala * perspectiva,
+        y: centroY + p.y * escala * perspectiva
+      };
+    });
+    dibujarEsqueleto(ctx3d, proyectados, colores[indice % colores.length], "rgba(255,255,255,0.35)");
+  });
+}
+
+// Comunicación con el ESP32 por el mismo cable USB, usando Web Serial API.
+// Solo funciona en navegadores basados en Chromium (Chrome, Edge).
+let puertoSerial;
+let escritorSerial;
+
+function formatoHex(valor) {
+  if (valor === undefined || valor === null) return "no disponible";
+  return "0x" + valor.toString(16).padStart(4, "0").toUpperCase();
+}
+
+btnConectar.addEventListener("click", async () => {
+  try {
+    puertoSerial = await navigator.serial.requestPort();
+    await puertoSerial.open({ baudRate: 115200 });
+    escritorSerial = puertoSerial.writable.getWriter();
+    estadoDiv.textContent = "ESP32 conectado por USB";
+
+    estadoPuertoSpan.textContent = "conectado";
+    const info = puertoSerial.getInfo ? puertoSerial.getInfo() : {};
+    vidPidSpan.textContent = formatoHex(info.usbVendorId) + " / " + formatoHex(info.usbProductId);
+    baudRateSpan.textContent = "115200";
+  } catch (error) {
+    estadoDiv.textContent = "No se pudo conectar: " + error.message;
+    estadoPuertoSpan.textContent = "error";
+  }
+});
+
+async function escribirEnSerial(texto) {
+  if (!escritorSerial) return;
+  const codificador = new TextEncoder();
+  await escritorSerial.write(codificador.encode(texto + "\n"));
+}
+
+let gestureRecognizer;
+
+const TAM_VENTANA = 15;
+const UMBRAL_CONFIRMACION = 0.8;
+const UMBRAL_CONFIANZA = 0.65;
+const COOLDOWN_MS = 2500;
+
+let ventana = [];
+let ventanaScores = [];
+let ultimoComandoContinuo = "NONE";
+let ultimoDisparoThumb = { THUMB_DOWN: 0, THUMB_UP: 0 };
+
+let modoPersistente = true;
+document.querySelectorAll('input[name="modoApagado"]').forEach((radio) => {
+  radio.addEventListener("change", (evento) => {
+    modoPersistente = evento.target.value === "persistente";
+  });
+});
+
+async function iniciarModelo() {
+  estadoMediaPipeSpan.textContent = "cargando runtime...";
+  const vision = await FilesetResolver.forVisionTasks(
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+  );
+  estadoWasmSpan.textContent = "cargado";
+  puntoWasm.classList.remove("pendiente");
+  puntoWasm.classList.add("listo");
+
+  estadoMediaPipeSpan.textContent = "descargando modelo...";
+  gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
+    baseOptions: {
+      modelAssetPath:
+        "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task"
+    },
+    runningMode: "VIDEO",
+    numHands: 2
+  });
+  estadoModeloSpan.textContent = "cargado";
+  puntoModelo.classList.remove("pendiente");
+  puntoModelo.classList.add("listo");
+  estadoMediaPipeSpan.textContent = "conectado";
+}
+
+function clasificarFrame(resultado) {
+  const manos = resultado.gestures;
+  if (!manos || manos.length === 0) return { gesto: "None", score: 0 };
+
+  if (manos.length === 2) {
+    const g1 = manos[0][0];
+    const g2 = manos[1][0];
+    if (
+      g1.categoryName === "Open_Palm" &&
+      g2.categoryName === "Open_Palm" &&
+      g1.score >= UMBRAL_CONFIANZA &&
+      g2.score >= UMBRAL_CONFIANZA
+    ) {
+      return { gesto: "Open_Palm_2", score: Math.min(g1.score, g2.score) };
+    }
+  }
+
+  let mejorGesto = "None";
+  let mejorScore = 0;
+  for (const mano of manos) {
+    const candidato = mano[0];
+    if (candidato.score > mejorScore) {
+      mejorScore = candidato.score;
+      mejorGesto = candidato.categoryName;
+    }
+  }
+
+  if (mejorScore < UMBRAL_CONFIANZA) return { gesto: "None", score: mejorScore };
+  return { gesto: mejorGesto, score: mejorScore };
+}
+
+function actualizarVentana(gesto, score) {
+  ventana.push(gesto);
+  ventanaScores.push(score);
+  if (ventana.length > TAM_VENTANA) {
+    ventana.shift();
+    ventanaScores.shift();
+  }
+
+  const conteo = {};
+  const sumaScore = {};
+  for (let i = 0; i < ventana.length; i++) {
+    const g = ventana[i];
+    conteo[g] = (conteo[g] || 0) + 1;
+    sumaScore[g] = (sumaScore[g] || 0) + ventanaScores[i];
+  }
+
+  let mejorGesto = "None";
+  let mejorProporcion = 0;
+  for (const g in conteo) {
+    const proporcion = conteo[g] / ventana.length;
+    if (proporcion > mejorProporcion) {
+      mejorProporcion = proporcion;
+      mejorGesto = g;
+    }
+  }
+
+  const confianzaPromedio = sumaScore[mejorGesto] / conteo[mejorGesto];
+
+  return {
+    gestoConfirmado: mejorProporcion >= UMBRAL_CONFIRMACION ? mejorGesto : null,
+    gestoGanador: mejorGesto,
+    proporcion: mejorProporcion,
+    confianzaPromedio: confianzaPromedio
+  };
+}
+
+function mapearAComando(gestoConfirmado) {
+  switch (gestoConfirmado) {
+    case "Closed_Fist": return "FIST";
+    case "Victory": return "VICTORY";
+    case "Open_Palm_2": return "OPEN2";
+    case "Thumb_Down": return "THUMB_DOWN";
+    case "Thumb_Up": return "THUMB_UP";
+    case "None": return "NONE";
+    default: return null;
+  }
+}
+
+function registrarEnLog(comando) {
+  const item = document.createElement("li");
+  const hora = new Date().toLocaleTimeString();
+  item.textContent = hora + " — " + comando;
+  listaLog.insertBefore(item, listaLog.firstChild);
+}
+
+function enviarComando(comando) {
+  const esDisparoUnico = comando === "THUMB_DOWN" || comando === "THUMB_UP";
+
+  if (esDisparoUnico) {
+    const ahora = Date.now();
+    if (ahora - ultimoDisparoThumb[comando] < COOLDOWN_MS) return;
+    ultimoDisparoThumb[comando] = ahora;
+    escribirEnSerial(comando);
+    registrarEnLog(comando);
+    return;
+  }
+
+  if (comando !== ultimoComandoContinuo) {
+    ultimoComandoContinuo = comando;
+    const debeEnviarse = comando !== "NONE" || !modoPersistente;
+    if (debeEnviarse) {
+      escribirEnSerial(comando);
+      registrarEnLog(comando);
+    }
+  }
+}
+
+function formatearLateralidad(resultado) {
+  const manos = resultado.handedness;
+  if (!manos || manos.length === 0) return "-";
+  return manos
+    .map((mano) => {
+      const top = mano[0];
+      const nombre = top.categoryName === "Left" ? "Izquierda" : "Derecha";
+      return nombre + " " + (top.score * 100).toFixed(0) + "%";
+    })
+    .join(" · ");
+}
+
+let tiempoInicio = null;
+let tiempoUltimoFrame = performance.now();
+
+function actualizarTiempoActivo() {
+  if (tiempoInicio === null) return;
+  const segundos = Math.floor((Date.now() - tiempoInicio) / 1000);
+  const mm = String(Math.floor(segundos / 60)).padStart(2, "0");
+  const ss = String(segundos % 60).padStart(2, "0");
+  tiempoActivoSpan.textContent = mm + ":" + ss;
+}
+setInterval(actualizarTiempoActivo, 1000);
+
+async function procesarFrame() {
+  if (gestureRecognizer && video.readyState >= 2) {
+    const inicioInferencia = performance.now();
+    const resultado = gestureRecognizer.recognizeForVideo(video, performance.now());
+    const finInferencia = performance.now();
+    latenciaSpan.textContent = (finInferencia - inicioInferencia).toFixed(1) + " ms";
+
+    const ahoraFrame = performance.now();
+    const fps = 1000 / (ahoraFrame - tiempoUltimoFrame);
+    tiempoUltimoFrame = ahoraFrame;
+    fpsInferenciaSpan.textContent = fps.toFixed(0) + " fps";
+
+    if (vistaActual === "camara" || vistaActual === "ambas") {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      if (mostrarLandmarks && resultado.landmarks) {
+        const colores = ["#e8b930", "#4f8fce"];
+        resultado.landmarks.forEach((puntosMano, indice) => {
+          const proyectados = puntosMano.map((p) => ({
+            x: p.x * canvas.width,
+            y: p.y * canvas.height
+          }));
+          dibujarEsqueleto(ctx, proyectados, colores[indice % colores.length], "rgba(255,255,255,0.5)");
+        });
+      }
+    }
+
+    if (vistaActual === "3d" || vistaActual === "ambas") {
+      dibujar3D(resultado);
+    }
+
+    manosDetectadasSpan.textContent = (resultado.gestures ? resultado.gestures.length : 0) + " / 2";
+    lateralidadSpan.textContent = formatearLateralidad(resultado);
+    resolucionSpan.textContent = video.videoWidth + " × " + video.videoHeight;
+
+    const { gesto: gestoFrame, score: scoreFrame } = clasificarFrame(resultado);
+    gestoFrameSpan.textContent = gestoFrame;
+    confianzaFrameSpan.textContent = (scoreFrame * 100).toFixed(1) + "%";
+
+    const resultadoVentana = actualizarVentana(gestoFrame, scoreFrame);
+    gestoConfirmadoSpan.textContent =
+      resultadoVentana.gestoConfirmado !== null ? resultadoVentana.gestoConfirmado : "(sin confirmar aún)";
+    proporcionVentanaSpan.textContent =
+      resultadoVentana.gestoGanador + ": " + (resultadoVentana.proporcion * 100).toFixed(0) + "%";
+    confianzaVentanaSpan.textContent = (resultadoVentana.confianzaPromedio * 100).toFixed(1) + "%";
+
+    if (resultadoVentana.gestoConfirmado !== null) {
+      const comando = mapearAComando(resultadoVentana.gestoConfirmado);
+      if (comando !== null) enviarComando(comando);
+    }
+  }
+  requestAnimationFrame(procesarFrame);
+}
+
+async function iniciarCamara() {
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: { width: { ideal: 480 }, height: { ideal: 360 } }
+  });
+  video.srcObject = stream;
+  await video.play();
+
+  const pista = stream.getVideoTracks()[0];
+  dispositivoCamaraSpan.textContent = pista.label || "sin nombre reportado por el navegador";
+}
+
+// --- Botones de control manual ---
+function conectarBotonEstatico(boton, comandoToggle, comandoOn, comandoOff) {
+  let sostenido = false;
+
+  boton.addEventListener("pointerdown", () => {
+    if (modoPersistente) {
+      escribirEnSerial(comandoToggle);
+      registrarEnLog(comandoToggle + " (manual)");
+    } else {
+      sostenido = true;
+      boton.classList.add("presionado");
+      escribirEnSerial(comandoOn);
+      registrarEnLog(comandoOn + " (manual)");
+    }
+  });
+
+  const soltar = () => {
+    if (!sostenido) return;
+    sostenido = false;
+    boton.classList.remove("presionado");
+    escribirEnSerial(comandoOff);
+    registrarEnLog(comandoOff + " (manual)");
+  };
+  boton.addEventListener("pointerup", soltar);
+  boton.addEventListener("pointerleave", soltar);
+  boton.addEventListener("pointercancel", soltar);
+}
+
+function conectarBotonModo(boton, comandoIniciar) {
+  let sostenido = false;
+
+  boton.addEventListener("pointerdown", () => {
+    escribirEnSerial(comandoIniciar);
+    registrarEnLog(comandoIniciar + " (manual)");
+    if (!modoPersistente) {
+      sostenido = true;
+      boton.classList.add("presionado");
+    }
+  });
+
+  const soltar = () => {
+    if (!sostenido) return;
+    sostenido = false;
+    boton.classList.remove("presionado");
+    escribirEnSerial("NONE");
+    registrarEnLog("NONE (manual)");
+  };
+  boton.addEventListener("pointerup", soltar);
+  boton.addEventListener("pointerleave", soltar);
+  boton.addEventListener("pointercancel", soltar);
+}
+
+conectarBotonEstatico(btnManualFist, "FIST", "FIST_ON", "FIST_OFF");
+conectarBotonEstatico(btnManualVictory, "VICTORY", "VICTORY_ON", "VICTORY_OFF");
+conectarBotonEstatico(btnManualOpen2, "OPEN2", "OPEN2_ON", "OPEN2_OFF");
+conectarBotonModo(btnManualModo1, "THUMB_DOWN");
+conectarBotonModo(btnManualModo2, "THUMB_UP");
+
+btnManualDetener.addEventListener("click", () => {
+  escribirEnSerial("NONE");
+  registrarEnLog("NONE (manual)");
+  ultimoComandoContinuo = "NONE";
+});
+
+(async () => {
+  await iniciarModelo();
+  await iniciarCamara();
+  estadoDiv.textContent = "Modelo y cámara listos";
+  tiempoInicio = Date.now();
+  procesarFrame();
+})();
+</script>
+</body>
+</html>

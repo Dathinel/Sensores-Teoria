@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Previsualización — taller segundo corte</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1013;
+    --panel: #15191d;
+    --panel-border: #262b31;
+    --text: #e7e9ec;
+    --text-muted: #8b929b;
+    --accent: #4f8fce;
+    --verde-ok: #4caf7d;
+    --rojo: #d9534f;
+    --amarillo: #e8b930;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: "Space Grotesk", system-ui, sans-serif; }
+  body { padding: 1.2rem 1.4rem; min-height: 100vh; }
+  h1 { font-size: 1.15rem; font-weight: 600; margin: 0 0 0.2rem; }
+  p.sub { color: var(--text-muted); font-size: 0.8rem; margin: 0 0 1rem; max-width: 760px; }
+  .config-tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+  .config-tabs button {
+    background: transparent; color: var(--text-muted); border: 1px solid var(--panel-border);
+    padding: 0.5rem 0.9rem; border-radius: 6px; font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; cursor: pointer;
+  }
+  .config-tabs button.activo { border-color: var(--amarillo); color: var(--amarillo); }
+  .rejilla { display: grid; grid-template-columns: minmax(240px, 300px) minmax(220px, 280px) 1fr; gap: 1rem; align-items: start; max-width: 1800px; }
+  @media (max-width: 1100px) { .rejilla { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 8px; padding: 1rem; }
+  .modos { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+  .modos button {
+    flex: 1; background: transparent; color: var(--text-muted); border: 1px solid var(--panel-border);
+    padding: 0.5rem; border-radius: 6px; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; cursor: pointer;
+  }
+  .modos button.activo { border-color: var(--accent); color: var(--accent); }
+  #btnConectar {
+    width: 100%; background: transparent; color: var(--text); border: 1px solid var(--panel-border);
+    padding: 0.5rem; border-radius: 6px; font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; cursor: pointer;
+  }
+  #estado { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; color: var(--text-muted); margin-top: 0.5rem; }
+  #estado.ok { color: var(--verde-ok); }
+  #monitor {
+    margin-top: 0.8rem; height: 110px; overflow-y: auto; background: #0a0d10; border: 1px solid var(--panel-border);
+    border-radius: 6px; padding: 0.4rem 0.5rem; font-family: "IBM Plex Mono", monospace; font-size: 0.65rem; color: var(--text-muted);
+  }
+  #monitor div:last-child { color: var(--text); }
+  svg { width: 100%; max-height: 46vh; height: auto; background: #0a0d10; border: 1px solid var(--panel-border); border-radius: 8px; }
+  .lectura { display: flex; gap: 1rem; margin-top: 0.8rem; font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; color: var(--text-muted); flex-wrap: wrap; }
+  .teclado { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; }
+  .teclado button {
+    aspect-ratio: 1; border-radius: 6px; border: 1px solid var(--panel-border); background: #1c2126;
+    color: var(--text); font-family: "IBM Plex Mono", monospace; font-size: 0.95rem; cursor: pointer;
+  }
+  .teclado button.activa { border-color: var(--accent); color: var(--accent); }
+  .teclado button.deshabilitada { color: #3a3f45; cursor: default; }
+  #leyenda { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--amarillo); margin-top: 0.6rem; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<h1>Previsualización — taller segundo corte</h1>
+<p class="sub">Un solo teclado matricial 4x4 (esp32_teclado.py) controla las tres simulaciones del taller, cada una con su propia configuración de teclas. Este panel no reemplaza PyBullet: es un esquema 2D simplificado para probar el control rápido.</p>
+
+<div class="config-tabs">
+  <button id="btnConfigDrones" class="activo">Configuración: drones</button>
+  <button id="btnConfigBrazo">Configuración: brazo (tipo Baxter)</button>
+  <button id="btnConfigPatas">Configuración: locomoción (patas)</button>
+</div>
+
+<div class="rejilla">
+  <div class="panel">
+    <div class="modos">
+      <button id="btnModoPrueba" class="activo">Modo prueba</button>
+      <button id="btnModoConectado">Conectado (Web Serial)</button>
+    </div>
+    <button id="btnConectar" style="display:none">Conectar por USB (Web Serial)</button>
+    <div id="estado" style="display:none"></div>
+    <div id="monitor" style="display:none"></div>
+  </div>
+
+  <div class="panel" id="panelControles">
+    <div class="teclado" id="teclado"></div>
+    <div id="leyenda"></div>
+  </div>
+
+  <div class="panel">
+    <svg viewBox="0 0 320 320" id="lienzo">
+      <!-- ejes de referencia -->
+      <line x1="160" y1="10" x2="160" y2="310" stroke="#1c2126" stroke-width="1"/>
+      <line x1="10" y1="160" x2="310" y2="160" stroke="#1c2126" stroke-width="1"/>
+      <g id="capaMarcadores"></g>
+      <g id="capaMoviles"></g>
+    </svg>
+    <div class="lectura" id="lectura"></div>
+  </div>
+</div>
+
+<script>
+// ---------------------------------------------------------------
+// Vista 2D compartida: un canvas SVG visto "desde arriba" (X horizontal,
+// Y vertical en pantalla = Y del mundo). 1 metro = 60px, origen (0,0) en
+// el centro del lienzo (160,160). Sirve igual para el dron (lider +
+// seguidores) y para el efector del brazo (con el cubo y los 2 apoyos).
+// ---------------------------------------------------------------
+const ESCALA = 60;
+const CENTRO = 160;
+function mundoAPantalla(x, y) { return [CENTRO + x * ESCALA, CENTRO - y * ESCALA]; }
+
+const capaMarcadores = document.getElementById("capaMarcadores");
+const capaMoviles = document.getElementById("capaMoviles");
+const lectura = document.getElementById("lectura");
+const leyenda = document.getElementById("leyenda");
+const teclado = document.getElementById("teclado");
+const TECLAS = [["1","2","3","A"],["4","5","6","B"],["7","8","9","C"],["*","0","#","D"]];
+
+function limpiarSvg() { capaMarcadores.innerHTML = ""; capaMoviles.innerHTML = ""; }
+
+function marcador(x, y, color, etiqueta) {
+  const [px, py] = mundoAPantalla(x, y);
+  const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  c.setAttribute("cx", px); c.setAttribute("cy", py); c.setAttribute("r", 10);
+  c.setAttribute("fill", color); c.setAttribute("fill-opacity", "0.35"); c.setAttribute("stroke", color);
+  capaMarcadores.appendChild(c);
+  if (etiqueta) {
+    const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    t.setAttribute("x", px); t.setAttribute("y", py - 14); t.setAttribute("fill", color);
+    t.setAttribute("font-size", "11"); t.setAttribute("text-anchor", "middle");
+    t.setAttribute("font-family", "IBM Plex Mono, monospace");
+    t.textContent = etiqueta;
+    capaMarcadores.appendChild(t);
+  }
+}
+
+function punto(id, x, y, color, radio) {
+  let c = document.getElementById(id);
+  const [px, py] = mundoAPantalla(x, y);
+  if (!c) {
+    c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    c.setAttribute("id", id);
+    c.setAttribute("r", radio);
+    c.setAttribute("fill", color);
+    capaMoviles.appendChild(c);
+  }
+  c.setAttribute("cx", px); c.setAttribute("cy", py);
+}
+
+// ---------------------------------------------------------------
+// Configuración A: drones (ver drones_pybullet.py)
+//   8/2 = Y+/Y-, 4/6 = X-/X+, 9/7 = Z+/Z- (sube/baja), 5 = detener
+//   A/B/C = ir al punto, D = home, * = despegar, # = aterrizar
+// ---------------------------------------------------------------
+const PUNTOS_DRON = { A: [0, 0.9], B: [1.4, -0.6], C: [-1.3, 0.4] };
+const ORIGEN_DRON = [0, 0];
+const PASO_DRON = 0.06;
+let posLider = [0, 0];
+let objetivoLider = [0, 0];
+let alturaLider = 0.05; // solo para el marcador de texto, no afecta la vista 2D
+
+function teclaDrones(tecla) {
+  if (tecla === "8") objetivoLider[1] += PASO_DRON;
+  else if (tecla === "2") objetivoLider[1] -= PASO_DRON;
+  else if (tecla === "4") objetivoLider[0] -= PASO_DRON;
+  else if (tecla === "6") objetivoLider[0] += PASO_DRON;
+  else if (tecla === "9") alturaLider = Math.min(1.5, alturaLider + 0.05);
+  else if (tecla === "7") alturaLider = Math.max(0.05, alturaLider - 0.05);
+  else if (tecla === "5") objetivoLider = [...posLider];
+  else if (tecla in PUNTOS_DRON) objetivoLider = [...PUNTOS_DRON[tecla]];
+  else if (tecla === "D") objetivoLider = [...ORIGEN_DRON];
+  else if (tecla === "*") alturaLider = 1.0;
+  else if (tecla === "#") alturaLider = 0.05;
+}
+
+function dibujarDrones() {
+  limpiarSvg();
+  Object.entries(PUNTOS_DRON).forEach(([nombre, [x, y]]) => marcador(x, y, "#4f8fce", nombre));
+  marcador(...ORIGEN_DRON, "#8b929b", "home");
+  posLider[0] += (objetivoLider[0] - posLider[0]) * 0.15;
+  posLider[1] += (objetivoLider[1] - posLider[1]) * 0.15;
+  punto("dronLider", posLider[0], posLider[1], "#d9534f", 8);
+  punto("dronSegA", posLider[0] - 0.3, posLider[1] - 0.22, "#4f8fce", 6);
+  punto("dronSegB", posLider[0] + 0.3, posLider[1] - 0.22, "#4f8fce", 6);
+  lectura.innerHTML = `<span>X: ${posLider[0].toFixed(2)} m</span><span>Y: ${posLider[1].toFixed(2)} m</span><span>Z (altura): ${alturaLider.toFixed(2)} m</span>`;
+}
+
+// ---------------------------------------------------------------
+// Configuración B: brazo tipo Baxter (ver brazo_pybullet.py)
+//   8/2 = Y+/Y-, 4/6 = X-/X+, 9/7 = Z+/Z- (no se ve en 2D, solo lectura)
+//   5 = home, A = abrir pinza, C = cerrar pinza (agarra si esta cerca del cubo)
+//   D = demo automatica, 0 = reset del cubo
+// ---------------------------------------------------------------
+const POS_ORIGEN_BRAZO = [0.55, 0.20];
+const POS_DESTINO_BRAZO = [0.55, -0.30];
+const PASO_BRAZO = 0.03;
+let posEfector = [0.3, 0];
+let alturaEfector = 0.35;
+let pinzaAbierta = true;
+let posCubo = [...POS_ORIGEN_BRAZO];
+let cuboSostenido = false;
+let demoBrazoEnCurso = false;
+
+function distancia(a, b) { return Math.hypot(a[0] - b[0], a[1] - b[1]); }
+
+function teclaBrazo(tecla) {
+  if (demoBrazoEnCurso) return;
+  if (tecla === "8") posEfector[1] += PASO_BRAZO;
+  else if (tecla === "2") posEfector[1] -= PASO_BRAZO;
+  else if (tecla === "4") posEfector[0] -= PASO_BRAZO;
+  else if (tecla === "6") posEfector[0] += PASO_BRAZO;
+  else if (tecla === "9") alturaEfector = Math.min(0.55, alturaEfector + 0.03);
+  else if (tecla === "7") alturaEfector = Math.max(0.08, alturaEfector - 0.03);
+  else if (tecla === "5") { posEfector = [0.3, 0]; alturaEfector = 0.35; }
+  else if (tecla === "A") { pinzaAbierta = true; cuboSostenido = false; }
+  else if (tecla === "C") {
+    pinzaAbierta = false;
+    if (!cuboSostenido && distancia(posEfector, posCubo) < 0.12) cuboSostenido = true;
+  } else if (tecla === "D") { ejecutarDemoBrazo(); }
+  else if (tecla === "B") { ejecutarDemoRecorrido(); }
+  else if (tecla === "0") { posCubo = [...POS_ORIGEN_BRAZO]; cuboSostenido = false; }
+}
+
+async function ejecutarDemoRecorrido() {
+  demoBrazoEnCurso = true;
+  const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+  const home = [0.3, 0], alturaHome = 0.35;
+  const paso = async (xy, z) => { posEfector = [...xy]; alturaEfector = z; await espera(350); };
+  await paso(home, alturaHome);
+  await paso([home[0] + 0.25, home[1]], alturaHome);
+  await paso([home[0] - 0.2, home[1]], alturaHome);
+  await paso(home, alturaHome);
+  await paso([home[0], home[1] + 0.3], alturaHome);
+  await paso([home[0], home[1] - 0.3], alturaHome);
+  await paso(home, alturaHome);
+  await paso(home, 0.55);
+  await paso(home, 0.08);
+  await paso(home, alturaHome);
+  demoBrazoEnCurso = false;
+}
+
+async function ejecutarDemoBrazo() {
+  demoBrazoEnCurso = true;
+  const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+  posEfector = [...POS_ORIGEN_BRAZO]; alturaEfector = 0.35; await espera(300);
+  alturaEfector = 0.1; await espera(300);
+  pinzaAbierta = false; cuboSostenido = true; await espera(200);
+  alturaEfector = 0.35; await espera(300);
+  posEfector = [...POS_DESTINO_BRAZO]; await espera(400);
+  alturaEfector = 0.1; await espera(300);
+  pinzaAbierta = true; cuboSostenido = false; posCubo = [...POS_DESTINO_BRAZO]; await espera(200);
+  alturaEfector = 0.35; await espera(300);
+  demoBrazoEnCurso = false;
+}
+
+function dibujarBrazo() {
+  limpiarSvg();
+  marcador(...POS_ORIGEN_BRAZO, "#4f8fce", "ORIGEN");
+  marcador(...POS_DESTINO_BRAZO, "#4caf7d", "DESTINO");
+  if (cuboSostenido) posCubo = [...posEfector];
+  punto("cubo", posCubo[0], posCubo[1], "#e8b930", 6);
+  punto("efector", posEfector[0], posEfector[1], pinzaAbierta ? "#4f8fce" : "#d9534f", 9);
+  lectura.innerHTML = `<span>X: ${posEfector[0].toFixed(2)} m</span><span>Y: ${posEfector[1].toFixed(2)} m</span><span>Z: ${alturaEfector.toFixed(2)} m</span><span>Pinza: ${pinzaAbierta ? "abierta" : "cerrada"}</span><span>Cubo: ${cuboSostenido ? "sostenido" : "apoyado"}</span>`;
+}
+
+// ---------------------------------------------------------------
+// Configuración C: locomoción (ver laikago_pybullet.py)
+//   8 (sostenida) = caminar hacia adelante en la direccion actual
+//   4 / 6 = girar un poco a la izquierda/derecha (mientras se sostiene)
+//   5 = reset
+// ---------------------------------------------------------------
+let posPatas = [0, 0];
+let rumboPatas = 0; // radianes, 0 = "arriba" en el lienzo
+let caminandoPatas = false;
+const VELOCIDAD_PATAS = 0.02; // m por cuadro mientras camina (solo referencial)
+const PASO_GIRO_PATAS = 0.05; // rad por cuadro mientras se sostiene 4/6
+
+function teclaPatas(tecla) {
+  caminandoPatas = (tecla === "8");
+  if (tecla === "4") rumboPatas -= PASO_GIRO_PATAS;
+  else if (tecla === "6") rumboPatas += PASO_GIRO_PATAS;
+  else if (tecla === "5") { posPatas = [0, 0]; rumboPatas = 0; caminandoPatas = false; }
+}
+
+function dibujarPatas() {
+  limpiarSvg();
+  if (caminandoPatas) {
+    posPatas[0] += Math.sin(rumboPatas) * VELOCIDAD_PATAS;
+    posPatas[1] += Math.cos(rumboPatas) * VELOCIDAD_PATAS;
+  }
+  const [px, py] = mundoAPantalla(posPatas[0], posPatas[1]);
+  const cuerpo = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  cuerpo.setAttribute("transform", `translate(${px} ${py}) rotate(${(rumboPatas * 180 / Math.PI).toFixed(1)})`);
+  const triangulo = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+  triangulo.setAttribute("points", "0,-11 8,9 -8,9");
+  triangulo.setAttribute("fill", caminandoPatas ? "#4caf7d" : "#8b929b");
+  cuerpo.appendChild(triangulo);
+  capaMoviles.appendChild(cuerpo);
+  lectura.innerHTML = `<span>X: ${posPatas[0].toFixed(2)} m</span><span>Y: ${posPatas[1].toFixed(2)} m</span><span>Rumbo: ${(rumboPatas * 180 / Math.PI).toFixed(0)}&deg;</span><span>${caminandoPatas ? "caminando" : "parado"}</span>`;
+}
+
+// ---------------------------------------------------------------
+// Config activa + teclado clicable + Web Serial (un solo puerto,
+// compartido por las 3 configuraciones -- un solo ESP32 real)
+// ---------------------------------------------------------------
+let configActiva = "drones"; // "drones" | "brazo" | "patas"
+let bucleDibujo = null;
+
+const LEYENDAS = {
+  drones: "8/2 = adelante/atras &middot; 4/6 = izq/der &middot; 9/7 = subir/bajar &middot; 5 = detener<br>A/B/C = ir al punto &middot; D = home &middot; * = despegar &middot; # = aterrizar",
+  brazo: "8/2 = adelante/atras &middot; 4/6 = izq/der &middot; 9/7 = subir/bajar &middot; 5 = home<br>A = abrir pinza &middot; C = cerrar pinza &middot; D = demo (coge y mueve) &middot; B = demo (recorre ejes) &middot; 0 = reset cubo",
+  patas: "8 (mantener) = caminar hacia adelante<br>4 / 6 (mantener) = girar izquierda/derecha &middot; 5 = reset",
+};
+const TECLAS_ACTIVAS = {
+  drones: new Set(["8","2","4","6","9","7","5","A","B","C","D","*","#"]),
+  brazo: new Set(["8","2","4","6","9","7","5","A","B","C","D","0"]),
+  patas: new Set(["8","4","6","5"]),
+};
+// en "patas", 8/4/6 se sostienen (mousedown/mouseup) en vez de un click
+// suelto -- caminar y girar solo tienen sentido mientras se mantienen
+const TECLAS_SOSTENIBLES = { patas: new Set(["8","4","6"]) };
+
+function construirTeclado() {
+  teclado.innerHTML = "";
+  TECLAS.forEach((fila) => {
+    fila.forEach((tecla) => {
+      const boton = document.createElement("button");
+      boton.textContent = tecla;
+      boton.dataset.tecla = tecla;
+      let intervaloSostenido = null;
+      const esSostenible = () => (TECLAS_SOSTENIBLES[configActiva] || new Set()).has(tecla);
+      const empezar = (ev) => {
+        ev.preventDefault();
+        boton.classList.add("activa");
+        manejarTecla(tecla);
+        // igual que el ESP32 real, que reenvia la tecla sostenida cada ~50ms
+        if (esSostenible()) intervaloSostenido = setInterval(() => manejarTecla(tecla), 50);
+        else setTimeout(() => boton.classList.remove("activa"), 120);
+      };
+      const soltar = () => {
+        if (intervaloSostenido) { clearInterval(intervaloSostenido); intervaloSostenido = null; }
+        if (esSostenible()) { manejarTecla("-"); boton.classList.remove("activa"); }
+      };
+      boton.addEventListener("mousedown", empezar);
+      boton.addEventListener("touchstart", empezar);
+      boton.addEventListener("mouseup", soltar);
+      boton.addEventListener("mouseleave", soltar);
+      boton.addEventListener("touchend", soltar);
+      teclado.appendChild(boton);
+    });
+  });
+  actualizarTecladoHabilitado();
+}
+
+function actualizarTecladoHabilitado() {
+  const activas = TECLAS_ACTIVAS[configActiva];
+  teclado.querySelectorAll("button").forEach((boton) => {
+    const habilitada = activas.has(boton.dataset.tecla);
+    boton.classList.toggle("deshabilitada", !habilitada);
+    boton.disabled = !habilitada;
+  });
+  leyenda.innerHTML = LEYENDAS[configActiva];
+}
+
+function manejarTecla(tecla) {
+  if (configActiva === "drones") teclaDrones(tecla);
+  else if (configActiva === "brazo") teclaBrazo(tecla);
+  else teclaPatas(tecla);
+}
+
+function refrescar() {
+  if (configActiva === "drones") dibujarDrones();
+  else if (configActiva === "brazo") dibujarBrazo();
+  else dibujarPatas();
+}
+
+construirTeclado();
+bucleDibujo = setInterval(refrescar, 50);
+
+const btnConfigDrones = document.getElementById("btnConfigDrones");
+const btnConfigBrazo = document.getElementById("btnConfigBrazo");
+const btnConfigPatas = document.getElementById("btnConfigPatas");
+const botonesConfig = [btnConfigDrones, btnConfigBrazo, btnConfigPatas];
+
+function activarConfig(nombre, boton) {
+  configActiva = nombre;
+  botonesConfig.forEach((b) => b.classList.toggle("activo", b === boton));
+  construirTeclado(); // reconstruye para que las teclas sostenibles cambien segun la config
+}
+
+btnConfigDrones.addEventListener("click", () => activarConfig("drones", btnConfigDrones));
+btnConfigBrazo.addEventListener("click", () => activarConfig("brazo", btnConfigBrazo));
+btnConfigPatas.addEventListener("click", () => activarConfig("patas", btnConfigPatas));
+
+// -------- modos (prueba / conectado) --------
+const btnModoPrueba = document.getElementById("btnModoPrueba");
+const btnModoConectado = document.getElementById("btnModoConectado");
+const panelControles = document.getElementById("panelControles");
+const btnConectar = document.getElementById("btnConectar");
+const estado = document.getElementById("estado");
+const monitor = document.getElementById("monitor");
+
+btnModoPrueba.addEventListener("click", () => {
+  btnModoPrueba.classList.add("activo"); btnModoConectado.classList.remove("activo");
+  panelControles.style.opacity = "1"; panelControles.style.pointerEvents = "auto";
+  btnConectar.style.display = "none"; estado.style.display = "none"; monitor.style.display = "none";
+});
+
+btnModoConectado.addEventListener("click", () => {
+  btnModoConectado.classList.add("activo"); btnModoPrueba.classList.remove("activo");
+  panelControles.style.opacity = "0.6"; panelControles.style.pointerEvents = "none";
+  btnConectar.style.display = "block"; estado.style.display = "block"; monitor.style.display = "block";
+  estado.textContent = "sin conectar"; estado.classList.remove("ok");
+});
+
+// -------- Web Serial: un solo puerto para las 2 configuraciones (un
+// solo ESP32 real con esp32_teclado.py); lee "TECLA:x" sin parar --------
+let puerto = null;
+const patronLinea = /TECLA:(.)/;
+
+function agregarAlMonitor(linea) {
+  const div = document.createElement("div");
+  div.textContent = linea;
+  monitor.appendChild(div);
+  monitor.scrollTop = monitor.scrollHeight;
+  while (monitor.childNodes.length > 40) monitor.removeChild(monitor.firstChild);
+}
+
+btnConectar.addEventListener("click", async () => {
+  if (!("serial" in navigator)) {
+    estado.textContent = "Web Serial no disponible (usa Chrome o Edge)";
+    return;
+  }
+  try {
+    puerto = await navigator.serial.requestPort();
+    await puerto.open({ baudRate: 115200 });
+    estado.textContent = "conectado, esperando datos del ESP32...";
+    estado.classList.add("ok");
+    leerPuerto();
+  } catch (error) {
+    estado.textContent = "no se pudo conectar: " + error.message;
+  }
+});
+
+async function leerPuerto() {
+  const lector = puerto.readable.getReader();
+  const decodificador = new TextDecoder();
+  let bufferTexto = "";
+  try {
+    while (true) {
+      const { value, done } = await lector.read();
+      if (done) break;
+      bufferTexto += decodificador.decode(value, { stream: true });
+      let indice;
+      while ((indice = bufferTexto.indexOf("\n")) >= 0) {
+        const linea = bufferTexto.slice(0, indice).trim();
+        bufferTexto = bufferTexto.slice(indice + 1);
+        if (!linea) continue;
+        agregarAlMonitor(linea);
+        const coincidencia = patronLinea.exec(linea);
+        if (coincidencia) {
+          // se procesa CADA linea, sostenida o no -- igual que los scripts
+          // de Python, que tampoco descartan lineas repetidas (asi es como
+          // el jog se siente continuo mientras se sostiene una tecla real)
+          manejarTecla(coincidencia[1]);
+          estado.textContent = "recibiendo datos del ESP32";
+        }
+      }
+    }
+  } catch (error) {
+    estado.textContent = "conexion perdida: " + error.message;
+    estado.classList.remove("ok");
+  } finally {
+    lector.releaseLock();
+  }
+}
+</script>
+</body>
+</html>

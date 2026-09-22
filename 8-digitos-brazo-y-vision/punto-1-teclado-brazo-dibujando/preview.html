@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Previsualización — teclado + LCD + brazo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1013; --panel: #15191d; --panel-border: #262b31;
+    --text: #e7e9ec; --text-muted: #8b929b; --accent: #4f8fce; --verde-ok: #4caf7d;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: "Space Grotesk", system-ui, sans-serif; }
+  body { padding: 1.2rem 1.4rem; min-height: 100vh; }
+  h1 { font-size: 1.15rem; font-weight: 600; margin: 0 0 0.2rem; }
+  p.sub { color: var(--text-muted); font-size: 0.8rem; margin: 0 0 1rem; }
+  .rejilla { display: grid; grid-template-columns: minmax(240px, 300px) minmax(200px, 260px) minmax(200px, 420px); gap: 1rem; align-items: start; max-width: 1800px; }
+  @media (max-width: 900px) { .rejilla { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 8px; padding: 1rem; }
+  .modos { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+  .modos button {
+    flex: 1; background: transparent; color: var(--text-muted); border: 1px solid var(--panel-border);
+    padding: 0.5rem; border-radius: 6px; font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; cursor: pointer;
+  }
+  .modos button.activo { border-color: var(--accent); color: var(--accent); }
+  #btnConectar {
+    width: 100%; margin-top: 0.6rem; background: transparent; color: var(--text); border: 1px solid var(--panel-border);
+    padding: 0.5rem; border-radius: 6px; font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; cursor: pointer;
+  }
+  #estado { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; color: var(--text-muted); margin-top: 0.5rem; }
+  #estado.ok { color: var(--verde-ok); }
+
+  .lcd-bisel {
+    background: linear-gradient(180deg, #2b2f33, #17191b); border-radius: 8px; padding: 0.7rem;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 6px rgba(0,0,0,0.4);
+  }
+  .lcd {
+    background: #8fbf3f; border-radius: 2px; padding: 0.5rem 0.4rem;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.35);
+  }
+  .lcd-fila { display: flex; gap: 2px; margin-bottom: 2px; }
+  .lcd-fila:last-child { margin-bottom: 0; }
+  .lcd-celda {
+    flex: 1; aspect-ratio: 0.62; background: rgba(0,0,0,0.06); border-radius: 1px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "IBM Plex Mono", monospace; font-size: 0.95rem; color: #14210a;
+    text-shadow: 0 0 1px rgba(20,33,10,0.4);
+  }
+  .teclado { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; margin-top: 1rem; }
+  .teclado button {
+    aspect-ratio: 1; border-radius: 6px; border: 1px solid var(--panel-border); background: #1c2126;
+    color: var(--text); font-family: "IBM Plex Mono", monospace; font-size: 1rem; cursor: pointer;
+  }
+  .teclado button.digito:hover { border-color: var(--accent); color: var(--accent); }
+  .teclado button.deshabilitada { color: #3a3f45; cursor: default; }
+  svg { width: 100%; height: auto; background: #0a0d10; border: 1px solid var(--panel-border); border-radius: 8px; }
+  .monitor {
+    margin-top: 0.8rem; background: #05070a; border: 1px solid var(--panel-border); border-radius: 6px;
+    padding: 0.5rem 0.6rem; font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; color: var(--verde-ok);
+    height: 90px; overflow-y: auto; display: flex; flex-direction: column-reverse;
+  }
+  .monitor .linea-vacia { color: var(--text-muted); }
+  .monitor-titulo { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; color: var(--text-muted); margin-top: 0.8rem; }
+</style>
+</head>
+<body>
+
+<h1>Previsualización — teclado + LCD + brazo dibujando</h1>
+<p class="sub">Simula esp32_teclado_lcd.py + brazo_dibuja.py (no reemplaza la simulación real en PyBullet).</p>
+
+<div class="rejilla">
+  <div class="panel">
+    <div class="modos">
+      <button id="btnModoPrueba" class="activo">Modo prueba</button>
+      <button id="btnModoConectado">Conectado (Web Serial)</button>
+    </div>
+    <button id="btnConectar" style="display:none">Conectar al ESP32 (Web Serial)</button>
+    <div id="estado" style="display:none"></div>
+    <div class="monitor-titulo" id="monitorTitulo" style="display:none">Datos crudos recibidos del ESP32:</div>
+    <div class="monitor" id="monitor" style="display:none"><span class="linea-vacia">(sin datos todavía)</span></div>
+  </div>
+
+  <div class="panel">
+    <div class="lcd-bisel">
+      <div class="lcd" id="lcd"></div>
+    </div>
+    <div class="teclado" id="teclado"></div>
+  </div>
+
+  <div class="panel">
+    <svg viewBox="0 0 200 200">
+      <rect x="0" y="0" width="200" height="200" fill="#0a0d10"/>
+      <path id="trazo" d="" fill="none" stroke="#4caf7d" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+</div>
+
+<script>
+const TECLAS = [["1","2","3","A"],["4","5","6","B"],["7","8","9","C"],["*","0","#","D"]];
+const TRAZOS_DIGITOS = {
+  "0": [[0.2,0],[0,0.2],[0,0.8],[0.2,1],[0.8,1],[1,0.8],[1,0.2],[0.2,0]],
+  "1": [[0.3,0.8],[0.5,1],[0.5,0]],
+  "2": [[0,0.8],[0.3,1],[0.7,1],[1,0.8],[1,0.55],[0,0.2],[0,0],[1,0]],
+  "3": [[0,1],[1,1],[0.5,0.55],[1,0.15],[0.6,0],[0.1,0.1]],
+  "4": [[0.7,0],[0.7,1],[0,0.35],[1,0.35]],
+  "5": [[1,1],[0,1],[0,0.55],[0.8,0.55],[1,0.35],[0.8,0],[0,0.1]],
+  "6": [[0.9,0.9],[0.3,1],[0,0.6],[0,0.2],[0.3,0],[0.7,0],[1,0.25],[0.7,0.5],[0.2,0.5]],
+  "7": [[0,1],[1,1],[0.4,0]],
+  "8": [[0.5,0.5],[0.2,0.65],[0.2,0.9],[0.5,1],[0.8,0.9],[0.8,0.65],[0.5,0.5],[0.2,0.35],[0.2,0.1],[0.5,0],[0.8,0.1],[0.8,0.35],[0.5,0.5]],
+  "9": [[0.3,0.1],[0.7,0],[1,0.35],[1,0.75],[0.7,1],[0.3,0.9],[0.3,0.5],[0.8,0.5]],
+};
+
+const lcd = document.getElementById("lcd");
+const trazo = document.getElementById("trazo");
+const teclado = document.getElementById("teclado");
+
+// LCD 16x2 como una cuadricula real de 32 celdas (2 filas x 16
+// columnas), no un bloque de texto — así se ve como una pantalla de
+// caracteres de verdad, con cada caracter en su propio recuadro.
+const celdasLCD = [[], []];
+for (let fila = 0; fila < 2; fila++) {
+  const filaDiv = document.createElement("div");
+  filaDiv.className = "lcd-fila";
+  for (let col = 0; col < 16; col++) {
+    const celda = document.createElement("div");
+    celda.className = "lcd-celda";
+    filaDiv.appendChild(celda);
+    celdasLCD[fila].push(celda);
+  }
+  lcd.appendChild(filaDiv);
+}
+
+function mostrarEnLCD(fila0, fila1) {
+  const texto0 = fila0.padEnd(16).slice(0, 16);
+  const texto1 = fila1.padEnd(16).slice(0, 16);
+  [...texto0].forEach((c, i) => (celdasLCD[0][i].textContent = c === " " ? "" : c));
+  [...texto1].forEach((c, i) => (celdasLCD[1][i].textContent = c === " " ? "" : c));
+}
+
+mostrarEnLCD("Marca un digito", "para dibujar");
+
+function dibujarTrazo(digito) {
+  const puntos = TRAZOS_DIGITOS[digito];
+  if (!puntos) return;
+  const escala = 160, offset = 20;
+  const d = puntos.map((p, i) => `${i === 0 ? "M" : "L"} ${offset + p[0]*escala} ${offset + (1-p[1])*escala}`).join(" ");
+  trazo.setAttribute("d", d);
+  // animacion simple: dibuja el trazo de una vez, con transicion de opacidad
+  trazo.style.opacity = 0;
+  requestAnimationFrame(() => { trazo.style.transition = "opacity 0.6s"; trazo.style.opacity = 1; });
+}
+
+function digitoRecibido(digito) {
+  mostrarEnLCD("Dibujando:", digito);
+  dibujarTrazo(digito);
+}
+
+TECLAS.forEach((fila) => {
+  fila.forEach((tecla) => {
+    const boton = document.createElement("button");
+    boton.textContent = tecla;
+    if (/[0-9]/.test(tecla)) {
+      boton.className = "digito";
+      boton.addEventListener("click", () => digitoRecibido(tecla));
+    } else {
+      boton.className = "deshabilitada";
+      boton.disabled = true;
+    }
+    teclado.appendChild(boton);
+  });
+});
+
+// -------- monitor de datos crudos --------
+const monitor = document.getElementById("monitor");
+function logMonitor(texto) {
+  const vacio = monitor.querySelector(".linea-vacia");
+  if (vacio) vacio.remove();
+  const linea = document.createElement("div");
+  linea.textContent = texto;
+  monitor.prepend(linea);
+  while (monitor.children.length > 30) monitor.removeChild(monitor.lastChild);
+}
+
+// -------- modos --------
+const btnModoPrueba = document.getElementById("btnModoPrueba");
+const btnModoConectado = document.getElementById("btnModoConectado");
+const btnConectar = document.getElementById("btnConectar");
+const estado = document.getElementById("estado");
+const monitorTitulo = document.getElementById("monitorTitulo");
+
+btnModoPrueba.addEventListener("click", () => {
+  btnModoPrueba.classList.add("activo");
+  btnModoConectado.classList.remove("activo");
+  btnConectar.style.display = "none";
+  estado.style.display = "none";
+  monitorTitulo.style.display = "none";
+  monitor.style.display = "none";
+});
+
+btnModoConectado.addEventListener("click", () => {
+  btnModoConectado.classList.add("activo");
+  btnModoPrueba.classList.remove("activo");
+  btnConectar.style.display = "block";
+  estado.style.display = "block";
+  estado.textContent = "sin conectar";
+  estado.classList.remove("ok");
+  monitorTitulo.style.display = "block";
+  monitor.style.display = "flex";
+});
+
+// -------- Web Serial: lee "DIGIT:n" igual que brazo_dibuja.py --------
+let puerto = null;
+
+btnConectar.addEventListener("click", async () => {
+  if (!("serial" in navigator)) {
+    estado.textContent = "Web Serial no disponible (usa Chrome o Edge)";
+    return;
+  }
+  try {
+    puerto = await navigator.serial.requestPort();
+    await puerto.open({ baudRate: 115200 });
+    estado.textContent = "conectado, esperando digitos del teclado...";
+    estado.classList.add("ok");
+    leerPuerto();
+  } catch (error) {
+    estado.textContent = "no se pudo conectar: " + error.message;
+  }
+});
+
+async function leerPuerto() {
+  const lector = puerto.readable.getReader();
+  const decodificador = new TextDecoder();
+  let bufferTexto = "";
+  try {
+    while (true) {
+      const { value, done } = await lector.read();
+      if (done) break;
+      bufferTexto += decodificador.decode(value, { stream: true });
+      let indice;
+      while ((indice = bufferTexto.indexOf("\n")) >= 0) {
+        const linea = bufferTexto.slice(0, indice).trim();
+        bufferTexto = bufferTexto.slice(indice + 1);
+        if (!linea) continue;
+        const hora = new Date().toLocaleTimeString("es-CO", { hour12: false });
+        logMonitor(`[${hora}] ${linea}`);
+        if (linea.startsWith("DIGIT:")) {
+          digitoRecibido(linea.split(":")[1]);
+          estado.textContent = "ultimo digito recibido: " + linea.split(":")[1];
+        }
+      }
+    }
+  } catch (error) {
+    estado.textContent = "conexion perdida: " + error.message;
+    estado.classList.remove("ok");
+  } finally {
+    lector.releaseLock();
+  }
+}
+</script>
+</body>
+</html>

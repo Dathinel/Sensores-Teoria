@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Previsualización — brazo robótico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1013;
+    --panel: #15191d;
+    --panel-border: #262b31;
+    --text: #e7e9ec;
+    --text-muted: #8b929b;
+    --accent: #4f8fce;
+    --verde-ok: #4caf7d;
+    --rojo: #d9534f;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: "Space Grotesk", system-ui, sans-serif; }
+  body { padding: 1.2rem 1.4rem; min-height: 100vh; }
+  h1 { font-size: 1.15rem; font-weight: 600; margin: 0 0 0.2rem; }
+  p.sub { color: var(--text-muted); font-size: 0.8rem; margin: 0 0 1rem; }
+  .rejilla { display: grid; grid-template-columns: minmax(260px, 320px) minmax(220px, 280px) 1fr; gap: 1rem; align-items: start; max-width: 1800px; }
+  @media (max-width: 1100px) { .rejilla { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 8px; padding: 1rem; }
+  .modos { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+  .modos button {
+    flex: 1; background: transparent; color: var(--text-muted); border: 1px solid var(--panel-border);
+    padding: 0.5rem; border-radius: 6px; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; cursor: pointer;
+  }
+  .modos button.activo { border-color: var(--accent); color: var(--accent); }
+  label { display: block; font-size: 0.75rem; color: var(--text-muted); margin: 0.8rem 0 0.2rem; }
+  input[type=range] { width: 100%; }
+  .valor { font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; color: var(--text); }
+  #btnConectar {
+    width: 100%; margin-top: 1rem; background: transparent; color: var(--text); border: 1px solid var(--panel-border);
+    padding: 0.5rem; border-radius: 6px; font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; cursor: pointer;
+  }
+  #estado { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; color: var(--text-muted); margin-top: 0.5rem; }
+  #estado.ok { color: var(--verde-ok); }
+  svg { width: 100%; max-height: 46vh; height: auto; background: #0a0d10; border: 1px solid var(--panel-border); border-radius: 8px; }
+  .lectura { display: flex; gap: 1rem; margin-top: 0.8rem; font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; color: var(--text-muted); flex-wrap: wrap; }
+  .teclado { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; }
+  .teclado button {
+    aspect-ratio: 1; border-radius: 6px; border: 1px solid var(--panel-border); background: #1c2126;
+    color: var(--text); font-family: "IBM Plex Mono", monospace; font-size: 0.95rem; cursor: pointer;
+  }
+  .teclado button.sel { border-color: var(--accent); color: var(--accent); }
+  .teclado button.deshabilitada { color: #3a3f45; cursor: default; }
+  #seleccionTexto { font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; color: var(--accent); margin-top: 0.6rem; }
+</style>
+</head>
+<body>
+
+<h1>Previsualización — brazo robótico</h1>
+<p class="sub">Esquema 2D simplificado de esp32_brazo.py + brazo_pybullet.py (no reemplaza la simulación real en PyBullet). Solo teclado, sin potenciómetro: mantener presionada una tecla mueve la articulación (jog), igual que el ESP32 real.</p>
+
+<div class="rejilla">
+  <div class="panel">
+    <div class="modos">
+      <button id="btnModoPrueba" class="activo">Modo prueba</button>
+      <button id="btnModoConectado">Conectado (Web Serial)</button>
+    </div>
+    <button id="btnConectar" style="display:none">Conectar por USB (Web Serial)</button>
+    <div id="estado" style="display:none"></div>
+  </div>
+
+  <div class="panel" id="panelControles">
+    <div class="teclado" id="teclado"></div>
+    <div id="seleccionTexto">8/2 = joint_1 · 6/4 = joint_2 · 9/7 = pinza · 5 = home</div>
+  </div>
+
+  <div class="panel">
+    <svg viewBox="0 0 300 260">
+      <line x1="60" y1="240" x2="240" y2="240" stroke="#262b31" stroke-width="2"/>
+      <circle cx="150" cy="220" r="18" fill="#3a3f45"/>
+      <g id="grupoBrazo" transform="rotate(0 150 220)">
+        <line id="brazo1" x1="150" y1="220" x2="150" y2="120" stroke="#4f8fce" stroke-width="10" stroke-linecap="round"/>
+        <g id="grupoCodo" transform="translate(150 120)">
+          <line id="brazo2" x1="0" y1="0" x2="0" y2="-90" stroke="#e8b930" stroke-width="8" stroke-linecap="round"/>
+          <g id="grupoPinza" transform="translate(0 -90)">
+            <rect id="pinzaBase" x="-10" y="-6" width="20" height="12" fill="#d9534f" rx="2"/>
+            <line id="dedoIzq" x1="-8" y1="0" x2="-8" y2="0" stroke="#e7e9ec" stroke-width="4"/>
+            <line id="dedoDer" x1="8" y1="0" x2="8" y2="0" stroke="#e7e9ec" stroke-width="4"/>
+          </g>
+        </g>
+      </g>
+    </svg>
+    <div class="lectura">
+      <span>J1: <span id="lecturaJ1">0.000</span> rad</span>
+      <span>J2: <span id="lecturaJ2">0.000</span> rad</span>
+      <span>G: <span id="lecturaG">0.000</span> m</span>
+    </div>
+  </div>
+</div>
+
+<script>
+const grupoBrazo = document.getElementById("grupoBrazo");
+const grupoCodo = document.getElementById("grupoCodo");
+const dedoIzq = document.getElementById("dedoIzq");
+const dedoDer = document.getElementById("dedoDer");
+const lecturaJ1 = document.getElementById("lecturaJ1");
+const lecturaJ2 = document.getElementById("lecturaJ2");
+const lecturaG = document.getElementById("lecturaG");
+
+function aplicar(j1, j2, g) {
+  const gradosJ1 = j1 * 180 / Math.PI;
+  const gradosJ2 = j2 * 180 / Math.PI;
+  grupoBrazo.setAttribute("transform", `rotate(${gradosJ1.toFixed(2)} 150 220)`);
+  grupoCodo.setAttribute("transform", `translate(150 120) rotate(${gradosJ2.toFixed(2)})`);
+  const mitad = Math.max(0, g / 3) * 100; // igual que en brazo_pybullet.py: g/3
+  dedoIzq.setAttribute("x2", -8 - mitad);
+  dedoDer.setAttribute("x2", 8 + mitad);
+  lecturaJ1.textContent = j1.toFixed(3);
+  lecturaJ2.textContent = j2.toFixed(3);
+  lecturaG.textContent = g.toFixed(3);
+}
+
+// -------- teclado de jog: mismo esquema que esp32_brazo.py, sin potenciometro --------
+// 8/2 = joint_1 (base) +/-, 6/4 = joint_2 (codo) +/-, 9/7 = pinza +/-, 5 = home
+const LIMITES = { j1: [-2.5, 2.5], j2: [-2.0, 2.0], g: [0, 0.15] };
+const PASO = { j1: 0.05, j2: 0.05, g: 0.005 };
+const JOG = {
+  "8": ["j1", 1], "2": ["j1", -1],
+  "6": ["j2", 1], "4": ["j2", -1],
+  "9": ["g", 1], "7": ["g", -1],
+};
+const TECLAS = [["1","2","3","A"],["4","5","6","B"],["7","8","9","C"],["*","0","#","D"]];
+const valoresArticulaciones = { j1: 0, j2: 0, g: 0 };
+
+const teclado = document.getElementById("teclado");
+let intervaloJog = null;
+
+function limitar(valor, [min, max]) { return Math.max(min, Math.min(max, valor)); }
+
+function aplicarJog(tecla) {
+  if (tecla === "5") {
+    valoresArticulaciones.j1 = valoresArticulaciones.j2 = valoresArticulaciones.g = 0;
+  } else if (tecla in JOG) {
+    const [articulacion, signo] = JOG[tecla];
+    valoresArticulaciones[articulacion] = limitar(
+      valoresArticulaciones[articulacion] + signo * PASO[articulacion], LIMITES[articulacion]
+    );
+  }
+  aplicar(valoresArticulaciones.j1, valoresArticulaciones.j2, valoresArticulaciones.g);
+}
+
+TECLAS.forEach((fila) => {
+  fila.forEach((tecla) => {
+    const boton = document.createElement("button");
+    boton.textContent = tecla;
+    if (tecla in JOG || tecla === "5") {
+      // mantener presionado = jog continuo, igual que sostener la tecla fisica
+      const empezar = (ev) => { ev.preventDefault(); aplicarJog(tecla); intervaloJog = setInterval(() => aplicarJog(tecla), 100); };
+      const parar = () => { clearInterval(intervaloJog); intervaloJog = null; };
+      boton.addEventListener("mousedown", empezar);
+      boton.addEventListener("touchstart", empezar);
+      boton.addEventListener("mouseup", parar);
+      boton.addEventListener("mouseleave", parar);
+      boton.addEventListener("touchend", parar);
+    } else {
+      boton.className = "deshabilitada";
+      boton.disabled = true;
+    }
+    teclado.appendChild(boton);
+  });
+});
+
+aplicar(0, 0, 0);
+
+// -------- modos --------
+const btnModoPrueba = document.getElementById("btnModoPrueba");
+const btnModoConectado = document.getElementById("btnModoConectado");
+const panelControles = document.getElementById("panelControles");
+const btnConectar = document.getElementById("btnConectar");
+const estado = document.getElementById("estado");
+
+btnModoPrueba.addEventListener("click", () => {
+  btnModoPrueba.classList.add("activo");
+  btnModoConectado.classList.remove("activo");
+  panelControles.style.opacity = "1";
+  panelControles.style.pointerEvents = "auto";
+  btnConectar.style.display = "none";
+  estado.style.display = "none";
+});
+
+btnModoConectado.addEventListener("click", () => {
+  btnModoConectado.classList.add("activo");
+  btnModoPrueba.classList.remove("activo");
+  panelControles.style.opacity = "0.4";
+  panelControles.style.pointerEvents = "none";
+  btnConectar.style.display = "block";
+  estado.style.display = "block";
+  estado.textContent = "sin conectar";
+  estado.classList.remove("ok");
+});
+
+// -------- Web Serial: lee "J1:..,J2:..,G:.." igual que brazo_pybullet.py --------
+let puerto = null;
+const patronLinea = /J1:(-?[\d.]+),J2:(-?[\d.]+),G:(-?[\d.]+)/;
+
+btnConectar.addEventListener("click", async () => {
+  if (!("serial" in navigator)) {
+    estado.textContent = "Web Serial no disponible (usa Chrome o Edge)";
+    return;
+  }
+  try {
+    puerto = await navigator.serial.requestPort();
+    await puerto.open({ baudRate: 115200 });
+    estado.textContent = "conectado, esperando datos del ESP32...";
+    estado.classList.add("ok");
+    leerPuerto();
+  } catch (error) {
+    estado.textContent = "no se pudo conectar: " + error.message;
+  }
+});
+
+async function leerPuerto() {
+  const lector = puerto.readable.getReader();
+  const decodificador = new TextDecoder();
+  let bufferTexto = "";
+  try {
+    while (true) {
+      const { value, done } = await lector.read();
+      if (done) break;
+      bufferTexto += decodificador.decode(value, { stream: true });
+      let indice;
+      while ((indice = bufferTexto.indexOf("\n")) >= 0) {
+        const linea = bufferTexto.slice(0, indice).trim();
+        bufferTexto = bufferTexto.slice(indice + 1);
+        const coincidencia = patronLinea.exec(linea);
+        if (coincidencia) {
+          aplicar(parseFloat(coincidencia[1]), parseFloat(coincidencia[2]), parseFloat(coincidencia[3]));
+          estado.textContent = "recibiendo datos del ESP32";
+        }
+      }
+    }
+  } catch (error) {
+    estado.textContent = "conexion perdida: " + error.message;
+    estado.classList.remove("ok");
+  } finally {
+    lector.releaseLock();
+  }
+}
+</script>
+</body>
+</html>

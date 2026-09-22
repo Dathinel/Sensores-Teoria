@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Previsualización — reconocimiento + OLED</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1013; --panel: #15191d; --panel-border: #262b31;
+    --text: #e7e9ec; --text-muted: #8b929b; --accent: #4f8fce; --verde-ok: #4caf7d;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: "Space Grotesk", system-ui, sans-serif; }
+  body { padding: 1.2rem 1.4rem; min-height: 100vh; }
+  h1 { font-size: 1.15rem; font-weight: 600; margin: 0 0 0.2rem; }
+  p.sub { color: var(--text-muted); font-size: 0.8rem; margin: 0 0 1rem; }
+  .rejilla { display: grid; grid-template-columns: minmax(260px, 320px) 1fr; gap: 1rem; align-items: start; }
+  @media (max-width: 760px) { .rejilla { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 8px; padding: 1rem; }
+  .modos { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+  .modos button {
+    flex: 1; background: transparent; color: var(--text-muted); border: 1px solid var(--panel-border);
+    padding: 0.5rem; border-radius: 6px; font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; cursor: pointer;
+  }
+  .modos button.activo { border-color: var(--accent); color: var(--accent); }
+  p.nota { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.6rem; line-height: 1.4; }
+  #btnConectar {
+    width: 100%; margin-top: 0.5rem; background: transparent; color: var(--text); border: 1px solid var(--panel-border);
+    padding: 0.5rem; border-radius: 6px; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; cursor: pointer;
+  }
+  #estado { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; color: var(--text-muted); margin-top: 0.5rem; }
+  #estado.ok { color: var(--verde-ok); }
+  .monitor {
+    margin-top: 0.6rem; background: #05070a; border: 1px solid var(--panel-border); border-radius: 6px;
+    padding: 0.5rem 0.6rem; font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; color: var(--verde-ok);
+    height: 90px; overflow-y: auto; display: flex; flex-direction: column-reverse;
+  }
+  .monitor .linea-vacia { color: var(--text-muted); }
+  .monitor-titulo { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; color: var(--text-muted); margin-top: 0.6rem; }
+  .digitos { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.4rem; margin-top: 1rem; }
+  .digitos button {
+    aspect-ratio: 1; border-radius: 6px; border: 1px solid var(--panel-border); background: #1c2126;
+    color: var(--text); font-family: "IBM Plex Mono", monospace; font-size: 1.1rem; cursor: pointer;
+  }
+  .digitos button:hover { border-color: var(--accent); color: var(--accent); }
+  .oled-marco { background: #05070a; border: 3px solid #1c2126; border-radius: 4px; padding: 1rem; display: flex; justify-content: center; }
+  svg { background: #000; }
+</style>
+</head>
+<body>
+
+<h1>Previsualización — reconocimiento + OLED</h1>
+<p class="sub">Simulador de lo que reconocer_digito.py + esp_a_maestro.py + esp_b_esclavo.ino terminan mostrando en la OLED (no corre la CNN ni la cámara — es solo para ver el resultado sin tener todo el hardware armado).</p>
+
+<div class="rejilla">
+  <div class="panel">
+    <div class="modos">
+      <button id="btnModoPrueba" class="activo">Modo prueba</button>
+      <button id="btnModoConectado">Conectado (Web Serial)</button>
+    </div>
+    <p class="nota" id="notaPrueba">Cada botón simula "la CNN reconoció este dígito" y actualiza la OLED simulada, igual que terminaría mostrando el ESP-B.</p>
+    <p class="nota" id="notaConectada" style="display:none">Conecta el ESP-A por USB (el único que necesita estar en el PC: el ESP-B solo se conecta al ESP-A por UART2 y/o SPI, no al PC). Cada botón manda "DIGIT:n" de verdad, como si fuera reconocer_digito.py, y el monitor de abajo muestra la confirmación "REENVIADO:n" que manda el ESP-A al recibirlo.</p>
+    <div class="digitos" id="digitos"></div>
+    <button id="btnConectar" style="display:none">Conectar ESP-A (Web Serial)</button>
+    <div id="estado" style="display:none"></div>
+    <div class="monitor-titulo" id="monitorTitulo" style="display:none">Datos crudos recibidos del ESP-A:</div>
+    <div class="monitor" id="monitor" style="display:none"><span class="linea-vacia">(sin datos todavía)</span></div>
+  </div>
+
+  <div class="panel">
+    <div class="oled-marco">
+      <svg id="oled" viewBox="0 0 128 64" width="384" height="192"></svg>
+    </div>
+  </div>
+</div>
+
+<script>
+const oled = document.getElementById("oled");
+
+function limpiarOLED() {
+  oled.innerHTML = "";
+}
+
+function pixel(x, y, tam) {
+  const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  r.setAttribute("x", x); r.setAttribute("y", y);
+  r.setAttribute("width", tam); r.setAttribute("height", tam);
+  r.setAttribute("fill", "#8fe3ff");
+  oled.appendChild(r);
+}
+
+function texto(str, x, y) {
+  const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  t.setAttribute("x", x); t.setAttribute("y", y);
+  t.setAttribute("fill", "#8fe3ff");
+  t.setAttribute("font-family", "IBM Plex Mono, monospace");
+  t.setAttribute("font-size", "7");
+  t.textContent = str;
+  oled.appendChild(t);
+}
+
+// mismo patron de dibujo "pixelado" que esp_b_esclavo.ino: una fuente
+// 8x8 (aca, simplificada a segmentos) escalada 5x, centrada
+const SEGMENTOS_DIGITO = {
+  "0": [[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+  "1": [[0,0,1,0,0],[0,1,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,1,1,1,0]],
+  "2": [[0,1,1,1,0],[1,0,0,0,1],[0,0,0,0,1],[0,0,1,1,0],[0,1,0,0,0],[1,0,0,0,0],[1,1,1,1,1]],
+  "3": [[1,1,1,1,0],[0,0,0,0,1],[0,0,1,1,0],[0,0,0,0,1],[0,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+  "4": [[0,0,0,1,0],[0,0,1,1,0],[0,1,0,1,0],[1,0,0,1,0],[1,1,1,1,1],[0,0,0,1,0],[0,0,0,1,0]],
+  "5": [[1,1,1,1,1],[1,0,0,0,0],[1,1,1,1,0],[0,0,0,0,1],[0,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+  "6": [[0,0,1,1,0],[0,1,0,0,0],[1,0,0,0,0],[1,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+  "7": [[1,1,1,1,1],[0,0,0,0,1],[0,0,0,1,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0]],
+  "8": [[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+  "9": [[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,1],[0,0,0,0,1],[0,0,0,1,0],[0,1,1,0,0]],
+};
+
+function mostrarDigito(digito) {
+  limpiarOLED();
+  texto("Digito reconocido:", 4, 10);
+  const filas = SEGMENTOS_DIGITO[digito];
+  if (!filas) return;
+  const tam = 6, offX = 40, offY = 16;
+  filas.forEach((fila, y) => {
+    fila.forEach((encendido, x) => {
+      if (encendido) pixel(offX + x * tam, offY + y * tam, tam);
+    });
+  });
+}
+
+const digitosDiv = document.getElementById("digitos");
+for (let d = 0; d <= 9; d++) {
+  const boton = document.createElement("button");
+  boton.textContent = d;
+  boton.addEventListener("click", () => manejarDigito(String(d)));
+  digitosDiv.appendChild(boton);
+}
+
+// -------- monitor de datos crudos --------
+const monitor = document.getElementById("monitor");
+function logMonitor(texto) {
+  const vacio = monitor.querySelector(".linea-vacia");
+  if (vacio) vacio.remove();
+  const linea = document.createElement("div");
+  linea.textContent = texto;
+  monitor.prepend(linea);
+  while (monitor.children.length > 30) monitor.removeChild(monitor.lastChild);
+}
+
+// -------- modos --------
+const btnModoPrueba = document.getElementById("btnModoPrueba");
+const btnModoConectado = document.getElementById("btnModoConectado");
+const notaPrueba = document.getElementById("notaPrueba");
+const notaConectada = document.getElementById("notaConectada");
+const btnConectar = document.getElementById("btnConectar");
+const estado = document.getElementById("estado");
+const monitorTitulo = document.getElementById("monitorTitulo");
+
+btnModoPrueba.addEventListener("click", () => {
+  btnModoPrueba.classList.add("activo");
+  btnModoConectado.classList.remove("activo");
+  notaPrueba.style.display = "block";
+  notaConectada.style.display = "none";
+  btnConectar.style.display = "none";
+  estado.style.display = "none";
+  monitorTitulo.style.display = "none";
+  monitor.style.display = "none";
+});
+
+btnModoConectado.addEventListener("click", () => {
+  btnModoConectado.classList.add("activo");
+  btnModoPrueba.classList.remove("activo");
+  notaPrueba.style.display = "none";
+  notaConectada.style.display = "block";
+  btnConectar.style.display = "block";
+  estado.style.display = "block";
+  estado.textContent = "sin conectar";
+  estado.classList.remove("ok");
+  monitorTitulo.style.display = "block";
+  monitor.style.display = "flex";
+});
+
+// -------- Web Serial: manda "DIGIT:n" al ESP-A (como reconocer_digito.py) y muestra todo lo que llega --------
+let puerto = null, escritor = null;
+
+btnConectar.addEventListener("click", async () => {
+  if (!("serial" in navigator)) {
+    estado.textContent = "Web Serial no disponible (usa Chrome o Edge)";
+    return;
+  }
+  try {
+    puerto = await navigator.serial.requestPort();
+    await puerto.open({ baudRate: 115200 });
+    escritor = puerto.writable.getWriter();
+    estado.textContent = "conectado al ESP-A";
+    estado.classList.add("ok");
+    leerPuerto();
+  } catch (error) {
+    estado.textContent = "no se pudo conectar: " + error.message;
+  }
+});
+
+async function leerPuerto() {
+  const lector = puerto.readable.getReader();
+  const decodificador = new TextDecoder();
+  let bufferTexto = "";
+  try {
+    while (true) {
+      const { value, done } = await lector.read();
+      if (done) break;
+      bufferTexto += decodificador.decode(value, { stream: true });
+      let indice;
+      while ((indice = bufferTexto.indexOf("\n")) >= 0) {
+        const linea = bufferTexto.slice(0, indice).trim();
+        bufferTexto = bufferTexto.slice(indice + 1);
+        if (!linea) continue;
+        const hora = new Date().toLocaleTimeString("es-CO", { hour12: false });
+        logMonitor(`[${hora}] ${linea}`);
+        if (linea.startsWith("REENVIADO:")) estado.textContent = "ESP-A confirmó que reenvió " + linea.split(":")[1];
+      }
+    }
+  } catch (error) {
+    estado.textContent = "conexion perdida: " + error.message;
+    estado.classList.remove("ok");
+  } finally {
+    lector.releaseLock();
+  }
+}
+
+async function manejarDigito(digito) {
+  mostrarDigito(digito);
+  if (escritor) {
+    await escritor.write(new TextEncoder().encode(`DIGIT:${digito}\n`));
+    estado.textContent = "enviado al ESP-A: DIGIT:" + digito;
+  }
+}
+
+mostrarDigito("0");
+</script>
+</body>
+</html>
