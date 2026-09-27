@@ -23,14 +23,20 @@ Tres enlaces:
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+
+# Este archivo corre IGUAL en el PC (CPython) y en los dos ESP32 (MicroPython,
+# fase 8: firmware/preparar.py lo compila con mpy-cross). Por eso no usa
+# dataclasses ni {**dict}: MicroPython no los tiene.
 
 
 def parsear_linea(linea: str | bytes) -> dict | None:
     """Una linea del serial -> mensaje. Tolerante: una linea cortada, vacia o
     con basura devuelve None (se cuenta y se sigue; nunca se cae)."""
     if isinstance(linea, bytes):
-        linea = linea.decode("utf-8", errors="replace")
+        try:
+            linea = linea.decode("utf-8")
+        except UnicodeError:   # basura en el serial
+            return None
     linea = linea.strip()
     if not linea.startswith("{") or not linea.endswith("}"):
         return None
@@ -46,22 +52,23 @@ def linea(mensaje: dict) -> str:
     return json.dumps(mensaje, separators=(",", ":"), ensure_ascii=False) + "\n"
 
 
-@dataclass
 class Emisor:
     """Numera los mensajes y los guarda hasta su ack. `reintentos` = None
     reintenta sin limite (el carro: no pierde eventos aunque el enlace se
     corte un rato); un numero = reintentos y despues fallo (el PC)."""
 
-    reintento_ms: int
-    reintentos: int | None = None
-    cola_max: int = 32
-    _siguiente: int = 1
-    pendientes: dict = field(default_factory=dict)   # id -> [mensaje, t_envio, intentos]
-    fallidos: list = field(default_factory=list)
-    descartados: int = 0
+    def __init__(self, reintento_ms, reintentos=None, cola_max=32):
+        self.reintento_ms = reintento_ms
+        self.reintentos = reintentos
+        self.cola_max = cola_max
+        self._siguiente = 1
+        self.pendientes = {}     # id -> [mensaje, t_envio, intentos]
+        self.fallidos = []
+        self.descartados = 0
 
     def enviar(self, mensaje: dict, t_ms: int) -> dict:
-        m = {**mensaje, "id": self._siguiente}
+        m = dict(mensaje)
+        m["id"] = self._siguiente
         self._siguiente += 1
         if len(self.pendientes) >= self.cola_max:
             # Cola llena: se descarta el mas viejo (y se cuenta).
@@ -89,13 +96,13 @@ class Emisor:
         return out
 
 
-@dataclass
 class Receptor:
     """Recibe mensajes numerados: contesta el ack de cada uno y descarta los
     repetidos (un reenvio cuyo ack se perdio no se ejecuta dos veces)."""
 
-    vistos: set = field(default_factory=set)
-    repetidos: int = 0
+    def __init__(self):
+        self.vistos = set()
+        self.repetidos = 0
 
     def recibir(self, mensaje: dict) -> tuple[bool, dict]:
         id_ = mensaje["id"]
@@ -107,12 +114,12 @@ class Receptor:
         return True, ack
 
 
-@dataclass
 class Secuencia:
     """Eventos con numero de secuencia `n` (ESP32 fijo -> PC): detecta huecos."""
 
-    ultimo: int = 0
-    perdidos: int = 0
+    def __init__(self, ultimo=0, perdidos=0):
+        self.ultimo = ultimo
+        self.perdidos = perdidos
 
     def recibir(self, n: int) -> int:
         """Devuelve cuantos se perdieron antes de este (0 si ninguno)."""
@@ -122,15 +129,15 @@ class Secuencia:
         return hueco
 
 
-@dataclass
 class Latido:
     """Estado de un enlace segun lo ultimo que se oyo del otro lado."""
 
-    periodo_ms: int
-    perdido_ms: int
-    ultimo_oido: int | None = None
-    ultimo_enviado: int | None = None
-    _vivo: bool = False
+    def __init__(self, periodo_ms, perdido_ms):
+        self.periodo_ms = periodo_ms
+        self.perdido_ms = perdido_ms
+        self.ultimo_oido = None
+        self.ultimo_enviado = None
+        self._vivo = False
 
     def oido(self, t_ms: int) -> None:
         self.ultimo_oido = t_ms

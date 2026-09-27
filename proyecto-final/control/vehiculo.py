@@ -52,7 +52,6 @@ izquierda a derecha. Angulos positivos = a la izquierda (antihorario).
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
 
 
 # Lecturas filtradas seguidas del infrarrojo del centro para dar por
@@ -92,18 +91,30 @@ def _angulo(a: float) -> float:
     return (a + math.pi) % (2 * math.pi) - math.pi
 
 
-@dataclass
 class LecturaCarro:
-    """Lo que el carro lee en un ciclo de control."""
+    """Lo que el carro lee en un ciclo de control.
 
-    linea: tuple[int, ...]          # 5 bits, izquierda -> derecha (1 = ve negro)
-    distancia_mm: float | None      # ultrasonico; None = nada en rango
-    pulsos_izq: int                 # acumulados desde el encendido
-    pulsos_der: int                 # (encoder de un canal: no sabe el sentido)
-    medida_us: int = 0              # numero de medicion del ultrasonico (cambia con cada disparo)
-    tof_mm: float | None = None     # laser VL53L0X frontal; None = nada hasta su alcance
-    medida_tof: int = 0             # numero de medicion del laser
-    cuna: bool | None = None        # infrarrojo de la cuna (sensor 12); None = no se lee
+    - linea: 5 bits, izquierda -> derecha (1 = ve negro)
+    - distancia_mm: ultrasonico; None = nada en rango
+    - pulsos_izq / pulsos_der: acumulados desde el encendido (encoder de un
+      canal: no sabe el sentido)
+    - medida_us: numero de medicion del ultrasonico (cambia con cada disparo)
+    - tof_mm: laser VL53L0X frontal; None = nada hasta su alcance
+    - medida_tof: numero de medicion del laser
+    - cuna: infrarrojo de la cuna (sensor 12); None = no se lee
+    (Clase normal y no dataclass: corre tambien en el ESP32 del carro.)
+    """
+
+    def __init__(self, linea, distancia_mm, pulsos_izq, pulsos_der, medida_us=0, tof_mm=None, medida_tof=0,
+                 cuna=None):
+        self.linea = linea
+        self.distancia_mm = distancia_mm
+        self.pulsos_izq = pulsos_izq
+        self.pulsos_der = pulsos_der
+        self.medida_us = medida_us
+        self.tof_mm = tof_mm
+        self.medida_tof = medida_tof
+        self.cuna = cuna
 
 
 class ControlCarro:
@@ -272,7 +283,7 @@ class ControlCarro:
         else:
             pasos = [{"tipo": "reversa", "distancia": distancia}]
             texto = f"Retrocede {distancia * 100:.0f} cm despacio (atrás no tiene sensor)"
-        self._empezar([self._parar(), *pasos, self._fin_orden()], {"accion": accion, "distancia_m": distancia})
+        self._empezar([self._parar()] + pasos + [self._fin_orden()], {"accion": accion, "distancia_m": distancia})
         return True, texto
 
     def _salir_del_muelle(self) -> list[dict]:
@@ -290,7 +301,7 @@ class ControlCarro:
         if not 0 < abs(grados) <= 180:
             return False, "El giro tiene que estar entre -180 y 180 grados (positivo = izquierda)"
         salir = self._salir_del_muelle()
-        self._empezar([self._parar(), *salir, self._girar(math.radians(grados)), self._fin_orden()],
+        self._empezar([self._parar()] + salir + [self._girar(math.radians(grados)), self._fin_orden()],
                       {"accion": "girar", "grados": grados})
         return True, ((f"Primero sale del muelle ({SALIR_DEL_MUELLE_M * 100:.0f} cm derecho); después " if salir else "")
                       + f"gira {abs(grados):.0f}° a la {'izquierda' if grados > 0 else 'derecha'} sobre su eje")
@@ -305,7 +316,7 @@ class ControlCarro:
                            "de odometría; pídalo por partes")
         destino = self._a_eje(x, y)
         salir = self._salir_del_muelle()
-        self._empezar([self._parar(), *salir, {"tipo": "ir_a", "x": destino[0], "y": destino[1], "intento": 1},
+        self._empezar([self._parar()] + salir + [{"tipo": "ir_a", "x": destino[0], "y": destino[1], "intento": 1},
                        self._fin_orden("llego_al_punto")], {"accion": "ir_a", "x": x, "y": y})
         return True, (("Primero sale del muelle derecho; después " if salir else "")
                       + f"va a ({x:.2f}, {y:.2f}) m, a {d:.2f} m: gira hacia el punto y avanza vigilando adelante")
@@ -731,7 +742,9 @@ class ControlCarro:
             avance["vigilar"] = True
             # El camino se revisa la primera vez; las correcciones son cortas.
             revisar = self._revisar_camino(d) if a["intento"] == 1 else []
-            self._acciones[0:1] = pasos + revisar + [avance, dict(a, intento=a["intento"] + 1)]
+            siguiente = dict(a)
+            siguiente["intento"] = a["intento"] + 1
+            self._acciones[0:1] = pasos + revisar + [avance, siguiente]
             return
 
         elif t == "camino":
@@ -844,4 +857,6 @@ class ControlCarro:
         ]
 
     def _evento(self, ev: str, **datos) -> None:
-        self.eventos.append({"ev": ev, "fase": self.fase, **datos})
+        e = {"ev": ev, "fase": self.fase}
+        e.update(datos)
+        self.eventos.append(e)

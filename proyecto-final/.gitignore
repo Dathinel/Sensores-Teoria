@@ -18,3 +18,6 @@ vision/modelos/*.onnx
 # base de datos en modo WAL (archivos auxiliares)
 *.db-shm
 *.db-wal
+
+# firmware armado para subir (firmware/preparar.py): se genera, no se versiona
+firmware/salida/

@@ -401,3 +401,36 @@ simulacion:
   # fija: la misma corrida da el mismo resultado, para poder mostrarla.
   errores_sensores: true
   semilla: 7
+
+# Fase 8 (2026-09-27): valores del FIRMWARE de los dos ESP32. firmware/preparar.py
+# los copia a `config_placa.py` de cada placa (fuente unica: no se escriben a
+# mano en el firmware). Todo PROVISIONAL hasta medirlo en el montaje.
+firmware:
+  # Cintas: NEMA17 + A4988. Rodillo motriz de ~12,7 mm: 40 mm de banda por vuelta
+  # (una casilla de monedas por vuelta; dos de vasos = 80 mm). PROVISIONAL.
+  mm_por_vuelta_cinta: 40
+  # 1/4 de micropaso (no 1/16): los pasos los genera el PWM del ESP32 y a 1/4
+  # la frecuencia queda baja (~1,3 kHz). La camara corrige el desfase igual.
+  micropasos_firmware: 4
+  # Carrusel: 28BYJ-48 en medio paso = 4096 pasos por vuelta (con engranaje).
+  carrusel_pasos_por_vuelta: 4096
+  carrusel_ms_por_paso: 2
+  # Servos por el PCA9685 (canal = el del conexionado). Angulos PROVISIONALES:
+  # reposo = posicion segura (la que toma en la parada segura).
+  servos:
+    desvio:    {canal: 0, reposo: 0,   activo: 30}     # 0 = al rechazo (a prueba de fallas)
+    obturador: {canal: 1, reposo: 0,   activo: 90}
+    tapas:     {canal: 2, reposo: 0,   activo: 60}
+    prensa:    {canal: 3, reposo: 0,   activo: 180}    # 0 = arriba
+    empujador: {canal: 4, reposo: 0,   activo: 120}
+    canaleta:  {canal: 5, reposo: 0,   activo: 45}     # escape de dos dedos: 0 = retener
+  # Cortina: por debajo de esta distancia el VL53L0X ve una mano (la zona mide
+  # ~140 mm; sin mano lee la pared de enfrente o nada). PROVISIONAL.
+  cortina_umbral_mm: 150
+  # Polaridad de los modulos (True = la salida baja a 0 cuando detecta).
+  activo_bajo: {presencia: true, capacitivo: true, inductivo: true, hall: true, cuna: true, linea_negro_alto: true}
+  telemetria_ms: 200
+  # Carro: velocidad de rueda con el PWM al 100 % (sin carga), para el control
+  # de velocidad (adelanto + correccion con los encoders). PROVISIONAL.
+  carro_v_max_m_s: 0.55
+  carro_ganancia_ki: 0.8

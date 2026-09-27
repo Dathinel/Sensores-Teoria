@@ -61,10 +61,26 @@ Puntos (marcar al terminar):
 - [x] c. Streamlit: chat con lo más nuevo ARRIBA, pegado a la caja de escribir.
 - [x] d. Visor: quitar pestaña Asistente; texto de la última respuesta sobre la nube / pantalla del
       PC (solo lectura); botón de vista "Asistente" en la barra de vistas.
-- [ ] e. Mover `proyecto final/` dentro del repo `Sensores-Teoria/` (sin respaldos ni entorno), commits y push.
-- [ ] f. Fase 8: firmware de los dos ESP32 + backend real de la HAL + puente serial, con pruebas.
+- [x] e. (commit 07f6830, pusheado) Mover `proyecto final/` dentro del repo `Sensores-Teoria/` (sin respaldos ni entorno), commits y push.
+- [~] f. EN CURSO. Fase 8: firmware de los dos ESP32 + backend real de la HAL + puente serial, con pruebas.
 - [ ] g. Mejorar los otros temas del repo (README con datos y diagramas, sin texto de relleno).
 - [ ] h. Actualizar contexto, bitácora, CLAUDE.md.
+
+**Dónde quedó la fase 8 (se cortó por límite de uso, 2026-09-27):**
+- Hecho SIN commit todavía: `control/protocolo.py` y `control/vehiculo.py` compatibles con
+  MicroPython (sin dataclasses ni {**d} ni [*x]; compilan con mpy-cross); `firmware/` (fijo:
+  estacion.py lógica pura + hw.py + main.py; carro: logica.py + hw.py + main.py; comun: enlaces.py
+  serial sin bloquear + ESP-NOW, distancia.py VL53L0X con XSHUT); `firmware/preparar.py` (pines desde
+  sim/conexiones.py, config desde parametros.yaml sección `firmware` nueva, compila .mpy, descarga el
+  driver VL53L0X porque su repo no tiene licencia); `firmware/subir.py` (mpremote); `app/puente_serial.py`
+  (PC↔ESP32, estación EMULADA si no hay placa); `tests/test_firmware.py` (14 pruebas, pasan).
+  Herramientas instaladas en entorno: mpremote, esptool, mpy-cross 1.29.
+- Suite completa estaba corriendo al cortar: volver a correrla, luego commit "Fase 8: ..." y push.
+- Falta: README de firmware/ (diagrama + cómo subir), backend real de la HAL / orquestador de la
+  línea real (criterio "una línea de config"), requirements.txt (mpremote, esptool, mpy-cross),
+  CLAUDE.md sección 9/15/16 y bitácora; punto g (mejorar READMEs de los temas 1-9); relanzar la app
+  escondida (se detuvo al mover la carpeta; se relanzó desde `Sensores-Teoria/proyecto-final`).
+- Clave DeepSeek que dio el usuario: guardada en `.env`, pero DeepSeek la rechaza (401).
 
 ## 3. Estado actual (2026-09-27, fin de sesión)
 
