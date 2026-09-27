@@ -62,29 +62,24 @@ Puntos (marcar al terminar):
 - [x] d. Visor: quitar pestaña Asistente; texto de la última respuesta sobre la nube / pantalla del
       PC (solo lectura); botón de vista "Asistente" en la barra de vistas.
 - [x] e. (commit 07f6830, pusheado) Mover `proyecto final/` dentro del repo `Sensores-Teoria/` (sin respaldos ni entorno), commits y push.
-- [~] f. EN CURSO. Fase 8: firmware de los dos ESP32 + backend real de la HAL + puente serial, con pruebas.
-- [ ] g. Mejorar los otros temas del repo (README con datos y diagramas, sin texto de relleno).
-- [ ] h. Actualizar contexto, bitácora, CLAUDE.md.
+- [x] f. Fase 8 hecha en software (commits 259c3a3 y fe92ffa): firmware/ MicroPython (ver
+      firmware/README.md), app/puente_serial.py, control/hal/backend_real.py y
+      `hardware.backend: sim|real` en config/parametros.yaml (supervisor en modo real; sin placa usa
+      la estación emulada). Punto 17 del paso a paso, pendiente de revisión.
+- [x] g. Temas 1-9 mejorados (commit b8a6d9e): tema 1 reescrito con ficha técnica, diagramas y
+      tablas; tema 3 con tabla y el código corregido ("laptop" -> "chair", como la documentación);
+      tema 8 raíz con diagrama y comparación; tema 9 con tabla de teclas; tema 4 enlazado al
+      asistente del proyecto final.
+- [x] h. Contexto, bitácora, CLAUDE.md actualizados. Todo subido a GitHub.
 
-**Dónde quedó la fase 8 (se cortó por límite de uso, 2026-09-27):**
-- Hecho SIN commit todavía: `control/protocolo.py` y `control/vehiculo.py` compatibles con
-  MicroPython (sin dataclasses ni {**d} ni [*x]; compilan con mpy-cross); `firmware/` (fijo:
-  estacion.py lógica pura + hw.py + main.py; carro: logica.py + hw.py + main.py; comun: enlaces.py
-  serial sin bloquear + ESP-NOW, distancia.py VL53L0X con XSHUT); `firmware/preparar.py` (pines desde
-  sim/conexiones.py, config desde parametros.yaml sección `firmware` nueva, compila .mpy, descarga el
-  driver VL53L0X porque su repo no tiene licencia); `firmware/subir.py` (mpremote); `app/puente_serial.py`
-  (PC↔ESP32, estación EMULADA si no hay placa); `tests/test_firmware.py` (14 pruebas, pasan).
-  Herramientas instaladas en entorno: mpremote, esptool, mpy-cross 1.29.
-- Suite completa estaba corriendo al cortar: volver a correrla, luego commit "Fase 8: ..." y push.
-- Falta: README de firmware/ (diagrama + cómo subir), backend real de la HAL / orquestador de la
-  línea real (criterio "una línea de config"), requirements.txt (mpremote, esptool, mpy-cross),
-  CLAUDE.md sección 9/15/16 y bitácora; punto g (mejorar READMEs de los temas 1-9); relanzar la app
-  escondida (se detuvo al mover la carpeta; se relanzó desde `Sensores-Teoria/proyecto-final`).
-- Clave DeepSeek que dio el usuario: guardada en `.env`, pero DeepSeek la rechaza (401).
+**Pendiente de decisión/acción del usuario:** clave de DeepSeek válida (la dada da 401); revisar
+y aprobar los puntos 15, 16 y 17; probar el firmware en las placas y medir los valores
+PROVISIONALES de `firmware:`; fotos de monedas para la visión real (fase 5), que es lo que falta
+para la línea automática con hardware. Entrega: martes 29-09-2026, 23:59.
 
 ## 3. Estado actual (2026-09-27, fin de sesión)
 
-- Pruebas: `entorno/Scripts/python -m pytest -q` → todas deben pasar (528, ~4 min).
+- Pruebas: `entorno/Scripts/python -m pytest -q` → todas deben pasar (544, ~4 min).
 - Forma de trabajar (usuario, 2026-09-26): dejar SIEMPRE una corrida escondida con el código
   actual (`python -m app.lanzar --auto prueba_completa --reemplazar` en segundo plano; cierra la
   anterior y su consola). El usuario la mira cuando quiere con `visor.bat` (un clic). NO
@@ -93,7 +88,7 @@ Puntos (marcar al terminar):
   `http://localhost:8765` (visor 3D) y `http://localhost:8501` (dashboard). **NO publicarlo como
   artefacto de Claude**: se abre en el navegador del PC. Si los puertos ya están ocupados es que
   el usuario lo tiene abierto: no cerrarlo; para verificar, levantar una copia en otro puerto.
-- Paso a paso (`docs/paso-a-paso.yaml`, 16 puntos): 1-14 aprobados; **15 (protocolo) preaprobado**
+- Paso a paso (`docs/paso-a-paso.yaml`, 17 puntos): 1-14 aprobados; **15 (protocolo) preaprobado**
   (2026-09-27), falta la aprobación del usuario; **16 (asistente y órdenes al carro) pendiente** de
   revisión.
 - Decisiones vigentes: filtro total (cinta de monedas de 4 estaciones: presencia, material,
