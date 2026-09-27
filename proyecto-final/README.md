@@ -34,7 +34,16 @@ otro PC, sin Python ni internet, muestra la demo grabada. Se rehace con `python 
 - **Asistente** (pestaña del dashboard): se le pregunta por escrito o por voz por las cifras de
   la corrida o por cualquier parte del proyecto, y se le puede pedir que mueva el carro (avanzar,
   girar, ir a un punto, ir a la meta, volver al muelle) o la línea. Usa DeepSeek (clave en `.env`,
-  ver `.env.example`); sin internet, un intérprete local entiende las órdenes y lo básico.
+  ver `.env.example`); sin internet, un modelo local o un intérprete de reglas. La voz también
+  funciona sin internet (ver abajo).
+
+Si no hay internet, o si lo que se ve no es la simulación en vivo, se nota de lejos: el visor
+muestra arriba "▶ DEMO GRABADA", "⚠ SIN CONEXIÓN CON LA SIMULACIÓN" o "📴 SIN INTERNET" (la
+nube de DeepSeek se pone gris), y el dashboard muestra de dónde salen los datos (simulación,
+ESP32 real o emulado), si hay internet y un aviso grande "NO ES EN VIVO" cuando la simulación
+no está corriendo. Sin internet sigue funcionando todo lo de la planta: el ESP32 fijo habla con el
+PC por USB, el carro con el ESP32 fijo por ESP-NOW (radio directa, sin router) y los datos van por
+SQLite dentro del mismo PC.
 
 ```mermaid
 flowchart LR
@@ -70,6 +79,12 @@ de 4 GB responde en ~7 s. Mientras piensa, en el visor 3D se ilumina el teclado 
 DeepSeek, en cambio, la pregunta viaja a la nube). Las órdenes claras ("avanza 20 cm",
 "gira a la derecha") las decide siempre el intérprete de reglas; el modelo chico solo responde
 preguntas.
+
+**Voz sin internet.** Con internet, el micrófono lo transcribe Google y la respuesta la lee gTTS
+(como el tema 4). Sin internet: **Whisper** (`faster-whisper`, modelo `small`) oye en el mismo PC y
+responde una **voz de Windows** en español (pyttsx3). El modelo de Whisper (~480 MB) se descarga
+una vez, también fuera del proyecto: `python -m app.asistente --preparar-voz`. Probado: "avanza 20
+centímetros y después vuelve al muelle" se transcribe exacto en ~2,5 s.
 
 ## Costo en Colombia
 

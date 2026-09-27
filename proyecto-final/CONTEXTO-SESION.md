@@ -52,9 +52,18 @@ visor en vivo.
 - [x] c. visor.bat abre el portable y arranca la simulación por detrás.
 - [x] d. Probar con Chrome headless (file://, con y sin supervisor), pruebas, docs, commit.
 
+**Pedido del 2026-09-28 (3):** "si, haga el cambio de voz, y label o que sea mas evidente en el
+visor y en el streamlit que no tiene internet, o esta viendo una demo".
+- [x] a. Voz sin internet: reconocimiento local (respaldo del de Google) y voz de respuesta local
+  (voces de Windows) cuando gTTS no puede.
+- [x] b. Streamlit: aviso grande y visible de "sin internet" (qué sigue funcionando) y de si los
+  datos son de la simulación, del hardware real o de una corrida vieja (simulación detenida).
+- [x] c. Visor 3D: aviso grande de "DEMO GRABADA" (no en vivo) y de "sin internet" (la nube).
+- [x] d. Pruebas, docs, commit.
+
 ## 3. Estado actual (2026-09-27, fin de sesión)
 
-- Pruebas: `entorno/Scripts/python -m pytest -q` → todas deben pasar (560, ~4 min).
+- Pruebas: `entorno/Scripts/python -m pytest -q` → todas deben pasar (567, ~4 min).
 - Forma de trabajar (usuario, 2026-09-26): dejar SIEMPRE una corrida escondida con el código
   actual (`python -m app.lanzar --auto prueba_completa --reemplazar` en segundo plano; cierra la
   anterior y su consola). El usuario la mira cuando quiere con `visor.bat` (un clic). NO

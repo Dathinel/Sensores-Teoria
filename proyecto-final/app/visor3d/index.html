@@ -92,6 +92,20 @@
   .preg { margin: 4px 0 0 16px; padding: 0; }
 
   #aviso { position: fixed; top: 56px; right: 12px; max-width: 360px; display: none; }
+  /* Que se vea de lejos si lo que se mira NO es la simulacion en vivo, o si no hay internet. */
+  #modo { position: fixed; top: 60px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column;
+    align-items: center; gap: 6px; pointer-events: none; z-index: 5; max-width: min(560px, calc(100vw - 24px)); }
+  #modo > div { border-radius: 10px; padding: 7px 18px; text-align: center; box-shadow: 0 4px 18px rgba(0, 0, 0, .5); }
+  #modo b { font-size: 1rem; letter-spacing: .05em; }
+  #modo span { display: block; font-size: 0.78rem; margin-top: 1px; }
+  #modo .demo { background: var(--ambar); color: #1b1300; }
+  #modo .desconectado { background: var(--rojo); color: #fff; }
+  #modo .offline { background: rgba(18, 22, 29, 0.94); border: 2px solid var(--rojo); color: var(--texto); padding: 5px 14px; }
+  #modo .offline b { font-size: 0.85rem; color: #ff8a80; }
+  /* A los 10 s quedan en una sola linea (siguen a la vista, pero no tapan la pantalla de la laptop). */
+  #modo.compacto { flex-direction: row; }
+  #modo.compacto > div { padding: 4px 14px; }
+  #modo.compacto span { display: none; }
   #aviso div { background: rgba(229, 83, 75, 0.18); border: 1px solid var(--rojo); border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; font-size: 0.85rem; }
   #aviso div.ambar { background: rgba(242, 177, 52, 0.15); border-color: var(--ambar); }
   #eventos { position: fixed; right: 12px; bottom: 12px; width: 430px; max-width: calc(100vw - 24px); max-height: 30vh; overflow: hidden;
@@ -173,6 +187,7 @@
 </div>
 
 <div id="aviso"></div>
+<div id="modo" aria-live="polite"></div>
 <div id="eventos"></div>
 <div id="ayuda">arrastrar: girar · rueda: zoom · clic derecho: mover · clic en un sensor: ver qué hace</div>
 

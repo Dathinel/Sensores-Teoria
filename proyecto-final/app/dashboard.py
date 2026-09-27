@@ -97,6 +97,15 @@ code, .mono { font-family:'IBM Plex Mono', monospace; }
 .aviso { border-radius:8px; padding:10px 14px; margin:8px 0; font-size:0.92rem; }
 .aviso.rojo { background:rgba(229,83,75,.14); border:1px solid var(--rojo); }
 .aviso.ambar { background:rgba(242,177,52,.12); border:1px solid var(--ambar); }
+/* Avisos GRANDES (usuario, 2026-09-28): que se note de lejos si no es en vivo o no hay internet. */
+.aviso-grande { border-radius:10px; padding:12px 18px; margin:10px 0 6px; font-size:0.95rem; line-height:1.4; }
+.aviso-grande b.titulo { display:block; font-size:1.15rem; letter-spacing:.04em; margin-bottom:2px; }
+.aviso-grande.demo { background:var(--ambar); color:#1b1300; }
+.aviso-grande.offline { background:rgba(229,83,75,.16); border:2px solid var(--rojo); }
+.aviso-grande.offline b.titulo { color:#ff8a80; }
+.chip.origen { color:var(--texto); border-color:var(--azul); }
+.chip.real { color:#0e1116; background:var(--morado); border-color:var(--morado); }
+.chip.sinred { color:#fff; background:var(--rojo); border-color:var(--rojo); }
 .cinta { display:grid; gap:6px; margin:6px 0 2px; }
 .cinta.m { grid-template-columns:repeat(7, minmax(0,1fr)); }
 .cinta.v { grid-template-columns:repeat(5, minmax(0,1fr)); }
@@ -459,14 +468,43 @@ ESTADO_LINEA_TXT = {"corriendo": "La línea está trabajando", "pausada": "La l�
                     "detenida": "La línea está detenida"}
 
 
+def simulacion_viva() -> bool:
+    """True si el supervisor (simulacion o puente al ESP32) esta corriendo en este PC.
+    Se le pregunta a su servidor local: con la corrida terminada deja de escribir
+    telemetria, asi que la edad del ultimo dato no alcanza para saberlo."""
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{PARAMETROS['supervisor']['puerto_http']}/api/estado",
+                                    timeout=0.6) as r:
+            return r.status == 200
+    except OSError:
+        return False
+
+
+def origen_datos(tel: dict) -> tuple[str, str]:
+    """(texto, clase) del chip que dice de donde salen los datos."""
+    if tel.get("backend") == "real":
+        if (tel.get("hardware") or {}).get("emulada"):
+            return "🧪 ESP32 EMULADO (sin placa)", "origen"
+        return "🔌 ESP32 REAL", "real"
+    return "🖥 SIMULACIÓN (PyBullet)", "origen"
+
+
 @st.fragment(run_every=REFRESCO_S)
 def cabecera() -> None:
+    from app.asistente import hay_internet
+
     tel = telemetria()
+    viva = simulacion_viva()
+    internet = hay_internet()
     estado = tel["linea"] if tel else "sin supervisor"
+    origen, clase = origen_datos(tel) if tel else ("", "")
     st.markdown(
         f'<div class="cabecera"><h1>🪙 Logística de monedas inteligentes</h1>'
-        f'<span class="chip {estado}">{ESTADO_LINEA_TXT.get(estado, estado)}</span>'
-        + (f'<span class="chip">ciclo {tel.get("tick", "—")}</span><span class="chip">simulación</span>' if tel else "")
+        f'<span class="chip {estado if viva else ""}">{ESTADO_LINEA_TXT.get(estado, estado)}</span>'
+        + (f'<span class="chip">ciclo {tel.get("tick", "—")}</span><span class="chip {clase}">{origen}</span>' if tel else "")
+        + (f'<span class="chip">🌐 con internet</span>' if internet else '<span class="chip sinred">📴 SIN INTERNET</span>')
         + '</div><div class="nota">Clasifica monedas colombianas, las empaca en vasos de una sola denominación y '
         "un carro autónomo los lleva a la meta · Elemento 7: detector de monedas y vasos · Micros y Laboratorio, UMNG</div>",
         unsafe_allow_html=True,
@@ -476,10 +514,23 @@ def cabecera() -> None:
             '<div class="aviso ambar">No hay datos todavía. Abra <b>visor.bat</b> (arranca todo) o, en una '
             "terminal, <code>python -m app.lanzar</code>.</div>", unsafe_allow_html=True)
         return
-    edad = (datetime.now() - datetime.fromisoformat(tel["ts"])).total_seconds()
-    if tel["linea"] == "corriendo" and edad > max(5, 6 * REFRESCO_S):
-        st.markdown(f'<div class="aviso ambar">Hace {edad:.0f} s que no llegan datos: parece que el programa de la '
-                    "línea se cerró. Vuelva a abrir <b>visor.bat</b>.</div>", unsafe_allow_html=True)
+    if not viva:
+        hora = datetime.fromisoformat(tel["ts"])
+        st.markdown(
+            '<div class="aviso-grande demo"><b class="titulo">⏸ NO ES EN VIVO</b>La simulación no está corriendo: '
+            f"lo que se ve son los datos guardados de la última corrida ({hora:%d/%m %H:%M}). Para verla en vivo, "
+            "abra <b>visor.bat</b>.</div>", unsafe_allow_html=True)
+    elif tel.get("backend") == "real" and (tel.get("hardware") or {}).get("emulada"):
+        st.markdown(
+            '<div class="aviso-grande demo"><b class="titulo">🧪 ESP32 EMULADO</b>Está en modo hardware real pero no '
+            "hay ninguna placa conectada: responde una estación EMULADA (el mismo firmware con sensores falsos).</div>",
+            unsafe_allow_html=True)
+    if not internet:
+        st.markdown(
+            '<div class="aviso-grande offline"><b class="titulo">📴 SIN INTERNET</b>La planta, el carro y este '
+            "dashboard siguen funcionando: todo pasa en este PC (ESP32 por USB, carro por ESP-NOW, datos en SQLite). "
+            "El asistente responde con el modelo local de la laptop y la voz es la de este PC (Whisper para oír, voz "
+            "de Windows para hablar).</div>", unsafe_allow_html=True)
 
 
 @st.fragment(run_every=REFRESCO_S)
@@ -1195,7 +1246,14 @@ def _atender_frase(frase: str) -> None:
         db.insertar_orden(conexion(), orden)
     st.session_state["asistente_ultima"] = r
     if st.session_state.get("hablar") and r.texto:
-        st.session_state["asistente_audio"] = asistente.voz(r.texto)
+        st.session_state["asistente_audio"] = asistente.voz(r.texto)   # (audio, "mp3"|"wav") o None
+
+
+def _sin_error(funcion) -> None:
+    try:
+        funcion()
+    except Exception:  # sin faster-whisper o sin el modelo descargado: se avisa al usarlo
+        pass
 
 
 def pestana_asistente() -> None:
@@ -1225,16 +1283,27 @@ def pestana_asistente() -> None:
     izq, der = st.columns([1.6, 1])
     with der:
         st.markdown("**Cómo hablarle**")
-        audio = st.audio_input("🎤 Dígale algo (necesita internet)", key="microfono")
+        audio = st.audio_input("🎤 Dígale algo", key="microfono",
+                               help="Con internet lo oye Google (como el tema 4); sin internet, Whisper en este PC.")
+        if not st.session_state.get("voz_precargada"):
+            # Whisper tarda unos segundos en cargarse: se carga por detras al abrir la pestaña.
+            st.session_state["voz_precargada"] = True
+            import threading
+
+            threading.Thread(target=lambda: _sin_error(asistente._whisper_modelo), daemon=True).start()
         if audio is not None:
             datos = audio.getvalue()
             if st.session_state.get("audio_procesado") != hash(datos):
                 st.session_state["audio_procesado"] = hash(datos)
-                texto, motivo = asistente.transcribir(datos)
+                with st.spinner("Escuchando…"):
+                    texto, detalle = asistente.transcribir(datos)
                 if texto:
                     st.session_state["frase_pendiente"] = texto
+                    st.session_state["oido_por"] = detalle
                 else:
-                    st.warning(motivo)
+                    st.warning(detalle)
+        if st.session_state.get("oido_por"):
+            st.caption(f"Última frase oída con: {st.session_state['oido_por']}")
         c1, c2 = st.columns(2)
         c1.toggle("🔊 Responder en voz alta", key="hablar")
         c2.selectbox("Quién responde", ["auto", "deepseek", "ollama", "reglas"], key="proveedor",
@@ -1295,7 +1364,7 @@ def pestana_asistente() -> None:
                                .get(m["modo"], "intérprete de reglas"))
         audio_resp = st.session_state.pop("asistente_audio", None)
         if audio_resp:
-            st.audio(audio_resp, format="audio/mp3", autoplay=True)
+            st.audio(audio_resp[0], format=f"audio/{audio_resp[1]}", autoplay=True)
 
 
 @st.fragment(run_every=REFRESCO_S)

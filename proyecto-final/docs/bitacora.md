@@ -964,3 +964,18 @@ fotos); clave de DeepSeek válida (la dada da 401).
   al arrancarla 12 s después → vivo a los 22 s, sin errores. Sin Python ni internet (otro PC) se
   queda en la demo. `tests/test_portable.py` (5 pruebas).
 
+## 2026-09-28 — Voz sin internet y avisos de "no es en vivo" / "sin internet"
+
+- Voz: con internet Google (oír) y gTTS (hablar), como el tema 4; sin internet Whisper `small` en
+  el PC y la voz de Windows (Helena, es-ES). Probado en cadena (voz de Windows → WAV → Whisper):
+  "Avanza 20 centímetros y después vuelve al muelle." y "¿Cuánto dinero hay en los vasos?" exactos,
+  ~2,5 s cada una. Sin internet DeepSeek ni se intenta.
+- Dashboard: chips de origen de los datos (simulación / ESP32 real / emulado) y de internet; avisos
+  grandes "NO ES EN VIVO" (supervisor cerrado: datos de la última corrida), "ESP32 EMULADO" y "SIN
+  INTERNET" (qué sigue funcionando).
+- Visor: avisos "DEMO GRABADA", "SIN CONEXIÓN CON LA SIMULACIÓN" y "SIN INTERNET" arriba al centro
+  (10 s completos, luego una línea para no tapar la pantalla de la laptop); sin internet la nube se
+  pone gris con "Sin internet · responde el modelo local". En la demo el chip ya no sale verde.
+- Pruebas: `tests/test_voz.py` (5) y 2 del dashboard. Capturas con Chrome sin ventana y la red
+  cortada por DevTools.
+

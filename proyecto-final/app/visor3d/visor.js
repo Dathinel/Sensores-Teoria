@@ -2290,11 +2290,16 @@ function construirEnlaceAsistente() {
   const et = etiqueta('☁ API de DeepSeek (internet)', { alto: 0.014, alcance: 1.8, borde: '#539bf5' });
   et.position.copy(centro).add(new THREE.Vector3(0, 0.085, 0));
   grupo.add(et);
+  // Sin internet la nube se apaga (gris) y lo dice: responde el modelo local de la laptop.
+  const etSinRed = etiqueta('📴 Sin internet · responde el modelo local', { alto: 0.014, alcance: 1.8, borde: '#e5534b', color: '#ffb4ae' });
+  etSinRed.position.copy(et.position);
+  etSinRed.visible = false;
+  grupo.add(etSinRed);
   const etW = etiqueta('Wi-Fi del portátil (el carro usa ESP-NOW)', { alto: 0.009, alcance: 1.0, color: '#8b949e' });
   etW.position.copy(a.clone().lerp(b, 0.5)).add(new THREE.Vector3(0.1, 0, 0));
   grupo.add(etW);
   escena.add(grupo);
-  P.asistente = { grupo, paquete, a, b, matNube, mensajes: -1, panel: L.pantalla, lienzo: L.lienzo,
+  P.asistente = { grupo, paquete, a, b, matNube, et, etSinRed, linea, mensajes: -1, panel: L.pantalla, lienzo: L.lienzo,
     textura: L.textura, pensando: null, fase: 0 };
   dibujarPanelAsistente(null);
 }
@@ -4253,6 +4258,74 @@ async function enviarOrden(orden) {
 }
 
 // ---------------------------------------------------------------------------
+// avisos grandes: demo grabada, sin conexion, sin internet (usuario, 2026-09-28)
+// ---------------------------------------------------------------------------
+
+// null = todavia no se sabe. Se revisa cada 20 s y cuando el navegador avisa que cambio la red.
+let hayInternet = null;
+
+async function revisarInternet() {
+  let hay = navigator.onLine;
+  if (hay) {
+    try {
+      // no-cors: no se lee la respuesta, solo se ve si el servidor de DeepSeek se alcanza.
+      await fetch('https://api.deepseek.com/', { mode: 'no-cors', cache: 'no-store', signal: AbortSignal.timeout(5000) });
+    } catch (e) { hay = false; }
+  }
+  if (hay !== hayInternet) { hayInternet = hay; pintarModo(); }
+}
+
+function pintarModo() {
+  const caja = document.getElementById('modo');
+  if (!caja) return;
+  const partes = [];
+  if (MODO_DEMO) {
+    partes.push('<div class="demo"><b>▶ DEMO GRABADA</b><span>' + (EN_ARCHIVO
+      ? 'No es la simulación en vivo. Cuando la simulación de este PC arranque, esta pestaña pasa sola a en vivo.'
+      : 'No es la simulación en vivo: es una corrida grabada que se repite.') + '</span></div>');
+  } else if (fallos > 3) {
+    partes.push('<div class="desconectado"><b>⚠ SIN CONEXIÓN CON LA SIMULACIÓN</b><span>Lo que se ve está congelado. '
+      + 'Vuelva a abrir visor.bat.</span></div>');
+  }
+  if (hayInternet === false) {
+    partes.push('<div class="offline"><b>📴 SIN INTERNET</b><span>La planta, el carro y el dashboard siguen funcionando '
+      + '(todo es local). El asistente responde con el modelo de la laptop.</span></div>');
+  }
+  const html = partes.join('');
+  if (html !== pintarModo.ultimo) {
+    pintarModo.ultimo = html;
+    // Aviso nuevo: completo 10 s y despues compacto.
+    caja.innerHTML = html;
+    caja.classList.remove('compacto');
+    clearTimeout(pintarModo.temporizador);
+    pintarModo.temporizador = setTimeout(() => caja.classList.add('compacto'), 10000);
+  }
+  // Centrado sobre la parte libre de la vista (a la derecha del panel, si esta abierto).
+  const panel = document.getElementById('panel');
+  const izq = panel && !panel.classList.contains('oculto') && window.innerWidth > 900 ? panel.getBoundingClientRect().right : 0;
+  caja.style.left = ((izq + window.innerWidth) / 2) + 'px';
+  const barra = document.getElementById('barra');
+  if (barra) caja.style.top = (barra.getBoundingClientRect().bottom + 10) + 'px';
+  if (P.asistente) {
+    const sinRed = hayInternet === false;
+    P.asistente.et.visible = !sinRed;
+    P.asistente.etSinRed.visible = sinRed;
+    P.asistente.matNube.color.set(sinRed ? 0x5b6270 : 0xdfe7f5);
+    P.asistente.matNube.emissive.set(sinRed ? 0x000000 : 0x539bf5);
+    P.asistente.linea.material.color.set(sinRed ? 0xe5534b : 0x539bf5);
+  }
+}
+
+function vigilarInternet() {
+  revisarInternet();
+  setInterval(revisarInternet, 20000);
+  window.addEventListener('online', revisarInternet);
+  window.addEventListener('offline', revisarInternet);
+  window.addEventListener('resize', pintarModo);
+  document.getElementById('btnPanel').addEventListener('click', () => setTimeout(pintarModo, 0));
+}
+
+// ---------------------------------------------------------------------------
 // estado en vivo
 // ---------------------------------------------------------------------------
 
@@ -4286,7 +4359,9 @@ async function consultar() {
       const r = await fetch(BASE + 'api/estado', { cache: 'no-store' });
       estado = await r.json();
     }
+    const volvio = fallos > 3;
     fallos = 0;
+    if (volvio) pintarModo();
     VEL = MODO_DEMO ? 1 : Math.max(0.25, Number(estado.velocidad) || 1);
     if (estado.tick !== undefined && estado.tick < tickAnterior) limpiarCorrida();
     const cicloNuevo = estado.tick !== tickAnterior || ultimoTick === -1;
@@ -4320,7 +4395,7 @@ async function consultar() {
     const chip = document.getElementById('chipEstado');
     chip.textContent = MODO_DEMO ? (EN_ARCHIVO ? 'demo grabada · esperando la simulación de este PC'
       : `demo grabada · ${estado.linea || ''}`) : (estado.linea || '—');
-    chip.className = 'chip ' + (estado.linea || '');
+    chip.className = 'chip ' + (MODO_DEMO ? 'pausada' : (estado.linea || ''));   // demo: ámbar, nunca verde
     document.getElementById('chipTick').textContent = `tick ${estado.tick ?? '—'}`;
     const avisos = [];
     if (estado.cortina_activa) avisos.push('<div>🖐 <b>Cortina activa</b>: la prensa sube y se detiene; tapa y empujador congelados. La cinta de monedas sigue.</div>');
@@ -4339,6 +4414,7 @@ async function consultar() {
       chip.textContent = 'sin conexión con el supervisor';
       chip.className = 'chip error';
     }
+    pintarModo();
   }
 }
 
@@ -4410,6 +4486,8 @@ async function iniciar() {
     try { PASOS = await cargarJSON('./api/pasos'); } catch (e) { PASOS = []; }
   }
   if (EN_ARCHIVO) vigilarSimulacion();
+  vigilarInternet();
+  pintarModo();
   construirCintaMonedas();
   construirCintaVasos();
   construirCanaleta();

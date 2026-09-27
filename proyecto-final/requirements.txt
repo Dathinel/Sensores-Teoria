@@ -14,6 +14,9 @@ openai
 python-dotenv
 SpeechRecognition
 gTTS
+# voz SIN internet (2026-09-28): Whisper local para oir y las voces de Windows para hablar
+faster-whisper
+pyttsx3
 
 # dependencias de desarrollo (no listadas en CLAUDE.md seccion 19, necesarias
 # para correr las pruebas unitarias de las fases 1 en adelante)

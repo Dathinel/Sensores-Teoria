@@ -74,3 +74,41 @@ def test_el_asistente_responde_en_el_dashboard_sin_deepseek(monkeypatch, tmp_pat
     c.close()
     at.run()
     assert any(r"Hay \$500 y \$1.000" in m.value for m in at.markdown)
+
+
+def _corrida_corta(tmp_path):
+    from app import db
+
+    ruta = tmp_path / "c.db"
+    db.conectar(ruta).close()
+    s = Supervisor(ruta)
+    s.conexion.close()
+    return ruta
+
+
+def test_sin_internet_y_sin_simulacion_se_ve_de_lejos(monkeypatch, tmp_path):
+    """Usuario, 2026-09-28: que sea evidente que no hay internet o que no es en vivo."""
+    import urllib.request
+
+    from app import asistente
+
+    ruta = _corrida_corta(tmp_path)
+    monkeypatch.setattr(asistente, "hay_internet", lambda *a, **k: False)
+
+    def sin_supervisor(*a, **k):
+        raise OSError("nada escuchando")
+
+    monkeypatch.setattr(urllib.request, "urlopen", sin_supervisor)
+    at = _correr(monkeypatch, ruta)
+    texto = " ".join(m.value for m in at.markdown)
+    assert "📴 SIN INTERNET" in texto and "NO ES EN VIVO" in texto
+    assert "SIMULACIÓN (PyBullet)" in texto
+
+
+def test_con_internet_no_hay_aviso_de_internet(monkeypatch, tmp_path):
+    from app import asistente
+
+    ruta = _corrida_corta(tmp_path)
+    monkeypatch.setattr(asistente, "hay_internet", lambda *a, **k: True)
+    texto = " ".join(m.value for m in _correr(monkeypatch, ruta).markdown)
+    assert "con internet" in texto and "📴 SIN INTERNET" not in texto

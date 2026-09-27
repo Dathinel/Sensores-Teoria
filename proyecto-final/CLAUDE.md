@@ -772,6 +772,16 @@ DeepSeek o la laptop (teclado RGB, luz de actividad, pantalla) si piensa el mode
 `python -m app.evaluar_asistente`: 24 casos reales (cifras, técnico, costos, sin dato, órdenes con
 errores de ortografía, seguridad, inglés) → 24/24 local (mediana 7,5 s) y 24/24 reglas.
 
+**Sin internet (2026-09-28):** `hay_internet()` (conexión TCP a DeepSeek o Google, recordada 15 s).
+Sin red no se intenta DeepSeek (no se espera su timeout). Voz: con internet Google + gTTS; sin
+internet **Whisper `small`** (faster-whisper, CPU int8, ~2,5 s por frase; `base` oía "abanza" y
+"muye") y la **voz de Windows** (pyttsx3, en un proceso aparte: se cuelga si se llama dos veces en
+el mismo proceso). Modelo descargado una vez con `python -m app.asistente --preparar-voz`, fuera del
+repo. Avisos: el dashboard pregunta al servidor del supervisor si está vivo (la telemetría se
+detiene al terminar la corrida, así que su edad no sirve) y muestra "NO ES EN VIVO", "ESP32
+EMULADO" y "SIN INTERNET" en grande; el visor, "DEMO GRABADA", "SIN CONEXIÓN" y "SIN INTERNET"
+(completos 10 s, luego en una línea) y la nube gris.
+
 El chatbot nunca inventa cifras: si una métrica no está en el estado inyectado, debe decir
 que no tiene ese dato.
 
