@@ -133,14 +133,19 @@ class EstacionBackendSim:
     vasos, la cortina de seguridad y la camara de monedas en modo oraculo."""
 
     def __init__(self, escena: EscenaEstacion, *, camara: CamaraOraculo | None = None,
-                 cortina: dict | None = None):
-        if cortina is None:
-            # config/parametros.yaml (cortina_seguridad): altura, cono y
-            # desplazamiento del VL53L0X.
+                 cortina: dict | None = None, vasos: dict | None = None):
+        if cortina is None or vasos is None:
+            # config/parametros.yaml: cortina_seguridad (altura, cono y desplazamiento
+            # del VL53L0X) y vasos (las dos franjas de la camara de vasos).
             import yaml
             from pathlib import Path
             ruta = Path(__file__).resolve().parents[2] / "config" / "parametros.yaml"
-            cortina = yaml.safe_load(ruta.read_text(encoding="utf-8"))["cortina_seguridad"]
+            cfg = yaml.safe_load(ruta.read_text(encoding="utf-8"))
+            cortina = cortina or cfg["cortina_seguridad"]
+            vasos = vasos or cfg["vasos"]
+        # Auditoria 2026-09-28: estaban escritas a mano (0.5 y 1.05) aunque el comentario de
+        # abajo decia que venian de la configuracion.
+        media_frac, borde_frac = vasos["barrera_media_altura_frac"], vasos["barrera_borde_altura_frac"]
         self.escena = escena
         self.camara = camara or CamaraOraculo()
         self.errores_activos = False
@@ -172,8 +177,8 @@ class EstacionBackendSim:
         def zona(casilla: int) -> ZonaCamaraVasos:
             return ZonaCamaraVasos(
                 presencia=sensores_sim.presencia_silueta_vasos(escena, casilla),
-                media_altura=sensores_sim.franja_silueta_vaso(escena, casilla, altura_frac=0.5),
-                borde=sensores_sim.franja_silueta_vaso(escena, casilla, altura_frac=1.05),
+                media_altura=sensores_sim.franja_silueta_vaso(escena, casilla, altura_frac=media_frac),
+                borde=sensores_sim.franja_silueta_vaso(escena, casilla, altura_frac=borde_frac),
             )
 
         self.zona_verificacion = zona(ESTACION_VERIFICACION_VASOS)

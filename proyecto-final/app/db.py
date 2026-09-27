@@ -75,6 +75,16 @@ CREATE TABLE IF NOT EXISTS asistente (
     acciones TEXT
 );
 
+-- Quien esta pensando una respuesta del asistente AHORA (una sola fila, id=1;
+-- proveedor NULL = nadie). El visor anima la nube (DeepSeek, por internet) o
+-- la laptop (modelo local) mientras tanto.
+CREATE TABLE IF NOT EXISTS asistente_pensando (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    proveedor TEXT,
+    pregunta TEXT,
+    desde TEXT
+);
+
 CREATE TABLE IF NOT EXISTS ordenes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ts TEXT NOT NULL,

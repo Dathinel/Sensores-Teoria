@@ -1,12 +1,12 @@
 from app import db
 
 
-def test_conectar_crea_las_siete_tablas(tmp_path):
+def test_conectar_crea_las_ocho_tablas(tmp_path):
     ruta = tmp_path / "prueba.db"
     conexion = db.conectar(ruta)
     try:
         tablas = db.nombres_de_tablas(conexion)
-        assert tablas == {"eventos", "elementos", "vasos", "ruta", "ordenes", "almacen_turno", "asistente"}
+        assert tablas == {"eventos", "elementos", "vasos", "ruta", "ordenes", "almacen_turno", "asistente", "asistente_pensando"}
     finally:
         conexion.close()
 

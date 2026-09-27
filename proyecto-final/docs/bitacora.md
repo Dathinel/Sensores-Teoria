@@ -931,3 +931,25 @@ fotos); clave de DeepSeek válida (la dada da 401).
   teclado, touchpad, bisagra, tapa a ~110°) y el asistente en su pantalla (el panel ya no flota
   sobre la nube).
 
+## 2026-09-28 — Auditoría general, modelo local más completo y laptop ×1,5
+
+- Laptop ASUS TUF Gaming A15 rehecha al nivel de los modelos de Blender de los labs: esquinas
+  redondeadas, teclado completo en relieve con letras (WASD translúcidas), touchpad, luces de
+  estado, rejillas, puertos con profundidad, bisagras, logo TUF. Medidas reales, dibujada ×1,5 (a
+  pedido, para leer la pantalla); movida detrás de la caja de control: la anterior se metía 7 mm en
+  la fuente y 3 mm en el ESP32 (auditoría de solapes). Nube centrada sobre ella (0,4 mm).
+- Pantalla = el asistente con la letra más grande que cabe; "pensando": con el modelo local se
+  anima la laptop (teclado RGB, luz de actividad) y no la nube; con DeepSeek, la nube.
+- Modelo local con 8192 tokens y candados nuevos (ver CLAUDE.md §14); batería real 24/24.
+- Auditoría: (1) el backend real tenía el sensor del interior como distancia y la simulación como
+  sí/no → alineados (umbral con `margen_interior_mm`, que nadie usaba); la cortina la decide el
+  ESP32; nombres iguales a los del backend sim. (2) `backend_sim` tenía las franjas de la cámara
+  de vasos escritas a mano (0,5 y 1,05) aunque decía que venían de la configuración; `geometria`
+  tenía la altura del vaso a mano → ahora de `config/parametros.yaml`. (3) Pausa de la cinta de
+  monedas duplicada (300 ms sin uso vs 1000 ms real) → quitada; CLAUDE.md decía 300. (4)
+  Micropaso duplicado (16 vs 4) → uno solo (1/4) en `motor_paso_a_paso`; el firmware lee los pasos
+  por vuelta y el rango mínimo del ultrasónico de la configuración. (5) Cable USB hub→laptop con
+  su recorrido real. (6) Abrazadera del VL53L0X del interior (la varilla parecía atravesar la
+  placa). Sin código muerto. Solapes restantes (24): montajes, ejes dentro de rodillos, vasos en
+  la bandeja, piezas del carro; la auditoría trata cilindros como cajas y exagera.
+

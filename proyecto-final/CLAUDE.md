@@ -93,7 +93,7 @@ Cuatro subsistemas.
 
 **Estación de filtrado y conteo.** Una cinta transportadora indexada, de superficie negra
 mate, con separadores cada 40 mm que definen casillas. La mueve un motor paso a paso en
-modo avanzar y detener: avanza exactamente una casilla, se detiene cerca de 300 ms, vuelve
+modo avanzar y detener: avanza exactamente una casilla, se detiene 1000 ms (`tiempos_ms`), vuelve
 a avanzar. La cámara de cada cinta ve sus separadores y mide, después de cada avance, si la
 cinta quedó en su casilla; si se corrió, se corrige con micropasos en la misma pausa (grupo,
 2026-09-25: reemplaza al sensor de ranura que proponía esta sección). Sobre esa cinta se montan las estaciones fijas
@@ -435,6 +435,7 @@ esquemas) se crean cuando empiece esa fase, no antes.
     grabar_demo.py              graba una corrida para el modo demo del visor
     documentos.py               genera los .md de docs/ (incluido costos.md)
     costos.py                   lee config/precios.yaml: totales por subsistema, ahorros
+    evaluar_asistente.py        batería REAL del asistente (24 casos) -> docs/pruebas-asistente.md
     puente_serial.py            fase 8: PC <-> ESP32 fijo (y estación EMULADA si no hay placa)
   firmware/                     fase 8, MicroPython (ver firmware/README.md)
     fijo/  carro/  comun/       lógica pura (se prueba en el PC) + hw.py (pines) + main.py
@@ -756,6 +757,18 @@ con el contexto por defecto de Ollama (~4000 tokens) un prompt largo se corta po
 pierde las instrucciones. Las órdenes claras las decide el intérprete de reglas (el modelo chico
 inventó una secuencia de 4 órdenes para "gira a la derecha"), el signo del giro lo manda la frase
 y se acepta UNA sola orden al carro por mensaje, con cualquier proveedor.
+
+**Modelo local, segunda ronda (2026-09-28):** `qwen2.5-proyecto` = qwen2.5:3b con 8192 tokens de
+contexto (`python -m app.asistente --preparar-local`; 3,5 de 4 GB en la RTX 3050), ~9000 caracteres
+de documentación, el estado en vivo PEGADO a la pregunta (al principio de un texto largo el modelo
+chico lo ignoraba) y, si las reglas ya tienen la cifra exacta, va como "DATO VERIFICADO" (confundía
+"cuánto pesan" con pesos). Candados para TODOS los proveedores: una pregunta nunca da órdenes; el
+modelo local no puede mover el carro si la frase no pide un movimiento; las medidas que ningún
+sensor toma (temperatura, voltaje, corriente) las responden las reglas sin inventar. Estado
+"pensando" (tabla `asistente_pensando`, en `/api/asistente`): el visor anima la nube si piensa
+DeepSeek o la laptop (teclado RGB, luz de actividad, pantalla) si piensa el modelo local.
+`python -m app.evaluar_asistente`: 24 casos reales (cifras, técnico, costos, sin dato, órdenes con
+errores de ortografía, seguridad, inglés) → 24/24 local (mediana 7,5 s) y 24/24 reglas.
 
 El chatbot nunca inventa cifras: si una métrica no está en el estado inyectado, debe decir
 que no tiene ese dato.

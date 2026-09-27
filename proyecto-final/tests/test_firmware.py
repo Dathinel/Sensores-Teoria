@@ -232,16 +232,22 @@ def test_backend_real_mueve_y_lee_a_traves_del_firmware():
     for t in range(0, 1200, 20):
         reloj["t"] = t
         puente.atender(t)
-    hw.cinta_monedas.avanzar_casilla()
+    hw.banda_monedas.avanzar_casilla()
     puente.ser.hw.sensores["presencia"] = True
     puente.ser.hw.sensores["cortina_mm"] = 80
+    puente.ser.hw.sensores["interior_mm"] = 60          # algo adentro del vaso (vacio: ~105 mm)
     for t in range(1200, 1800, 20):
         reloj["t"] = t
         puente.atender(t)
     assert puente.ser.hw.pasos["monedas"] == 1
     assert hw.sensor_presencia.leer() is True
-    assert hw.cortina.leer_mm() == 80
-    assert hw.sensor_interior.leer_mm() == 120
+    assert hw.distancia_cortina.leer_mm() == 80
+    assert hw.sensor_cortina.leer() is True           # lo decidio el ESP32 (seguridad = cortina)
+    assert hw.sensor_interior.leer() is True          # 60 mm < 105 - 10: hay algo adentro
+    puente.ser.hw.sensores["interior_mm"] = 104
+    for t in range(1800, 2000, 20):
+        puente.atender(t)
+    assert hw.sensor_interior.leer() is False         # vaso vacio
 
 
 def test_supervisor_en_modo_real_sin_placa(tmp_path):

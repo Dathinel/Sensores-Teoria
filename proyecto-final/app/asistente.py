@@ -59,11 +59,15 @@ MAX_CARACTERES_DOCS = 24000      # ~7000 tokens de documentacion por pregunta
 # FUERA del proyecto: no pesa en GitHub. Ollama habla el mismo formato de OpenAI, asi que se usa
 # el mismo cliente, el mismo prompt, el mismo JSON y la misma lista blanca que con DeepSeek.
 URL_LOCAL = os.environ.get("ASISTENTE_URL_LOCAL", "http://localhost:11434")
-MODELO_LOCAL = os.environ.get("ASISTENTE_MODELO_LOCAL", "qwen2.5:3b")
+# `qwen2.5-proyecto` = qwen2.5:3b con 8192 tokens de contexto (Ollama trae ~4000 por defecto),
+# creado con `python -m app.asistente --preparar-local`. Si no existe, se usa el de base.
+MODELO_LOCAL = os.environ.get("ASISTENTE_MODELO_LOCAL", "qwen2.5-proyecto")
+MODELO_LOCAL_BASE = "qwen2.5:3b"
 # Ollama usa por defecto un contexto de ~4000 tokens: si el prompt lo pasa, se corta POR EL
 # PRINCIPIO y el modelo pierde las instrucciones (se vio: respondia sin la clave "respuesta").
 # Por eso al modelo local va menos: sin el README y con ~3000 caracteres de documentacion.
-MAX_CARACTERES_DOCS_LOCAL = 3000
+MAX_CARACTERES_DOCS_LOCAL = 9000   # con 8192 tokens de contexto (medido: 3,5 de 4 GB en la RTX 3050)
+MAX_CARACTERES_DOCS_LOCAL_BASE = 3000
 MAX_SECCION = 3500
 TURNOS_DE_MEMORIA = 6            # preguntas y respuestas anteriores que se le recuerdan
 
@@ -310,6 +314,20 @@ def guardar_mensaje(conexion: sqlite3.Connection, rol: str, texto: str, *, modo:
     conexion.commit()
 
 
+def marcar_pensando(conexion: sqlite3.Connection, proveedor: str | None, pregunta: str = "") -> None:
+    """Deja escrito quien esta pensando (el visor lo anima); None = nadie."""
+    from app import db
+
+    conexion.execute("INSERT OR REPLACE INTO asistente_pensando (id, proveedor, pregunta, desde) VALUES (1, ?, ?, ?)",
+                     (proveedor, pregunta[:200], db.ahora()))
+    conexion.commit()
+
+
+def pensando(conexion: sqlite3.Connection) -> dict | None:
+    f = conexion.execute("SELECT proveedor, pregunta, desde FROM asistente_pensando WHERE id = 1").fetchone()
+    return dict(f) if f and f["proveedor"] else None
+
+
 def conversacion(conexion: sqlite3.Connection, limite: int = 40) -> list[dict]:
     filas = conexion.execute("SELECT ts, rol, texto, modo, acciones FROM asistente ORDER BY id DESC LIMIT ?",
                              (limite,)).fetchall()
@@ -352,9 +370,18 @@ Reglas:
   {"cmd":"lote","valor":10} (monedas por vaso)   {"cmd":"velocidad","valor":2} (0.25 a 8)
 - Varias órdenes seguidas se ejecutan en orden, pero una orden nueva al carro reemplaza la anterior: para
   una secuencia de movimientos del carro, manda solo la primera y explica que la siguiente se pide después.
+- Si preguntan por una medida que ningún sensor del proyecto mide EN VIVO (temperatura, voltaje o
+  corriente de algo, humedad...), di claramente que no hay un sensor que la mida y que no tienes ese
+  dato; puedes dar el valor NOMINAL de la documentación, aclarando que no es una medición.
+- Una pregunta (¿...?) nunca da órdenes: "acciones" va vacío.
 - El carro no choca: antes de moverse mira el camino, y si ve algo adelante se detiene; si la persona pide
   algo que lo haría chocar o salir de la pista, explícalo. Las cm se pasan a metros.
-- En "respuesta" explica en una o dos frases qué vas a hacer (o la respuesta a la pregunta).
+- En "respuesta": si es una orden, una o dos frases diciendo qué vas a hacer. Si es una pregunta,
+  de 2 a 6 frases completas: la respuesta directa primero, con las cifras exactas de ESTADO_EN_VIVO
+  (con sus unidades) o los datos de DOCUMENTACION, y después el porqué o el detalle útil. Nunca
+  contestes una pregunta con una sola frase: agrega qué significa la cifra, de dónde sale (qué
+  sensor, estación o archivo) y un dato relacionado del estado o de la documentación. No nombres
+  campos internos (ESTADO_EN_VIVO, claves del JSON como valor_aceptado_pesos): habla como persona.
 """
 
 
@@ -385,8 +412,12 @@ def cliente_local():
             modelos = [m["name"] for m in json.loads(r.read()).get("models", [])]
     except (OSError, ValueError):
         return None
-    if MODELO_LOCAL not in modelos:
-        return None
+    global MODELO_LOCAL
+    nombres = {m.split(":")[0] if m.endswith(":latest") else m for m in modelos}
+    if MODELO_LOCAL not in nombres:
+        if MODELO_LOCAL_BASE not in nombres:
+            return None
+        MODELO_LOCAL = MODELO_LOCAL_BASE           # sin el de contexto largo: el de base
     from openai import OpenAI
 
     return OpenAI(api_key="ollama", base_url=URL_LOCAL + "/v1", timeout=90, max_retries=0)
@@ -398,8 +429,9 @@ def preguntar_deepseek(cliente, pregunta: str, estado: dict, historial: list[dic
 
 
 def preguntar_llm(cliente, modelo: str, pregunta: str, estado: dict, historial: list[dict],
-                  limite_docs: int = MAX_CARACTERES_DOCS, con_readme: bool = True) -> dict:
-    """Una pregunta a un modelo con API de OpenAI (DeepSeek u Ollama)."""
+                  limite_docs: int = MAX_CARACTERES_DOCS, con_readme: bool = True, dato_verificado: str = "") -> dict:
+    """Una pregunta a un modelo con API de OpenAI (DeepSeek u Ollama). `dato_verificado`: la
+    respuesta exacta que ya calcularon las reglas (el modelo la amplia, no la recalcula)."""
     docs = buscar(pregunta, limite_docs)
     readme = ((RAIZ / "README.md").read_text(encoding="utf-8")
               if con_readme and (RAIZ / "README.md").exists() else "")
@@ -408,9 +440,14 @@ def preguntar_llm(cliente, modelo: str, pregunta: str, estado: dict, historial: 
     mensajes = [{"role": "system", "content": PROMPT_SISTEMA}]
     for m in historial[-2 * TURNOS_DE_MEMORIA:]:
         mensajes.append({"role": "user" if m["rol"] == "usuario" else "assistant", "content": m["texto"]})
+    # Documentacion primero y el estado en vivo pegado a la pregunta: un modelo chico se
+    # "pierde" si las cifras quedan al principio de un texto largo (se vio en las pruebas).
     mensajes.append({"role": "user", "content": (
-        "ESTADO_EN_VIVO:\n" + json.dumps(estado, ensure_ascii=False)
-        + "\n\nDOCUMENTACION:\n" + documentacion + "\n\nFRASE DE LA PERSONA:\n" + pregunta)})
+        "DOCUMENTACION:\n" + documentacion
+        + "\n\nESTADO_EN_VIVO (cifras reales de la corrida):\n" + json.dumps(estado, ensure_ascii=False)
+        + ("\n\nDATO VERIFICADO (cifras exactas, úsalas tal cual y amplía la explicación):\n" + dato_verificado
+           if dato_verificado else "")
+        + "\n\nFRASE DE LA PERSONA:\n" + pregunta)})
     r = cliente.chat.completions.create(model=modelo, messages=mensajes, response_format={"type": "json_object"},
                                         temperature=0.2, max_tokens=900)
     datos = json.loads(r.choices[0].message.content or "{}")
@@ -443,12 +480,26 @@ def _distancia_m(texto: str) -> float | None:
     return v / 100 if u.startswith("c") else v / 1000 if u.startswith("mm") or u.startswith("mili") else v
 
 
+def es_pregunta(frase: str) -> bool:
+    t = normalizar(frase).strip()
+    return "?" in t or "¿" in frase or bool(re.match(r"(cuant|que |como |donde |cual|por ?que|quien|cuando |how |what |where )", t))
+
+
+# Pide un movimiento del carro (si no, una orden al carro de un modelo chico se descarta).
+PIDE_MOVIMIENTO = re.compile(r"\b(muev|avanz|abanz|avans|retroce|reversa|gir|volte|rota|media vuelta|ve |ir |vaya|anda|"
+                             r"lleva|vuelv|regres|deten|det[eé]n|frena|para el|pare|quieto|sigue|retoma|meta|muelle|punto)")
+
+
+# Medidas que ningun sensor del proyecto toma en vivo.
+SIN_SENSOR = re.compile(r"\b(temperatura|voltaje|tension|corriente|humedad)\b")
+
+
 def interpretar_orden_local(frase: str) -> list[dict]:
     """Ordenes con expresiones regulares (sin DeepSeek). Devuelve la lista de
     ordenes crudas (despues se validan igual que las de DeepSeek)."""
     t = normalizar(frase).strip()
     # Una pregunta nunca mueve nada ("¿cuantos vasos llegaron a la meta?").
-    if "?" in t or "¿" in frase or re.match(r"(cuant|que |como |donde |cual|por ?que|quien|cuando )", t):
+    if es_pregunta(frase):
         return []
     carro = re.search(r"\b(carro|vehiculo|carrito|robot)\b", t)
     if re.search(r"\bparo( de emergencia)?\b|\bemergencia\b", t):
@@ -473,7 +524,7 @@ def interpretar_orden_local(frase: str) -> list[dict]:
         if "derech" in t:
             grados = -abs(grados)
         return [{"cmd": "carro", "accion": "girar", "grados": grados}]
-    if re.search(r"\b(avanza|avanzar|adelante|muevete|mueve|camina)\b", t):
+    if re.search(r"\b(avanza|avanzar|abanza|abanzar|avansa|avansar|adelante|muevete|mueve|camina)\b", t):
         return [{"cmd": "carro", "accion": "avanzar", "distancia_m": _distancia_m(t) or 0.2}]
     if re.search(r"\b(retrocede|retroceder|atras|reversa)\b", t):
         return [{"cmd": "carro", "accion": "retroceder", "distancia_m": _distancia_m(t) or 0.1}]
@@ -522,14 +573,14 @@ def responder_local(frase: str, estado: dict) -> str:
         return "Todavía no hay datos de ninguna corrida: empiece una desde la barra de la izquierda."
     tot = estado["totales"]
     partes = []
-    if re.search(r"\b(dinero|plata|valor|pesos|cuanto se ha|total)\b", t):
+    if re.search(r"\b(dinero|plata|valor|pesos|cuanto se ha|money)\b", t):
         partes.append(f"Valor aceptado: {_pesos(tot['valor_aceptado_pesos'])} en {tot['monedas_aceptadas']} monedas; "
                       f"en el almacén hay {_pesos(estado.get('almacen_valor_pesos'))} guardados.")
-    if re.search(r"\b(moneda|monedas|denominacion|denominaciones)\b", t):
+    if re.search(r"\b(moneda|monedas|denominacion|denominaciones|coins)\b", t) and re.search(r"\b(cuant|total|how many)", t):
         por = estado["aceptadas_por_denominacion"]
         detalle = ", ".join(f"{d['monedas']} de {_pesos(int(k))}" for k, d in sorted(por.items(), key=lambda x: int(x[0])))
         partes.append(f"Monedas aceptadas: {tot['monedas_aceptadas']}" + (f" ({detalle})." if detalle else "."))
-    if re.search(r"\b(peso|pesa|gramos|masa)\b", t):
+    if re.search(r"\b(peso|pesa|pesan|gramos|masa)\b", t):
         partes.append(f"Peso estimado: {tot['peso_estimado_g']} g ({tot['nota_peso']}).")
     if re.search(r"\b(rechaz|rechazo|rechazos|rechazadas|causa|causas|filtro|filtros)", t):
         causas = estado["rechazos_por_causa"]
@@ -538,7 +589,17 @@ def responder_local(frase: str, estado: dict) -> str:
     if re.search(r"\b(vaso|vasos)\b", t):
         partes.append(f"Vasos entregados en la meta: {tot['vasos_entregados_en_meta']}; "
                       f"esperando en la canaleta: {estado['canaleta_vasos_esperando']}.")
-    if re.search(r"\b(carro|vehiculo|donde esta|ruta|obstaculo|obstaculos)\b", t):
+    if re.search(r"\b(confianza|umbral)\b", t):
+        from app import configuracion
+
+        c = configuracion.cargar_parametros()["filtrado"]["confianza_minima"]
+        partes.append(f"La cámara acepta una moneda solo si la reconoce con confianza de al menos {c:.2f} "
+                      f"({c * 100:.0f} %); por debajo se rechaza como «no reconocida».")
+    if SIN_SENSOR.search(t):
+        partes.append("No hay un sensor que mida eso en vivo, así que no tengo ese dato (solo los valores "
+                      "nominales de la documentación).")
+    if re.search(r"\b(carro|vehiculo|donde esta|ruta|obstaculo|obstaculos)\b", t) and \
+            re.search(r"\b(donde|estado|posicion|ubicacion|cuant|recorr)", t):
         c = estado.get("carro")
         if c:
             partes.append(f"El carro está {ESTADO_CARRO.get(c['estado'], c['estado'])} en ({c['x']:.2f}, {c['y']:.2f}) m"
@@ -598,10 +659,16 @@ def atender(frase: str, conexion: sqlite3.Connection, *, usar: str = "auto", usa
             avisos.append("Sin clave de DeepSeek (DEEPSEEK_API_KEY).")
         else:
             try:
+                marcar_pensando(conexion, "deepseek", frase)
                 crudo = preguntar_deepseek(cliente, frase, estado, historial)
                 modo = "deepseek"
             except Exception as error:  # red caida, clave rechazada, JSON roto...
                 avisos.append(f"DeepSeek no respondió ({type(error).__name__}: {str(error)[:90]}).")
+    if crudo is None and usar in ("auto", "ollama") and SIN_SENSOR.search(normalizar(frase)):
+        # Medidas que ningun sensor toma: las reglas lo dicen sin inventar (el modelo local
+        # contestaba "7,4 V en este momento", que es el valor nominal, no una medicion).
+        crudo = {"respuesta": responder_local(frase, estado), "acciones": [], "documentos": []}
+        modo = "local"
     if crudo is None and usar in ("auto", "ollama") and interpretar_orden_local(frase):
         # Una orden clara la decide el interprete de reglas (siempre igual), no el modelo
         # chico: en las pruebas, "gira 45 grados a la derecha" le hizo inventar 4 ordenes
@@ -615,13 +682,20 @@ def atender(frase: str, conexion: sqlite3.Connection, *, usar: str = "auto", usa
             avisos.append(f"El modelo local ({MODELO_LOCAL}) no está corriendo (Ollama).")
         else:
             try:
+                marcar_pensando(conexion, "ollama", frase)
                 # Menos contexto: pocos eventos, menos historial y menos documentacion.
                 compacto = {k: v for k, v in estado.items() if k not in ("ultimos_eventos", "errores_del_filtro")}
-                crudo = preguntar_llm(local, MODELO_LOCAL, frase, compacto, historial[-2:], MAX_CARACTERES_DOCS_LOCAL,
-                                      con_readme=False)
+                limite = MAX_CARACTERES_DOCS_LOCAL if MODELO_LOCAL != MODELO_LOCAL_BASE else MAX_CARACTERES_DOCS_LOCAL_BASE
+                # Si las reglas ya tienen la cifra exacta, va como dato verificado: el modelo chico
+                # confundia "cuanto pesan" (gramos) con pesos colombianos.
+                regla = responder_local(frase, estado) if estado.get("hay_datos") else ""
+                verificado = "" if regla.startswith(("Sin DeepSeek", "No tengo")) else regla
+                crudo = preguntar_llm(local, MODELO_LOCAL, frase, compacto, historial[-2:], limite, con_readme=False,
+                                      dato_verificado=verificado)
                 modo = "ollama"
             except Exception as error:
                 avisos.append(f"El modelo local no respondió ({type(error).__name__}: {str(error)[:90]}).")
+    marcar_pensando(conexion, None)
     aviso = " ".join(avisos + (["Respondo con el intérprete de reglas."] if crudo is None and avisos else []))
     if crudo is None:
         ordenes = interpretar_orden_local(frase)
@@ -630,6 +704,16 @@ def atender(frase: str, conexion: sqlite3.Connection, *, usar: str = "auto", usa
         modo = "local"
     validas, descartadas = [], []
     carro_ya = False
+    if es_pregunta(frase) and crudo["acciones"]:
+        # Una pregunta nunca mueve nada (en las pruebas, "¿cuántos vasos llegaron a la meta?" hizo
+        # que el modelo local mandara el carro a un punto).
+        descartadas.append("una pregunta no da órdenes")
+        crudo["acciones"] = []
+    if modo == "ollama" and not PIDE_MOVIMIENTO.search(normalizar(frase)):
+        quitadas = [a for a in crudo["acciones"] if isinstance(a, dict) and a.get("cmd") == "carro"]
+        if quitadas:
+            descartadas.append("el modelo local propuso mover el carro sin que se lo pidieran")
+            crudo["acciones"] = [a for a in crudo["acciones"] if a not in quitadas]
     for a in corregir_giros(frase, crudo["acciones"] if isinstance(crudo["acciones"], list) else []):
         orden, motivo = validar_accion(a)
         if orden and orden["cmd"] == "carro" and carro_ya:
@@ -741,3 +825,22 @@ def describir_ordenes(ordenes: list[dict]) -> str:
                            "lote": f"Lote de {o.get('valor')} monedas por vaso.",
                            "velocidad": f"Velocidad ×{o.get('valor')}."}.get(o["cmd"], o["cmd"]))
     return " ".join(textos)
+
+
+def preparar_local() -> str:
+    """Crea en Ollama `qwen2.5-proyecto` (qwen2.5:3b con 8192 tokens de contexto). Una vez."""
+    import subprocess
+    import tempfile
+
+    ollama = os.path.expandvars(r"%LOCALAPPDATA%\Programs\Ollama\ollama.exe") if os.name == "nt" else "ollama"
+    with tempfile.NamedTemporaryFile("w", suffix=".Modelfile", delete=False, encoding="utf-8") as f:
+        f.write(f"FROM {MODELO_LOCAL_BASE}\nPARAMETER num_ctx 8192\nPARAMETER temperature 0.2\n")
+    r = subprocess.run([ollama, "create", "qwen2.5-proyecto", "-f", f.name], capture_output=True, text=True)
+    return r.stdout + r.stderr
+
+
+if __name__ == "__main__":
+    import sys
+
+    if "--preparar-local" in sys.argv:
+        print(preparar_local())

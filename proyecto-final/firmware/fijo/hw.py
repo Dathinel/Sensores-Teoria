@@ -40,7 +40,7 @@ class Cinta:
     def __init__(self, pin_step, pin_dir, cfg):
         self.step = PWM(Pin(pin_step), freq=1000, duty=0)
         self.dir = Pin(pin_dir, Pin.OUT, value=1)
-        self.pasos_por_mm = 200 * cfg["micropasos"] / cfg["mm_por_vuelta"]
+        self.pasos_por_mm = cfg["pasos_por_vuelta"] * cfg["micropasos"] / cfg["mm_por_vuelta"]
         self.fin = None
 
     def avanzar(self, mm, ms):
@@ -109,7 +109,8 @@ class Hardware:
         self.cfg = cfg
         self.activo_bajo = cfg["activo_bajo"]
         self.en = Pin(pines.DRIVERS_EN, Pin.OUT, value=0)         # A4988: ENABLE activo en bajo
-        mc = {"micropasos": cfg["micropasos"], "mm_por_vuelta": cfg["mm_por_vuelta_cinta"]}
+        mc = {"micropasos": cfg["micropasos"], "mm_por_vuelta": cfg["mm_por_vuelta_cinta"],
+              "pasos_por_vuelta": cfg["pasos_por_vuelta_motor"]}
         self.cintas = {"monedas": Cinta(pines.DRIVERS_M_STEP, pines.DRIVERS_M_DIR, mc),
                        "vasos": Cinta(pines.DRIVERS_V_STEP, pines.DRIVERS_V_DIR, mc)}
         self.entradas = {"presencia": Pin(pines.PRESENCIA_OUT, Pin.IN),

@@ -25,7 +25,7 @@
 
 | Componente | Cant. | Modelo propuesto | Para qué sirve | Estado | Hilos |
 |---|---|---|---|---|---|
-| Drivers de las dos cintas (M y V) (`drivers_cintas`) | 2 | A4988 o TMC2208 (silencioso), en una sola placa | Generan los pasos de los dos NEMA17 (micropaso 1/16): el driver M mueve la cinta de monedas y el V la de vasos. Son iguales y comparten placa, 12 V (VMOT, con su condensador de 100 µF cada uno) y la señal ENABLE; cada uno tiene su STEP y su DIR propios en el ESP32 fijo. | efecto simulado | 17 |
+| Drivers de las dos cintas (M y V) (`drivers_cintas`) | 2 | A4988 o TMC2208 (silencioso), en una sola placa | Generan los pasos de los dos NEMA17 (micropaso 1/4, por el PWM del ESP32): el driver M mueve la cinta de monedas y el V la de vasos. Son iguales y comparten placa, 12 V (VMOT, con su condensador de 100 µF cada uno) y la señal ENABLE; cada uno tiene su STEP y su DIR propios en el ESP32 fijo. | efecto simulado | 17 |
 | ESP32 fijo (estación) (`esp32_fijo`) | 1 | ESP32 DevKit V1 (38 pines) | Lee los sensores, mueve motores y servos, habla con el PC por USB y con el carro por ESP-NOW. No decide la clasificación: la visión corre en el PC. | efecto simulado | 33 |
 | Controlador de servos (`pca9685`) | 1 | PCA9685 (16 canales, I2C) | Maneja los 6 servos con solo 2 pines del ESP32 (I2C; sobran 10 de sus 16 canales). | efecto simulado | 24 |
 | Fuente de 12 V (`fuente`) | 1 | Fuente conmutada 12 V 10 A (tipo LRS-150-12, 159 x 97 x 30 mm) | 12 V para los drivers de los pasos a paso, los sensores capacitivo e inductivo y los dos reguladores. Tierra comun en estrella en la bornera X2. El ESP32 fijo va por el USB del portatil. | solo visual | 6 |

@@ -23,14 +23,18 @@ filtrado:
 cinta_monedas:
   # Separacion entre casillas de la cinta indexada, en mm.
   separacion_casilla_mm: 40
-  # Pausa tras cada avance de casilla, en ms.
-  pausa_casilla_ms: 300
+  # La pausa tras cada avance esta en tiempos_ms.pausa_casilla_monedas (1000 ms). Aqui habia
+  # otra de 300 ms que nadie leia y contradecia esa (auditoria 2026-09-28).
 
 vasos:
   # Sensor del interior del vaso (VL53L0X mirando hacia abajo, en la
   # verificacion): si la distancia al fondo es menor que la del vaso vacio
   # menos este margen (mm), el vaso trae algo adentro y no entra. PROVISIONAL.
   margen_interior_mm: 10
+  # PROVISIONAL: el sensor del interior va 15 mm sobre la boca del vaso (revision final
+  # 2026-09-26); con el vaso de 90 mm el fondo vacio queda a ~105 mm. Lo usan el visor
+  # (sim/geometria.py) y el backend real (umbral = fondo - margen_interior_mm).
+  sensor_interior_sobre_boca_mm: 15
   # PROVISIONAL: altura total del vaso a imprimir/comprar, en mm. Ajustar
   # con la medida real antes de la fase 2 (construccion del URDF).
   altura_mm: 90
@@ -69,7 +73,10 @@ motor_paso_a_paso:
   # Confirmar antes de dimensionar el driver y el torque necesario.
   modelo: "NEMA17 17HS4401 (provisional)"
   pasos_por_revolucion: 200
-  microstepping: 16
+  # 1/4 de micropaso (no 1/16): el firmware genera los pasos con el PWM del ESP32 y a 1/4
+  # la frecuencia queda baja (~1,3 kHz). La camara de cada cinta corrige el desfase igual.
+  # (Antes: 16 aqui y 4 en firmware.micropasos_firmware; auditoria 2026-09-28: uno solo.)
+  microstepping: 4
 
 canaleta_entrega:
   # Inclinacion de los rieles de la canaleta, en grados (seccion 4).
@@ -409,9 +416,7 @@ firmware:
   # Cintas: NEMA17 + A4988. Rodillo motriz de ~12,7 mm: 40 mm de banda por vuelta
   # (una casilla de monedas por vuelta; dos de vasos = 80 mm). PROVISIONAL.
   mm_por_vuelta_cinta: 40
-  # 1/4 de micropaso (no 1/16): los pasos los genera el PWM del ESP32 y a 1/4
-  # la frecuencia queda baja (~1,3 kHz). La camara corrige el desfase igual.
-  micropasos_firmware: 4
+  # El micropaso y los pasos por vuelta del NEMA17 estan en motor_paso_a_paso.
   # Carrusel: 28BYJ-48 en medio paso = 4096 pasos por vuelta (con engranaje).
   carrusel_pasos_por_vuelta: 4096
   carrusel_ms_por_paso: 2

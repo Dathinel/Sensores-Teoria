@@ -58,12 +58,13 @@ class Encoder:
 
 
 class Ultrasonico:
-    def __init__(self, trig, echo, periodo_ms, alcance_mm):
+    def __init__(self, trig, echo, periodo_ms, alcance_mm, minimo_mm=20):
         self.trig = Pin(trig, Pin.OUT, value=0)
         self.echo = Pin(echo, Pin.IN)
         self.echo.irq(trigger=Pin.IRQ_RISING | Pin.IRQ_FALLING, handler=self._flanco)
         self.periodo = periodo_ms
         self.alcance = alcance_mm
+        self.minimo = minimo_mm
         self._t_subida = 0
         self._prox = time.ticks_ms()
         self.ultima = None
@@ -74,7 +75,7 @@ class Ultrasonico:
             self._t_subida = time.ticks_us()
         else:
             mm = time.ticks_diff(time.ticks_us(), self._t_subida) * 0.1715   # 343 m/s, ida y vuelta
-            self.ultima = mm if 20 <= mm <= self.alcance else None
+            self.ultima = mm if self.minimo <= mm <= self.alcance else None
             self.medidas += 1
 
     def actualizar(self):
@@ -97,7 +98,7 @@ class Hardware:
                                                 pines.IR_LINEA_OUT4, pines.IR_LINEA_OUT5)]
         self.cuna = Pin(pines.IR_CUNA_DO, Pin.IN)
         self.us = Ultrasonico(pines.HCSR04_TRIG, pines.HCSR04_ECHO, v["ultrasonico_periodo_ms"],
-                              v["ultrasonico_rango_max_mm"])
+                              v["ultrasonico_rango_max_mm"], v["ultrasonico_rango_min_mm"])
         self.tof = Laser(I2C(0, sda=Pin(21), scl=Pin(22), freq=400_000), 0x29, None, v["tof_periodo_ms"],
                          v["tof_rango_max_mm"])
         self.m_por_pulso = 3.14159 * v["diametro_rueda_mm"] / 1000 / v["encoder_pulsos_por_vuelta"]

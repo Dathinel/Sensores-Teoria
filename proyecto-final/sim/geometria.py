@@ -56,7 +56,7 @@ def _vec(t) -> list[float]:
     return [round(float(v), 5) for v in t]
 
 
-def _rayos_de_sensores() -> dict[str, dict]:
+def _rayos_de_sensores(vasos: dict | None = None) -> dict[str, dict]:
     """Geometria REAL de cada sensor, sacada del backend sim."""
     b = EstacionBackendSim(_EscenaSoloGeometria())
     geo: dict[str, dict] = {}
@@ -87,8 +87,10 @@ def _rayos_de_sensores() -> dict[str, dict]:
     # cono de 25 grados llegaba al fondo con 2,5 mm de margen a la pared;
     # asi quedan ~6 mm). Y el Hall del carrusel.
     x, y, z = mundo.posicion_estacion_vasos(mundo.ESTACION_VERIFICACION_VASOS)
-    alto = 0.09  # altura del vaso (config vasos.altura_mm)
-    geo["sensor_interior"] = {"tipo": "proximidad", "posicion": _vec((x, y, z + alto + 0.015)), "mira": [0, 0, -1]}
+    vasos = vasos or {"altura_mm": 90, "sensor_interior_sobre_boca_mm": 15}
+    alto = vasos["altura_mm"] / 1000
+    sobre = vasos.get("sensor_interior_sobre_boca_mm", 15) / 1000
+    geo["sensor_interior"] = {"tipo": "proximidad", "posicion": _vec((x, y, z + alto + sobre)), "mira": [0, 0, -1]}
     cx, cy = mundo.centro_carrusel()
     # Hall: encima del iman (6 x 3 mm, en el disco del carrusel a R+15 mm,
     # a 0 grados: entre los tubos de 330 y 30), mirando hacia abajo con 4 mm
@@ -186,7 +188,7 @@ def geometria_completa(parametros: dict) -> dict:
                            "alto": pista_cfg["obstaculo_alto_mm"] / 1000})
     meta = linea[-1]
 
-    rayos = _rayos_de_sensores()
+    rayos = _rayos_de_sensores(parametros["vasos"])
     sensores = [dict(s, geometria=rayos.get(s["id"])) for s in CATALOGO_SENSORES]
 
     return {

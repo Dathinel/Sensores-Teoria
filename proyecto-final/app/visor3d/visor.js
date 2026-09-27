@@ -2034,108 +2034,261 @@ function construirCajaControl() {
   construirEnlaceAsistente();
 }
 
-// Portatil del grupo: ASUS TUF Gaming A15 (medidas de la ficha oficial de ASUS:
-// 359 x 256 x 24,7 mm, 2,3 kg, pantalla de 15,6" 16:9 = 344 x 194 mm de area activa).
-// Base de 16,7 mm + tapa de 8 mm; abierta a ~110 grados. Esta detras de la mesa de monedas
-// (las dos webcams llegan con su cable de 1,5 m) y sus USB del costado derecho quedan frente
-// al hub. En la pantalla se ve lo ultimo que respondio el asistente (solo lectura).
-const LAPTOP = { cx: 0.01, cy: 0.38, ancho: 0.359, fondo: 0.256, base: 0.0167, tapa: 0.008, alto_tapa: 0.245,
-  apertura: 0.35, pantalla: [0.3442, 0.1936] };
+// Portatil del grupo: ASUS TUF Gaming A15 (ficha oficial de ASUS: 359 x 256 x 24,7 mm,
+// 2,3 kg, pantalla de 15,6" 16:9 = 344 x 194 mm de area activa). Se modela a su medida real y
+// se dibuja AMPLIADO x1,5 (usuario, 2026-09-28: para leer en el visor lo que responde el
+// asistente); la etiqueta lo dice. Esta detras de la caja de control, en espacio libre (medido
+// con la auditoria de solapes), y sus USB del costado derecho quedan del lado del hub.
+const LAPTOP = { escala: 1.5, cx: 0.0, cy: 0.535, ancho: 0.359, fondo: 0.256, base: 0.0167, tapa: 0.007,
+  alto_tapa: 0.236, apertura: 0.35, pantalla: [0.3442, 0.1936] };
+const COLOR_TUF = { cuerpo: 0x3a3e44, tapa: 0x33373c, oscuro: 0x15171a, tecla: 0x1b1e22, detalle: 0x8b949e };
 
-function construirLaptop() {
-  const L = LAPTOP;
-  const pc = new THREE.Group();
-  const gris = 0x2a2e35, negro = 0x121418;
-  // Base con el borde inferior un poco mas chico (se ve biselada).
-  pc.add(caja(L.ancho - 0.006, L.fondo - 0.006, 0.004, negro, Vxyz(0, 0, 0.002)));
-  pc.add(caja(L.ancho, L.fondo, L.base - 0.004, gris, Vxyz(0, 0, 0.004 + (L.base - 0.004) / 2), { metalness: 0.35, roughness: 0.5 }));
-  // Teclado completo con numerico: 6 filas; WASD translucidas como en la TUF.
-  const z = L.base + 0.0006, tecla = 0.0152, paso = 0.0187;
-  const filas = [[15, 0.0], [15, 0.0], [15, 0.0], [14, 0.0], [13, 0.0], [10, 0.0]];
-  filas.forEach(([n, _], f) => {
-    for (let k = 0; k < n; k++) {
-      const x = -0.165 + k * paso + (f === 5 && k > 3 ? 0.04 : 0);
-      const y = 0.07 - f * paso;
-      const wasd = (f === 2 && k === 2) || (f === 3 && k >= 1 && k <= 3);
-      const ancho = f === 5 && k === 3 ? 0.09 : tecla;   // barra espaciadora
-      pc.add(caja(ancho, tecla, 0.0012, wasd ? 0x9aa4b1 : 0x1b1e23, Vxyz(x + (ancho - tecla) / 2, y, z)));
-    }
-  });
-  pc.add(caja(0.105, 0.068, 0.0006, 0x33373e, Vxyz(-0.03, -0.088, L.base + 0.0003)));        // touchpad
-  pc.add(cilindro(0.006, 0.26, negro, Vxyz(0, L.fondo / 2 - 0.004, L.base + 0.002)).rotateZ(Math.PI / 2));
-  // Tapa: gira sobre la bisagra del borde de atras.
-  const tapa = new THREE.Group();
-  tapa.position.copy(Vxyz(0, L.fondo / 2 - 0.004, L.base + 0.002));
-  tapa.rotation.x = -L.apertura;
-  tapa.add(caja(L.ancho, L.tapa, L.alto_tapa, gris, Vxyz(0, L.tapa / 2, L.alto_tapa / 2), { metalness: 0.35, roughness: 0.5 }));
-  const logo = new THREE.Mesh(new THREE.CircleGeometry(0.014, 6), new THREE.MeshStandardMaterial({ color: 0x8b949e, metalness: 0.8 }));
-  logo.position.copy(Vxyz(0, L.tapa + 0.0002, L.alto_tapa * 0.55));
-  logo.rotation.y = Math.PI;                               // mira hacia atras
-  tapa.add(logo);
-  // Pantalla: lienzo 16:9 con la ultima respuesta del asistente.
-  const lienzo = document.createElement('canvas');
-  lienzo.width = 1280; lienzo.height = 720;
-  const textura = new THREE.CanvasTexture(lienzo);
-  textura.colorSpace = THREE.SRGBColorSpace;
-  const pantalla = new THREE.Mesh(new THREE.PlaneGeometry(...L.pantalla), new THREE.MeshBasicMaterial({ map: textura }));
-  pantalla.position.copy(Vxyz(0, -0.0006, 0.008 + L.pantalla[1] / 2));
-  pantalla.userData.asistente = true;
-  tapa.add(pantalla);
-  pc.add(tapa);
-  pc.position.copy(Vxyz(L.cx, L.cy, 0));
-  escena.add(pc);
-  registrar('pc', ...pc.children.filter((c) => c.isMesh));
-  // USB del costado derecho, frente al hub (los cables llegan a estos pines).
-  const xDer = L.cx + L.ancho / 2 + 0.001;
-  for (const [n, y] of [['pc.USB1', 0.35], ['pc.USB2', 0.33]]) {
-    const puerto = caja(0.002, 0.012, 0.005, 0x2d6fd0, Vxyz(xDer - 0.001, y, 0.009));
-    escena.add(puerto);
-    pinSuelto(n, escena, Vxyz(xDer, y, 0.009), new THREE.Vector3(1, 0, 0), 'usb');
-  }
-  const etPc = etiqueta('Portátil ASUS TUF Gaming A15 (visión + supervisor)', { alto: 0.012, alcance: 0.9 });
-  etPc.position.copy(Vxyz(L.cx, L.cy + 0.2, 0.3));
-  escena.add(etPc);
-  P.laptop = { pantalla, lienzo, textura };
+// Caja con esquinas redondeadas (vista en planta), extruida hacia arriba: la base, la tapa,
+// el touchpad y las teclas dejan de verse como bloques.
+function cajaRedonda(sx, sy, sz, r, color, pos, extra = {}) {
+  const f = new THREE.Shape();
+  const x = -sx / 2, y = -sy / 2;
+  f.moveTo(x + r, y); f.lineTo(x + sx - r, y); f.quadraticCurveTo(x + sx, y, x + sx, y + r);
+  f.lineTo(x + sx, y + sy - r); f.quadraticCurveTo(x + sx, y + sy, x + sx - r, y + sy);
+  f.lineTo(x + r, y + sy); f.quadraticCurveTo(x, y + sy, x, y + sy - r);
+  f.lineTo(x, y + r); f.quadraticCurveTo(x, y, x + r, y);
+  const bisel = Math.min(sz * 0.25, r * 0.5, 0.0012);
+  const g = new THREE.ExtrudeGeometry(f, { depth: Math.max(sz - 2 * bisel, 1e-4), bevelEnabled: bisel > 0,
+    bevelThickness: bisel, bevelSize: bisel, bevelSegments: 2, curveSegments: 6 });
+  g.rotateX(-Math.PI / 2);            // la extrusion queda hacia arriba (z de la simulacion)
+  g.translate(0, bisel, 0);
+  const m = new THREE.Mesh(g, color && color.isMaterial ? color : mat(color, extra));
+  if (pos) m.position.copy(pos);
+  m.castShadow = true;
+  return m;
 }
 
-// Fase 7: el asistente vive en el portatil y le pregunta a la API de
-// DeepSeek por internet (el Wi-Fi del PC; el carro usa ESP-NOW, aparte). No
-// es una pieza fisica: se dibuja como una nube unida al portatil por una linea
-// punteada, y cada mensaje nuevo viaja por ella. Clic en la nube: pestana
-// "Asistente" del panel (solo lectura; se le escribe desde el dashboard).
+// Teclado de la TUF A15 (en mm desde el centro del teclado; x a la derecha, y hacia atras):
+// fila de funciones baja, bloque principal de 15 unidades, flechas y numerico de 4 columnas.
+function teclasTuf() {
+  const u = 17.2, t = [];
+  const fila = (y, alto, etiquetas, x0 = -168) => {
+    let x = x0;
+    for (const e of etiquetas) {
+      const [txt, ancho = 1] = Array.isArray(e) ? e : [e, 1];
+      t.push({ txt, x: x + (ancho * u) / 2, y, w: ancho * u - 2.2, h: alto });
+      x += ancho * u;
+    }
+  };
+  fila(47, 9, ['Esc', 'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12', 'Ins', 'Del',
+    'Prt', 'Home', 'End', '⏻'].map((x) => [x, 0.97]));
+  fila(33, 15, ['`', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', ['⌫', 2]]);
+  fila(16, 15, [['Tab', 1.5], 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '[', ']', ['\\', 1.5]]);
+  fila(-1, 15, [['Caps', 1.75], 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Ñ', "'", ['Enter', 2.25]]);
+  fila(-18, 15, [['Shift', 2.25], 'Z', 'X', 'C', 'V', 'B', 'N', 'M', ',', '.', '-', ['Shift', 1.75], '↑']);
+  fila(-35, 15, ['Ctrl', 'Fn', '⊞', 'Alt', ['', 5.5], 'Alt', 'Ctrl', '←', '↓', '→']);
+  // Numerico (mas angosto, como en la A15).
+  const np = [['Num', '/', '*', '-'], ['7', '8', '9', '+'], ['4', '5', '6', ''], ['1', '2', '3', 'Ent'], [['0', 2], '.', '']];
+  np.forEach((etq, i) => {
+    let x = 97;
+    for (const e of etq) {
+      const [txt, ancho = 1] = Array.isArray(e) ? e : [e, 1];
+      if (txt !== '' || i === 4) t.push({ txt, x: x + (ancho * 15) / 2, y: 33 - i * 17, w: ancho * 15 - 2, h: 15 });
+      x += ancho * 15;
+    }
+  });
+  return t;
+}
+const WASD = new Set(['W', 'A', 'S', 'D']);
+
+function construirLaptop() {
+  const L = LAPTOP, C = COLOR_TUF, mm = 0.001;
+  const pc = new THREE.Group();
+  const metal = { metalness: 0.45, roughness: 0.45 };
+  // Base: casco inferior oscuro + cubierta superior gris con esquinas redondeadas; patas de goma.
+  pc.add(cajaRedonda(L.ancho, L.fondo, 0.005, 0.012, C.oscuro, Vxyz(0, 0, 0)));
+  pc.add(cajaRedonda(L.ancho - 0.001, L.fondo - 0.001, L.base - 0.004, 0.011, C.cuerpo, Vxyz(0, 0, 0.004), metal));
+  for (const [x, y] of [[-0.15, -0.1], [0.15, -0.1], [-0.15, 0.1], [0.15, 0.1]])
+    pc.add(cajaRedonda(0.05, 0.008, 0.002, 0.003, C.oscuro, Vxyz(x, y, -0.0015)));
+  // Rejilla trasera (salida del aire caliente) y lateral.
+  for (let i = 0; i < 26; i++) pc.add(caja(0.0035, 0.0012, 0.008, C.oscuro, Vxyz(-0.14 + i * 0.0112, L.fondo / 2 + 0.0002, 0.009)));
+  for (let i = 0; i < 12; i++) pc.add(caja(0.0012, 0.0035, 0.006, C.oscuro, Vxyz(-L.ancho / 2 - 0.0002, 0.03 + i * 0.007, 0.009)));
+  // Placa del teclado hundida + teclas en relieve (una malla por fila de teclas repetidas).
+  const zTec = L.base + 0.0002;
+  pc.add(caja(0.33, 0.112, 0.0006, C.oscuro, Vxyz(0, 0.052, zTec - 0.0004)));
+  const teclas = teclasTuf();
+  const kc = new THREE.Vector2(0, 0.052);   // centro del teclado en la base
+  for (const k of teclas) {
+    const esWasd = WASD.has(k.txt);
+    const tec = cajaRedonda(k.w * mm, k.h * mm, 0.0014, 0.0012, esWasd ? 0x9fb3c8 : C.tecla,
+      Vxyz(kc.x + k.x * mm, kc.y + k.y * mm, zTec), esWasd ? { transparent: true, opacity: 0.8, roughness: 0.2 } : { roughness: 0.7 });
+    pc.add(tec);
+  }
+  // Letras de las teclas: un lienzo encima de las teclas. Es tambien el mapa de luz del
+  // teclado RGB (emissiveMap): cuando el modelo local piensa, la luz cambia de color.
+  const lz = document.createElement('canvas');
+  lz.width = 2048; lz.height = 704;
+  const cx = lz.getContext('2d');
+  const W = 0.36, H = 0.124;                  // metros que cubre el lienzo
+  const px = (x) => (x * mm + W / 2) / W * lz.width, py = (y) => (H / 2 - y * mm) / H * lz.height;
+  cx.fillStyle = '#000'; cx.fillRect(0, 0, lz.width, lz.height);
+  cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillStyle = '#fff';
+  for (const k of teclas) {
+    if (!k.txt) continue;
+    const s = k.txt.length > 3 ? 26 : k.txt.length > 1 ? 30 : 40;
+    cx.font = `600 ${s}px "Space Grotesk", sans-serif`;
+    cx.fillText(k.txt, px(k.x), py(k.y));
+  }
+  const texLetras = new THREE.CanvasTexture(lz);
+  texLetras.colorSpace = THREE.SRGBColorSpace;
+  const matLetras = new THREE.MeshStandardMaterial({ color: 0x000000, transparent: true, alphaMap: texLetras,
+    emissive: 0xffffff, emissiveMap: texLetras, emissiveIntensity: 0.55, depthWrite: false });
+  const letras = new THREE.Mesh(new THREE.PlaneGeometry(W, H), matLetras);
+  letras.rotation.x = -Math.PI / 2;
+  letras.position.copy(Vxyz(0, 0.052, zTec + 0.0016));
+  pc.add(letras);
+  // Touchpad, reposamanos con franja y luces de estado (la de "actividad" parpadea al pensar).
+  pc.add(cajaRedonda(0.11, 0.07, 0.0006, 0.006, 0x2d3137, Vxyz(-0.042, -0.078, L.base), { roughness: 0.3 }));
+  pc.add(caja(0.3, 0.0008, 0.0003, 0x6e7681, Vxyz(0, -0.115, L.base + 0.0002)));
+  const leds = [0x3fb68b, 0x3fb68b, 0xf2b134].map((c, i) => {
+    const l = new THREE.Mesh(new THREE.CylinderGeometry(0.0012, 0.0012, 0.0005, 10),
+      new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: i < 2 ? 0.8 : 0.1 }));
+    l.position.copy(Vxyz(-0.155 + i * 0.006, -L.fondo / 2 + 0.006, L.base + 0.0002));
+    pc.add(l);
+    return l;
+  });
+  // Puertos. Izquierda: DC, RJ45, HDMI, USB-C, USB-A, audio. Derecha: 2 USB-A (a estos llegan
+  // los cables de las webcams y del ESP32 por el hub).
+  // Un puerto: boca negra hundida en el costado y, adentro, la lengueta (azul en los USB 3.0).
+  const puerto = (x, y, z, sx, sy, sz, c) => {
+    pc.add(caja(sx + 0.0012, sy + 0.0012, sz + 0.0012, 0x050506, Vxyz(x, y, z)));
+    if (c !== 0x1d2129) pc.add(caja(sx + 0.0014, sy * 0.72, sz * 0.32, c, Vxyz(x, y, z + sz * 0.12)));
+  };
+  const xi = -L.ancho / 2 - 0.0003, xd = L.ancho / 2 + 0.0003;
+  [[0.075, 0.006, 0.006, 'cil'], [0.05, 0.016, 0.012, 0x1d2129], [0.028, 0.015, 0.006, 0x1d2129],
+    [0.012, 0.009, 0.0035, 0x1d2129], [-0.006, 0.013, 0.005, 0x2d6fd0], [-0.03, 0.006, 0.006, 'cil']].forEach(([y, a, h, c]) => {
+    if (c === 'cil') {
+      const d = new THREE.Mesh(new THREE.CylinderGeometry(a / 2, a / 2, 0.003, 16), mat(0x0b0c0e));
+      d.rotation.z = Math.PI / 2;
+      d.position.copy(Vxyz(xi, y, 0.009));
+      pc.add(d);
+    } else puerto(xi, y, 0.009, 0.0012, a, h, c);
+  });
+  const usbDerecha = [[-0.02, 0.013], [0.0, 0.013]];
+  for (const [y, a] of usbDerecha) puerto(xd, y, 0.009, 0.0012, a, 0.005, 0x2d6fd0);
+  // Bisagras.
+  const yBis = L.fondo / 2 - 0.006, zBis = L.base + 0.003;
+  for (const x of [-0.13, 0.13]) {
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.0045, 0.0045, 0.05, 16), mat(C.oscuro, metal));
+    b.rotation.z = Math.PI / 2;
+    b.position.copy(Vxyz(x, yBis, zBis));
+    pc.add(b);
+  }
+  // Tapa: gira sobre la bisagra. Por fuera, aluminio con el logo; por dentro, el marco negro
+  // delgado, la camara y la pantalla.
+  const tapa = new THREE.Group();
+  tapa.position.copy(Vxyz(0, yBis, zBis));
+  tapa.rotation.x = -L.apertura;
+  const cara = cajaRedonda(L.ancho, L.alto_tapa, L.tapa, 0.01, C.tapa, null, metal);
+  cara.rotation.x = Math.PI / 2;                       // de horizontal a vertical
+  cara.position.copy(Vxyz(0, L.tapa, L.alto_tapa / 2));
+  tapa.add(cara);
+  const marco = new THREE.Mesh(new THREE.PlaneGeometry(L.ancho - 0.004, L.alto_tapa - 0.004), mat(0x07080a, { roughness: 0.2 }));
+  marco.position.copy(Vxyz(0, -0.0004, L.alto_tapa / 2));
+  tapa.add(marco);
+  const cam = new THREE.Mesh(new THREE.CircleGeometry(0.0015, 16), mat(0x1f3a5f, { metalness: 0.8, roughness: 0.1 }));
+  cam.position.copy(Vxyz(0, -0.0006, L.alto_tapa - 0.006));
+  tapa.add(cam);
+  // Logo TUF por fuera (lienzo).
+  const lg = document.createElement('canvas');
+  lg.width = 512; lg.height = 256;
+  const g2 = lg.getContext('2d');
+  g2.strokeStyle = '#aab3bd'; g2.lineWidth = 10;
+  g2.beginPath();
+  for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; g2.lineTo(128 + 90 * Math.cos(a), 128 + 90 * Math.sin(a)); }
+  g2.closePath(); g2.stroke();
+  g2.fillStyle = '#aab3bd'; g2.font = '800 96px "Space Grotesk", sans-serif'; g2.textAlign = 'center'; g2.textBaseline = 'middle';
+  g2.fillText('TUF', 128, 132);
+  g2.font = '700 54px "Space Grotesk", sans-serif'; g2.textAlign = 'left'; g2.fillText('GAMING', 250, 132);
+  const texLogo = new THREE.CanvasTexture(lg);
+  texLogo.colorSpace = THREE.SRGBColorSpace;
+  const logo = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.05), new THREE.MeshStandardMaterial({ map: texLogo,
+    transparent: true, metalness: 0.6, roughness: 0.3 }));
+  logo.position.copy(Vxyz(0, L.tapa + 0.0015, L.alto_tapa * 0.55));
+  logo.rotation.y = Math.PI;
+  tapa.add(logo);
+  // Pantalla: el asistente (lienzo 1920 x 1080, la misma proporcion que el panel real).
+  const lienzo = document.createElement('canvas');
+  lienzo.width = 1920; lienzo.height = 1080;
+  const textura = new THREE.CanvasTexture(lienzo);
+  textura.colorSpace = THREE.SRGBColorSpace;
+  textura.anisotropy = 8;
+  const pantalla = new THREE.Mesh(new THREE.PlaneGeometry(...L.pantalla), new THREE.MeshBasicMaterial({ map: textura }));
+  pantalla.position.copy(Vxyz(0, -0.0008, 0.018 + L.pantalla[1] / 2));
+  pantalla.userData.asistente = true;
+  tapa.add(pantalla);
+  // "TUF GAMING" en el marco de abajo.
+  const eb = document.createElement('canvas');
+  eb.width = 512; eb.height = 64;
+  const g3 = eb.getContext('2d');
+  g3.fillStyle = '#6e7681'; g3.font = '700 40px "Space Grotesk", sans-serif'; g3.textAlign = 'center'; g3.textBaseline = 'middle';
+  g3.fillText('TUF GAMING', 256, 34);
+  const texEb = new THREE.CanvasTexture(eb);
+  const rot = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.00625), new THREE.MeshBasicMaterial({ map: texEb, transparent: true }));
+  rot.position.copy(Vxyz(0, -0.0008, 0.0085));
+  tapa.add(rot);
+  pc.add(tapa);
+
+  pc.scale.setScalar(L.escala);
+  pc.position.copy(Vxyz(L.cx, L.cy, 0.0015 * L.escala));   // apoyada en sus patas
+  escena.add(pc);
+  pc.updateMatrixWorld(true);
+  const meshes = [];
+  pc.traverse((m) => { if (m.isMesh) meshes.push(m); });
+  registrar('pc', ...meshes);
+  // Pines de los USB de la derecha, en coordenadas del mundo (el portatil esta ampliado).
+  usbDerecha.forEach(([y], i) => {
+    const w = pc.localToWorld(Vxyz(xd + 0.0006, y, 0.009));
+    pinSuelto(`pc.USB${i + 1}`, escena, w, new THREE.Vector3(1, 0, 0), 'usb');
+  });
+  const etPc = etiqueta('Portátil ASUS TUF Gaming A15 · dibujado ×1,5 para leer la pantalla', { alto: 0.012, alcance: 1.2 });
+  escena.add(etPc);
+  const puntaTapa = new THREE.Vector3();
+  cam.getWorldPosition(puntaTapa);
+  // Sobre el borde de arriba de la tapa, a la izquierda (adelante o al costado quedaba
+  // encima de la planta en las vistas "Planta" y "Todo").
+  etPc.position.copy(puntaTapa).add(new THREE.Vector3(-0.22, 0.05, 0));
+  P.laptop = { grupo: pc, pantalla, lienzo, textura, matLetras, leds, puntaTapa };
+}
+
+// Fase 7: el asistente vive en el portatil. Con DeepSeek la pregunta viaja por el Wi-Fi a la
+// API (la nube); con el modelo local piensa el mismo portatil (teclado RGB y luz de actividad).
 function construirEnlaceAsistente() {
   const grupo = new THREE.Group();
-  const centro = Vxyz(LAPTOP.cx, LAPTOP.cy + 0.3, 0.46);
+  const L = P.laptop;
+  // Nube CENTRADA sobre el portatil (misma x), por encima del borde de la tapa.
+  const a = L.puntaTapa.clone().add(new THREE.Vector3(0, 0.02, 0));
+  const centro = new THREE.Vector3(a.x, a.y + 0.2, a.z);
   const matNube = new THREE.MeshStandardMaterial({ color: 0xdfe7f5, roughness: 0.9, emissive: 0x539bf5, emissiveIntensity: 0.12 });
-  for (const [dx, dz, r] of [[0, 0, 0.055], [-0.06, -0.01, 0.042], [0.06, -0.012, 0.045], [-0.028, 0.03, 0.04], [0.03, 0.028, 0.038]]) {
+  for (const [dx, dy, dz, r] of [[0, 0, 0, 0.055], [-0.062, -0.012, 0.006, 0.042], [0.062, -0.012, -0.006, 0.042],
+    [-0.03, 0.03, -0.01, 0.04], [0.03, 0.03, 0.01, 0.04], [0, -0.02, 0.03, 0.035], [0, -0.02, -0.03, 0.035]]) {
     const b = new THREE.Mesh(new THREE.SphereGeometry(r, 20, 14), matNube);
-    b.position.copy(centro).add(new THREE.Vector3(dx, dz, 0));
+    b.position.copy(centro).add(new THREE.Vector3(dx, dy, dz));
     b.userData.asistente = true;
     grupo.add(b);
   }
-  // Sale del borde de arriba de la tapa abierta.
-  const a = Vxyz(LAPTOP.cx, LAPTOP.cy + LAPTOP.fondo / 2 + LAPTOP.alto_tapa * Math.sin(LAPTOP.apertura),
-    LAPTOP.base + LAPTOP.alto_tapa * Math.cos(LAPTOP.apertura) + 0.01);
   const b = centro.clone().add(new THREE.Vector3(0, -0.05, 0));
   const geo = new THREE.BufferGeometry().setFromPoints([a, b]);
   const linea = new THREE.Line(geo, new THREE.LineDashedMaterial({ color: 0x539bf5, dashSize: 0.012, gapSize: 0.008 }));
   linea.computeLineDistances();
   grupo.add(linea);
-  const paquete = new THREE.Mesh(new THREE.SphereGeometry(0.009, 12, 10),
-    new THREE.MeshBasicMaterial({ color: COLOR.ambar }));
+  const paquete = new THREE.Mesh(new THREE.SphereGeometry(0.009, 12, 10), new THREE.MeshBasicMaterial({ color: COLOR.ambar }));
   paquete.visible = false;
   grupo.add(paquete);
-  const et = etiqueta('💬 Asistente · API de DeepSeek (internet)', { alto: 0.014, alcance: 1.6, borde: '#539bf5' });
+  const et = etiqueta('☁ API de DeepSeek (internet)', { alto: 0.014, alcance: 1.8, borde: '#539bf5' });
   et.position.copy(centro).add(new THREE.Vector3(0, 0.085, 0));
   grupo.add(et);
-  const etW = etiqueta('Wi-Fi del portátil (el carro usa ESP-NOW)', { alto: 0.009, alcance: 0.9, color: '#8b949e' });
-  etW.position.copy(a.clone().lerp(b, 0.5)).add(new THREE.Vector3(0.09, 0, 0));
+  const etW = etiqueta('Wi-Fi del portátil (el carro usa ESP-NOW)', { alto: 0.009, alcance: 1.0, color: '#8b949e' });
+  etW.position.copy(a.clone().lerp(b, 0.5)).add(new THREE.Vector3(0.1, 0, 0));
   grupo.add(etW);
-  // Lo que respondio el asistente se ve en la PANTALLA de la laptop (usuario,
-  // 2026-09-27): solo lectura; se le escribe desde el dashboard.
   escena.add(grupo);
-  const { pantalla: panel, lienzo, textura } = P.laptop;
-  P.asistente = { grupo, paquete, a, b, matNube, mensajes: -1, panel, lienzo, textura };
+  P.asistente = { grupo, paquete, a, b, matNube, mensajes: -1, panel: L.pantalla, lienzo: L.lienzo,
+    textura: L.textura, pensando: null, fase: 0 };
   dibujarPanelAsistente(null);
 }
 
@@ -2152,59 +2305,114 @@ function envolver(ctx, texto, ancho) {
   return lineas;
 }
 
+const QUIEN = { deepseek: 'DeepSeek (internet)', ollama: 'modelo local qwen2.5 (este portátil)' };
+
+// La pantalla de la laptop: barra de ventana, la pregunta, la respuesta con la letra MAS GRANDE
+// que quepa entera, y abajo quien respondio. Mientras piensa: la pregunta y un indicador animado.
 function dibujarPanelAsistente(d) {
   const A = P.asistente;
+  if (!A) return;
   const ctx = A.lienzo.getContext('2d');
-  const W = A.lienzo.width, H = A.lienzo.height;
-  ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = 'rgba(14,17,22,0.92)';
-  ctx.beginPath(); ctx.roundRect(4, 4, W - 8, H - 8, 28); ctx.fill();
-  ctx.strokeStyle = '#539bf5'; ctx.lineWidth = 6; ctx.stroke();
-  ctx.fillStyle = '#e6e8eb'; ctx.font = '700 44px "Space Grotesk", sans-serif'; ctx.textBaseline = 'top';
-  ctx.fillText('💬 Asistente del proyecto', 34, 26);
-  ctx.font = '500 26px "IBM Plex Mono", monospace'; ctx.fillStyle = '#8b949e';
-  ctx.fillText('solo lectura · se le escribe o habla desde el dashboard', 36, 84);
+  const W = A.lienzo.width, H = A.lienzo.height, m = 70;
+  ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#161b22'; ctx.fillRect(0, 0, W, 96);
+  ctx.fillStyle = '#e6e8eb'; ctx.font = '700 46px "Space Grotesk", sans-serif'; ctx.textBaseline = 'middle';
+  ctx.fillText('💬 Asistente del proyecto', m, 50);
+  ctx.fillStyle = '#8b949e'; ctx.font = '500 30px "IBM Plex Mono", monospace'; ctx.textAlign = 'right';
+  ctx.fillText('solo lectura · se le escribe o habla desde el dashboard', W - m, 50);
+  ctx.textAlign = 'left';
   const msgs = (d && d.mensajes) || [];
+  const pens = d && d.pensando;
   let pregunta = null, respuesta = null;
   for (let k = msgs.length - 1; k >= 0; k--) {
     if (!respuesta && msgs[k].rol === 'asistente') respuesta = msgs[k];
     else if (respuesta && msgs[k].rol === 'usuario') { pregunta = msgs[k]; break; }
   }
-  let y = 134;
-  if (!respuesta) {
-    ctx.font = '500 34px "Space Grotesk", sans-serif'; ctx.fillStyle = '#8b949e';
-    ctx.fillText(MODO_DEMO ? 'Demo grabada: sin conversación.' : 'Todavía nadie le ha preguntado nada.', 36, y);
+  let y = 150;
+  const bloquePregunta = (texto) => {
+    ctx.font = '600 44px "Space Grotesk", sans-serif'; ctx.fillStyle = '#f2b134'; ctx.textBaseline = 'top';
+    for (const l of envolver(ctx, `🧑 ${texto}`, W - 2 * m).slice(0, 2)) { ctx.fillText(l, m, y); y += 56; }
+    y += 24;
+  };
+  if (pens) {
+    bloquePregunta(pens.pregunta || '');
+    const local = pens.proveedor === 'ollama';
+    ctx.font = '600 56px "Space Grotesk", sans-serif'; ctx.fillStyle = local ? '#b083f0' : '#539bf5';
+    const puntos = '.'.repeat(1 + (A.fase % 3));
+    ctx.fillText((local ? 'Pensando en este portátil (qwen2.5, sin internet)' : 'Consultando a DeepSeek por internet') + puntos, m, y + 60);
+    // Barra que va y viene.
+    const u = (Math.sin(A.fase * 0.5) + 1) / 2;
+    ctx.fillStyle = '#21262d'; ctx.fillRect(m, y + 170, W - 2 * m, 16);
+    ctx.fillStyle = local ? '#b083f0' : '#539bf5'; ctx.fillRect(m + u * (W - 2 * m - 300), y + 170, 300, 16);
+  } else if (!respuesta) {
+    ctx.font = '500 52px "Space Grotesk", sans-serif'; ctx.fillStyle = '#8b949e'; ctx.textBaseline = 'top';
+    ctx.fillText(MODO_DEMO ? 'Demo grabada: sin conversación.' : 'Todavía nadie le ha preguntado nada.', m, y);
   } else {
-    if (pregunta) {
-      ctx.font = '600 32px "Space Grotesk", sans-serif'; ctx.fillStyle = '#f2b134';
-      for (const l of envolver(ctx, `🧑 ${pregunta.texto}`, W - 72).slice(0, 2)) { ctx.fillText(l, 36, y); y += 42; }
-      y += 10;
+    if (pregunta) bloquePregunta(pregunta.texto);
+    // Respuesta: la letra mas grande (de 64 a 30 px) con la que cabe entera.
+    const alto = H - y - 120;
+    let tam = 64, lineas;
+    for (; tam >= 30; tam -= 2) {
+      ctx.font = `500 ${tam}px "Space Grotesk", sans-serif`;
+      lineas = envolver(ctx, respuesta.texto, W - 2 * m);
+      if (lineas.length * tam * 1.3 <= alto) break;
     }
-    ctx.font = '500 32px "Space Grotesk", sans-serif'; ctx.fillStyle = '#e6e8eb';
-    const lineas = envolver(ctx, respuesta.texto, W - 72);
-    const caben = Math.floor((H - y - 70) / 41);
-    for (const l of lineas.slice(0, caben)) { ctx.fillText(l, 36, y); y += 41; }
-    if (lineas.length > caben) { ctx.fillStyle = '#8b949e'; ctx.fillText('… (completa en el dashboard)', 36, y); }
-    ctx.font = '500 24px "IBM Plex Mono", monospace';
-    const QUIEN = { deepseek: 'DeepSeek', ollama: 'modelo local (qwen2.5)' };
+    ctx.fillStyle = '#e6e8eb'; ctx.textBaseline = 'top';
+    const caben = Math.floor(alto / (tam * 1.3));
+    for (const l of lineas.slice(0, caben)) { ctx.fillText(l, m, y); y += tam * 1.3; }
+    if (lineas.length > caben) { ctx.fillStyle = '#8b949e'; ctx.fillText('… (completa en el dashboard)', m, y); }
+    ctx.fillStyle = '#161b22'; ctx.fillRect(0, H - 86, W, 86);
+    ctx.font = '500 32px "IBM Plex Mono", monospace'; ctx.textBaseline = 'middle';
     ctx.fillStyle = QUIEN[respuesta.modo] ? '#3fb68b' : '#f2b134';
     const ordenes = (respuesta.acciones || []).map((o) => o.accion || o.cmd).join(', ');
-    ctx.fillText(`${respuesta.ts.slice(11, 19)} · ${QUIEN[respuesta.modo] || 'intérprete de reglas'}`
-      + (ordenes ? ` · órdenes: ${ordenes}` : ''), 36, H - 52);
+    ctx.fillText(`${respuesta.ts.slice(11, 19)} · respondió: ${QUIEN[respuesta.modo] || 'intérprete de reglas'}`
+      + (ordenes ? ` · órdenes: ${ordenes}` : ''), m, H - 43);
   }
   A.textura.needsUpdate = true;
 }
 
-// Un mensaje nuevo: la pregunta sube a la nube y la respuesta baja.
+// Mientras alguien piensa (lo dice /api/asistente): con DeepSeek el paquete va y viene por la
+// linea a la nube; con el modelo local la nube se queda quieta y el que "piensa" es el
+// portatil: teclado RGB que cambia de color, luz de actividad parpadeando y la pantalla animada.
+function animarAsistente(dt) {
+  const A = P.asistente, L = P.laptop;
+  if (!A || !L) return;
+  const pens = asistenteDatos && asistenteDatos.pensando;
+  A.t = (A.t || 0) + dt;
+  if (pens && A.t > 0.25) { A.t = 0; A.fase++; dibujarPanelAsistente(asistenteDatos); }
+  const local = pens && pens.proveedor === 'ollama';
+  const nube = pens && pens.proveedor === 'deepseek';
+  const s = performance.now() / 1000;
+  if (local) {
+    L.matLetras.emissive.setHSL((s * 0.25) % 1, 0.9, 0.55);
+    L.matLetras.emissiveIntensity = 0.9;
+    L.leds[2].material.emissiveIntensity = (Math.sin(s * 12) > 0) ? 1.2 : 0.05;
+  } else {
+    L.matLetras.emissive.setHex(0xffffff);
+    L.matLetras.emissiveIntensity = 0.55;
+    L.leds[2].material.emissiveIntensity = 0.1;
+  }
+  if (nube) {
+    const u = (s * 0.8) % 1;
+    A.paquete.visible = true;
+    A.paquete.position.copy(A.a).lerp(A.b, suave(u));
+    A.matNube.emissiveIntensity = 0.25 + 0.25 * Math.sin(s * 6);
+  } else if (!A.animandoRespuesta) {
+    A.paquete.visible = false;
+    A.matNube.emissiveIntensity = 0.12;
+  }
+}
+
+// Llego la respuesta de DeepSeek: el paquete baja de la nube a la laptop.
 function pulsoAsistente() {
   const A = P.asistente;
   if (!A) return;
   cancelar(A);
+  A.animandoRespuesta = true;
   A.paquete.visible = true;
-  animar(0.7, (u) => A.paquete.position.copy(A.a).lerp(A.b, suave(u)), { dueno: A });
-  animar(0.5, (u) => { A.matNube.emissiveIntensity = 0.12 + 0.6 * Math.sin(Math.PI * u); }, { dueno: A, retraso: 0.7 });
-  animar(0.7, (u) => A.paquete.position.copy(A.b).lerp(A.a, suave(u)), { dueno: A, retraso: 1.2,
-    fin: () => { A.paquete.visible = false; } });
+  animar(0.5, (u) => { A.matNube.emissiveIntensity = 0.12 + 0.6 * Math.sin(Math.PI * u); }, { dueno: A });
+  animar(0.7, (u) => A.paquete.position.copy(A.b).lerp(A.a, suave(u)), { dueno: A, retraso: 0.3,
+    fin: () => { A.paquete.visible = false; A.animandoRespuesta = false; } });
 }
 
 // Donde cree el carro que esta (odometria) y a donde se le pidio ir.
@@ -2490,8 +2698,10 @@ function construirCables() {
       return [pe, [x, y, pe[2]], [x, y, 0.0066], [x, 0.2685, 0.0066], [p[0], 0.2685, 0.0066], p];
     },
     usb_pc: () => {
+      // Por el piso, paralelo al costado derecho de la laptop, y entra derecho al puerto.
       const h = S(PIN['hub_usb.UP'].tip), p = S(PIN['pc.USB1'].tip);
-      return [h, [h[0] - 0.005, h[1], 0.006], [p[0] + 0.005, p[1], 0.006], p];
+      const xc = Math.max(h[0], p[0]) + 0.03;
+      return [h, [h[0], h[1], 0.006], [xc, h[1], 0.006], [xc, p[1], 0.006], [p[0] + 0.012, p[1], p[2]], p];
     },
     red: () => [[0.75, C.by + 0.02, 0.0066], [C.xParedDer + 0.02, C.by + 0.02, 0.0066], [C.xParedDer + 0.02, C.by + 0.02, 0.02],
       [C.xParedDer - 0.004, C.by + 0.02, 0.02]],
@@ -2852,6 +3062,10 @@ function construirSensores() {
         // GY-530 con el VL53L0X mirando hacia abajo y los pines arriba.
         modulo = construirModulo('vl53_interior', escena, p.clone().add(new THREE.Vector3(0, 0.001, 0)), yaw(0), { sensorId: s.id, etiquetaSobre: 0.03 });
         colgar = p.clone().add(Vxyz(0, -0.003, 0.0026));
+        // Abrazadera impresa: la varilla no se clava en la placa, la toma un bloque pegado
+        // con cinta doble faz (se veia como si la atravesara, auditoria 2026-09-28).
+        obj.objetos.push(caja(0.009, 0.007, 0.003, 0x1b1e22, colgar.clone().add(new THREE.Vector3(0, 0.0015, 0))));
+        colgar.add(new THREE.Vector3(0, 0.003, 0));
         obj.ancla = p.clone().add(new THREE.Vector3(0, 0.03, 0));
       }
       if (modulo.userData.led) obj.led = modulo.userData.led;
@@ -3519,7 +3733,8 @@ function vista(nombre) {
   const centroP = pista.getCenter(new THREE.Vector3());
   const almacen = Vxyz(G.almacen.centro[0], G.almacen.centro[1], G.almacen.tubo_z_arriba - 0.03);
   const vistas = {
-    todo: [centroP.clone().add(new THREE.Vector3(-0.3, 0, 0.1)), new THREE.Vector3(-1.0, 1.4, 1.6)],
+    // Incluye la laptop y la nube del asistente (detras de la planta, a la izquierda de la pista).
+    todo: [centroP.clone().add(new THREE.Vector3(-0.55, 0.05, -0.12)), new THREE.Vector3(-1.1, 1.65, 1.85)],
     planta: [centroV.clone().lerp(centroM, 0.5).add(new THREE.Vector3(0.05, 0, 0.05)), new THREE.Vector3(0.45, 0.45, 0.75)],
     carga: [em[0], new THREE.Vector3(-0.1, 0.14, 0.24)],
     monedas: [centroM, new THREE.Vector3(0.02, 0.22, 0.4)],
@@ -3534,7 +3749,7 @@ function vista(nombre) {
     caja: [Vxyz(P.caja.bx, P.caja.by, 0.02), new THREE.Vector3(0, 0.3, 0.16)],
     // De frente a la pantalla de la laptop (la pantalla mira hacia +z de three).
     asistente: [P.asistente ? P.asistente.panel.getWorldPosition(new THREE.Vector3()) : centroP,
-      new THREE.Vector3(0.0, 0.04, 0.42)],
+      new THREE.Vector3(0, 0.72 * Math.sin(LAPTOP.apertura), 0.72 * Math.cos(LAPTOP.apertura))],
     carro: [P.carro ? P.carro.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.04, 0)) : centroP,
       new THREE.Vector3(0.16, 0.14, 0.2)],
   };
@@ -3628,13 +3843,18 @@ let ultimaConsultaAsistente = 0;
 async function consultarAsistente() {
   if (MODO_DEMO) return;
   const ahora = performance.now();
-  if (ahora - ultimaConsultaAsistente < 2000) return;
+  const pensando = asistenteDatos && asistenteDatos.pensando;
+  if (ahora - ultimaConsultaAsistente < (pensando ? 500 : 1500)) return;
   ultimaConsultaAsistente = ahora;
   try {
     asistenteDatos = await cargarJSON('./api/asistente');
     const n = asistenteDatos.mensajes.length ? asistenteDatos.mensajes[asistenteDatos.mensajes.length - 1].ts : '';
-    if (P.asistente && P.asistente.mensajes !== -1 && n !== P.asistente.mensajes) pulsoAsistente();
-    if (P.asistente && n !== P.asistente.mensajes) dibujarPanelAsistente(asistenteDatos);
+    const ultimo = asistenteDatos.mensajes[asistenteDatos.mensajes.length - 1];
+    // Solo la respuesta de DeepSeek baja de la nube (el modelo local y las reglas no salen del portatil).
+    if (P.asistente && P.asistente.mensajes !== -1 && n !== P.asistente.mensajes && ultimo && ultimo.modo === 'deepseek') pulsoAsistente();
+    const pensaba = P.asistente && P.asistente.pensando;
+    P.asistente.pensando = asistenteDatos.pensando ? asistenteDatos.pensando.proveedor : null;
+    if (P.asistente && (n !== P.asistente.mensajes || pensaba !== P.asistente.pensando)) dibujarPanelAsistente(asistenteDatos);
     if (P.asistente) P.asistente.mensajes = n;
   } catch (e) { /* sin supervisor: se reintenta */ }
 }
@@ -4125,6 +4345,7 @@ function bucle() {
   animarVuelo(dt);
   correrAnimaciones();
   animarActuadores(dt);
+  animarAsistente(dt);
   if (G) { actualizarSensores(t); resaltarComponente(t); }
   controles.update();
   actualizarEtiquetas();
@@ -4210,7 +4431,7 @@ async function iniciar() {
 
 // Revision de espacio (?auditar): expone la escena para que un script mida
 // si alguna pieza atraviesa a otra. No cambia nada del visor.
-if (new URLSearchParams(location.search).has('auditar')) window.__visor = { THREE, escena, COMP, SENS, P, CABLES, G: () => G };
+if (new URLSearchParams(location.search).has('auditar')) window.__visor = { THREE, escena, COMP, SENS, P, CABLES, G: () => G, camara, controles };
 
 bucle();
 iniciar();

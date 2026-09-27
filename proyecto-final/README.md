@@ -57,7 +57,10 @@ ollama pull qwen2.5:3b
 ```
 
 El modelo (~1,9 GB) queda en la carpeta del usuario (`.ollama`), **fuera del proyecto**: no se
-sube a GitHub. En una RTX 3050 de 4 GB responde en ~5 s. Las órdenes claras ("avanza 20 cm",
+sube a GitHub. Para darle más contexto (respuestas más completas), una vez más:
+`python -m app.asistente --preparar-local` (crea `qwen2.5-proyecto`, con 8192 tokens). En una RTX 3050
+de 4 GB responde en ~7 s. Mientras piensa, en el visor 3D se ilumina el teclado de la laptop (si piensa
+DeepSeek, en cambio, la pregunta viaja a la nube). Las órdenes claras ("avanza 20 cm",
 "gira a la derecha") las decide siempre el intérprete de reglas; el modelo chico solo responde
 preguntas.
 
@@ -87,6 +90,9 @@ diagnosticar).
 - [`docs/replicacion.md`](docs/replicacion.md) — qué medir para construirlo de verdad y el
   presupuesto de tiempos.
 - [`docs/costos.md`](docs/costos.md) — precio de cada componente en Colombia y dónde ahorrar.
+- [`docs/conexiones.md`](docs/conexiones.md) — conexionado pin a pin de las dos placas.
+- [`docs/pruebas-asistente.md`](docs/pruebas-asistente.md) — 24 preguntas y órdenes reales al asistente, con
+  su resultado y su tiempo (modelo local y reglas).
 - [`docs/bitacora.md`](docs/bitacora.md) — las decisiones sesión a sesión.
 - [`docs/enunciado/`](docs/enunciado/) — la guía del parcial (PDF) y sus figuras.
 

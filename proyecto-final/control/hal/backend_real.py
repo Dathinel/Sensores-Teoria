@@ -45,6 +45,28 @@ class SensorDistanciaReal(_ConPuente, SensorDistancia):
         return float("inf") if v is None else float(v)
 
 
+class SensorInteriorReal(_ConPuente, SensorDiscreto):
+    """El VL53L0X que mira al fondo del vaso, como sensor de SI/NO (igual que en la
+    simulacion): hay algo adentro si la distancia es menor que la del fondo de un vaso
+    vacio menos `vasos.margen_interior_mm`."""
+
+    def __init__(self, puente, reloj, fondo_mm: float, margen_mm: float):
+        super().__init__(puente, reloj)
+        self.umbral_mm = fondo_mm - margen_mm
+
+    def leer(self) -> bool:
+        d = self.puente.tel.get("interior_mm")
+        return d is not None and d < self.umbral_mm
+
+
+class SensorCortinaReal(_ConPuente, SensorDiscreto):
+    """La cortina la decide el ESP32 fijo (la seguridad no depende del PC): aqui solo se
+    lee lo que el ESP32 ya decidio (`seguridad` = "cortina")."""
+
+    def leer(self) -> bool:
+        return self.puente.tel.get("seguridad") == "cortina"
+
+
 class BandaReal(_ConPuente, BandaIndexada):
     def __init__(self, puente, reloj, nombre: str):
         super().__init__(puente, reloj)
@@ -99,21 +121,28 @@ class DispensadorReal(_ConPuente, DispensadorTapas):
 
 
 class BackendReal:
-    """Todo el hardware de la estacion, como lo ve la capa de control."""
+    """Todo el hardware de la estacion, como lo ve la capa de control. Los nombres y
+    los tipos son los MISMOS de backend_sim.EstacionBackendSim (auditoria 2026-09-28:
+    antes el sensor del interior era una distancia aqui y un si/no alla)."""
 
-    def __init__(self, puente, reloj):
+    def __init__(self, puente, reloj, vasos: dict | None = None):
+        v = vasos or {"altura_mm": 90, "margen_interior_mm": 10, "sensor_interior_sobre_boca_mm": 15}
         self.puente = puente
         self.sensor_presencia = SensorDiscretoReal(puente, reloj, "presencia")
         self.sensor_capacitivo = SensorDiscretoReal(puente, reloj, "capacitivo")
         self.sensor_inductivo = SensorDiscretoReal(puente, reloj, "inductivo")
         self.sensor_hall_carrusel = SensorDiscretoReal(puente, reloj, "hall")
-        self.cortina = SensorDistanciaReal(puente, reloj, "cortina_mm")
-        self.sensor_interior = SensorDistanciaReal(puente, reloj, "interior_mm")
-        self.cinta_monedas = BandaReal(puente, reloj, "monedas")
-        self.cinta_vasos = BandaReal(puente, reloj, "vasos")
+        self.sensor_cortina = SensorCortinaReal(puente, reloj)
+        self.sensor_interior = SensorInteriorReal(puente, reloj, v["altura_mm"] + v.get("sensor_interior_sobre_boca_mm", 15),
+                                                  v["margen_interior_mm"])
+        # Las distancias crudas, para diagnostico (el dashboard y el puente las muestran).
+        self.distancia_cortina = SensorDistanciaReal(puente, reloj, "cortina_mm")
+        self.distancia_interior = SensorDistanciaReal(puente, reloj, "interior_mm")
+        self.banda_monedas = BandaReal(puente, reloj, "monedas")
+        self.banda_vasos = BandaReal(puente, reloj, "vasos")
         self.prensa = PrensaReal(puente, reloj)
         self.dispensador_tapas = DispensadorReal(puente, reloj)
-        self.empujador = ServoReal(puente, reloj, "empujador")
+        self.servo_empujador_entrega = ServoReal(puente, reloj, "empujador")
         self.obturador = ServoReal(puente, reloj, "obturador")
         self.escape_canaleta = ServoReal(puente, reloj, "canaleta")
         self._reloj = reloj

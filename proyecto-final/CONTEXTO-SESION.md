@@ -42,24 +42,28 @@ app corriendo escondida (`python -m app.lanzar --auto prueba_completa --reemplaz
 para que él vea visor y Streamlit cuando quiera; ahorrar tokens: antes de escribir lógica desde
 cero, revisar el repo `Sensores-Teoria` (temas 1-9) que ya tiene patrones resueltos.
 
-**Pedido del 2026-09-27 (noche):**
-> apruebe el 15, el 16 y 17 se necesitaría un montaje real, así que quedan en pausa; una versión
-> portable y rápida de deepseek para probar cosas del punto 16 (no para GitHub por el peso);
-> analice el precio de los componentes en Colombia y dónde abaratar (eso se lo preguntarán a
-> deepseek); modele la laptop (Asus TUF Gaming A15, con medidas) y en la pantalla algo; deme ideas.
-Decisiones (preguntadas): Ollama + qwen2.5:3b (fuera del repo); pantalla de la laptop = SOLO el
-asistente (el panel deja de flotar sobre la nube); costos: documentar y proponer, NO cambiar diseño.
+**Pedido del 2026-09-28:**
+> le dije que contestara en español; al modelado de la laptop le falta; cuando use el modelo local
+> no tiene que hacer la animación de enviarlo a la nube sino de que la laptop está "pensando"; me
+> gustaría que respondiera con más información (si la gráfica y el contexto de la IA local lo
+> permiten); auditoría y revisión general (lógica, integración, organización); pruebas adicionales,
+> distintas a las hechas, a la IA local y al diseño 3D; laptop más grande y la respuesta ajustada a su
+> pantalla; más detalle a todo (ver la carpeta "Blender with claude" para el nivel de modelado); no
+> sobreponer elementos y centrar la nube de DeepSeek.
 
 Puntos:
-- [x] a. Paso a paso: 15 aprobado; 16 y 17 en `pausa` (estado nuevo).
-- [x] b. Ollama + qwen2.5:3b como proveedor local del asistente (DeepSeek → local → reglas).
-- [x] c. Costos en COP: config/precios.yaml → docs/costos.md, ahorros, asistente y dashboard.
-- [x] d. Laptop TUF A15 modelada; el asistente en su pantalla.
-- [x] e. Pruebas, app escondida, docs, commit y push.
+- [x] a. Español SIEMPRE, también en los avisos intermedios.
+- [x] b. Nivel de modelado de referencia: carpeta Blender with claude.
+- [x] c. Laptop más grande y más detallada; respuesta proporcionada a la pantalla.
+- [x] d. Modelo local: animación de "pensando" en la laptop (no la nube); nube centrada.
+- [x] e. Respuestas más completas del modelo local (probar contexto mayor en la RTX 3050).
+- [x] f. Pruebas nuevas a la IA local (variables distintas) y al 3D (solapes, centrado).
+- [x] g. Auditoría general: lógica, integración, organización; corregir lo que salga.
+- [x] h. Contexto, docs, pruebas, commit y push.
 
 ## 3. Estado actual (2026-09-27, fin de sesión)
 
-- Pruebas: `entorno/Scripts/python -m pytest -q` → todas deben pasar (544, ~4 min).
+- Pruebas: `entorno/Scripts/python -m pytest -q` → todas deben pasar (555, ~4 min).
 - Forma de trabajar (usuario, 2026-09-26): dejar SIEMPRE una corrida escondida con el código
   actual (`python -m app.lanzar --auto prueba_completa --reemplazar` en segundo plano; cierra la
   anterior y su consola). El usuario la mira cuando quiere con `visor.bat` (un clic). NO

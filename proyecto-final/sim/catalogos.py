@@ -323,7 +323,7 @@ COMPONENTES = [
     # de control (usuario, 2026-09-27: una sola explicacion para los dos).
     {"id": "drivers_cintas", "categoria": "Control y potencia", "nombre": "Drivers de las dos cintas (M y V)",
      "cantidad": 2, "modelo": "A4988 o TMC2208 (silencioso), en una sola placa",
-     "funcion": "Generan los pasos de los dos NEMA17 (micropaso 1/16): el driver M mueve la cinta de monedas y "
+     "funcion": "Generan los pasos de los dos NEMA17 (micropaso 1/4, por el PWM del ESP32): el driver M mueve la cinta de monedas y "
                 "el V la de vasos. Son iguales y comparten placa, 12 V (VMOT, con su condensador de 100 µF cada "
                 "uno) y la señal ENABLE; cada uno tiene su STEP y su DIR propios en el ESP32 fijo.",
      "estado": "solo visual", "zona": "control"},

@@ -200,3 +200,30 @@ def test_costos_con_el_interprete_de_reglas():
     texto = asistente.responder_local("¿cuánto cuesta el proyecto y dónde se puede ahorrar?", {"hay_datos": False})
     assert costos.pesos(costos.total()) in texto and "ahorrar" in texto
 
+
+
+def test_mientras_piensa_se_sabe_quien_y_al_terminar_se_limpia(conexion):
+    """El visor anima la nube (DeepSeek) o la laptop (modelo local) segun esto."""
+    vistos = []
+
+    class Espia(ClienteFalso):
+        def _crear(self, **kwargs):
+            vistos.append(asistente.pensando(conexion))
+            return super()._crear(**kwargs)
+
+    asistente.atender("¿qué hace la cortina?", conexion, cliente=ClienteFalso(ConnectionError("401")),
+                      cliente_ia_local=Espia({"respuesta": "Detiene la zona de tapa y prensa.", "acciones": []}))
+    assert vistos and vistos[0]["proveedor"] == "ollama" and "cortina" in vistos[0]["pregunta"]
+    assert asistente.pensando(conexion) is None
+
+
+def test_una_pregunta_nunca_da_ordenes_con_ningun_proveedor(conexion):
+    ds = ClienteFalso({"respuesta": "Llegaron 2.", "acciones": [{"cmd": "carro", "accion": "ir_meta"}]})
+    r = asistente.atender("¿cuántos vasos llegaron a la meta?", conexion, cliente=ds)
+    assert r.ordenes == [] and r.descartadas
+
+
+def test_medidas_sin_sensor_no_se_inventan(conexion):
+    local = ClienteFalso({"respuesta": "La batería está en 7,4 V.", "acciones": []})
+    r = asistente.atender("¿cuál es el voltaje de la batería ahora?", conexion, usar="ollama", cliente_ia_local=local)
+    assert local.enviado is None and "no" in r.texto.lower() and "7,4" not in r.texto

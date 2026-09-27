@@ -89,7 +89,7 @@ class Supervisor:
             self._t0 = time.monotonic()
             puerto = hw.get("puerto")
             self.puente = PuenteESP32(self.parametros, None if puerto in (None, "auto") else puerto)
-            self.hardware = BackendReal(self.puente, self._ms)
+            self.hardware = BackendReal(self.puente, self._ms, self.parametros["vasos"])
             self._eventos_leidos = 0
             self._tick_real = 0
 

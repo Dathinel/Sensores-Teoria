@@ -75,11 +75,14 @@ def _asistente_json(ruta_bd: Path) -> bytes:
         respuestas = [json.loads(f["payload"]) | {"ts": f["ts"]} for f in conexion.execute(
             "SELECT ts, payload FROM eventos WHERE tipo = 'respuesta' AND payload LIKE '%\"asistente\"%' "
             "ORDER BY id DESC LIMIT 6").fetchall()]
+        f = conexion.execute("SELECT proveedor, pregunta, desde FROM asistente_pensando WHERE id = 1").fetchone()
+        pensando = dict(f) if f and f["proveedor"] else None
     finally:
         conexion.close()
     for m in mensajes:
         m["acciones"] = json.loads(m["acciones"] or "[]")
-    return json.dumps({"mensajes": mensajes, "respuestas": respuestas}, ensure_ascii=False).encode("utf-8")
+    return json.dumps({"mensajes": mensajes, "respuestas": respuestas, "pensando": pensando},
+                      ensure_ascii=False).encode("utf-8")
 
 
 def _crear_manejador(compartido: EstadoCompartido):
