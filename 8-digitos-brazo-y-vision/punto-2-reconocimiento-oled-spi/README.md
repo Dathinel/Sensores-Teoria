@@ -98,4 +98,4 @@ Dos ESP32 por separado, cada uno con su propio cable de alimentación/datos, má
 
 ## Pendiente
 
-Se hicieron pruebas adicionales de la comunicación serial antes del montaje físico. Fotos del montaje (los dos ESP32 con la OLED) y video de la demo — se agregan aquí antes de subir el tema al repositorio.
+Se hicieron pruebas adicionales de la comunicación serial antes del montaje físico. Fotos del montaje (los dos ESP32 con la OLED) y video de la demo: se agregan aquí cuando estén.

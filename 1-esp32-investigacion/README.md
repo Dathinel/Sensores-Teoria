@@ -1,113 +1,155 @@
 # Investigación del ESP32
 
-## De dónde viene la idea de un chip que hace de todo
+## Ficha técnica (DevKit V1 con ESP32-WROOM-32, la placa de los labs)
 
-La historia de la industria se entiende mejor si se piensa en saltos y no en una línea recta de progreso constante. Cada tanto aparece una tecnología que cambia por completo la forma de producir y de vivir, y a esos momentos se les llama revoluciones industriales.
+| Dato | Valor |
+|---|---|
+| CPU | Xtensa LX6 de 32 bits, **2 núcleos**, 160-240 MHz (diseño de Tensilica) + coprocesador ULP |
+| Memoria | 520 KB de SRAM · 4 MB de flash externa (SPI) |
+| Radio | Wi-Fi 802.11 b/g/n 2,4 GHz · Bluetooth clásico y BLE · ESP-NOW (sin router) |
+| Voltaje de trabajo | **3,3 V** (la placa regula desde 5 V por USB o VIN) |
+| ADC | 2 unidades de 12 bits (4096 niveles): ADC1 (8 canales) y ADC2 (10, **no usar con Wi-Fi activo**) |
+| DAC | **solo 2** salidas analógicas reales, de 8 bits (256 niveles): GPIO25 y GPIO26 |
+| PWM (LEDC) | 16 canales, hasta 16 bits, frecuencia configurable (casi cualquier GPIO) |
+| Buses | 3 UART · 2 I2C · SPI (VSPI y HSPI) |
+| Otros | 10 pines táctiles capacitivos · RTC_GPIO que siguen vivos en sueño profundo (~µA) |
+| Fabricación | Diseño de Espressif (Shanghái), silicio de TSMC a 40 nm |
 
-La primera arrancó a finales del siglo dieciocho en Inglaterra con la máquina de vapor. Hasta ese momento la producción dependía de la fuerza humana, animal o del agua y el viento, y de repente fue posible mecanizar procesos completos, empezando por la industria textil. Ese salto convirtió los talleres artesanales en fábricas y disparó la urbanización de Europa.
+## De dónde viene
 
-La segunda llegó entre finales del siglo diecinueve y comienzos del veinte, con la electricidad, el petróleo y la producción en masa. El ejemplo clásico es la línea de ensamblaje que Henry Ford implementó para el Ford Modelo T, que redujo drásticamente el tiempo y el costo de fabricar un automóvil. En paralelo aparecieron el teléfono y el telégrafo, sentando las bases de las comunicaciones modernas.
+El salto que importa aquí es la **tercera revolución industrial** (electrónica, computadores,
+automatización): un sistema que decide con lógica programable y no solo con mecanismos. El ESP32
+se vuelve masivo en la **cuarta** (Industria 4.0, Internet de las Cosas), porque es justo el chip
+que permite que cualquier objeto barato tenga sensores y se conecte a una red.
 
-La tercera comenzó a mediados del siglo veinte y es la que de verdad conecta con este proyecto, porque es la revolución de la electrónica, los computadores y la automatización. Aparecieron los transistores, luego los circuitos integrados y finalmente los primeros microprocesadores, y con ellos la posibilidad de que un sistema tomara decisiones mediante lógica programable en lugar de depender solo de mecanismos físicos. Es la era en la que nace el concepto mismo de microcontrolador, que se explica más adelante.
+```mermaid
+timeline
+    1971 : Intel 4004, primer microprocesador comercial (4 bits)
+    1974 : TMS 1000 (Texas Instruments), primer microcontrolador (CPU + RAM + ROM en un chip)
+    1976-1980 : Intel 8048 y 8051 (el 8051 se sigue fabricando)
+    1993 : EEPROM y el primer microcontrolador con flash (Atmel)
+    2008 : Nace Espressif en Shanghái
+    2014 : ESP8266, popularizado por el módulo ESP-01 de Ai-Thinker
+    2016 : ESP32, doble núcleo + Wi-Fi + Bluetooth
+    2020+ : Series S, C (RISC-V) y H (Zigbee/Thread)
+```
 
-La cuarta, conocida como Industria 4.0, es la que vivimos en las últimas dos décadas y se caracteriza por la fusión entre lo físico y lo digital. Aquí entran el Internet de las Cosas, la computación en la nube, el manejo masivo de datos y la inteligencia artificial aplicada a procesos productivos. Las fábricas empiezan a llenarse de sensores conectados entre sí que reportan información en tiempo real y toman decisiones automáticas basadas en esos datos. El ESP32 nace y se vuelve masivo justo en pleno auge de esta etapa, porque es exactamente el tipo de chip que permite que cualquier objeto cotidiano se conecte a una red y forme parte de ese ecosistema de sensores.
+**Microprocesador vs. microcontrolador.** Un microprocesador es solo la CPU y necesita chips
+externos de memoria y de entrada/salida. Un microcontrolador mete CPU, memoria y pines en una sola
+pieza de silicio: con él solo ya se arma un sistema completo.
 
-La quinta revolución, todavía en construcción como concepto, plantea corregir el enfoque puramente eficientista de la 4.0 y devolverle protagonismo al ser humano. La Comisión Europea la describe como una industria sostenible, centrada en la persona y resiliente, donde máquinas y personas colaboran en lugar de que las primeras simplemente reemplacen a las segundas. Un chip barato, de bajo consumo y usado en proyectos personalizados en vez de producción masiva estandarizada empieza a encajar también en esa lógica.
+**Cómo cambió la forma de programarlos.** La ROM/PROM se grababa una vez. La EPROM se podía borrar,
+pero con luz ultravioleta por una ventana de cuarzo. La EEPROM y la flash (1993) se borran
+eléctricamente, y eso volvió rápido probar programas. El ESP32 usa flash.
 
-## Cómo nació el microcontrolador como tal
+**El ESP8266 y el salto al ESP32.** El ESP8266 no se hizo famoso por el marketing de Espressif:
+Ai-Thinker sacó el ESP-01, un módulo con Wi-Fi rarísimamente barato que se manejaba con comandos AT
+y documentación en chino. La comunidad lo adoptó igual, Espressif liberó sus kits de desarrollo y
+aparecieron NodeMCU y WeMos. El ESP32 (6 de septiembre de 2016) corrigió sus carencias: pasó de uno
+a dos núcleos, sumó Bluetooth y muchos más periféricos (ADC, DAC, SPI, I2C, UART) y un sueño
+profundo de microamperios.
 
-Antes de que existiera el ESP32 tuvo que existir primero la idea de meter una computadora completa dentro de un solo chip. Un microprocesador por sí solo es apenas la unidad central de proceso, y necesita chips externos de memoria y de entrada y salida para hacer algo útil. Un microcontrolador en cambio integra todo eso, procesador, memoria y pines de entrada y salida, dentro de una sola pieza de silicio, lo que permite construir un sistema completo sin tener que armar un circuito con varios componentes separados.
+## Arquitectura
 
-El primer microprocesador comercial ampliamente reconocido fue el Intel 4004, de 4 bits, lanzado en 1971. Se diseñó originalmente para una calculadora de la empresa japonesa Busicom, y fue el primer caso en la historia en que un chip electrónico podía programarse por software para hacer tareas distintas, en lugar de tener una única función fija grabada de fábrica. Ese mismo año, dos ingenieros de Texas Instruments, Gary Boone y Michael Cochran, crearon el TMS 1000, comercializado en 1974, que se considera el primer microcontrolador propiamente dicho porque fue el primero en combinar en un solo circuito integrado la CPU, la memoria RAM y la memoria ROM, pensado directamente para sistemas embebidos, es decir dispositivos con una función específica y no computadores de propósito general.
+```mermaid
+flowchart LR
+    subgraph Modulo["Módulo ESP32-WROOM-32 (con blindaje y antena)"]
+        CPU["CPU Xtensa LX6<br/>2 núcleos, 240 MHz"] --- BUS((bus interno))
+        ULP["Coprocesador ULP<br/>(corre dormido)"] --- BUS
+        SRAM["520 KB SRAM"] --- BUS
+        FLASH["4 MB flash (SPI)<br/>el programa"] --- BUS
+        RADIO["Radio 2,4 GHz<br/>Wi-Fi · BT · BLE · ESP-NOW"] --- BUS
+        BUS --- PER["Periféricos: ADC ×2 · DAC ×2 · LEDC (PWM) ×16<br/>UART · I2C · SPI · táctil · RTC"]
+    end
+    PER --- GPIO["Pines GPIO de la placa DevKit"]
+    USB["USB-serial (CP2102 / CH340)<br/>+ regulador 3,3 V + botones EN/BOOT"] --- Modulo
+```
 
-Intel siguió esa línea con el 8048 en 1976, que llegó a usarse incluso en el teclado de los primeros computadores personales de IBM, y después con el 8051 en 1980, una arquitectura tan exitosa que sus variantes se siguen fabricando hoy en día, más de cuatro décadas después. Con el tiempo aparecieron otras familias que marcaron época, como los PIC de Microchip y los AVR de Atmel, esta última la familia de chips detrás de los primeros Arduino.
+Tres niveles distintos que se suelen confundir: el **chip** (ESP32-D0WDQ6, el silicio, casi nunca
+se compra suelto), el **módulo** (el chip con antena, flash y blindaje: lo que un fabricante suelda
+en su producto) y la **placa de desarrollo** (el módulo con headers, conversor USB-serial, regulador
+y botones: lo que se compra para aprender). Con dos núcleos se puede dejar uno para la radio y el
+otro para la aplicación, aunque un solo núcleo alcanza para la mayoría de proyectos.
 
-Un capítulo importante de esta historia es cómo fue cambiando la forma de programar estos chips. Al principio la memoria de programa era de tipo ROM o PROM, se grababa una sola vez en fábrica o con un programador especial y no se podía modificar después. Luego llegó la memoria EPROM, reprogramable, pero para borrarla había que exponer el chip a luz ultravioleta a través de una pequeña ventana de cuarzo en el encapsulado, un proceso lento e incómodo. En 1993 llegó la memoria EEPROM, que se podía borrar y volver a escribir eléctricamente sin necesidad de luz ultravioleta ni hardware especial, lo que aceleró enormemente el desarrollo y las pruebas de nuevos programas. Ese mismo año Atmel lanzó el primer microcontrolador con memoria flash, el mismo tipo de memoria que usan hoy prácticamente todos los microcontroladores modernos, incluido el ESP32.
+## Pines: lo que no se puede hacer con cada uno
 
-Con la miniaturización constante de los transistores y la caída de los costos de fabricación, en algún momento se volvió posible meter dentro del mismo chip no solo cómputo y memoria, sino también radio de comunicación inalámbrica. Esa necesidad de conectividad barata y accesible es exactamente el vacío que una empresa china fundada en 2008 decidió llenar.
+Cada pin del DevKit cumple varias funciones según cómo se configure; por eso el pinout trae varias
+etiquetas por pin. Las restricciones que más problemas dan:
 
-## Espressif y el camino hasta el ESP32
+| Pines | Restricción | Consecuencia práctica |
+|---|---|---|
+| GPIO34, 35, 36, 39 | **Solo entrada**, sin pull-up interno | Sirven para sensores (así se usan en el proyecto final), nunca para mover algo |
+| ADC2 (GPIO0, 2, 4, 12-15, 25-27) | Comparte hardware con el Wi-Fi | Con Wi-Fi activo la lectura falla: para analógico + Wi-Fi, usar ADC1 |
+| GPIO25, 26 | Únicos DAC | Si se usan como DAC, no quedan para otra cosa (tema 5) |
+| GPIO0, 2, 12, 15 | Pines de arranque (strapping) | Un módulo que los fuerce al encender puede impedir que la placa arranque |
+| GPIO6-11 | Conectados a la flash interna | No se usan nunca |
+| 3V3 / VIN / GND / EN | Alimentación y reinicio | El chip trabaja a 3,3 V: un sensor de 5 V necesita divisor (el ECHO del HC-SR04) |
 
-Espressif Systems se fundó en 2008 en Shanghái, con la idea de desarrollar soluciones inalámbricas económicas e innovadoras, especializándose en SoCs, es decir chips que integran varios subsistemas completos dentro de una sola pieza de silicio, con WiFi y Bluetooth pensados para el mercado naciente del Internet de las Cosas.
+## Analógico: ADC, DAC y PWM
 
-El gran punto de quiebre para la compañía fue el ESP8266, lanzado en 2014. Curiosamente el chip no se hizo popular por el marketing de Espressif, sino gracias a un fabricante externo, Ai-Thinker, que sacó un módulo pequeño y muy barato llamado ESP-01 basado en ese chip. En ese momento se manejaba solo mediante comandos AT por puerto serial, al estilo de los viejos módems, la documentación oficial estaba en chino y era escasa, y aun así la comunidad de makers en todo el mundo vio de inmediato el potencial. Por primera vez existía un chip con WiFi integrado a un precio ridículamente bajo comparado con cualquier otra alternativa disponible en ese momento.
+El mundo físico es analógico (temperatura, luz, un potenciómetro) y el chip solo entiende ceros y
+unos. El **ADC** convierte un voltaje de 0 a 3,3 V en un número de 0 a 4095. El **DAC** hace lo
+contrario, un voltaje real de salida, pero solo en dos pines y con 8 bits: generar una salida
+analógica limpia exige más circuitería que leer una. El **PWM** no es analógico: es una señal
+digital que se prende y apaga muy rápido y que, promediada por un motor o un LED, se comporta como
+si lo fuera. Por eso para brillo o velocidad se usa PWM (hay 16 canales) y el DAC se deja para lo
+que de verdad necesita una señal analógica, como las figuras en el osciloscopio del tema 5.
 
-Espressif reaccionó a ese interés liberando kits de desarrollo de software con licencias abiertas, lo que impulsó a toda una ola de fabricantes a crear placas de desarrollo propias basadas en el ESP8266, entre ellas la NodeMCU y la WeMos, además de firmwares alternativos como el que popularizó el lenguaje Lua para programarlo.
+## Qué se usó de todo esto en este repositorio
 
-El ESP32 se lanzó el seis de septiembre de 2016 como sucesor directo, resolviendo varias de las carencias del ESP8266. El salto principal fue pasar de un solo núcleo a un procesador de doble núcleo con arquitectura Xtensa LX6, diseñada por la empresa Tensilica, fundada en 1997 en Santa Clara por Chris Rowen, uno de los cofundadores de MIPS Technologies. Tensilica se dedicaba justamente a licenciar núcleos de procesador configurables a otras compañías de semiconductores, y Espressif fue una de las que adoptó esa arquitectura para construir el ESP32. Además del doble núcleo, el ESP32 sumó Bluetooth clásico y de baja energía junto al WiFi que ya traía su antecesor, ganó muchísimo en periféricos, incorporando conversores ADC y DAC, más pines disponibles y más protocolos de comunicación como SPI, I2C y UART, y mejoró notablemente el manejo de energía con varios modos de bajo consumo, incluido un sueño profundo capaz de reducir el consumo a niveles de microamperios.
+| Periférico | Tema | Para qué |
+|---|---|---|
+| UART por USB | [3](../3-deteccion-objetos), [4](../4-chatbot-asistente-voz), [6](../6-control-de-led-mediante-gestos), [7](../7-brazo-robotico-urdf), [8](../8-digitos-brazo-y-vision), [9](../9-taller-segundo-corte) | PC ↔ ESP32 con líneas de texto |
+| DAC ×2 | [5](../5-parcial-figuras-lissauer) | Dibujar peces en un osciloscopio en modo XY |
+| PWM (LEDC) | [6](../6-control-de-led-mediante-gestos), [proyecto final](../proyecto-final) | Brillo de LEDs, pasos de los motores, motores del carro |
+| I2C | [7](../7-brazo-robotico-urdf), [8](../8-digitos-brazo-y-vision), [proyecto final](../proyecto-final) | Teclado, LCD, OLED, PCA9685, láser VL53L0X |
+| UART2 + SPI | [8](../8-digitos-brazo-y-vision/punto-2-reconocimiento-oled-spi) | Dos ESP32 hablando entre sí |
+| ESP-NOW | [proyecto final](../proyecto-final/firmware) | Radio entre la estación y el carro, sin router |
 
-El diseño del chip corre por cuenta de Espressif, pero la fabricación física del silicio la realiza TSMC, la fundición de semiconductores más grande del mundo, la misma que fabrica chips para Apple, Nvidia y buena parte de la industria tecnológica global, usando un proceso de fabricación de 40 nanómetros.
+## La familia y quién la fabrica
 
-Desde el ESP32 original la familia se fue ramificando. La serie S mantiene la arquitectura Xtensa, con el S2 enfocado en seguridad, incorporando un motor criptográfico dedicado pero sacrificando el Bluetooth, y el S3 pensado para tareas más pesadas como inteligencia artificial ligera o procesamiento de imágenes, con más pines GPIO disponibles. La serie C representa un cambio de fondo en la arquitectura del procesador, dejando de lado el Xtensa propietario de Tensilica para adoptar RISC-V, un conjunto de instrucciones abierto y libre que cualquiera puede implementar sin pagar licencias, resultando en chips más baratos y eficientes energéticamente. La serie H se orienta a redes tipo malla y protocolos como Zigbee y Thread, pensados para domótica avanzada donde muchos dispositivos se comunican entre sí sin depender directamente del router WiFi de la casa.
+| Serie | Núcleo | Para qué |
+|---|---|---|
+| ESP32 (WROOM-32) | Xtensa LX6 ×2 | Propósito general: el de los labs |
+| ESP32-S2 | Xtensa ×1 | Seguridad (motor criptográfico), **sin Bluetooth** |
+| ESP32-S3 | Xtensa LX7 ×2 | IA ligera e imagen, más GPIO |
+| ESP32-C3 | **RISC-V** (abierto, sin licencia) | Más barato y eficiente |
+| ESP32-H2 | RISC-V | Zigbee y Thread (domótica en malla) |
 
-La combinación de precio bajísimo, WiFi y Bluetooth integrados de fábrica, una cantidad generosa de pines y periféricos, y sobre todo una comunidad enorme generando documentación, tutoriales y herramientas como el soporte para programarlo desde el Arduino IDE, hizo que el ESP32 pasara de ser un chip de nicho a convertirse en uno de los microcontroladores más usados del mundo, tanto en proyectos personales como en productos comerciales de domótica, wearables y sensores industriales.
-
-## Definición y arquitectura de la ESP32-WROOM-32
-
-La ESP32-WROOM-32 es un módulo de radio SoC, es decir un sistema completo en un solo chip, fabricado por Espressif Systems, que integra en una única pieza de silicio un microcontrolador de doble núcleo, memoria de trabajo, conectividad inalámbrica WiFi y Bluetooth, y un conjunto amplio de periféricos de entrada y salida. No es solo un procesador: es un módulo, es decir el chip ESP32-D0WDQ6 ya montado sobre una pequeña placa de circuito impreso junto con su antena impresa o cerámica, su memoria flash externa, un blindaje metálico de protección electromagnética y los componentes pasivos necesarios para que funcione, listo para que un fabricante lo suelde directamente sobre su propio producto o sobre una placa de desarrollo como la DevKit V1 usada en este proyecto.
-
-En cuanto a arquitectura, el corazón del módulo es una CPU Xtensa LX6 de doble núcleo de 32 bits, diseñada por Tensilica, corriendo típicamente entre 160 y 240 MHz, acompañada de un coprocesador de baja potencia (ULP) capaz de seguir ejecutando tareas simples, como leer un sensor, incluso cuando los núcleos principales están dormidos. Alrededor de esa CPU se organiza el resto del sistema: 520 KB de SRAM interna como memoria de trabajo, memoria flash externa (típicamente 4 MB) conectada por SPI donde vive el programa compilado, los bloques de radio de 2.4 GHz para WiFi 802.11 b/g/n y Bluetooth clásico y de baja energía (BLE), y un bus interno que conecta todo eso con los controladores de periféricos, entre ellos los conversores ADC y DAC, los controladores PWM, los buses SPI, I2C y UART, los sensores táctiles capacitivos y los pines de propósito general (GPIO). Esta forma de organizar el chip, con dos núcleos que se pueden repartir tareas y un coprocesador aparte para bajo consumo, es lo que le permite al ESP32 comportarse a la vez como un microcontrolador clásico y como un dispositivo conectado a internet sin depender de hardware externo adicional.
-
-## Qué hay dentro del chip y qué significa cada pin
-
-El módulo usado como referencia para este proyecto es un DevKit V1 de treinta GPIOs, construido sobre el módulo ESP-WROOM-32, que a su vez trae adentro el chip ESP32-D0WDQ6. Ese chip integra una CPU de doble núcleo Xtensa LX6, corriendo normalmente entre 160 y 240 MHz. Tener dos núcleos permite, por ejemplo, dedicar uno a las tareas de comunicación inalámbrica y el otro a la lógica propia de la aplicación, aunque también es perfectamente posible programar todo usando un solo núcleo si el proyecto no lo requiere. A eso se suman 520 KB de SRAM como memoria de trabajo y memoria flash externa, típicamente de 4 MB en los módulos más comunes, donde queda almacenado el programa una vez compilado. El chip trae además la radio de WiFi de 2.4 GHz y Bluetooth ya integrada, con su antena, amplificadores de potencia, receptores de bajo ruido y filtros montados directamente en el módulo, junto a un conjunto amplio de periféricos como sensores táctiles capacitivos, generación de PWM, un controlador de motores y las interfaces de comunicación SPI, I2C y UART.
-
-GPIO significa entrada y salida de propósito general, y son los pines que se pueden configurar por software para leer una señal externa como entrada o enviar una señal como salida. En la placa DevKit V1 cada pin físico puede cumplir varias funciones distintas dependiendo de cómo se configure en el código, y por eso en los diagramas de pinout cada uno aparece con varias etiquetas superpuestas.
-
-Los canales ADC1, del cero al siete, y ADC2, del cero al nueve, son entradas capaces de convertir una señal analógica en un valor digital que el programa puede leer. Los pines de ADC2 comparten hardware con el módulo de WiFi, así que si el WiFi está activo la lectura de esos canales puede volverse inestable o directamente dejar de funcionar, algo que conviene tener presente al elegir qué pin usar para un sensor analógico. DAC1 y DAC2 son los únicos dos pines capaces de generar directamente una señal analógica de salida, apenas dos, frente a los muchos canales de entrada del ADC, y están ubicados en los mismos pines físicos que ADC2 canal ocho y canal nueve.
-
-Los pines TOUCH0 a TOUCH9 traen sensor táctil capacitivo integrado, capaz de detectar el tacto humano sin necesidad de un botón físico. Los pines marcados como RTC_GPIO se mantienen activos incluso cuando el chip entra en modo de sueño profundo, lo que los hace útiles para despertar el chip mediante una señal externa mientras el resto del sistema permanece prácticamente apagado para ahorrar energía. VSPI y HSPI son los dos buses SPI disponibles, usados para comunicación de alta velocidad con periféricos como pantallas o tarjetas de memoria SD, mientras que el bus I2C, con sus líneas SDA y SCL, es un bus de solo dos hilos muy utilizado para conectar sensores. UART corresponde a la comunicación serial clásica, la misma que se usa para ver mensajes de depuración por el monitor serial mientras se programa el chip.
-
-El pin EN habilita o reinicia el chip, y VIN, 3V3 y GND corresponden a la alimentación. El chip trabaja internamente a 3.3 voltios, aunque muchas placas de desarrollo aceptan una entrada de 5 voltios por el puerto USB o por el pin VIN y la regulan internamente hasta el voltaje que necesita el chip. Un detalle de hardware importante es que los pines GPIO34 a GPIO39 son exclusivamente de entrada, no se pueden configurar como salida bajo ninguna circunstancia, porque físicamente el chip no tiene los transistores necesarios para manejarlos como salida en esos pines concretos. Conocer de antemano qué pines son compartidos, cuáles son de entrada únicamente y cuáles se ven afectados por el uso del WiFi evita bastantes dolores de cabeza a la hora de diseñar un circuito, porque es un error bastante común elegir un pin al azar para un sensor o un motor y descubrir después que ese pin en particular tiene una restricción especial.
-
-## Cómo el ESP32 traduce el mundo analógico
-
-El mundo físico es analógico por naturaleza. La temperatura, la luz, el sonido o la posición de un potenciómetro varían de forma continua, mientras que un microcontrolador solo entiende ceros y unos. El puente entre esos dos mundos son los conversores ADC y DAC.
-
-El ADC, conversor analógico digital, toma una señal analógica, por ejemplo un voltaje variable entre 0 y 3.3 voltios proveniente de un sensor, y la convierte en un número digital que el programa puede leer y usar. El ESP32 trae dos unidades de ADC. La primera, ADC1, con ocho canales, se puede usar sin ninguna restricción particular. La segunda, ADC2, con diez canales, comparte hardware con el módulo de WiFi, de modo que si el WiFi está activo y en uso la lectura de esos canales puede volverse inestable o dejar de funcionar del todo, razón por la cual en proyectos que necesitan WiFi y lecturas analógicas confiables al mismo tiempo suele recomendarse usar exclusivamente ADC1. La resolución nativa es de doce bits, lo que significa que puede distinguir 4096 niveles distintos de voltaje dentro del rango configurado, y cuantos más bits de resolución tenga un conversor, más fino es el detalle que puede captar de la señal original.
-
-El DAC, conversor digital analógico, hace el camino inverso, toma un valor digital calculado por el programa y lo convierte en una señal analógica real de salida, es decir un voltaje que varía de forma continua en lugar de simplemente encender o apagar como haría un pin digital normal. El ESP32 solo cuenta con dos pines DAC, con una resolución de ocho bits, equivalente a 256 niveles distintos, bastante más limitada que la del ADC. Esa diferencia se explica porque generar una señal analógica de salida limpia exige una circuitería interna más exigente que simplemente leer una señal existente.
-
-En la práctica el ADC se usa constantemente, para leer un potenciómetro, un sensor de luz, un sensor de temperatura analógico, la posición de un joystick o el nivel de una batería. El DAC se usa con menos frecuencia, pero resulta clave cuando de verdad se necesita generar una señal analógica real, como en la reproducción de audio simple o en la generación de formas de onda para pruebas de laboratorio. Vale la pena distinguir esto del PWM, la modulación por ancho de pulso, que técnicamente no es una salida analógica real sino una señal digital que se enciende y apaga muy rápido, y que al promediarse en el tiempo, por ejemplo en un motor o en un LED, se comporta como si fuera analógica aunque no lo sea en sentido estricto. El ESP32 tiene muchísimos más pines capaces de generar PWM que pines DAC reales, y por eso en la práctica el PWM termina usándose mucho más seguido que el DAC para controlar el brillo de un LED o la velocidad de un motor.
-
-La generación de PWM en el ESP32 corre por cuenta de un periférico dedicado llamado LEDC (LED Control), que a pesar del nombre no está limitado a manejar LEDs y se usa igual para controlar servomotores, motores DC mediante un driver externo o cualquier carga que se controle variando el ciclo de trabajo de la señal. El chip ofrece dieciséis canales de PWM independientes, agrupados en varios temporizadores configurables, cada uno con una resolución ajustable de hasta dieciséis bits, es decir hasta 65536 niveles distintos de ciclo de trabajo, y una frecuencia también configurable por software, a diferencia de placas más simples donde la frecuencia de PWM viene fija de fábrica. Esa combinación de muchos canales, resolución alta y frecuencia ajustable es lo que hace que en el ESP32 casi cualquier pin GPIO común pueda usarse como salida PWM, mientras que los DAC reales quedan limitados a apenas dos pines fijos.
-
-## La familia completa, quién fabrica qué y la diferencia entre original y genérico
-
-Espressif no se quedó con un único modelo de chip. El ESP32 original, basado en el módulo WROOM-32, es el de propósito general, el más común para aprender y para la mayoría de proyectos personales. El ESP32-S2 sacrifica el Bluetooth a cambio de mejoras de seguridad, incluyendo un motor criptográfico dedicado, pensado para aplicaciones donde proteger la comunicación importa más que tener Bluetooth disponible. El ESP32-S3 apunta a tareas más exigentes, como inteligencia artificial ligera o procesamiento de imágenes, y ofrece más pines GPIO que el modelo original. El ESP32-C3 cambia por completo la arquitectura del procesador, dejando el Xtensa propietario de Tensilica para adoptar RISC-V, resultando en una alternativa más económica y eficiente energéticamente. El ESP32-H2 se orienta a redes tipo malla y a protocolos como Zigbee y Thread, típicos de instalaciones domóticas más avanzadas donde numerosos dispositivos se comunican directamente entre sí.
-
-Conviene distinguir tres niveles distintos dentro de todo este ecosistema. El chip es el silicio puro, por ejemplo el ESP32-D0WDQ6, y casi nunca se compra suelto. El módulo, como el ESP-WROOM-32, es ese chip ya montado sobre una pequeña placa junto con su antena, su memoria flash y los componentes necesarios para funcionar, y es lo que un fabricante integra dentro de su propio producto final. La placa de desarrollo, como el DevKit V1 usado de referencia en este proyecto, es ese módulo montado sobre una placa más grande, con los pines expuestos en headers, un conversor de USB a serial para poder programarla desde un computador, botones de reset y de boot, y un regulador de voltaje. Esto último es lo que compra la mayoría de las personas para aprender o para prototipar.
-
-Espressif fabrica sus propios módulos oficiales, como el ESP-WROOM-32 y el ESP32-WROOM-32U, que llevan su marca directamente. Pero al tratarse de un diseño con kits de desarrollo y documentación relativamente abiertos, numerosos fabricantes, en su mayoría chinos, producen sus propias versiones. Ai-Thinker, el mismo fabricante que popularizó el ESP-01 del ESP8266, también sacó placas ESP32 propias, como la NodeMCU-32S, heredando el nombre y buena parte de la distribución de pines de sus placas ESP8266 anteriores, aunque hoy casi nadie usa el firmware Lua original de NodeMCU sobre ellas y se programan exactamente igual que cualquier otra placa ESP32, ya sea con Arduino o con MicroPython. Marcas como AZ-Delivery, DOIT o HiLetgo, entre muchas otras, arman sus propias placas de desarrollo usando el módulo oficial de Espressif o, en algunos casos, clones de ese módulo, montados sobre un diseño de placa propio.
-
-En la práctica que una placa sea genérica no significa necesariamente que sea mala. Muchas de estas placas usan el módulo real de Espressif por dentro, y lo único que cambia es el diseño de la placa base, el chip conversor de USB a serial, unas usan el CP2102 y otras el CH340, y por supuesto el precio final. El riesgo real de las versiones más baratas o de fabricantes menos conocidos suele estar en la calidad del regulador de voltaje, en el conversor USB, o incluso en módulos con memoria flash de menor calidad que puede fallar antes de lo esperado.
-
-Frente a alternativas como los microcontroladores AVR de los Arduino clásicos, que no traen WiFi de fábrica, o frente a microcontroladores más simples sin conectividad, el ESP32 gana terreno por ofrecer conectividad inalámbrica integrada a un precio muy bajo, una cantidad generosa de periféricos, y sobre todo una comunidad y un ecosistema de herramientas enorme, lo que reduce muchísimo la curva de aprendizaje comparado con chips igual de potentes pero con menos soporte o documentación disponible.
+Espressif fabrica sus módulos oficiales, pero como el diseño es relativamente abierto, muchas
+marcas (Ai-Thinker, DOIT, AZ-Delivery, HiLetgo) arman sus propias placas. Genérica no significa
+mala: muchas usan el módulo original y solo cambian la placa y el conversor USB (CP2102 o CH340).
+El riesgo de las más baratas está en el regulador, el conversor USB o una flash de peor calidad.
+Frente a un AVR (Arduino clásico), el ESP32 gana por traer la radio integrada a muy bajo precio,
+más periféricos y una comunidad enorme.
 
 ## Cómo se programa
 
-El ESP32 no está atado a un único lenguaje de programación. C y C++ mediante el framework de Arduino son la puerta de entrada más común, sobre todo para quien ya viene de usar placas Arduino clásicas, programando bajo la lógica típica de una función de configuración inicial y un ciclo que se repite continuamente. El ESP-IDF, el framework oficial de Espressif, también se basa en C pero resulta mucho más completo, dando acceso directo a todas las capacidades del chip, y es la opción elegida cuando se necesita control fino de verdad y no solo un prototipo rápido. MicroPython es una versión de Python adaptada para microcontroladores, más lenta en ejecución que C pero considerablemente más rápida a la hora de escribir y probar código. También existen opciones menos habituales pero reales, como Rust, con soporte creciente especialmente en los modelos basados en RISC-V, o incluso JavaScript a través de firmwares específicos.
+| | C/C++ (Arduino o ESP-IDF) | MicroPython |
+|---|---|---|
+| Ejecución | Compilado a instrucciones nativas: máxima velocidad y latencia predecible | Intérprete: más lento, menos predecible en tiempos finos |
+| Memoria | Poca RAM en ejecución | El intérprete ocupa RAM (el proyecto final precompila a `.mpy` para ahorrarla) |
+| Acceso al hardware | Todo, incluido lo de bajo nivel | La mayoría (`machine`, `espnow`...) pero no todo: no hay SPI esclavo (ver tema 8) |
+| Ciclo de prueba | Recompilar y volver a subir todo | Cambiar un archivo y probar al instante en el REPL |
+| Errores típicos | Fugas de memoria, desbordes | Casi no existen: memoria automática |
+| Herramientas | Arduino IDE, PlatformIO, ESP-IDF | Thonny, mpremote |
 
-Para compilar y subir ese código al chip, el Arduino IDE es la opción más sencilla y la más recomendable para empezar. PlatformIO, normalmente usado dentro de Visual Studio Code, resulta mucho más potente a la hora de manejar proyectos grandes, múltiples librerías y control de versiones. El ESP-IDF también puede usarse directamente desde línea de comandos con las herramientas oficiales de Espressif, para quien necesita el máximo control posible sobre cada aspecto del chip.
+En resumen: C cuando hace falta exprimir el chip o controlar el hardware fino; MicroPython cuando
+importa iterar rápido y que el código se lea fácil. También hay soporte creciente para Rust (sobre
+todo en RISC-V) y JavaScript con firmwares específicos. El detalle de Thonny está en el
+[tema 2](../2-lenguajes-thonny).
 
-## Ventajas y desventajas de programar en C y en MicroPython
+## El costo ambiental de un chip barato
 
-Programar el ESP32 en C, o en C++ mediante el framework de Arduino, tiene como principal ventaja el rendimiento: el código se compila directamente a instrucciones nativas para la arquitectura Xtensa LX6, así que se ejecuta a la máxima velocidad posible del chip y con la latencia más baja y predecible, algo importante en tareas sensibles al tiempo como generar señales precisas o leer sensores muy rápido. También da acceso completo a absolutamente todos los periféricos y funciones de bajo nivel del chip, incluyendo configuraciones finas del ADC, del PWM o de los modos de sueño, sin capas intermedias que oculten opciones. El programa compilado ocupa poca memoria flash y RAM en tiempo de ejecución, lo que deja más espacio libre para la lógica propia del proyecto. La contrapartida es una curva de aprendizaje más alta, sobre todo para quien recién empieza a programar, un ciclo de desarrollo más lento porque cada cambio exige recompilar y volver a subir el firmware completo al chip, que suele tardar bastante más que simplemente reiniciar un script, y errores típicos de C como fugas de memoria o desbordamientos de buffer que en Python simplemente no existen de la misma forma.
+Fabricar semiconductores gasta mucha energía, agua y metales difíciles de conseguir de forma
+sostenible; que el módulo cueste unos pocos dólares no significa que ese costo no exista, solo que
+no aparece en el precio. Al ser tan barato, termina seguido en prototipos abandonados o productos
+de poca duración, alimentando la basura electrónica, uno de los residuos que más crece. A favor:
+su sueño profundo de microamperios lo hace muy eficiente en proyectos a batería. Diseñar para que
+dure, se reutilice o se deseche bien es parte de usar esta tecnología con criterio.
 
-MicroPython, en cambio, corre como un intérprete instalado sobre el chip, así que el código se ejecuta línea por línea en lugar de compilarse a instrucciones nativas, lo que lo hace notablemente más lento que C, tanto en velocidad de ejecución como en el tiempo de respuesta ante eventos, algo que puede ser un problema real en tareas que requieren temporización muy precisa. También consume más RAM en tiempo de ejecución porque el propio intérprete y sus estructuras de datos dinámicas ocupan memoria además del programa del usuario, lo que en proyectos grandes con muchas variables puede llegar a ser una limitación real en un chip con apenas 520 KB de SRAM. A cambio, su gran ventaja es la velocidad de desarrollo: al no requerir compilación ni volver a subir un firmware completo, es posible escribir una línea de código, probarla al instante mediante el REPL interactivo, sujeto a un solo archivo modificado en la memoria flash del chip, y corregir errores en segundos en lugar de minutos. Su sintaxis es además mucho más simple y legible que C, con manejo automático de memoria que evita buena parte de los errores típicos de bajo nivel, lo que la vuelve especialmente atractiva para prototipar rápido, para enseñar programación de microcontroladores a quien recién empieza, o para proyectos donde el rendimiento máximo del chip no es la prioridad principal.
+## Para qué se usa
 
-En resumen, C conviene cuando el proyecto necesita exprimir al máximo el rendimiento y los recursos del chip o requiere control fino sobre el hardware, mientras que MicroPython conviene cuando lo que más importa es iterar rápido, mantener el código simple de leer y mantener, o se está recién aprendiendo, aceptando a cambio un chip algo más lento y con menos memoria disponible para la lógica propia del proyecto.
-
-## El costo ambiental detrás de un chip barato
-
-Fabricar cualquier semiconductor implica un proceso industrial intensivo en energía y en agua, y requiere materiales que no siempre son fáciles de conseguir de forma sostenible, como distintos metales raros. Que un módulo ESP32 cueste apenas unos pocos dólares no significa que su fabricación esté libre de un costo ambiental real, simplemente ese costo no queda reflejado de forma directa en el precio de venta al público.
-
-Al tratarse de un chip tan barato y tan accesible, es común que termine en proyectos de prueba que después se abandonan, o en productos comerciales de bajo costo con poca durabilidad. Eso alimenta el problema global de la basura electrónica, uno de los tipos de residuo que más rápido está creciendo en el mundo, y que con frecuencia termina mal gestionado justo en los países que menos se benefician económicamente de la cadena de fabricación.
-
-En contraparte, el ESP32 en sí mismo está diseñado pensando en el bajo consumo, con modos de sueño profundo capaces de reducir su consumo a niveles de microamperios, lo que lo hace considerablemente más eficiente que alternativas más viejas o menos optimizadas, y explica en buena parte por qué se usa tanto en proyectos que necesitan funcionar con batería durante largos periodos, como sensores remotos instalados en lugares de difícil acceso. La facilidad y el bajo costo de la electrónica moderna cargan una huella detrás que rara vez se discute en los tutoriales básicos, y diseñar proyectos pensando en que duren, se puedan reutilizar o al menos se desechen de forma responsable forma parte de usar esta tecnología con criterio.
-
-## Para qué se usa en la práctica
-
-El ESP32 dejó de ser un chip exclusivo para hobbistas hace bastante tiempo. En domótica es prácticamente el corazón de firmwares como ESPHome o Tasmota, usados para controlar luces, enchufes inteligentes, sensores de movimiento y cerraduras de forma independiente a la nube del fabricante original del dispositivo. En el terreno del Internet de las Cosas industrial se usa en sensores remotos de temperatura, humedad, vibración o nivel de líquidos, que reportan sus datos por WiFi a un sistema central de monitoreo.
-
-También aparece en wearables y prototipos portátiles gracias a su bajo consumo y al tamaño reducido de algunas de sus variantes, y es una de las plataformas más comunes en educación y prototipado, precisamente por el balance que ofrece entre capacidad, precio y comunidad de soporte disponible. En automatización y control se usa para manejo de motores, sensores de posición y sistemas de control en lazo cerrado, el tipo de proyecto habitual en un laboratorio de electrónica o mecatrónica. A nivel comercial, marcas como Shelly o Athom construyeron líneas completas de dispositivos domóticos usando el ESP32 o su antecesor el ESP8266 como base de su hardware.
+Domótica (es el corazón de ESPHome y Tasmota, y de productos como Shelly o Athom), sensores
+remotos industriales que reportan por Wi-Fi, wearables por su bajo consumo, y control de motores y
+lazos cerrados en laboratorios de mecatrónica, como los de este repositorio.

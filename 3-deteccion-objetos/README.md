@@ -8,6 +8,20 @@ Internamente el proceso funciona dividiendo la imagen de entrada en una cuadríc
 
 Desde esa primera versión la familia fue evolucionando mucho. Las versiones intermedias mejoraron la precisión y la capacidad de detectar objetos pequeños, y en 2020 Ultralytics lanzó YOLOv5, implementado en PyTorch, lo que lo hizo mucho más fácil de instalar y usar y terminó convirtiéndolo en el estándar de facto para la mayoría de proyectos aplicados. Las versiones más recientes, incluida la usada en este proyecto, siguen esa misma línea de facilidad de uso, empaquetadas dentro de la librería ultralytics de Python.
 
+## En una tabla
+
+| Objeto | Clase COCO en `OBJETIVOS` | Carácter del mensaje | LED | GPIO |
+|---|---|---|---|---|
+| Silla | `"chair"` | 1.º (`1x`) | LED silla | 25 |
+| Celular | `"cell phone"` | 2.º (`x1`) | LED celular | 26 |
+
+| Dato | Valor | Dónde |
+|---|---|---|
+| Modelo | YOLOv8 nano (`yolov8n.pt`, el más liviano: corre sin GPU) | `deteccion_pc.py` |
+| Cámara | 640×480 | `deteccion_pc.py` |
+| Serial | 115200 baudios, un mensaje solo cuando cambia algo | `deteccion_pc.py` |
+| Apagado de seguridad | 2000 ms sin mensajes → los dos LEDs se apagan | `esp32_leds.py` (`TIEMPO_LIMITE_MS`) |
+
 ## Cómo está armado este proyecto
 
 La idea central es cerrar el círculo entre visión artificial y electrónica física. La computadora corre el modelo de YOLO leyendo la cámara en vivo, y cuando reconoce alguno de los objetos que nos interesan, en este caso una silla o un celular, le avisa al ESP32 a través de un cable USB, y el ESP32 enciende el LED correspondiente. Cuando el objeto deja de estar en cuadro, el LED se apaga.
@@ -163,11 +177,11 @@ Estas son las trabas más probables al repetir este proyecto en Windows, todas r
 
 ## Demostración en funcionamiento
 
-Así se ve el montaje corriendo de principio a fin, desde la computadora reconociendo la silla haciendo que los LEDs enciednan reaccionando en la protoboard.
+Así se ve el montaje corriendo de principio a fin, desde la computadora reconociendo la silla y los LEDs encendiéndose en la protoboard.
 
 ![Vista general del montaje con la detección corriendo en pantalla](demo-montaje-1.gif)
 
-Así se ve el montaje corriendo de principio a fin, desde la computadora reconociendo la telefono haciendo que los LEDs enciednan reaccionando en la protoboard.
+Así se ve el montaje corriendo de principio a fin, desde la computadora reconociendo la telefono y los LEDs encendiéndose en la protoboard.
 
 ![Vista general del montaje desde otro ángulo](demo-montaje-2.gif)
 

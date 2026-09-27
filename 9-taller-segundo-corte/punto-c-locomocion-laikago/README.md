@@ -73,4 +73,4 @@ Solo el teclado matricial va al ESP32 — no hace falta ningún otro sensor:
 
 ## Pendiente
 
-Se hicieron pruebas adicionales de la comunicación serial antes del montaje físico. Fotos del montaje y video de la demo — se agregan aquí antes de subir el tema al repositorio.
+Se hicieron pruebas adicionales de la comunicación serial antes del montaje físico. Fotos del montaje y video de la demo: se agregan aquí cuando estén.

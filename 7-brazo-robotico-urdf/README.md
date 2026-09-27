@@ -93,4 +93,4 @@ No hace falta ninguna otra fuente de alimentación: el ESP32 alimenta el teclado
 
 ## Pendiente
 
-Se hicieron pruebas adicionales de la comunicación serial antes del montaje físico. Fotos del montaje físico y video de la demo funcionando — se agregan aquí antes de subir el tema al repositorio.
+Se hicieron pruebas adicionales de la comunicación serial antes del montaje físico. Fotos del montaje físico y video de la demo funcionando: se agregan aquí cuando estén.

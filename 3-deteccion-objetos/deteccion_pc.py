@@ -14,7 +14,7 @@ PUERTO_SERIAL = "COM7"
 BAUDIOS = 115200
 
 # Nombres exactos de las clases dentro del dataset COCO que usa YOLOv8
-OBJETIVOS = ["laptop", "cell phone"]
+OBJETIVOS = ["chair", "cell phone"]
 
 model = YOLO('yolov8n.pt')
 

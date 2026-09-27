@@ -66,4 +66,4 @@ Teclado y LCD comparten el mismo bus I2C — no hace falta ninguna placa aparte 
 
 ## Pendiente
 
-Se hicieron pruebas adicionales de la comunicación serial antes del montaje físico. Fotos del montaje y video de la demo — se agregan aquí antes de subir el tema al repositorio.
+Se hicieron pruebas adicionales de la comunicación serial antes del montaje físico. Fotos del montaje y video de la demo: se agregan aquí cuando estén.

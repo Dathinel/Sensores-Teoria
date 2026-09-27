@@ -6,6 +6,21 @@ Taller de tres puntos asignado por el profesor (el enunciado de cada punto está
 
 **Un solo teclado matricial 4x4** (el mismo módulo I2C reutilizado en los temas 7 y 8) controla las tres simulaciones de este taller. El firmware del ESP32 (`esp32_teclado.py`) es idéntico para las tres: no sabe nada de drones, brazos ni patas, solo manda por serial la tecla que esté presionada en cada instante (`TECLA:8`, `TECLA:-`, etc). La "configuración" — qué hace cada tecla — vive del lado del PC, en cada script de Python, así que **no hay que reprogramar el ESP32 para pasar de un punto al otro**, solo correr el script que corresponda.
 
+**Qué hace cada tecla en cada punto** (sacado de `procesar_tecla` de cada script):
+
+| Tecla | a) Drones | b) Brazo KUKA | c) Laikago |
+|---|---|---|---|
+| 8 / 2 | +Y / −Y | efector +Y / −Y | 8 sostenida: trotar |
+| 4 / 6 | −X / +X | efector −X / +X | girar un paso (detiene el trote antes) |
+| 9 / 7 | subir / bajar (no pasa del suelo) | efector +Z / −Z | — |
+| 5 | congelar donde está | volver a la pose inicial | reiniciar el robot |
+| A / B / C | ir al waypoint A, B o C | A: abrir pinza · B: demo recorrer los 3 ejes · C: cerrar y agarrar | — |
+| D | volver al origen | demo: coger el cubo y llevarlo | — |
+| \* / # | despegar / aterrizar | — | — |
+| 0 | — | soltar y reponer el cubo | — |
+
+Waypoints del punto a): A = (0,0; 0,9; 1,2) m, B = (1,4; −0,6; 1,6) m, C = (−1,3; 0,4; 0,9) m.
+
 ### [Punto a) Drones: mover entre 3 puntos A, B y C](./punto-a-drones-waypoints)
 Un dron (con otros dos siguiéndolo en formación) se mueve entre tres waypoints con movimiento fluido, controlado por teclado: jog manual para posicionarlo a mano o saltos directos a los puntos A/B/C.
 
@@ -71,4 +86,4 @@ Cada punto tiene su propio script (ver su README para el detalle completo), pero
 
 ## Pendiente
 
-Se hicieron pruebas adicionales de la comunicación serial antes del montaje físico. Fotos del montaje y video de la demo — se agregan aquí antes de subir el tema al repositorio.
+Se hicieron pruebas adicionales de la comunicación serial antes del montaje físico. Fotos del montaje y video de la demo: se agregan aquí cuando estén.

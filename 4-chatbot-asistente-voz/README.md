@@ -230,3 +230,10 @@ Con todo lo anterior resuelto, esta es una corrida real dando los comandos por v
 ![Protoboard durante el show de luces, con el LED azul encendido en ese instante de la secuencia](demo-show-luces-azul.gif)
 
 ![Protoboard durante el show de luces, con el LED rojo encendido en ese instante de la secuencia](demo-show-luces-rojo.gif)
+
+## Dónde se reutilizó
+
+La misma lógica (frase → DeepSeek → JSON de intención → validar → actuar) es la del asistente del
+[proyecto final](../proyecto-final/app/asistente.py): ahí el JSON trae una respuesta con los datos de
+la planta y órdenes para el carro, y pasa por una lista blanca antes de ejecutar nada.
+

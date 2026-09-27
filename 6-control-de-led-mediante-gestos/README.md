@@ -59,4 +59,4 @@ flowchart TD
 
 ## Pendiente
 
-Fotos del montaje físico y video de la demo funcionando — se agregan aquí antes de subir el tema al repositorio.
+Fotos del montaje físico y video de la demo funcionando: se agregan aquí cuando estén.
