@@ -25,6 +25,7 @@ Para verlo en 3D: doble clic en `visor.bat` (pestaña Paso a paso del visor).
 | 14 | [Ruta del carro con tres obstáculos (ida y vuelta sola)](#14-ruta-del-carro-con-tres-obstáculos-ida-y-vuelta-sola) | [9](sensores.md#9-arreglo-de-5-infrarrojos-de-línea), [10](sensores.md#10-ultrasónico-frontal-respaldo), [11](sensores.md#11-encoders-de-las-ruedas), [13](sensores.md#13-láser-de-distancia-frontal) | ✅ aprobado |
 | 15 | [Telemetría, protocolo y 3D](#15-telemetría-protocolo-y-3d) | [12](sensores.md#12-infrarrojo-de-la-cuna-de-carga) | 🔵 preaprobado |
 | 16 | [Asistente (DeepSeek) y órdenes al carro](#16-asistente-deepseek-y-órdenes-al-carro) | [9](sensores.md#9-arreglo-de-5-infrarrojos-de-línea), [10](sensores.md#10-ultrasónico-frontal-respaldo), [11](sensores.md#11-encoders-de-las-ruedas), [13](sensores.md#13-láser-de-distancia-frontal) | ⏳ pendiente |
+| 17 | [Firmware de los dos ESP32 y hardware real](#17-firmware-de-los-dos-esp32-y-hardware-real) | [1](sensores.md#1-infrarrojo-de-presencia), [2](sensores.md#2-sensor-capacitivo), [3](sensores.md#3-sensor-inductivo), [5](sensores.md#5-sensor-del-interior-del-vaso), [6](sensores.md#6-sensor-hall-del-carrusel), [8](sensores.md#8-cortina-de-seguridad), [9](sensores.md#9-arreglo-de-5-infrarrojos-de-línea), [10](sensores.md#10-ultrasónico-frontal-respaldo), [11](sensores.md#11-encoders-de-las-ruedas), [12](sensores.md#12-infrarrojo-de-la-cuna-de-carga), [13](sensores.md#13-láser-de-distancia-frontal) | ⏳ pendiente |
 
 ## 1. Carga del elemento y estación 1 (presencia)
 
@@ -342,3 +343,20 @@ Fase 7. En el dashboard (pestaña Asistente) se le pregunta al asistente por esc
 ```
 
 **Cómo está implementado hoy:** app/asistente.py (búsqueda en la documentación, estado en vivo, DeepSeek con JSON, lista blanca, intérprete local, voz con SpeechRecognition y gTTS); control/vehiculo.py (`ordenar`, odometría, revisión del camino, atascado); pruebas en tests/test_asistente.py y tests/test_vehiculo.py, entre ellas un punto detrás de un muro (no lo toca) y, desde fuera de la línea, ir a la meta y volver al muelle (20 semillas de error sin tocar muros). Falta una clave de DeepSeek válida: la del tema 4 fue rechazada (401).
+
+## 17. Firmware de los dos ESP32 y hardware real
+
+**Revisión:** ⏳ pendiente
+
+Fase 8. El ESP32 fijo (USB al PC) mueve las cintas, el carrusel y los 6 servos y lee los sensores de la estación; el ESP32 del carro corre el MISMO control de la simulación (control/vehiculo.py compilado para MicroPython). Se comunican por ESP-NOW y el fijo hace de puente con el PC. Cambiar `hardware.backend: sim` por `real` en config/parametros.yaml pasa el supervisor, el dashboard, el asistente y el visor de la simulación a las placas.
+
+- **Entra:** Comandos numerados del PC (líneas JSON), latidos, órdenes al carro; los pines de cada sensor.
+- **Decide:** En la placa, sin esperar al PC: parada segura si falta el latido del PC 2 s; cortina → prensa arriba y cinta de vasos quieta en el mismo ciclo; comando repetido → solo el ack. El carro decide solo a 50 Hz y guarda sus eventos hasta el ack.
+- **Sale:** Eventos numerados y telemetría cada 200 ms al PC; eventos del carro reenviados una sola vez.
+- **Sensores:** [1. Infrarrojo de presencia](sensores.md#1-infrarrojo-de-presencia), [2. Sensor capacitivo](sensores.md#2-sensor-capacitivo), [3. Sensor inductivo](sensores.md#3-sensor-inductivo), [5. Sensor del interior del vaso](sensores.md#5-sensor-del-interior-del-vaso), [6. Sensor Hall del carrusel](sensores.md#6-sensor-hall-del-carrusel), [8. Cortina de seguridad](sensores.md#8-cortina-de-seguridad), [9. Arreglo de 5 infrarrojos de línea](sensores.md#9-arreglo-de-5-infrarrojos-de-línea), [10. Ultrasónico frontal (respaldo)](sensores.md#10-ultrasónico-frontal-respaldo), [11. Encoders de las ruedas](sensores.md#11-encoders-de-las-ruedas), [12. Infrarrojo de la cuna de carga](sensores.md#12-infrarrojo-de-la-cuna-de-carga), [13. Láser de distancia frontal](sensores.md#13-láser-de-distancia-frontal)
+
+```json
+{"t":"tel","n":27,"ms":3933,"seguridad":"ok","presencia":false,"cortina_mm":null}
+```
+
+**Cómo está implementado hoy:** firmware/ (MicroPython) con su README; pines generados de sim/conexiones.py y valores de config/parametros.yaml por firmware/preparar.py; todo compila con mpy-cross; tests/test_firmware.py prueba la estación, el carro y el puente de punta a punta con una estación EMULADA (mismo firmware, hardware falso), que es también lo que usa el supervisor si no hay placa conectada. Falta probarlo en las placas reales y medir los valores PROVISIONALES; la línea automática con hardware necesita la visión real (fase 5).

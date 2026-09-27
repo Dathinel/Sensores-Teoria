@@ -892,3 +892,27 @@ empezó a implementar lo de todos los grupos del PDF; somos solo el grupo 7).
   respuestas reales.
 - Que el usuario revise el punto 16 y apruebe el 15.
 
+## 2026-09-27 (3) — Fase 8: firmware de los dos ESP32 y hardware real
+
+**Hecho:**
+
+- `firmware/` en MicroPython (decisión: el del curso; así el control del carro y el protocolo
+  corren tal cual en las placas, compilados con mpy-cross). Estación fija: A4988 por PWM,
+  28BYJ-48, PCA9685 con los 6 servos, VL53L0X de cortina e interior con XSHUT, parada segura
+  sin latido del PC, cortina que reacciona en la placa, puente ESP-NOW. Carro: `ControlCarro`
+  real, TB6612 con corrección por encoders, HC-SR04 por interrupciones, eventos reenviados
+  hasta el ack.
+- `firmware/preparar.py`: pines desde `sim/conexiones.py` y valores desde la sección nueva
+  `firmware:` de `config/parametros.yaml` (PROVISIONALES); `firmware/subir.py` con mpremote.
+- `app/puente_serial.py` (drena todo el serial, última línea cruda, estación emulada si no hay
+  placa) y `control/hal/backend_real.py`.
+- `hardware.backend: sim|real` en `config/parametros.yaml`: la línea que cambia la simulación
+  por las placas en el supervisor (monitoreo, paro/reanudar, prueba de actuadores, órdenes al
+  carro).
+- El proyecto se movió dentro del repo (`Sensores-Teoria/proyecto-final/`) y se sube a GitHub.
+- Streamlit: chat con lo más nuevo arriba. Visor: sin pestaña de asistente; panel de solo
+  lectura sobre la nube y botón de vista "Asistente".
+
+**Pendiente:** probar en las placas reales; medir los PROVISIONALES; visión real (fase 5, faltan
+fotos); clave de DeepSeek válida (la dada da 401).
+

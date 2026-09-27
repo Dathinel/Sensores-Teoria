@@ -637,3 +637,28 @@ pasos:
       de la línea, ir a la meta y volver al muelle (20 semillas de error sin tocar muros). Falta
       una clave de DeepSeek válida: la del tema 4 fue rechazada (401).
     revision: pendiente
+  - numero: 17
+    titulo: Firmware de los dos ESP32 y hardware real
+    zona: caja
+    sensores: [1, 2, 3, 5, 6, 8, 9, 10, 11, 12, 13]
+    que_pasa: >
+      Fase 8. El ESP32 fijo (USB al PC) mueve las cintas, el carrusel y los 6 servos y lee los
+      sensores de la estación; el ESP32 del carro corre el MISMO control de la simulación
+      (control/vehiculo.py compilado para MicroPython). Se comunican por ESP-NOW y el fijo hace de
+      puente con el PC. Cambiar `hardware.backend: sim` por `real` en config/parametros.yaml pasa
+      el supervisor, el dashboard, el asistente y el visor de la simulación a las placas.
+    entra: Comandos numerados del PC (líneas JSON), latidos, órdenes al carro; los pines de cada sensor.
+    decide: >
+      En la placa, sin esperar al PC: parada segura si falta el latido del PC 2 s; cortina → prensa
+      arriba y cinta de vasos quieta en el mismo ciclo; comando repetido → solo el ack. El carro
+      decide solo a 50 Hz y guarda sus eventos hasta el ack.
+    sale: Eventos numerados y telemetría cada 200 ms al PC; eventos del carro reenviados una sola vez.
+    mensaje: '{"t":"tel","n":27,"ms":3933,"seguridad":"ok","presencia":false,"cortina_mm":null}'
+    como_esta_hoy: >
+      firmware/ (MicroPython) con su README; pines generados de sim/conexiones.py y valores de
+      config/parametros.yaml por firmware/preparar.py; todo compila con mpy-cross;
+      tests/test_firmware.py prueba la estación, el carro y el puente de punta a punta con una
+      estación EMULADA (mismo firmware, hardware falso), que es también lo que usa el supervisor
+      si no hay placa conectada. Falta probarlo en las placas reales y medir los valores
+      PROVISIONALES; la línea automática con hardware necesita la visión real (fase 5).
+    revision: pendiente

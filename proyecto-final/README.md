@@ -10,6 +10,12 @@ denominación y las entrega a un carro que sigue una línea, esquiva tres muros,
 meta y vuelve solo. Todo corre hoy en simulación (PyBullet con física real) y se ve en un
 visor 3D.
 
+![Visor 3D: la planta, el carro en el muelle y la pista con los tres muros](docs/capturas/visor-planta-y-pista.png)
+
+| Dashboard: el carro en vivo (mapa, odometría, órdenes) | Visor: lo último que respondió el asistente |
+|---|---|
+| ![Dashboard, pestaña Carro y ruta](docs/capturas/dashboard-carro-y-ruta.png) | ![Panel del asistente sobre la nube](docs/capturas/visor-asistente.png) |
+
 ## Cómo verlo
 
 Doble clic en **`visor.bat`**. Si la simulación ya está corriendo, abre el visor 3D; si no,
@@ -40,9 +46,17 @@ flowchart LR
 La simulación y el dashboard son procesos separados a propósito (sección 8 de
 `CLAUDE.md`): Streamlit reejecuta el script en cada click.
 
+## Hardware real (fase 8)
+
+Firmware de los dos ESP32 en MicroPython en [`firmware/`](firmware/README.md). El control del
+carro de la simulación corre tal cual en su placa. Para pasar de la simulación a las placas se
+cambia UNA línea en `config/parametros.yaml`: `hardware.backend: real`. Sin placa conectada, el
+supervisor usa una estación emulada con el mismo firmware (`python -m app.puente_serial` para
+diagnosticar).
+
 ## Documentación
 
-- [`docs/paso-a-paso.md`](docs/paso-a-paso.md) — los 16 puntos del funcionamiento: qué
+- [`docs/paso-a-paso.md`](docs/paso-a-paso.md) — los 17 puntos del funcionamiento: qué
   sensor usa cada uno, qué entra, qué decide, qué sale y su estado de revisión.
 - [`docs/sensores.md`](docs/sensores.md) — los 13 sensores: qué los activa, qué entregan,
   qué mensaje mandan, cómo se replican y cómo se simulan.

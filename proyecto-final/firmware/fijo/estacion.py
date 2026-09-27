@@ -30,7 +30,7 @@ COMANDOS = {
     "desvio": {"almacen": "_desvio_almacen", "rechazo": "_desvio_rechazo"},
     "carrusel": {"ir": "_carrusel_ir", "referencia": "_carrusel_referencia", "abrir": "_obturador"},
     "canaleta": {"soltar": "_soltar_vaso"},
-    "estado": {"leer": "_leer_estado"},
+    "estado": {"leer": "_leer_estado", "parar": "_parar", "reanudar": "_reanudar"},
 }
 
 # Duracion de los movimientos de servos que son un ciclo (ida y vuelta), ms.
@@ -193,6 +193,17 @@ class Estacion:
 
     def _leer_estado(self, m, t_ms):
         self._telemetria(t_ms)
+
+    def _parar(self, m, t_ms):
+        # Paro de emergencia del dashboard: lo mismo que la parada segura.
+        self.aplicar_parada_segura()
+        self.evento("esp32", "parada_segura", t_ms, {"motivo": "paro"})
+
+    def _reanudar(self, m, t_ms):
+        if not self.latido_pc.vivo(t_ms):
+            return "sin latido del PC"
+        self.parada_segura = False
+        self.evento("esp32", "reanudado", t_ms)
 
     # ------------------------------------------------------------------
     # seguridad

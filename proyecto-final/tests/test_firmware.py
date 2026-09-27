@@ -215,3 +215,59 @@ def test_puente_de_punta_a_punta_con_la_estacion_emulada():
 def test_sin_esp32_no_se_cae():
     puente = PuenteESP32(P, puerto="COM_QUE_NO_EXISTE_99")
     assert puente.conectado is False and puente.emulada is not None
+
+
+# ---------------------------------------------------------------------
+# backend real de la HAL y supervisor con `hardware.backend: real`
+# ---------------------------------------------------------------------
+
+
+def test_backend_real_mueve_y_lee_a_traves_del_firmware():
+    from control.hal.backend_real import BackendReal
+
+    puente = PuenteESP32(P, puerto_serial=EstacionEmulada(P))
+    puente.emulada = puente.ser
+    reloj = {"t": 0}
+    hw = BackendReal(puente, lambda: reloj["t"])
+    for t in range(0, 1200, 20):
+        reloj["t"] = t
+        puente.atender(t)
+    hw.cinta_monedas.avanzar_casilla()
+    puente.ser.hw.sensores["presencia"] = True
+    puente.ser.hw.sensores["cortina_mm"] = 80
+    for t in range(1200, 1800, 20):
+        reloj["t"] = t
+        puente.atender(t)
+    assert puente.ser.hw.pasos["monedas"] == 1
+    assert hw.sensor_presencia.leer() is True
+    assert hw.cortina.leer_mm() == 80
+    assert hw.sensor_interior.leer_mm() == 120
+
+
+def test_supervisor_en_modo_real_sin_placa(tmp_path):
+    import copy
+
+    from app import db
+    from app.supervisor import PARO, Supervisor
+
+    p = copy.deepcopy(P)
+    p["hardware"] = {"backend": "real", "puerto": "COM_QUE_NO_EXISTE_99"}
+    s = Supervisor(tmp_path / "real.db", parametros=p)
+    try:
+        assert s.puente.emulada is not None
+        s.aplicar_orden({"cmd": "iniciar"})
+        for _ in range(40):
+            s.vuelta()
+            s.puente.emulada.hw.t_ms += 0
+        s.aplicar_orden({"cmd": "carro", "accion": "avanzar", "distancia_m": 0.2, "origen": "asistente"})
+        assert s.ultima_orden["ok"] and "radio" in s.ultima_orden["detalle"]
+        assert any('"dst":"carro"' in x for x in s.puente.emulada.al_carro)   # salio por ESP-NOW
+        s.aplicar_orden({"cmd": "paro"})
+        assert s.estado_linea == PARO
+        s.aplicar_orden({"cmd": "hardware", "dst": "vasos", "act": "prensar"})
+        assert s.ultima_orden["ok"]
+        s.vuelta()
+        tel = db.ultima_telemetria(s.conexion)
+        assert tel["backend"] == "real" and "hardware" in tel
+    finally:
+        s.conexion.close()

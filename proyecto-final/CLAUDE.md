@@ -394,13 +394,14 @@ esquemas) se crean cuando empiece esa fase, no antes.
   config/monedas.yaml           tabla de monedas: 4 generaciones (sección 6)
   .streamlit/config.toml        tema del dashboard
   docs/
-    paso-a-paso.yaml            los 16 puntos con su estado de revisión (fuente única)
+    paso-a-paso.yaml            los 17 puntos con su estado de revisión (fuente única)
     paso-a-paso.md, sensores.md, componentes.md, replicacion.md, conexiones.md   generados (python -m app.documentos)
     bitacora.md                 avance y decisiones por sesión
     enunciado/                  la guia del parcial (segundo-parcial-umng.pdf) y sus figuras, numeradas; README.md
   control/                      lógica pura (sin PyBullet ni pyserial)
     hal/interfaces.py           clases abstractas de sensores y actuadores
     hal/backend_sim.py          la HAL sobre la simulación
+    hal/backend_real.py         la HAL sobre el ESP32 (telemetría y comandos del puente serial)
     linea.py                    máquina de estados de la cinta de monedas
     embalaje.py                 máquina de estados de la cinta de vasos
     registro.py                 registro de casillas y transiciones
@@ -432,6 +433,10 @@ esquemas) se crean cuando empiece esa fase, no antes.
     configuracion.py            carga de config/parametros.yaml
     grabar_demo.py              graba una corrida para el modo demo del visor
     documentos.py               genera los .md de docs/
+    puente_serial.py            fase 8: PC <-> ESP32 fijo (y estación EMULADA si no hay placa)
+  firmware/                     fase 8, MicroPython (ver firmware/README.md)
+    fijo/  carro/  comun/       lógica pura (se prueba en el PC) + hw.py (pines) + main.py
+    preparar.py, subir.py       arma salida/<placa>/ (pines y config generados, .mpy) y la sube con mpremote
   tests/                        pruebas (+ escenarios/ de un solo filtro y el mixto de 20)
 ```
 
@@ -812,7 +817,11 @@ revisión). Falta probarla con una clave de DeepSeek válida.
 
 **Fase 8. Backend real.** Firmware de los dos ESP32, protocolo serial, backend real de la
 HAL. Criterio: el mismo código de control que corría en simulación mueve el hardware
-cambiando una sola línea de configuración.
+cambiando una sola línea de configuración. **Hecha en software el 2026-09-27**
+(`hardware.backend: real`; ver `firmware/README.md`): firmware MicroPython, puente serial,
+`control/hal/backend_real.py`, supervisor en modo real y 17 pruebas con una estación emulada.
+Falta: probar en las placas, medir los valores PROVISIONALES de `firmware:`, y la línea
+automática con hardware espera la visión real (fase 5).
 
 **Fase 9. Documentación.** README con el paso a paso, diagramas de bloques, requerimientos,
 materiales justificados, esquemas, planos y resultados del clasificador.
@@ -879,8 +888,10 @@ línea en consola con `rich` es más ágil que abrir el navegador.
 Keras con MobileNetV2 si quiere control y material más serio para el informe. Roboflow
 sirve para etiquetar y aumentar el dataset si consiguen suficientes fotos.
 
-**Firmware.** PlatformIO sobre VS Code, mucho más manejable que el IDE de Arduino para dos
-proyectos en el mismo repositorio.
+**Firmware.** Decidido (2026-09-27): **MicroPython** (el del curso, con Thonny) y no
+PlatformIO: así `control/protocolo.py` y `control/vehiculo.py` corren tal cual en las placas
+(compilados con `mpy-cross`), sin reescribir el control en C++. Se sube con `mpremote`
+(`python -m firmware.subir`).
 
 ---
 

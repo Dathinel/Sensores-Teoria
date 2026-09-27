@@ -21,3 +21,8 @@ pytest
 
 # agregar tensorflow u onnxruntime solo en la fase 5, segun como se entrene
 # el modelo de vision (CLAUDE.md, seccion 19)
+
+# fase 8 (firmware): subir a la placa sin Thonny y compilar para MicroPython
+mpremote
+esptool
+mpy-cross

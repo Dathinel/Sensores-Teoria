@@ -33,7 +33,7 @@ Numerados igual que en el visor 3D (pestaña Sensores). Qué lo activa, qué rec
 - **Cómo mitigarlo:** Capuchon que tape la luz ambiente en E1; ajustar el potenciometro del LM393 con la cinta vacia; voto de 3 lecturas; ademas E2 respalda a E1 (presencia recuperada).
 - **Conexión:** Salida digital D0 del modulo a una entrada del ESP32 fijo (alimentar el modulo a 3,3 V).
 - **Cómo se simula:** rayTest vertical de 5 cm hacia la cinta; bloqueado si golpea algo que no sea la cinta.
-- **Pasos:** [1. Carga del elemento y estación 1 (presencia)](paso-a-paso.md#1-carga-del-elemento-y-estación-1-presencia)
+- **Pasos:** [1. Carga del elemento y estación 1 (presencia)](paso-a-paso.md#1-carga-del-elemento-y-estación-1-presencia), [17. Firmware de los dos ESP32 y hardware real](paso-a-paso.md#17-firmware-de-los-dos-esp32-y-hardware-real)
 
 ```json
 {"t":"evt","src":"e1","ev":"presencia","casilla":17,"ocupada":true}
@@ -51,7 +51,7 @@ Numerados igual que en el visor 3D (pestaña Sensores). Qué lo activa, qué rec
 - **Cómo mitigarlo:** Montarlo a 3-5 mm de la trayectoria; calibrar con el boton de plastico mas pequeno; limpiar la cara; voto de 3 lecturas.
 - **Conexión:** Salida NPN alimentada a 6-36 V: pasar por optoacoplador (PC817) o divisor a 3,3 V. NUNCA directo al ESP32.
 - **Cómo se simula:** Consulta si hay un cuerpo activo en la casilla E1 (cualquiera); la lectura viaja en el registro de la casilla y se usa en E2.
-- **Pasos:** [2. Estación 2 (material)](paso-a-paso.md#2-estación-2-material)
+- **Pasos:** [2. Estación 2 (material)](paso-a-paso.md#2-estación-2-material), [17. Firmware de los dos ESP32 y hardware real](paso-a-paso.md#17-firmware-de-los-dos-esp32-y-hardware-real)
 
 ```json
 {"t":"evt","src":"e2","ev":"material","capacitivo":true,"inductivo":false}
@@ -69,7 +69,7 @@ Numerados igual que en el visor 3D (pestaña Sensores). Qué lo activa, qué rec
 - **Cómo mitigarlo:** Centrado bajo la casilla (descentrado pierde la mitad del alcance); inserto IMPRESO en la bancada alrededor de la cara (es no enrasable: nada de metal a menos de ~2 cm); probar con cada familia, sobre todo las de bronce; voto de 3 lecturas; si el inductivo ve metal, manda sobre el capacitivo.
 - **Conexión:** Salida NPN a 6-36 V: optoacoplador o divisor a 3,3 V. NUNCA directo al ESP32.
 - **Cómo se simula:** Consulta la bandera `metal` del cuerpo que está en E2.
-- **Pasos:** [2. Estación 2 (material)](paso-a-paso.md#2-estación-2-material)
+- **Pasos:** [2. Estación 2 (material)](paso-a-paso.md#2-estación-2-material), [17. Firmware de los dos ESP32 y hardware real](paso-a-paso.md#17-firmware-de-los-dos-esp32-y-hardware-real)
 
 ```json
 {"t":"evt","src":"e2","ev":"material","capacitivo":true,"inductivo":true}
@@ -105,7 +105,7 @@ Numerados igual que en el visor 3D (pestaña Sensores). Qué lo activa, qué rec
 - **Cómo mitigarlo:** Margen de 10 mm sobre el fondo del vaso vacío; fondo del vaso mate; sensor centrado sobre la boca y fijo al pórtico; 3 medidas con voto.
 - **Conexión:** I2C (SDA/SCL) al ESP32 fijo, 3,3 V; XSHUT a un pin para cambiarle la dirección.
 - **Cómo se simula:** El vaso simulado tiene o no un objeto adentro, con su error (errores_sensores.sensor_interior).
-- **Pasos:** [6. Verificación del vaso (antes de llenar)](paso-a-paso.md#6-verificación-del-vaso-antes-de-llenar)
+- **Pasos:** [6. Verificación del vaso (antes de llenar)](paso-a-paso.md#6-verificación-del-vaso-antes-de-llenar), [17. Firmware de los dos ESP32 y hardware real](paso-a-paso.md#17-firmware-de-los-dos-esp32-y-hardware-real)
 
 ```json
 {"t":"evt","src":"vasos","ev":"verificacion","vaso":4,"objeto_adentro":false}
@@ -123,7 +123,7 @@ Numerados igual que en el visor 3D (pestaña Sensores). Qué lo activa, qué rec
 - **Cómo mitigarlo:** Imán pegado en una cavidad impresa; homing lento; al terminar cada vuelta completa, comprobar que el imán aparece donde se esperaba.
 - **Conexión:** Salida digital (colector abierto con pull-up) a una entrada del ESP32 fijo, 3,3-5 V.
 - **Cómo se simula:** Siempre encuentra la referencia (el carrusel simulado no pierde pasos).
-- **Pasos:** [5. Almacén tipo revólver (por denominación)](paso-a-paso.md#5-almacén-tipo-revólver-por-denominación)
+- **Pasos:** [5. Almacén tipo revólver (por denominación)](paso-a-paso.md#5-almacén-tipo-revólver-por-denominación), [17. Firmware de los dos ESP32 y hardware real](paso-a-paso.md#17-firmware-de-los-dos-esp32-y-hardware-real)
 
 ```json
 {"t":"evt","src":"almacen","ev":"referencia","ok":true}
@@ -159,7 +159,7 @@ Numerados igual que en el visor 3D (pestaña Sensores). Qué lo activa, qué rec
 - **Cómo mitigarlo:** Ventana de distancia (solo cuenta lo que esté a menos del largo de la zona); voto de 3 medidas (~100 ms); eje a 85 mm de la cinta para que el cono no toque los vasos.
 - **Conexión:** I2C (SDA/SCL) al ESP32 fijo, 3,3 V.
 - **Cómo se simula:** Cono real: 19 rayTest repartidos en un cono de 25° de prensa a tapa, a 65 mm de altura; activa si cualquiera ve algo dentro de la ventana de distancia.
-- **Pasos:** [11. Cortina de seguridad](paso-a-paso.md#11-cortina-de-seguridad)
+- **Pasos:** [11. Cortina de seguridad](paso-a-paso.md#11-cortina-de-seguridad), [17. Firmware de los dos ESP32 y hardware real](paso-a-paso.md#17-firmware-de-los-dos-esp32-y-hardware-real)
 
 ```json
 {"t":"evt","src":"seguridad","ev":"cortina","activa":true}
@@ -177,7 +177,7 @@ Numerados igual que en el visor 3D (pestaña Sensores). Qué lo activa, qué rec
 - **Cómo mitigarlo:** Montar a 3-5 mm del piso con falda contra la luz; calibrar blanco y negro al arrancar.
 - **Conexión:** 5 entradas (digitales o ADC) del ESP32 del carro.
 - **Cómo se simula:** Distancia de cada sensor a la línea central de la pista (y a las franjas negras de meta y de giro), con lecturas cambiadas a veces (errores_sensores.carro.error_linea). El control decide cada bit por mayoría de 3 lecturas y, para volver a la línea, exige 4 seguidas.
-- **Pasos:** [14. Ruta del carro con tres obstáculos (ida y vuelta sola)](paso-a-paso.md#14-ruta-del-carro-con-tres-obstáculos-ida-y-vuelta-sola), [16. Asistente (DeepSeek) y órdenes al carro](paso-a-paso.md#16-asistente-deepseek-y-órdenes-al-carro)
+- **Pasos:** [14. Ruta del carro con tres obstáculos (ida y vuelta sola)](paso-a-paso.md#14-ruta-del-carro-con-tres-obstáculos-ida-y-vuelta-sola), [16. Asistente (DeepSeek) y órdenes al carro](paso-a-paso.md#16-asistente-deepseek-y-órdenes-al-carro), [17. Firmware de los dos ESP32 y hardware real](paso-a-paso.md#17-firmware-de-los-dos-esp32-y-hardware-real)
 
 ```json
 {"t":"evt","src":"carro","ev":"linea","bits":"00100"}
@@ -195,7 +195,7 @@ Numerados igual que en el visor 3D (pestaña Sensores). Qué lo activa, qué rec
 - **Cómo mitigarlo:** Respaldo del laser: 2 mediciones seguidas; disparos cada 60 ms para que no se mezclen ecos.
 - **Conexión:** TRIG a una salida; ECHO (5 V) por divisor a 3,3 V al ESP32 del carro.
 - **Cómo se simula:** Abanico de 5 rayTest en ±7,5° a la altura real, una medición cada 60 ms, con ruido.
-- **Pasos:** [14. Ruta del carro con tres obstáculos (ida y vuelta sola)](paso-a-paso.md#14-ruta-del-carro-con-tres-obstáculos-ida-y-vuelta-sola), [16. Asistente (DeepSeek) y órdenes al carro](paso-a-paso.md#16-asistente-deepseek-y-órdenes-al-carro)
+- **Pasos:** [14. Ruta del carro con tres obstáculos (ida y vuelta sola)](paso-a-paso.md#14-ruta-del-carro-con-tres-obstáculos-ida-y-vuelta-sola), [16. Asistente (DeepSeek) y órdenes al carro](paso-a-paso.md#16-asistente-deepseek-y-órdenes-al-carro), [17. Firmware de los dos ESP32 y hardware real](paso-a-paso.md#17-firmware-de-los-dos-esp32-y-hardware-real)
 
 ```json
 {"t":"evt","src":"carro","ev":"obstaculo","sensor":"ultrasonico","distancia_mm":182}
@@ -213,7 +213,7 @@ Numerados igual que en el visor 3D (pestaña Sensores). Qué lo activa, qué rec
 - **Cómo mitigarlo:** Interrupciones con antirrebote; corregir la odometria con la linea.
 - **Conexión:** 2 entradas con interrupcion del ESP32 del carro.
 - **Cómo se simula:** Pulsos enteros del giro REAL de cada rueda en PyBullet (20 por vuelta, ~10 mm): si la rueda patina, cuenta de más. Llegar al muelle = dejan de contar contra el tope (con PWM bajo).
-- **Pasos:** [14. Ruta del carro con tres obstáculos (ida y vuelta sola)](paso-a-paso.md#14-ruta-del-carro-con-tres-obstáculos-ida-y-vuelta-sola), [16. Asistente (DeepSeek) y órdenes al carro](paso-a-paso.md#16-asistente-deepseek-y-órdenes-al-carro)
+- **Pasos:** [14. Ruta del carro con tres obstáculos (ida y vuelta sola)](paso-a-paso.md#14-ruta-del-carro-con-tres-obstáculos-ida-y-vuelta-sola), [16. Asistente (DeepSeek) y órdenes al carro](paso-a-paso.md#16-asistente-deepseek-y-órdenes-al-carro), [17. Firmware de los dos ESP32 y hardware real](paso-a-paso.md#17-firmware-de-los-dos-esp32-y-hardware-real)
 
 ```json
 {"t":"tel","src":"carro","x":0.84,"y":-0.52,"rumbo":-1.57}
@@ -231,7 +231,7 @@ Numerados igual que en el visor 3D (pestaña Sensores). Qué lo activa, qué rec
 - **Cómo mitigarlo:** Apuntarlo al fondo opaco del vaso; voto de 3 lecturas.
 - **Conexión:** Entrada digital del ESP32 del carro.
 - **Cómo se simula:** La cuna tiene o no un vaso (lo pone el escape al soltar), más su error (errores_sensores.cuna). Se lee antes de soltar (tiene que estar vacía) y después (confirma la carga).
-- **Pasos:** [13. Acople con el carro (ESP-NOW)](paso-a-paso.md#13-acople-con-el-carro-esp-now), [15. Telemetría, protocolo y 3D](paso-a-paso.md#15-telemetría-protocolo-y-3d)
+- **Pasos:** [13. Acople con el carro (ESP-NOW)](paso-a-paso.md#13-acople-con-el-carro-esp-now), [15. Telemetría, protocolo y 3D](paso-a-paso.md#15-telemetría-protocolo-y-3d), [17. Firmware de los dos ESP32 y hardware real](paso-a-paso.md#17-firmware-de-los-dos-esp32-y-hardware-real)
 
 ```json
 {"t":"evt","src":"carro","ev":"carga","vaso":4,"ok":true}
@@ -249,7 +249,7 @@ Numerados igual que en el visor 3D (pestaña Sensores). Qué lo activa, qué rec
 - **Cómo mitigarlo:** 3 mediciones seguidas para decidir; el ultrasonico de respaldo cubre lo que el laser no ve.
 - **Conexión:** I2C (SDA/SCL) al ESP32 del carro, 3,3 V.
 - **Cómo se simula:** Cono de 5 rayTest en ±12,5° a 7 cm del piso, una medición cada 33 ms, hasta 1,2 m, con ruido proporcional (errores_sensores.carro.ruido_tof).
-- **Pasos:** [14. Ruta del carro con tres obstáculos (ida y vuelta sola)](paso-a-paso.md#14-ruta-del-carro-con-tres-obstáculos-ida-y-vuelta-sola), [16. Asistente (DeepSeek) y órdenes al carro](paso-a-paso.md#16-asistente-deepseek-y-órdenes-al-carro)
+- **Pasos:** [14. Ruta del carro con tres obstáculos (ida y vuelta sola)](paso-a-paso.md#14-ruta-del-carro-con-tres-obstáculos-ida-y-vuelta-sola), [16. Asistente (DeepSeek) y órdenes al carro](paso-a-paso.md#16-asistente-deepseek-y-órdenes-al-carro), [17. Firmware de los dos ESP32 y hardware real](paso-a-paso.md#17-firmware-de-los-dos-esp32-y-hardware-real)
 
 ```json
 {"t":"evt","src":"carro","ev":"obstaculo","sensor":"laser","distancia_mm":191}

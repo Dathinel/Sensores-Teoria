@@ -76,6 +76,23 @@ class Supervisor:
         self.compartido = servidor.EstadoCompartido(geometria_completa(self.parametros), Path(ruta_bd))
         self.servidor_http = servidor.arrancar(self.compartido, puerto_http) if puerto_http else None
 
+        # Fase 8: `hardware.backend: real` (UNA linea de config/parametros.yaml)
+        # cambia la simulacion por los ESP32 de verdad. Sin placa conectada, el
+        # puente usa la estacion emulada (el mismo firmware con hardware falso).
+        hw = self.parametros.get("hardware", {})
+        self.backend = hw.get("backend", "sim")
+        self.puente = None
+        if self.backend == "real":
+            from app.puente_serial import PuenteESP32
+            from control.hal.backend_real import BackendReal
+
+            self._t0 = time.monotonic()
+            puerto = hw.get("puerto")
+            self.puente = PuenteESP32(self.parametros, None if puerto in (None, "auto") else puerto)
+            self.hardware = BackendReal(self.puente, self._ms)
+            self._eventos_leidos = 0
+            self._tick_real = 0
+
         self._publicar_telemetria()
 
     # ------------------------------------------------------------------
@@ -86,6 +103,15 @@ class Supervisor:
                 probabilidad_error: float | None = None, conservar_almacen: bool | None = None) -> None:
         """Nueva corrida: escena limpia, registros vacios y tablas de la
         corrida anterior borradas."""
+        if self.backend == "real":
+            # Con hardware no hay escena que armar: se limpia la corrida y la
+            # estacion sale de su parada (si oye al PC).
+            db.reiniciar_corrida(self.conexion)
+            self.escenario_nombre = "hardware real"
+            self.estado_linea = CORRIENDO
+            self.puente.comando("estado", "reanudar", self._ms())
+            self.conexion.commit()
+            return
         if confianza_minima is not None:
             self.confianza_minima = float(confianza_minima)
         if probabilidad_error is not None:
@@ -142,6 +168,10 @@ class Supervisor:
     def aplicar_orden(self, orden: dict) -> None:
         cmd = orden.get("cmd")
         db.registrar_evento(self.conexion, "supervisor", "orden", orden)
+        if self.backend == "real" and cmd not in ("iniciar", "lote", "velocidad"):
+            self._orden_real(orden)
+            self.conexion.commit()
+            return
         corriendo = self.estado_linea == CORRIENDO and self.planta is not None
 
         if cmd == "iniciar":
@@ -212,6 +242,52 @@ class Supervisor:
             else:
                 self._aplicar_sabotaje(orden)
         self.conexion.commit()
+
+    def _orden_real(self, orden: dict) -> None:
+        """Ordenes del dashboard/asistente con el hardware real: se traducen a
+        comandos del firmware (firmware/fijo/estacion.py, COMANDOS)."""
+        from firmware.fijo.estacion import COMANDOS
+
+        cmd, t = orden.get("cmd"), self._ms()
+        if cmd == "carro":
+            datos = {k: v for k, v in orden.items() if k not in ("cmd", "accion", "origen")}
+            self.puente.comando("carro", orden.get("accion"), t, **datos)
+            self._responder(orden, True, "Orden enviada al carro por la radio (él la valida y responde)")
+        elif cmd in ("pausar", "paro"):
+            self.puente.comando("estado", "parar", t)
+            self.estado_linea = PAUSADA if cmd == "pausar" else PARO
+            self._responder(orden, True, "Estación en parada segura: cintas quietas, prensa arriba")
+        elif cmd == "reanudar":
+            self.puente.comando("estado", "reanudar", t)
+            self.estado_linea = CORRIENDO
+            self._responder(orden, True, "La estación sigue")
+        elif cmd == "hardware" and orden.get("act") in COMANDOS.get(orden.get("dst"), {}):
+            # Probar un actuador suelto (puesta en marcha del montaje).
+            datos = {k: v for k, v in orden.items() if k not in ("cmd", "dst", "act", "origen")}
+            self.puente.comando(orden["dst"], orden["act"], t, **datos)
+            self._responder(orden, True, f"Comando {orden['dst']}.{orden['act']} enviado")
+        else:
+            self._responder(orden, False, f"Con hardware real todavía no se puede: {cmd}")
+
+    def _vuelta_real(self) -> None:
+        """Hardware real: el puente drena el serial; cada evento del ESP32 (y
+        del carro, reenviado por el) va a SQLite con el mismo estilo src/ev, y
+        la telemetria se publica para el dashboard y el visor."""
+        t = self._ms()
+        self.puente.atender(t)
+        nuevos = self.puente.eventos[self._eventos_leidos:]
+        self._eventos_leidos = len(self.puente.eventos)
+        for e in nuevos:
+            datos = {k: v for k, v in e.items() if k not in ("t", "src", "ev")}
+            db.registrar_evento(self.conexion, e.get("src", "esp32"), e.get("ev", "evento"), datos)
+            if e.get("src") == "carro" and "x" in e:
+                db.registrar_ruta(self.conexion, e["x"], e["y"], e["ev"], e.get("fase", ""))
+        self._tick_real += 1
+        if self._tick_real % 10 == 0 or nuevos:
+            self._publicar_telemetria()
+
+    def _ms(self) -> int:
+        return int((time.monotonic() - self._t0) * 1000)
 
     # Que hace cada sabotaje y que se responde si no puede hacerlo ahora.
     SABOTAJES = {
@@ -287,9 +363,16 @@ class Supervisor:
 
     def _publicar_telemetria(self) -> None:
         estado = self.planta.estado() if self.planta is not None else {}
+        if self.backend == "real":
+            tel = self.puente.tel
+            estado = {"tick": self._tick_real, "hardware": self.puente.estado(),
+                      "sensores": {k: tel.get(k) for k in ("presencia", "capacitivo", "inductivo", "hall")},
+                      "cortina_activa": tel.get("seguridad") == "cortina",
+                      "alarmas": (["sin_esp32"] if not self.puente.latido.vivo(self._ms()) else [])
+                      + (["parada_segura"] if tel.get("parada_segura") else [])}
         estado.update(
             linea=self.estado_linea,
-            backend="sim",
+            backend=self.backend,
             escenario=self.escenario_nombre,
             escenarios_disponibles=listar_escenarios(),
             velocidad=self.velocidad,
@@ -336,6 +419,10 @@ class Supervisor:
         ordenes = db.tomar_ordenes_pendientes(self.conexion)
         for orden in ordenes:
             self.aplicar_orden(orden)
+        if self.backend == "real":
+            self._vuelta_real()
+            self.conexion.commit()
+            return
 
         if self.estado_linea == CORRIENDO and self.planta is not None:
             self.tick()
@@ -355,7 +442,9 @@ class Supervisor:
             while True:
                 inicio = time.monotonic()
                 self.vuelta()
-                if self.estado_linea == CORRIENDO:
+                if self.backend == "real":
+                    time.sleep(0.02)       # el serial se atiende seguido (latido cada 500 ms)
+                elif self.estado_linea == CORRIENDO:
                     # Cada tick dura lo mismo que un ciclo real de la cinta
                     # (tiempos_ms, dividido por la velocidad elegida): la
                     # fisica es instantanea y se completa el resto durmiendo.
@@ -370,6 +459,8 @@ class Supervisor:
         finally:
             if self.servidor_http is not None:
                 self.servidor_http.shutdown()
+            if self.puente is not None:
+                self.puente.cerrar()
             self.conexion.close()
 
 

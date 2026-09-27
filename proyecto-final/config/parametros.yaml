@@ -434,3 +434,14 @@ firmware:
   # de velocidad (adelanto + correccion con los encoders). PROVISIONAL.
   carro_v_max_m_s: 0.55
   carro_ganancia_ki: 0.8
+
+# Fase 8: ESTA es la linea que cambia la simulacion por el hardware real.
+#   sim  -> PyBullet (lo de siempre)
+#   real -> los dos ESP32 por el USB serial (app/puente_serial.py). Sin placa
+#           conectada usa la estacion EMULADA (mismo firmware, hardware falso).
+# Con `real`, hoy: monitoreo en vivo, parada/reanudar, prueba de cada actuador
+# y ordenes al carro. La linea automatica completa necesita la vision real
+# (fase 5: faltan las fotos de las monedas para entrenar).
+hardware:
+  backend: sim
+  puerto: auto          # o "COM5"
