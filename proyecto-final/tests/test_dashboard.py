@@ -54,6 +54,9 @@ def test_el_asistente_responde_en_el_dashboard_sin_deepseek(monkeypatch, tmp_pat
     from app import db
 
     monkeypatch.setenv("DEEPSEEK_API_KEY", "")
+    from app import asistente
+
+    monkeypatch.setattr(asistente, "cliente_local", lambda: None)
     db.conectar(tmp_path / "a.db").close()
     at = _correr(monkeypatch, tmp_path / "a.db")
     at.chat_input[0].set_value("avanza el carro 25 cm").run()

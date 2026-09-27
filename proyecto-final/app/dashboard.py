@@ -876,6 +876,27 @@ def pestana_linea() -> None:
 
 
 @st.fragment(run_every=REFRESCO_S)
+def costos_proyecto() -> None:
+    """Costo en Colombia por subsistema y dónde abaratar (config/precios.yaml)."""
+    from app import costos
+
+    datos = costos.cargar()
+    subs = costos.por_subsistema(datos)
+    st.markdown(f"**Costo del proyecto en Colombia: {costos.pesos(costos.total(datos))}** "
+                f"<span class='nota'>· precios del {datos['consultado']}, sin el portátil; detalle en "
+                "<code>docs/costos.md</code></span>", unsafe_allow_html=True)
+    fig = figura_base(240)
+    orden = sorted(subs.items(), key=lambda x: x[1])
+    fig.add_bar(x=[v for _, v in orden], y=[n for n, _ in orden], orientation="h", marker_color=AMBAR,
+                text=[costos.pesos(v) for _, v in orden], textposition="outside",
+                hovertemplate="%{y}: %{text}<extra></extra>")
+    fig.update_xaxes(tickprefix="$", rangemode="tozero")
+    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+    st.dataframe(pd.DataFrame([{"Dónde abaratar (propuesta)": a["titulo"], "Ahorro": costos.pesos(a["ahorro"]),
+                                "Riesgo": a["riesgo"]} for a in costos.ahorros(datos)]),
+                 hide_index=True, width="stretch")
+
+
 def pestana_replicacion() -> None:
     """Lo que hay que saber para construirlo de verdad: si los tiempos
     caben, cuanto tardaria esta corrida en el montaje real y cuantas veces
@@ -923,6 +944,7 @@ def pestana_replicacion() -> None:
                     "veces y decide por mayoría. Error por lectura de cada sensor: bloque "
                     "<code>errores_sensores</code> de la configuración.</div>", unsafe_allow_html=True)
     with der:
+        costos_proyecto()
         pendientes = tabla_monedas.sin_verificar()
         st.markdown(f"**Monedas por medir** <span class='nota'>· {len(pendientes)} clases con medidas "
                     "provisionales</span>", unsafe_allow_html=True)
@@ -1168,7 +1190,7 @@ def _atender_frase(frase: str) -> None:
     from app import asistente
 
     with st.spinner("Pensando…"):
-        r = asistente.atender(frase, conexion(), usar_deepseek=st.session_state.get("usar_deepseek", True))
+        r = asistente.atender(frase, conexion(), usar=st.session_state.get("proveedor", "auto"))
     for orden in r.ordenes:
         db.insertar_orden(conexion(), orden)
     st.session_state["asistente_ultima"] = r
@@ -1181,21 +1203,24 @@ def pestana_asistente() -> None:
 
     con = conexion()
     hay_clave = asistente.cliente_deepseek() is not None
-    usar = st.session_state.get("usar_deepseek", True)
-    if hay_clave and usar:
-        estado_html = f'<span class="chip corriendo">DeepSeek · {asistente.MODELO}</span>'
-    else:
-        estado_html = '<span class="chip pausada">intérprete local (sin DeepSeek)</span>'
+    hay_local = asistente.cliente_local() is not None
+    if hay_local and not st.session_state.get("local_precargado"):
+        # La primera respuesta del modelo local tarda ~1 min si no esta en la GPU.
+        st.session_state["local_precargado"] = True
+        asistente.precargar_local()
+    estado_html = (f'<span class="chip {"corriendo" if hay_clave else ""}">DeepSeek {"✓" if hay_clave else "sin clave"}</span>'
+                   f'<span class="chip {"corriendo" if hay_local else ""}">local {asistente.MODELO_LOCAL} '
+                   f'{"✓" if hay_local else "apagado"}</span><span class="chip">reglas ✓</span>')
     st.markdown(f'<div class="cabecera"><h1 style="font-size:1.2rem">💬 Asistente del proyecto</h1>{estado_html}</div>'
                 '<div class="nota">Pregúntele en palabras normales por las cifras de la corrida o por cualquier '
                 "parte del proyecto (sensores, pines, decisiones), o pídale que mueva el carro o la línea. Responde "
                 "con los datos reales de la base de datos y la documentación del proyecto; si no tiene un dato, lo "
                 "dice.</div>", unsafe_allow_html=True)
-    if not hay_clave:
-        st.markdown('<div class="aviso ambar">Sin clave de DeepSeek: entiende órdenes y preguntas básicas, y para lo '
-                    "demás muestra la parte de la documentación más relacionada. Para conectarlo, cree un archivo "
-                    "<code>.env</code> en la carpeta del proyecto con la línea <code>DEEPSEEK_API_KEY=sk-...</code> "
-                    "(queda fuera de git) y recargue la página.</div>", unsafe_allow_html=True)
+    if not hay_clave and not hay_local:
+        st.markdown('<div class="aviso ambar">Sin DeepSeek ni modelo local: entiende órdenes y preguntas básicas, y '
+                    "para lo demás muestra la parte de la documentación más relacionada. DeepSeek: archivo "
+                    "<code>.env</code> con <code>DEEPSEEK_API_KEY=sk-...</code>. Local: instalar Ollama y "
+                    f"<code>ollama pull {asistente.MODELO_LOCAL}</code> (ver README).</div>", unsafe_allow_html=True)
 
     izq, der = st.columns([1.6, 1])
     with der:
@@ -1212,8 +1237,12 @@ def pestana_asistente() -> None:
                     st.warning(motivo)
         c1, c2 = st.columns(2)
         c1.toggle("🔊 Responder en voz alta", key="hablar")
-        c2.toggle("Usar DeepSeek", value=True, key="usar_deepseek", disabled=not hay_clave,
-                  help="Apagado: solo el intérprete local (sirve para probar sin internet).")
+        c2.selectbox("Quién responde", ["auto", "deepseek", "ollama", "reglas"], key="proveedor",
+                     format_func=lambda v: {"auto": "Automático", "deepseek": "Solo DeepSeek",
+                                            "ollama": "Solo el modelo local", "reglas": "Solo reglas"}[v],
+                     help="Automático: DeepSeek; si no hay, el modelo local (Ollama); si tampoco, las reglas. "
+                          "Las órdenes claras (avanza 20 cm, gira...) siempre las decide el intérprete de reglas "
+                          "cuando no responde DeepSeek.")
         st.markdown("**Ejemplos** <span class='nota'>· clic para preguntar</span>", unsafe_allow_html=True)
         for i, ej in enumerate(EJEMPLOS_ASISTENTE):
             if st.button(ej, key=f"ej{i}", width="stretch"):
@@ -1262,7 +1291,8 @@ def pestana_asistente() -> None:
                         NOMBRE_ORDEN_CARRO.get(o.get("accion"), o.get("accion")) if o["cmd"] == "carro"
                         else o["cmd"] for o in m["acciones"]))
                 if m["rol"] == "asistente" and m.get("modo"):
-                    st.caption("respondió: " + ("DeepSeek" if m["modo"] == "deepseek" else "intérprete local"))
+                    st.caption("respondió: " + {"deepseek": "DeepSeek", "ollama": f"modelo local ({asistente.MODELO_LOCAL})"}
+                               .get(m["modo"], "intérprete de reglas"))
         audio_resp = st.session_state.pop("asistente_audio", None)
         if audio_resp:
             st.audio(audio_resp, format="audio/mp3", autoplay=True)

@@ -916,3 +916,18 @@ empezó a implementar lo de todos los grupos del PDF; somos solo el grupo 7).
 **Pendiente:** probar en las placas reales; medir los PROVISIONALES; visión real (fase 5, faltan
 fotos); clave de DeepSeek válida (la dada da 401).
 
+## 2026-09-27 (4) — Revisión, modelo local, costos y laptop
+
+- Paso a paso: punto 15 **aprobado**; 16 y 17 **en pausa** (estado nuevo `pausa`: necesitan el
+  montaje real).
+- Asistente con modelo local: Ollama + qwen2.5:3b (fuera del repo), ~5 s por respuesta en la
+  RTX 3050. Encontrado al probarlo: con el prompt completo el modelo perdía las instrucciones
+  (contexto de Ollama) → contexto corto; inventaba varias órdenes → las órdenes claras las decide
+  el intérprete de reglas y va una sola orden al carro por mensaje; se equivocaba en el signo del
+  giro → lo manda la frase.
+- Costos en Colombia (`config/precios.yaml` → `docs/costos.md`, dashboard "Montaje real" y
+  asistente): **$1.680.746**, 28 % estimado; 7 propuestas de ahorro con su riesgo, NO aplicadas.
+- Visor: laptop ASUS TUF Gaming A15 con medidas de la ficha oficial (359 × 256 × 24,7 mm,
+  teclado, touchpad, bisagra, tapa a ~110°) y el asistente en su pantalla (el panel ya no flota
+  sobre la nube).
+

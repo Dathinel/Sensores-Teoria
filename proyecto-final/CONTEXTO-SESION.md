@@ -42,40 +42,20 @@ app corriendo escondida (`python -m app.lanzar --auto prueba_completa --reemplaz
 para que él vea visor y Streamlit cuando quiera; ahorrar tokens: antes de escribir lógica desde
 cero, revisar el repo `Sensores-Teoria` (temas 1-9) que ya tiene patrones resueltos.
 
-**Pedido del 2026-09-27 (tarde), textual resumido:**
-> no se guardó que siempre responda en español, y que ejecute la consola escondida [...] revise la
-> carpeta de sensores teoría que tiene lógica que ayuda a hacer más rápido las cosas; esta es la clave
-> de deepseek [...] colóquela y pruebe; no me gusta el orden de las respuestas en el streamlit, salen
-> hacia abajo [...] se escribe arriba y se ve abajo; en el visor 3D no quiero pestaña de asistente,
-> solo la nubecita, solo lectura, un bloque de texto de lo que responde deepseek arriba de la nube o
-> en la pantalla del PC, y un botón igual a los de arriba a la derecha que ponga la cámara para
-> leerlo; vaya creando la fase 8 (no tengo las imágenes de las monedas), instalando cosas, metiendo
-> lógica a cada parte, todo guardado en el contexto; organice carpetas y mejore lo de GitHub, haga
-> commits; pase la carpeta entera de proyecto final a Sensores-Teoria (sin los respaldos) y súbala;
-> mejore las demás actividades: lógica, presentación en GitHub, quitar texto irrelevante, poner
-> datos y diagramas.
+**Pedido del 2026-09-27 (noche):**
+> apruebe el 15, el 16 y 17 se necesitaría un montaje real, así que quedan en pausa; una versión
+> portable y rápida de deepseek para probar cosas del punto 16 (no para GitHub por el peso);
+> analice el precio de los componentes en Colombia y dónde abaratar (eso se lo preguntarán a
+> deepseek); modele la laptop (Asus TUF Gaming A15, con medidas) y en la pantalla algo; deme ideas.
+Decisiones (preguntadas): Ollama + qwen2.5:3b (fuera del repo); pantalla de la laptop = SOLO el
+asistente (el panel deja de flotar sobre la nube); costos: documentar y proponer, NO cambiar diseño.
 
-Puntos (marcar al terminar):
-- [x] a. Memoria: responder en español (memory + aquí).
-- [x] b. (DeepSeek la rechaza: 401, con y sin sk-; queda en .env) Clave de DeepSeek en `.env` (fuera de git) y probarla de verdad.
-- [x] c. Streamlit: chat con lo más nuevo ARRIBA, pegado a la caja de escribir.
-- [x] d. Visor: quitar pestaña Asistente; texto de la última respuesta sobre la nube / pantalla del
-      PC (solo lectura); botón de vista "Asistente" en la barra de vistas.
-- [x] e. (commit 07f6830, pusheado) Mover `proyecto final/` dentro del repo `Sensores-Teoria/` (sin respaldos ni entorno), commits y push.
-- [x] f. Fase 8 hecha en software (commits 259c3a3 y fe92ffa): firmware/ MicroPython (ver
-      firmware/README.md), app/puente_serial.py, control/hal/backend_real.py y
-      `hardware.backend: sim|real` en config/parametros.yaml (supervisor en modo real; sin placa usa
-      la estación emulada). Punto 17 del paso a paso, pendiente de revisión.
-- [x] g. Temas 1-9 mejorados (commit b8a6d9e): tema 1 reescrito con ficha técnica, diagramas y
-      tablas; tema 3 con tabla y el código corregido ("laptop" -> "chair", como la documentación);
-      tema 8 raíz con diagrama y comparación; tema 9 con tabla de teclas; tema 4 enlazado al
-      asistente del proyecto final.
-- [x] h. Contexto, bitácora, CLAUDE.md actualizados. Todo subido a GitHub.
-
-**Pendiente de decisión/acción del usuario:** clave de DeepSeek válida (la dada da 401); revisar
-y aprobar los puntos 15, 16 y 17; probar el firmware en las placas y medir los valores
-PROVISIONALES de `firmware:`; fotos de monedas para la visión real (fase 5), que es lo que falta
-para la línea automática con hardware. Entrega: martes 29-09-2026, 23:59.
+Puntos:
+- [x] a. Paso a paso: 15 aprobado; 16 y 17 en `pausa` (estado nuevo).
+- [x] b. Ollama + qwen2.5:3b como proveedor local del asistente (DeepSeek → local → reglas).
+- [x] c. Costos en COP: config/precios.yaml → docs/costos.md, ahorros, asistente y dashboard.
+- [x] d. Laptop TUF A15 modelada; el asistente en su pantalla.
+- [x] e. Pruebas, app escondida, docs, commit y push.
 
 ## 3. Estado actual (2026-09-27, fin de sesión)
 
@@ -88,7 +68,7 @@ para la línea automática con hardware. Entrega: martes 29-09-2026, 23:59.
   `http://localhost:8765` (visor 3D) y `http://localhost:8501` (dashboard). **NO publicarlo como
   artefacto de Claude**: se abre en el navegador del PC. Si los puertos ya están ocupados es que
   el usuario lo tiene abierto: no cerrarlo; para verificar, levantar una copia en otro puerto.
-- Paso a paso (`docs/paso-a-paso.yaml`, 17 puntos): 1-14 aprobados; **15 (protocolo) preaprobado**
+- Paso a paso (`docs/paso-a-paso.yaml`, 17 puntos): 1-15 aprobados; **16 y 17 en pausa (montaje real)**; antes: 15 preaprobado
   (2026-09-27), falta la aprobación del usuario; **16 (asistente y órdenes al carro) pendiente** de
   revisión.
 - Decisiones vigentes: filtro total (cinta de monedas de 4 estaciones: presencia, material,

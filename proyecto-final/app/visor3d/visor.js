@@ -2030,22 +2030,72 @@ function construirCajaControl() {
 
   // Hub USB con fuente propia (el portatil necesita 3 USB) y el portatil.
   construirModulo('hub_usb', escena, Vxyz(0.26, 0.30, 0), yaw(0), { idComponente: 'hub_usb', etiquetaSobre: 0.02 });
-  const pc = new THREE.Group();
-  pc.add(caja(0.30, 0.20, 0.012, 0x3a3f47, Vxyz(0, 0, 0.006)));
-  const pantalla = caja(0.30, 0.008, 0.19, 0x1d2129, Vxyz(0, 0.1, 0.1));
-  pantalla.rotation.x = -0.25;
-  pc.add(pantalla);
-  for (let i = 0; i < 2; i++) pc.add(caja(0.002, 0.012, 0.005, 0x2d6fd0, Vxyz(0.15, -0.03 - i * 0.02, 0.006)));
-  // Detras de la mesa de monedas: las dos webcams llegan con su cable de 1,5 m.
-  pc.position.copy(Vxyz(0.03, 0.38, 0));
-  escena.add(pc);
-  registrar('pc', ...pc.children);
-  pinSuelto('pc.USB1', escena, Vxyz(0.19, 0.35, 0.006), new THREE.Vector3(1, 0, 0), 'usb');
-  pinSuelto('pc.USB2', escena, Vxyz(0.19, 0.33, 0.006), new THREE.Vector3(1, 0, 0), 'usb');
-  const etPc = etiqueta('Portátil (visión + supervisor)', { alto: 0.012, alcance: 0.9 });
-  etPc.position.copy(Vxyz(0.03, 0.38, 0.21));
-  escena.add(etPc);
+  construirLaptop();
   construirEnlaceAsistente();
+}
+
+// Portatil del grupo: ASUS TUF Gaming A15 (medidas de la ficha oficial de ASUS:
+// 359 x 256 x 24,7 mm, 2,3 kg, pantalla de 15,6" 16:9 = 344 x 194 mm de area activa).
+// Base de 16,7 mm + tapa de 8 mm; abierta a ~110 grados. Esta detras de la mesa de monedas
+// (las dos webcams llegan con su cable de 1,5 m) y sus USB del costado derecho quedan frente
+// al hub. En la pantalla se ve lo ultimo que respondio el asistente (solo lectura).
+const LAPTOP = { cx: 0.01, cy: 0.38, ancho: 0.359, fondo: 0.256, base: 0.0167, tapa: 0.008, alto_tapa: 0.245,
+  apertura: 0.35, pantalla: [0.3442, 0.1936] };
+
+function construirLaptop() {
+  const L = LAPTOP;
+  const pc = new THREE.Group();
+  const gris = 0x2a2e35, negro = 0x121418;
+  // Base con el borde inferior un poco mas chico (se ve biselada).
+  pc.add(caja(L.ancho - 0.006, L.fondo - 0.006, 0.004, negro, Vxyz(0, 0, 0.002)));
+  pc.add(caja(L.ancho, L.fondo, L.base - 0.004, gris, Vxyz(0, 0, 0.004 + (L.base - 0.004) / 2), { metalness: 0.35, roughness: 0.5 }));
+  // Teclado completo con numerico: 6 filas; WASD translucidas como en la TUF.
+  const z = L.base + 0.0006, tecla = 0.0152, paso = 0.0187;
+  const filas = [[15, 0.0], [15, 0.0], [15, 0.0], [14, 0.0], [13, 0.0], [10, 0.0]];
+  filas.forEach(([n, _], f) => {
+    for (let k = 0; k < n; k++) {
+      const x = -0.165 + k * paso + (f === 5 && k > 3 ? 0.04 : 0);
+      const y = 0.07 - f * paso;
+      const wasd = (f === 2 && k === 2) || (f === 3 && k >= 1 && k <= 3);
+      const ancho = f === 5 && k === 3 ? 0.09 : tecla;   // barra espaciadora
+      pc.add(caja(ancho, tecla, 0.0012, wasd ? 0x9aa4b1 : 0x1b1e23, Vxyz(x + (ancho - tecla) / 2, y, z)));
+    }
+  });
+  pc.add(caja(0.105, 0.068, 0.0006, 0x33373e, Vxyz(-0.03, -0.088, L.base + 0.0003)));        // touchpad
+  pc.add(cilindro(0.006, 0.26, negro, Vxyz(0, L.fondo / 2 - 0.004, L.base + 0.002)).rotateZ(Math.PI / 2));
+  // Tapa: gira sobre la bisagra del borde de atras.
+  const tapa = new THREE.Group();
+  tapa.position.copy(Vxyz(0, L.fondo / 2 - 0.004, L.base + 0.002));
+  tapa.rotation.x = -L.apertura;
+  tapa.add(caja(L.ancho, L.tapa, L.alto_tapa, gris, Vxyz(0, L.tapa / 2, L.alto_tapa / 2), { metalness: 0.35, roughness: 0.5 }));
+  const logo = new THREE.Mesh(new THREE.CircleGeometry(0.014, 6), new THREE.MeshStandardMaterial({ color: 0x8b949e, metalness: 0.8 }));
+  logo.position.copy(Vxyz(0, L.tapa + 0.0002, L.alto_tapa * 0.55));
+  logo.rotation.y = Math.PI;                               // mira hacia atras
+  tapa.add(logo);
+  // Pantalla: lienzo 16:9 con la ultima respuesta del asistente.
+  const lienzo = document.createElement('canvas');
+  lienzo.width = 1280; lienzo.height = 720;
+  const textura = new THREE.CanvasTexture(lienzo);
+  textura.colorSpace = THREE.SRGBColorSpace;
+  const pantalla = new THREE.Mesh(new THREE.PlaneGeometry(...L.pantalla), new THREE.MeshBasicMaterial({ map: textura }));
+  pantalla.position.copy(Vxyz(0, -0.0006, 0.008 + L.pantalla[1] / 2));
+  pantalla.userData.asistente = true;
+  tapa.add(pantalla);
+  pc.add(tapa);
+  pc.position.copy(Vxyz(L.cx, L.cy, 0));
+  escena.add(pc);
+  registrar('pc', ...pc.children.filter((c) => c.isMesh));
+  // USB del costado derecho, frente al hub (los cables llegan a estos pines).
+  const xDer = L.cx + L.ancho / 2 + 0.001;
+  for (const [n, y] of [['pc.USB1', 0.35], ['pc.USB2', 0.33]]) {
+    const puerto = caja(0.002, 0.012, 0.005, 0x2d6fd0, Vxyz(xDer - 0.001, y, 0.009));
+    escena.add(puerto);
+    pinSuelto(n, escena, Vxyz(xDer, y, 0.009), new THREE.Vector3(1, 0, 0), 'usb');
+  }
+  const etPc = etiqueta('Portátil ASUS TUF Gaming A15 (visión + supervisor)', { alto: 0.012, alcance: 0.9 });
+  etPc.position.copy(Vxyz(L.cx, L.cy + 0.2, 0.3));
+  escena.add(etPc);
+  P.laptop = { pantalla, lienzo, textura };
 }
 
 // Fase 7: el asistente vive en el portatil y le pregunta a la API de
@@ -2055,7 +2105,7 @@ function construirCajaControl() {
 // "Asistente" del panel (solo lectura; se le escribe desde el dashboard).
 function construirEnlaceAsistente() {
   const grupo = new THREE.Group();
-  const centro = Vxyz(0.03, 0.56, 0.44);
+  const centro = Vxyz(LAPTOP.cx, LAPTOP.cy + 0.3, 0.46);
   const matNube = new THREE.MeshStandardMaterial({ color: 0xdfe7f5, roughness: 0.9, emissive: 0x539bf5, emissiveIntensity: 0.12 });
   for (const [dx, dz, r] of [[0, 0, 0.055], [-0.06, -0.01, 0.042], [0.06, -0.012, 0.045], [-0.028, 0.03, 0.04], [0.03, 0.028, 0.038]]) {
     const b = new THREE.Mesh(new THREE.SphereGeometry(r, 20, 14), matNube);
@@ -2063,7 +2113,9 @@ function construirEnlaceAsistente() {
     b.userData.asistente = true;
     grupo.add(b);
   }
-  const a = Vxyz(0.03, 0.43, 0.2);
+  // Sale del borde de arriba de la tapa abierta.
+  const a = Vxyz(LAPTOP.cx, LAPTOP.cy + LAPTOP.fondo / 2 + LAPTOP.alto_tapa * Math.sin(LAPTOP.apertura),
+    LAPTOP.base + LAPTOP.alto_tapa * Math.cos(LAPTOP.apertura) + 0.01);
   const b = centro.clone().add(new THREE.Vector3(0, -0.05, 0));
   const geo = new THREE.BufferGeometry().setFromPoints([a, b]);
   const linea = new THREE.Line(geo, new THREE.LineDashedMaterial({ color: 0x539bf5, dashSize: 0.012, gapSize: 0.008 }));
@@ -2079,20 +2131,10 @@ function construirEnlaceAsistente() {
   const etW = etiqueta('Wi-Fi del portátil (el carro usa ESP-NOW)', { alto: 0.009, alcance: 0.9, color: '#8b949e' });
   etW.position.copy(a.clone().lerp(b, 0.5)).add(new THREE.Vector3(0.09, 0, 0));
   grupo.add(etW);
-  // Panel de SOLO LECTURA sobre la nube: la ultima pregunta y lo que
-  // respondio el asistente (se le escribe desde el dashboard). Siempre mira a
-  // la camara, para leerlo desde cualquier lado; boton de vista "Asistente".
-  const lienzo = document.createElement('canvas');
-  lienzo.width = 1024; lienzo.height = 620;
-  const textura = new THREE.CanvasTexture(lienzo);
-  textura.colorSpace = THREE.SRGBColorSpace;
-  const panel = new THREE.Mesh(new THREE.PlaneGeometry(0.36, 0.36 * 620 / 1024),
-    new THREE.MeshBasicMaterial({ map: textura, transparent: true, depthWrite: false }));
-  panel.position.copy(centro).add(new THREE.Vector3(0, 0.25, 0));
-  panel.renderOrder = 9;
-  panel.userData.asistente = true;
-  grupo.add(panel);
+  // Lo que respondio el asistente se ve en la PANTALLA de la laptop (usuario,
+  // 2026-09-27): solo lectura; se le escribe desde el dashboard.
   escena.add(grupo);
+  const { pantalla: panel, lienzo, textura } = P.laptop;
   P.asistente = { grupo, paquete, a, b, matNube, mensajes: -1, panel, lienzo, textura };
   dibujarPanelAsistente(null);
 }
@@ -2119,7 +2161,7 @@ function dibujarPanelAsistente(d) {
   ctx.beginPath(); ctx.roundRect(4, 4, W - 8, H - 8, 28); ctx.fill();
   ctx.strokeStyle = '#539bf5'; ctx.lineWidth = 6; ctx.stroke();
   ctx.fillStyle = '#e6e8eb'; ctx.font = '700 44px "Space Grotesk", sans-serif'; ctx.textBaseline = 'top';
-  ctx.fillText('💬 Asistente · DeepSeek', 34, 26);
+  ctx.fillText('💬 Asistente del proyecto', 34, 26);
   ctx.font = '500 26px "IBM Plex Mono", monospace'; ctx.fillStyle = '#8b949e';
   ctx.fillText('solo lectura · se le escribe o habla desde el dashboard', 36, 84);
   const msgs = (d && d.mensajes) || [];
@@ -2144,9 +2186,10 @@ function dibujarPanelAsistente(d) {
     for (const l of lineas.slice(0, caben)) { ctx.fillText(l, 36, y); y += 41; }
     if (lineas.length > caben) { ctx.fillStyle = '#8b949e'; ctx.fillText('… (completa en el dashboard)', 36, y); }
     ctx.font = '500 24px "IBM Plex Mono", monospace';
-    ctx.fillStyle = respuesta.modo === 'deepseek' ? '#3fb68b' : '#f2b134';
+    const QUIEN = { deepseek: 'DeepSeek', ollama: 'modelo local (qwen2.5)' };
+    ctx.fillStyle = QUIEN[respuesta.modo] ? '#3fb68b' : '#f2b134';
     const ordenes = (respuesta.acciones || []).map((o) => o.accion || o.cmd).join(', ');
-    ctx.fillText(`${respuesta.ts.slice(11, 19)} · ${respuesta.modo === 'deepseek' ? 'DeepSeek' : 'intérprete local'}`
+    ctx.fillText(`${respuesta.ts.slice(11, 19)} · ${QUIEN[respuesta.modo] || 'intérprete de reglas'}`
       + (ordenes ? ` · órdenes: ${ordenes}` : ''), 36, H - 52);
   }
   A.textura.needsUpdate = true;
@@ -3489,8 +3532,9 @@ function vista(nombre) {
     // Los dos sensores de material se ven desde abajo de la cinta.
     material: [em[0].clone().lerp(em[1], 0.5).add(new THREE.Vector3(0, -0.04, 0)), new THREE.Vector3(0.06, -0.07, 0.2)],
     caja: [Vxyz(P.caja.bx, P.caja.by, 0.02), new THREE.Vector3(0, 0.3, 0.16)],
-    asistente: [P.asistente ? P.asistente.panel.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, -0.06, 0)) : centroP,
-      new THREE.Vector3(0.05, 0.05, 0.62)],
+    // De frente a la pantalla de la laptop (la pantalla mira hacia +z de three).
+    asistente: [P.asistente ? P.asistente.panel.getWorldPosition(new THREE.Vector3()) : centroP,
+      new THREE.Vector3(0.0, 0.04, 0.42)],
     carro: [P.carro ? P.carro.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.04, 0)) : centroP,
       new THREE.Vector3(0.16, 0.14, 0.2)],
   };
@@ -4083,7 +4127,6 @@ function bucle() {
   animarActuadores(dt);
   if (G) { actualizarSensores(t); resaltarComponente(t); }
   controles.update();
-  if (P.asistente) P.asistente.panel.quaternion.copy(camara.quaternion);
   actualizarEtiquetas();
   renderer.render(escena, camara);
   requestAnimationFrame(bucle);

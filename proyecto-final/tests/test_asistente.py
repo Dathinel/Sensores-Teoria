@@ -9,6 +9,12 @@ import pytest
 from app import asistente, db
 
 
+@pytest.fixture(autouse=True)
+def sin_ollama(monkeypatch):
+    """Las pruebas no dependen de que Ollama este corriendo en el PC."""
+    monkeypatch.setattr(asistente, "cliente_local", lambda: None)
+
+
 @pytest.fixture
 def conexion(tmp_path):
     c = db.conectar(tmp_path / "prueba.db")
@@ -151,3 +157,46 @@ def test_sin_deepseek_usa_el_interprete_local(conexion):
     r = asistente.atender("vuelve al muelle", conexion, usar_deepseek=False)
     assert r.modo == "local"
     assert r.ordenes[0]["accion"] == "volver_muelle"
+
+
+# ---------------------------------------------------------------------
+# modelo local (Ollama) y candados de las ordenes
+# ---------------------------------------------------------------------
+
+
+def test_sin_deepseek_pregunta_al_modelo_local(conexion):
+    local = ClienteFalso({"respuesta": "Se aceptaron 0 monedas.", "acciones": []})
+    r = asistente.atender("¿cuántas monedas hay?", conexion, cliente=ClienteFalso(ConnectionError("401")),
+                          cliente_ia_local=local)
+    assert r.modo == "ollama" and r.texto == "Se aceptaron 0 monedas."
+    assert local.enviado["model"] == asistente.MODELO_LOCAL
+    assert len(local.enviado["messages"][-1]["content"]) < 12000        # contexto corto para el modelo chico
+
+
+def test_una_orden_clara_la_decide_el_interprete_y_no_el_modelo_chico(conexion):
+    local = ClienteFalso({"respuesta": "x", "acciones": [{"cmd": "carro", "accion": "detener"}]})
+    r = asistente.atender("gira 45 grados a la derecha", conexion, usar="ollama", cliente_ia_local=local)
+    assert r.modo == "local" and local.enviado is None
+    assert r.ordenes == [{"cmd": "carro", "accion": "girar", "grados": -45.0, "origen": "asistente"}]
+
+
+def test_una_sola_orden_al_carro_por_mensaje(conexion):
+    ds = ClienteFalso({"respuesta": "ok", "acciones": [
+        {"cmd": "carro", "accion": "avanzar", "distancia_m": 0.2}, {"cmd": "carro", "accion": "girar", "grados": 90},
+        {"cmd": "pausar"}]})
+    r = asistente.atender("haz varias cosas", conexion, cliente=ds)
+    assert [o.get("accion", o["cmd"]) for o in r.ordenes] == ["avanzar", "pausar"]
+    assert r.descartadas
+
+
+def test_el_signo_del_giro_lo_manda_la_frase():
+    assert asistente.corregir_giros("gira a la derecha", [{"cmd": "carro", "accion": "girar", "grados": 45}])[0]["grados"] == -45
+    assert asistente.corregir_giros("a la izquierda", [{"cmd": "carro", "accion": "girar", "grados": -30}])[0]["grados"] == 30
+
+
+def test_costos_con_el_interprete_de_reglas():
+    from app import costos
+
+    texto = asistente.responder_local("¿cuánto cuesta el proyecto y dónde se puede ahorrar?", {"hay_datos": False})
+    assert costos.pesos(costos.total()) in texto and "ahorrar" in texto
+

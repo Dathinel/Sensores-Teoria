@@ -46,6 +46,27 @@ flowchart LR
 La simulación y el dashboard son procesos separados a propósito (sección 8 de
 `CLAUDE.md`): Streamlit reejecuta el script en cada click.
 
+## Asistente sin internet (modelo local)
+
+El asistente prueba en este orden: DeepSeek (clave en `.env`) → un modelo **local** con
+[Ollama](https://ollama.com) → un intérprete de reglas. Para tener el local, una sola vez:
+
+```
+winget install Ollama.Ollama
+ollama pull qwen2.5:3b
+```
+
+El modelo (~1,9 GB) queda en la carpeta del usuario (`.ollama`), **fuera del proyecto**: no se
+sube a GitHub. En una RTX 3050 de 4 GB responde en ~5 s. Las órdenes claras ("avanza 20 cm",
+"gira a la derecha") las decide siempre el intérprete de reglas; el modelo chico solo responde
+preguntas.
+
+## Costo en Colombia
+
+**$1.680.746 COP** en total (sin el portátil; precios del 2026-09-27 en Ferretrónica, Electronilab,
+Didácticas Electrónicas y Mercado Libre). Detalle por componente y **dónde abaratar** en
+[`docs/costos.md`](docs/costos.md) (fuente: `config/precios.yaml`).
+
 ## Hardware real (fase 8)
 
 Firmware de los dos ESP32 en MicroPython en [`firmware/`](firmware/README.md). El control del
@@ -65,6 +86,7 @@ diagnosticar).
   pines, alimentación, cables y ruido.
 - [`docs/replicacion.md`](docs/replicacion.md) — qué medir para construirlo de verdad y el
   presupuesto de tiempos.
+- [`docs/costos.md`](docs/costos.md) — precio de cada componente en Colombia y dónde ahorrar.
 - [`docs/bitacora.md`](docs/bitacora.md) — las decisiones sesión a sesión.
 - [`docs/enunciado/`](docs/enunciado/) — la guía del parcial (PDF) y sus figuras.
 

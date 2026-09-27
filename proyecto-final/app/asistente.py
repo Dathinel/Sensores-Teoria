@@ -50,9 +50,20 @@ MODELO = os.environ.get("DEEPSEEK_MODELO", "deepseek-chat")
 
 # Documentos que el asistente puede consultar (todo lo escrito del proyecto).
 DOCUMENTOS = ["README.md", "CLAUDE.md", "docs/paso-a-paso.md", "docs/sensores.md", "docs/componentes.md",
-              "docs/conexiones.md", "docs/replicacion.md", "docs/revision-final.md", "docs/bitacora.md",
+              "docs/conexiones.md", "docs/replicacion.md", "docs/revision-final.md", "docs/costos.md",
+              "docs/bitacora.md",
               "config/parametros.yaml", "config/monedas.yaml"]
 MAX_CARACTERES_DOCS = 24000      # ~7000 tokens de documentacion por pregunta
+# Proveedor LOCAL (usuario, 2026-09-27): Ollama con un modelo chico en el mismo portatil, para
+# probar el asistente sin internet ni clave. El modelo vive en la carpeta del usuario (.ollama),
+# FUERA del proyecto: no pesa en GitHub. Ollama habla el mismo formato de OpenAI, asi que se usa
+# el mismo cliente, el mismo prompt, el mismo JSON y la misma lista blanca que con DeepSeek.
+URL_LOCAL = os.environ.get("ASISTENTE_URL_LOCAL", "http://localhost:11434")
+MODELO_LOCAL = os.environ.get("ASISTENTE_MODELO_LOCAL", "qwen2.5:3b")
+# Ollama usa por defecto un contexto de ~4000 tokens: si el prompt lo pasa, se corta POR EL
+# PRINCIPIO y el modelo pierde las instrucciones (se vio: respondia sin la clave "respuesta").
+# Por eso al modelo local va menos: sin el README y con ~3000 caracteres de documentacion.
+MAX_CARACTERES_DOCS_LOCAL = 3000
 MAX_SECCION = 3500
 TURNOS_DE_MEMORIA = 6            # preguntas y respuestas anteriores que se le recuerdan
 
@@ -365,10 +376,33 @@ def cliente_deepseek():
     return OpenAI(api_key=clave, base_url=URL_DEEPSEEK, timeout=40, max_retries=1)
 
 
+def cliente_local():
+    """Cliente de Ollama (si esta corriendo y tiene el modelo), o None."""
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(URL_LOCAL + "/api/tags", timeout=0.8) as r:
+            modelos = [m["name"] for m in json.loads(r.read()).get("models", [])]
+    except (OSError, ValueError):
+        return None
+    if MODELO_LOCAL not in modelos:
+        return None
+    from openai import OpenAI
+
+    return OpenAI(api_key="ollama", base_url=URL_LOCAL + "/v1", timeout=90, max_retries=0)
+
+
 def preguntar_deepseek(cliente, pregunta: str, estado: dict, historial: list[dict]) -> dict:
     """Una pregunta a DeepSeek. Devuelve {"respuesta", "acciones", "documentos"}."""
-    docs = buscar(pregunta)
-    readme = (RAIZ / "README.md").read_text(encoding="utf-8") if (RAIZ / "README.md").exists() else ""
+    return preguntar_llm(cliente, MODELO, pregunta, estado, historial)
+
+
+def preguntar_llm(cliente, modelo: str, pregunta: str, estado: dict, historial: list[dict],
+                  limite_docs: int = MAX_CARACTERES_DOCS, con_readme: bool = True) -> dict:
+    """Una pregunta a un modelo con API de OpenAI (DeepSeek u Ollama)."""
+    docs = buscar(pregunta, limite_docs)
+    readme = ((RAIZ / "README.md").read_text(encoding="utf-8")
+              if con_readme and (RAIZ / "README.md").exists() else "")
     documentacion = readme + "\n\n" + "\n\n".join(f"[{s.archivo} · {s.titulo}]\n{s.texto}" for s in docs
                                                   if s.archivo != "README.md")
     mensajes = [{"role": "system", "content": PROMPT_SISTEMA}]
@@ -377,10 +411,16 @@ def preguntar_deepseek(cliente, pregunta: str, estado: dict, historial: list[dic
     mensajes.append({"role": "user", "content": (
         "ESTADO_EN_VIVO:\n" + json.dumps(estado, ensure_ascii=False)
         + "\n\nDOCUMENTACION:\n" + documentacion + "\n\nFRASE DE LA PERSONA:\n" + pregunta)})
-    r = cliente.chat.completions.create(model=MODELO, messages=mensajes, response_format={"type": "json_object"},
+    r = cliente.chat.completions.create(model=modelo, messages=mensajes, response_format={"type": "json_object"},
                                         temperature=0.2, max_tokens=900)
     datos = json.loads(r.choices[0].message.content or "{}")
-    return {"respuesta": str(datos.get("respuesta", "")).strip() or "(sin respuesta)",
+    if not isinstance(datos, dict):
+        datos = {}
+    texto = datos.get("respuesta")
+    if not isinstance(texto, str) or not texto.strip():
+        # Un modelo chico a veces cambia el nombre de la clave: el primer texto que traiga.
+        texto = next((v for v in datos.values() if isinstance(v, str) and v.strip()), "")
+    return {"respuesta": texto.strip() or "(sin respuesta)",
             "acciones": datos.get("acciones") or [], "documentos": [f"{s.archivo} · {s.titulo}" for s in docs[:6]]}
 
 
@@ -468,6 +508,16 @@ ESTADO_CARRO = {"siguiendo": "siguiendo la línea", "maniobra": "maniobrando", "
 def responder_local(frase: str, estado: dict) -> str:
     """Preguntas basicas con las cifras del estado (sin DeepSeek)."""
     t = normalizar(frase)
+    if re.search(r"\b(costo|costos|cuesta|cuestan|precio|precios|presupuesto|barato|abaratar|ahorrar|ahorro)", t):
+        from app import costos
+
+        subs = sorted(costos.por_subsistema().items(), key=lambda x: -x[1])
+        mejores = costos.ahorros()[:3]
+        return (f"El proyecto cuesta {costos.pesos(costos.total())} en Colombia (precios del "
+                f"{costos.cargar()['consultado']}, sin el portátil). Lo más caro: "
+                + ", ".join(f"{n} {costos.pesos(v)}" for n, v in subs[:3]) + ". Dónde ahorrar: "
+                + "; ".join(f"{a['titulo']} ({costos.pesos(a['ahorro'])}, riesgo {a['riesgo']})" for a in mejores)
+                + ". Detalle en docs/costos.md.")
     if not estado.get("hay_datos"):
         return "Todavía no hay datos de ninguna corrida: empiece una desde la barra de la izquierda."
     tot = estado["totales"]
@@ -521,41 +571,74 @@ def responder_local(frase: str, estado: dict) -> str:
 @dataclass
 class Respuesta:
     texto: str
-    modo: str                                  # "deepseek" o "local"
+    modo: str                                  # "deepseek", "ollama" o "local" (reglas)
     ordenes: list[dict] = field(default_factory=list)   # validas: van a la tabla `ordenes`
     descartadas: list[str] = field(default_factory=list)
     documentos: list[str] = field(default_factory=list)
     aviso: str = ""
 
 
-def atender(frase: str, conexion: sqlite3.Connection, *, usar_deepseek: bool = True, cliente=None) -> Respuesta:
-    """Atiende una frase: pregunta a DeepSeek (o al interprete local si no
-    se puede), valida las ordenes y guarda la conversacion. NO deja las
-    ordenes en la tabla: eso lo hace quien llama (el dashboard), para que
-    la persona vea que se va a hacer."""
+def atender(frase: str, conexion: sqlite3.Connection, *, usar: str = "auto", usar_deepseek: bool = True,
+            cliente=None, cliente_ia_local=None) -> Respuesta:
+    """Atiende una frase y guarda la conversacion. Proveedores, en orden:
+    DeepSeek (si hay clave y responde) -> modelo LOCAL de Ollama (si esta
+    corriendo) -> interprete de reglas (siempre). `usar`: "auto", "deepseek",
+    "ollama" o "reglas" (para probar uno solo). NO deja las ordenes en la
+    tabla: eso lo hace quien llama (el dashboard), para que la persona vea
+    que se va a hacer."""
+    if not usar_deepseek:
+        usar = "reglas"
     estado = estado_en_vivo(conexion)
     historial = conversacion(conexion, 2 * TURNOS_DE_MEMORIA)
-    aviso = ""
+    avisos = []
     crudo = None
-    if usar_deepseek:
+    if usar in ("auto", "deepseek"):
         cliente = cliente or cliente_deepseek()
         if cliente is None:
-            aviso = "Sin clave de DeepSeek (DEEPSEEK_API_KEY): respondo con el intérprete local."
+            avisos.append("Sin clave de DeepSeek (DEEPSEEK_API_KEY).")
         else:
             try:
                 crudo = preguntar_deepseek(cliente, frase, estado, historial)
                 modo = "deepseek"
             except Exception as error:  # red caida, clave rechazada, JSON roto...
-                aviso = f"DeepSeek no respondió ({type(error).__name__}: {str(error)[:120]}); uso el intérprete local."
+                avisos.append(f"DeepSeek no respondió ({type(error).__name__}: {str(error)[:90]}).")
+    if crudo is None and usar in ("auto", "ollama") and interpretar_orden_local(frase):
+        # Una orden clara la decide el interprete de reglas (siempre igual), no el modelo
+        # chico: en las pruebas, "gira 45 grados a la derecha" le hizo inventar 4 ordenes
+        # seguidas. El modelo local se usa para lo que hace bien: responder preguntas.
+        ordenes = interpretar_orden_local(frase)
+        crudo = {"respuesta": describir_ordenes(ordenes), "acciones": ordenes, "documentos": []}
+        modo = "local"
+    if crudo is None and usar in ("auto", "ollama"):
+        local = cliente_ia_local or cliente_local()
+        if local is None:
+            avisos.append(f"El modelo local ({MODELO_LOCAL}) no está corriendo (Ollama).")
+        else:
+            try:
+                # Menos contexto: pocos eventos, menos historial y menos documentacion.
+                compacto = {k: v for k, v in estado.items() if k not in ("ultimos_eventos", "errores_del_filtro")}
+                crudo = preguntar_llm(local, MODELO_LOCAL, frase, compacto, historial[-2:], MAX_CARACTERES_DOCS_LOCAL,
+                                      con_readme=False)
+                modo = "ollama"
+            except Exception as error:
+                avisos.append(f"El modelo local no respondió ({type(error).__name__}: {str(error)[:90]}).")
+    aviso = " ".join(avisos + (["Respondo con el intérprete de reglas."] if crudo is None and avisos else []))
     if crudo is None:
         ordenes = interpretar_orden_local(frase)
         texto = (describir_ordenes(ordenes) if ordenes else responder_local(frase, estado))
         crudo = {"respuesta": texto, "acciones": ordenes, "documentos": []}
         modo = "local"
     validas, descartadas = [], []
-    for a in crudo["acciones"] if isinstance(crudo["acciones"], list) else []:
+    carro_ya = False
+    for a in corregir_giros(frase, crudo["acciones"] if isinstance(crudo["acciones"], list) else []):
         orden, motivo = validar_accion(a)
+        if orden and orden["cmd"] == "carro" and carro_ya:
+            # Una orden nueva al carro reemplaza a la anterior: mandar varias en el mismo
+            # mensaje solo dejaria la ultima. Se cumple la primera; las demas se piden despues.
+            descartadas.append(f"{orden['accion']}: una sola orden al carro por mensaje")
+            continue
         if orden:
+            carro_ya = carro_ya or orden["cmd"] == "carro"
             validas.append(orden)
         else:
             descartadas.append(motivo)
@@ -601,6 +684,39 @@ def voz(texto: str) -> bytes | None:
         return buf.getvalue()
     except Exception:  # sin internet, sin la libreria...
         return None
+
+
+def corregir_giros(frase: str, acciones: list) -> list:
+    """Un modelo chico a veces se equivoca con el signo del giro (se vio: "a la
+    derecha" -> +45). Si la frase dice el lado, manda la frase: derecha =
+    negativo, izquierda = positivo (misma convencion que el carro)."""
+    t = normalizar(frase)
+    lado = -1 if "derech" in t else 1 if "izquierd" in t else 0
+    out = []
+    for a in acciones:
+        if lado and isinstance(a, dict) and a.get("accion") == "girar":
+            try:
+                a = dict(a, grados=lado * abs(float(a.get("grados", 0))))
+            except (TypeError, ValueError):
+                pass
+        out.append(a)
+    return out
+
+
+def precargar_local() -> None:
+    """Carga el modelo local en la GPU en segundo plano (la primera respuesta
+    tarda ~1 min si el modelo no esta cargado). No hace nada si Ollama no esta."""
+    import threading
+    import urllib.request
+
+    def _cargar():
+        try:
+            datos = json.dumps({"model": MODELO_LOCAL, "prompt": "", "keep_alive": "30m"}).encode()
+            urllib.request.urlopen(urllib.request.Request(URL_LOCAL + "/api/generate", data=datos), timeout=120).read()
+        except OSError:
+            pass
+
+    threading.Thread(target=_cargar, daemon=True).start()
 
 
 def describir_ordenes(ordenes: list[dict]) -> str:

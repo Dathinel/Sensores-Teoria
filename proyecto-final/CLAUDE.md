@@ -392,6 +392,7 @@ esquemas) se crean cuando empiece esa fase, no antes.
   requirements.txt
   config/parametros.yaml        umbrales, valores físicos, tiempos y errores de sensores
   config/monedas.yaml           tabla de monedas: 4 generaciones (sección 6)
+  config/precios.yaml           precio en Colombia de cada componente + ahorros propuestos (→ docs/costos.md)
   .streamlit/config.toml        tema del dashboard
   docs/
     paso-a-paso.yaml            los 17 puntos con su estado de revisión (fuente única)
@@ -432,7 +433,8 @@ esquemas) se crean cuando empiece esa fase, no antes.
     db.py                       esquema y acceso a SQLite
     configuracion.py            carga de config/parametros.yaml
     grabar_demo.py              graba una corrida para el modo demo del visor
-    documentos.py               genera los .md de docs/
+    documentos.py               genera los .md de docs/ (incluido costos.md)
+    costos.py                   lee config/precios.yaml: totales por subsistema, ahorros
     puente_serial.py            fase 8: PC <-> ESP32 fijo (y estación EMULADA si no hay placa)
   firmware/                     fase 8, MicroPython (ver firmware/README.md)
     fijo/  carro/  comun/       lógica pura (se prueba en el PC) + hw.py (pines) + main.py
@@ -746,6 +748,14 @@ el README, el estado en vivo y las secciones más parecidas a la pregunta (~24 0
 las preguntas básicas y, para lo demás, muestra la sección de la documentación más parecida. Una
 pregunta nunca mueve nada. La clave del tema 4 fue rechazada por DeepSeek (401, 2026-09-27): hay
 que poner una válida en `.env` (ver `.env.example`).
+
+**Modelo local (2026-09-27):** Ollama + `qwen2.5:3b` en el mismo portátil (fuera del repo), con
+el mismo cliente de OpenAI, el mismo prompt, JSON y lista blanca. Orden: DeepSeek → local →
+reglas. Al modelo local va un contexto corto (sin README, ~3000 caracteres de docs, sin eventos):
+con el contexto por defecto de Ollama (~4000 tokens) un prompt largo se corta por el principio y
+pierde las instrucciones. Las órdenes claras las decide el intérprete de reglas (el modelo chico
+inventó una secuencia de 4 órdenes para "gira a la derecha"), el signo del giro lo manda la frase
+y se acepta UNA sola orden al carro por mensaje, con cualquier proveedor.
 
 El chatbot nunca inventa cifras: si una métrica no está en el estado inyectado, debe decir
 que no tiene ese dato.

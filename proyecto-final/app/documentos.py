@@ -23,7 +23,7 @@ from sim.catalogos import CATALOGO_SENSORES
 RAIZ = Path(__file__).resolve().parent.parent
 DOCS = RAIZ / "docs"
 AVISO = "<!-- Generado por `python -m app.documentos`. No editar a mano. -->\n\n"
-ICONO = {"pendiente": "⏳ pendiente", "preaprobado": "🔵 preaprobado", "aprobado": "✅ aprobado", "cambiar": "✏️ por cambiar"}
+ICONO = {"pendiente": "⏳ pendiente", "preaprobado": "🔵 preaprobado", "aprobado": "✅ aprobado", "cambiar": "✏️ por cambiar", "pausa": "⏸️ en pausa (montaje real)"}
 
 
 def _ancla(paso: dict) -> str:
@@ -309,6 +309,11 @@ def generar_todo() -> list[Path]:
     escritos.append(destino)
     destino = DOCS / "conexiones.md"
     destino.write_text(generar_conexiones(), encoding="utf-8")
+    escritos.append(destino)
+    from app import costos
+
+    destino = DOCS / "costos.md"
+    destino.write_text(costos.generar_md(), encoding="utf-8")
     escritos.append(destino)
     return escritos
 

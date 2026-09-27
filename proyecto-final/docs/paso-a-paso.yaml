@@ -9,6 +9,7 @@
 #   preaprobado -> cambios pedidos ya hechos; falta que el usuario diga que si
 #   aprobado    -> el grupo confirmo que la logica esta bien
 #   cambiar    -> hay que cambiar algo (ver `nota_revision`)
+#   pausa      -> la logica esta, pero probarla necesita el montaje real
 #
 # `zona` es a donde vuela la camara del visor 3D; `sensores` son numeros del
 # catalogo de sensores (sim/catalogo_sensores.py y docs/sensores/).
@@ -593,7 +594,7 @@ pasos:
       "Cortar la radio del carro" muestra que el carro termina la vuelta, guarda sus mensajes,
       y al reconectar llegan en orden; no se le carga otro vaso hasta que diga que la cuna está
       vacía (prueba en tests/test_planta.py). El firmware (fase 8) implementa el mismo contrato.
-    revision: preaprobado
+    revision: aprobado
   - numero: 16
     titulo: Asistente (DeepSeek) y órdenes al carro
     zona: pista
@@ -636,7 +637,8 @@ pasos:
       y tests/test_vehiculo.py, entre ellas un punto detrás de un muro (no lo toca) y, desde fuera
       de la línea, ir a la meta y volver al muelle (20 semillas de error sin tocar muros). Falta
       una clave de DeepSeek válida: la del tema 4 fue rechazada (401).
-    revision: pendiente
+    nota_revision: En pausa, necesita el montaje real para probarse (usuario, 2026-09-27).
+    revision: pausa
   - numero: 17
     titulo: Firmware de los dos ESP32 y hardware real
     zona: caja
@@ -661,4 +663,5 @@ pasos:
       estación EMULADA (mismo firmware, hardware falso), que es también lo que usa el supervisor
       si no hay placa conectada. Falta probarlo en las placas reales y medir los valores
       PROVISIONALES; la línea automática con hardware necesita la visión real (fase 5).
-    revision: pendiente
+    nota_revision: En pausa, necesita el montaje real para probarse (usuario, 2026-09-27).
+    revision: pausa

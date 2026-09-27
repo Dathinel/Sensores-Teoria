@@ -1,0 +1,129 @@
+# Precios en Colombia de todo el proyecto (usuario, 2026-09-27: "eso sí o sí se lo preguntarán").
+#
+# Fuente única: app/documentos.py genera docs/costos.md, el dashboard (pestaña "Montaje real") y
+# el asistente leen de aquí. Cada `id` es el de sim/catalogos.py (COMPONENTES o
+# CATALOGO_SENSORES); `extras` son materiales que no están en el catálogo pero hay que comprar.
+#
+# `fuente`: "tienda" = precio publicado en esa tienda el día de la consulta; "estimado" = no hay
+# un producto igual publicado (se estimó con productos parecidos: VERIFICAR antes de comprar).
+# Los precios cambian: todo es del 2026-09-27, en pesos colombianos (COP), sin envío.
+
+consultado: "2026-09-27"
+moneda: COP
+
+tiendas:
+  ferretronica: {nombre: Ferretrónica (Tunja, envíos a todo el país), url: "https://www.ferretronica.com"}
+  electronilab: {nombre: Electronilab (Bogotá), url: "https://electronilab.co"}
+  didacticas: {nombre: Didácticas Electrónicas (Medellín), url: "https://www.didacticaselectronicas.com"}
+  mercadolibre: {nombre: Mercado Libre Colombia, url: "https://www.mercadolibre.com.co"}
+
+# precio = por unidad; cantidad = unidades a comprar (si falta, la del catálogo).
+items:
+  # ------------------------------------------------------------------ cinta de monedas
+  motor_cinta_monedas: {subsistema: Cinta de monedas, precio: 59000, tienda: mercadolibre, fuente: tienda, producto: "Motor NEMA 17 17HS4401 1,7 A"}
+  presencia: {subsistema: Cinta de monedas, precio: 5000, tienda: ferretronica, fuente: tienda, producto: "Módulo de proximidad infrarrojo (FC-51)"}
+  capacitivo: {subsistema: Cinta de monedas, precio: 32606, tienda: didacticas, fuente: tienda, producto: "Sensor capacitivo LJC18A3-B-Z/BX NPN"}
+  inductivo: {subsistema: Cinta de monedas, precio: 21740, tienda: mercadolibre, fuente: tienda, producto: "Sensor inductivo LJ18A3-8 (8 mm, M18, NPN)"}
+  camara: {subsistema: Cinta de monedas, precio: 80000, tienda: mercadolibre, fuente: estimado, producto: "Webcam USB 1080p (~60 000) + anillo de luz LED (~20 000)"}
+  servo_desvio_e7: {subsistema: Cinta de monedas, precio: 11000, tienda: ferretronica, fuente: tienda, producto: "Servomotor SG90"}
+  motor_carrusel: {subsistema: Cinta de monedas, precio: 19000, tienda: ferretronica, fuente: tienda, producto: "Motor 28BYJ-48 + driver ULN2003"}
+  hall_carrusel: {subsistema: Cinta de monedas, precio: 5000, tienda: ferretronica, fuente: tienda, producto: "Módulo efecto Hall 3144 (+ imán de neodimio ~1 000)"}
+  servo_obturador: {subsistema: Cinta de monedas, precio: 11000, tienda: ferretronica, fuente: tienda, producto: "Servomotor SG90"}
+  # ------------------------------------------------------------------ cinta de vasos y embalaje
+  motor_cinta_vasos: {subsistema: Cinta de vasos, precio: 59000, tienda: mercadolibre, fuente: tienda, producto: "Motor NEMA 17 17HS4401 1,7 A"}
+  camara_vasos: {subsistema: Cinta de vasos, precio: 45000, tienda: mercadolibre, fuente: estimado, producto: "Webcam USB 720p"}
+  panel_luz: {subsistema: Cinta de vasos, precio: 35000, tienda: mercadolibre, fuente: estimado, producto: "Tira LED 5 V blanca 1 m + acrílico opalino 33 x 11 cm"}
+  sensor_interior: {subsistema: Cinta de vasos, precio: 25000, tienda: ferretronica, fuente: tienda, producto: "Sensor de distancia VL53L0X"}
+  cortina: {subsistema: Cinta de vasos, precio: 25000, tienda: ferretronica, fuente: tienda, producto: "Sensor de distancia VL53L0X"}
+  servo_tapas: {subsistema: Cinta de vasos, precio: 11000, tienda: ferretronica, fuente: tienda, producto: "Servomotor SG90"}
+  motor_prensa: {subsistema: Cinta de vasos, precio: 37000, tienda: ferretronica, fuente: tienda, producto: "Servomotor MG996R"}
+  servo_empujador: {subsistema: Cinta de vasos, precio: 37000, tienda: ferretronica, fuente: tienda, producto: "Servomotor MG996R"}
+  # ------------------------------------------------------------------ canaleta y muelle
+  servo_compuerta_canaleta: {subsistema: Canaleta y muelle, precio: 11000, tienda: ferretronica, fuente: tienda, producto: "Servomotor SG90"}
+  # ------------------------------------------------------------------ carro
+  esp32_carro: {subsistema: Carro, precio: 34900, tienda: electronilab, fuente: tienda, producto: "ESP32 DevKit 30 pines CH340"}
+  motores_carro: {subsistema: Carro, precio: 12000, cantidad: 2, tienda: ferretronica, fuente: tienda, producto: "Motorreductor TT amarillo 1:48 con llanta"}
+  encoders: {subsistema: Carro, precio: 7500, cantidad: 2, tienda: ferretronica, fuente: tienda, producto: "Sensor de herradura F249 (6 000) + disco de 20 ranuras (1 500)"}
+  linea_ir: {subsistema: Carro, precio: 15900, tienda: electronilab, fuente: tienda, producto: "Módulo de seguimiento TCRT5000 de 5 canales"}
+  ultrasonico: {subsistema: Carro, precio: 7500, tienda: ferretronica, fuente: tienda, producto: "HC-SR04"}
+  laser_frontal: {subsistema: Carro, precio: 25000, tienda: ferretronica, fuente: tienda, producto: "Sensor de distancia VL53L0X"}
+  cuna: {subsistema: Carro, precio: 6000, tienda: ferretronica, fuente: tienda, producto: "Módulo TCRT5000"}
+  puente_h_carro: {subsistema: Carro, precio: 15000, tienda: ferretronica, fuente: tienda, producto: "Módulo puente H TB6612FNG"}
+  bateria_carro: {subsistema: Carro, precio: 71500, tienda: ferretronica, fuente: tienda, producto: "Par de 18650 2500 mAh (60 000) + portapilas 2S (3 500) + BMS 2S (8 000)"}
+  interruptor_carro: {subsistema: Carro, precio: 4000, tienda: ferretronica, fuente: estimado, producto: "Interruptor de palanca + portafusible aéreo con fusible 3 A"}
+  rodillos_guia: {subsistema: Carro, precio: 3000, cantidad: 2, tienda: mercadolibre, fuente: estimado, producto: "Rodamiento 623 (10 mm)"}
+  cuna_carro: {subsistema: Carro, precio: 0, fuente: estimado, producto: "Impresa en 3D (el PLA va en extras)"}
+  # ------------------------------------------------------------------ control y potencia
+  esp32_fijo: {subsistema: Control y potencia, precio: 39500, tienda: electronilab, fuente: tienda, producto: "ESP32 DevKit 38 pines CH9102F"}
+  drivers_cintas: {subsistema: Control y potencia, precio: 8000, cantidad: 2, tienda: ferretronica, fuente: tienda, producto: "Driver A4988"}
+  pca9685: {subsistema: Control y potencia, precio: 29500, tienda: ferretronica, fuente: tienda, producto: "Controlador de 16 servos PCA9685"}
+  fuente: {subsistema: Control y potencia, precio: 69000, tienda: ferretronica, fuente: tienda, producto: "Fuente conmutada 12 V 10 A 120 W"}
+  buck_servos: {subsistema: Control y potencia, precio: 29900, tienda: electronilab, fuente: tienda, producto: "Convertidor XL4016 9 A 300 W"}
+  buck_5v: {subsistema: Control y potencia, precio: 7000, tienda: ferretronica, fuente: tienda, producto: "Módulo LM2596 (sin voltímetro)"}
+  fusibles: {subsistema: Control y potencia, precio: 9200, tienda: ferretronica, fuente: tienda, producto: "4 portafusibles de chasis (2 300 c/u) con sus fusibles"}
+  bornera_x2: {subsistema: Control y potencia, precio: 15000, tienda: mercadolibre, fuente: estimado, producto: "Regleta de 16 bornes con puentes"}
+  entrada_red: {subsistema: Control y potencia, precio: 6000, tienda: mercadolibre, fuente: estimado, producto: "Conector IEC C14 con interruptor y portafusible"}
+  optoacopladores: {subsistema: Control y potencia, precio: 8000, tienda: ferretronica, fuente: tienda, producto: "Módulo optoacoplador PC817 de 2 canales"}
+  reparto_i2c: {subsistema: Control y potencia, precio: 5000, tienda: ferretronica, fuente: estimado, producto: "Placa perforada + resistencias 2,2 kΩ + conectores"}
+  uln2003: {subsistema: Control y potencia, precio: 0, fuente: tienda, producto: "Viene con el 28BYJ-48 (ya contado en el motor del carrusel)"}
+  hub_usb: {subsistema: Control y potencia, precio: 23500, tienda: electronilab, fuente: tienda, producto: "Hub USB de 4 puertos con entrada de alimentación"}
+  canaletas_caja: {subsistema: Control y potencia, precio: 25000, tienda: mercadolibre, fuente: estimado, producto: "Canaleta ranurada 25 x 30 mm (1 m) + prensaestopas PG"}
+  pc: {subsistema: Control y potencia, precio: 0, fuente: tienda, producto: "El portátil del grupo (no se compra)"}
+  # ------------------------------------------------------------------ estructura
+  estructura: {subsistema: Estructura, precio: 56900, cantidad: 3, tienda: electronilab, fuente: tienda, producto: "Perfil V-Slot 2020 de 1 m (estimado: 3 m para patas y pórtico)"}
+  cinta_monedas: {subsistema: Estructura, precio: 40000, tienda: mercadolibre, fuente: estimado, producto: "Banda de caucho negra mate 55 mm + 2 rodillos"}
+  cinta_vasos: {subsistema: Estructura, precio: 45000, tienda: mercadolibre, fuente: estimado, producto: "Banda de caucho 75 mm + 2 rodillos"}
+  almacen: {subsistema: Estructura, precio: 30000, tienda: mercadolibre, fuente: estimado, producto: "6 tubos de acrílico de 29 mm (el disco y la placa van en PLA)"}
+  tubo_tapas: {subsistema: Estructura, precio: 15000, tienda: mercadolibre, fuente: estimado, producto: "Tubo de acrílico de 78 mm"}
+  canaleta_entrega: {subsistema: Canaleta y muelle, precio: 25000, tienda: mercadolibre, fuente: estimado, producto: "2 varillas de 4 mm + cinta de PTFE"}
+  pista: {subsistema: Carro, precio: 11000, tienda: ferretronica, fuente: tienda, producto: "Cinta aislante negra 3M 18 mm x 18 m"}
+  canaletas_rechazo: {subsistema: Estructura, precio: 0, fuente: estimado, producto: "Impresa en 3D (el PLA va en extras)"}
+  bandeja_rechazo_vasos: {subsistema: Estructura, precio: 0, fuente: estimado, producto: "Impresa en 3D (el PLA va en extras)"}
+  canal_e7: {subsistema: Estructura, precio: 0, fuente: estimado, producto: "Impreso en 3D (el PLA va en extras)"}
+  muelle_carga: {subsistema: Canaleta y muelle, precio: 0, fuente: estimado, producto: "Impreso en 3D (el PLA va en extras)"}
+
+extras:
+  pla: {subsistema: Estructura, precio: 93900, cantidad: 2, tienda: electronilab, fuente: tienda, producto: "Filamento PLA 1,75 mm 1 kg (estimado: 2 kg para todas las piezas impresas)"}
+  rueda_loca: {subsistema: Carro, precio: 9500, tienda: ferretronica, fuente: tienda, producto: "Rueda loca de bola de acero 3/4\""}
+  tornilleria: {subsistema: Estructura, precio: 40000, fuente: estimado, producto: "Tornillos M3/M4/M5, tuercas en T, escuadras 2020"}
+  cables: {subsistema: Control y potencia, precio: 30000, fuente: estimado, producto: "Cables dupont, cable 18 AWG, termoencogible, conectores JST"}
+  base: {subsistema: Estructura, precio: 40000, fuente: estimado, producto: "Tablero MDF de 9 mm para la base y la pista"}
+
+# Dónde abaratar (PROPUESTAS: el diseño NO se cambia sin que el grupo lo apruebe).
+# riesgo: bajo = mismo comportamiento; medio = funciona pero hay que medir algo; alto = cambia el diseño.
+ahorros:
+  - id: nema17_ml
+    titulo: "NEMA 17 en Mercado Libre y no en tienda especializada"
+    ahorro: 41800
+    riesgo: bajo
+    detalle: "El mismo 17HS4401 cuesta 59 000 en Mercado Libre y 79 900 en Electronilab (x2). Ya está contado al precio bajo."
+  - id: quitar_capacitivo
+    titulo: "Quitar el sensor capacitivo"
+    ahorro: 40606
+    riesgo: medio
+    detalle: "Con el filtro total, que haya pieza ya lo dice el infrarrojo de presencia (E1); no metálico = presencia sí e inductivo no. Se ahorran el LJC18A3 (32 606) y un canal del optoacoplador (~8 000). Se pierde la segunda confirmación de que la pieza sigue en la casilla en E2."
+  - id: perfil_por_tubo
+    titulo: "Pórtico en tubo cuadrado de aluminio de ferretería en vez de perfil 2020"
+    ahorro: 120000
+    riesgo: medio
+    detalle: "3 m de perfil V-Slot cuestan ~170 700; tubo cuadrado de 3/4\" cuesta ~15 000/m en ferretería. Se pierde lo modular (tuercas en T): hay que taladrar y ajustar alturas a mano."
+  - id: pca9685_directo
+    titulo: "Servos directo al PWM del ESP32 (sin PCA9685)"
+    ahorro: 29500
+    riesgo: alto
+    detalle: "El ESP32 tiene 16 canales LEDC, pero el fijo ya usa 19 de sus ~25 pines útiles: 6 servos más no caben sin quitar otra cosa. No recomendado."
+  - id: buck_5a
+    titulo: "Buck de 5 A (XL4015) en vez del XL4016 de 9 A para los servos"
+    ahorro: 16900
+    riesgo: medio
+    detalle: "Alcanza si prensa y empujador (MG996R, ~2,5 A de arranque cada uno) no arrancan a la vez; hoy la lógica los mueve en momentos distintos, pero hay que medir el pico real."
+  - id: una_camara
+    titulo: "Webcam de 720p también en la cámara cenital"
+    ahorro: 15000
+    riesgo: medio
+    detalle: "La cámara cenital mide diámetros de monedas (±0,5 mm): con 720p a la misma altura la resolución baja de ~0,05 a ~0,08 mm/píxel. Probar con fotos reales antes (fase 5)."
+  - id: baterias_par
+    titulo: "Comprar las 18650 en par"
+    ahorro: 4000
+    riesgo: bajo
+    detalle: "El par cuesta 60 000 contra 2 x 32 000. Ya está contado al precio del par."

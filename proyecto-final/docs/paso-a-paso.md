@@ -23,9 +23,9 @@ Para verlo en 3D: doble clic en `visor.bat` (pestaña Paso a paso del visor).
 | 12 | [Canaleta de entrega](#12-canaleta-de-entrega) | — | ✅ aprobado |
 | 13 | [Acople con el carro (ESP-NOW)](#13-acople-con-el-carro-esp-now) | [12](sensores.md#12-infrarrojo-de-la-cuna-de-carga) | ✅ aprobado |
 | 14 | [Ruta del carro con tres obstáculos (ida y vuelta sola)](#14-ruta-del-carro-con-tres-obstáculos-ida-y-vuelta-sola) | [9](sensores.md#9-arreglo-de-5-infrarrojos-de-línea), [10](sensores.md#10-ultrasónico-frontal-respaldo), [11](sensores.md#11-encoders-de-las-ruedas), [13](sensores.md#13-láser-de-distancia-frontal) | ✅ aprobado |
-| 15 | [Telemetría, protocolo y 3D](#15-telemetría-protocolo-y-3d) | [12](sensores.md#12-infrarrojo-de-la-cuna-de-carga) | 🔵 preaprobado |
-| 16 | [Asistente (DeepSeek) y órdenes al carro](#16-asistente-deepseek-y-órdenes-al-carro) | [9](sensores.md#9-arreglo-de-5-infrarrojos-de-línea), [10](sensores.md#10-ultrasónico-frontal-respaldo), [11](sensores.md#11-encoders-de-las-ruedas), [13](sensores.md#13-láser-de-distancia-frontal) | ⏳ pendiente |
-| 17 | [Firmware de los dos ESP32 y hardware real](#17-firmware-de-los-dos-esp32-y-hardware-real) | [1](sensores.md#1-infrarrojo-de-presencia), [2](sensores.md#2-sensor-capacitivo), [3](sensores.md#3-sensor-inductivo), [5](sensores.md#5-sensor-del-interior-del-vaso), [6](sensores.md#6-sensor-hall-del-carrusel), [8](sensores.md#8-cortina-de-seguridad), [9](sensores.md#9-arreglo-de-5-infrarrojos-de-línea), [10](sensores.md#10-ultrasónico-frontal-respaldo), [11](sensores.md#11-encoders-de-las-ruedas), [12](sensores.md#12-infrarrojo-de-la-cuna-de-carga), [13](sensores.md#13-láser-de-distancia-frontal) | ⏳ pendiente |
+| 15 | [Telemetría, protocolo y 3D](#15-telemetría-protocolo-y-3d) | [12](sensores.md#12-infrarrojo-de-la-cuna-de-carga) | ✅ aprobado |
+| 16 | [Asistente (DeepSeek) y órdenes al carro](#16-asistente-deepseek-y-órdenes-al-carro) | [9](sensores.md#9-arreglo-de-5-infrarrojos-de-línea), [10](sensores.md#10-ultrasónico-frontal-respaldo), [11](sensores.md#11-encoders-de-las-ruedas), [13](sensores.md#13-láser-de-distancia-frontal) | ⏸️ en pausa (montaje real) |
+| 17 | [Firmware de los dos ESP32 y hardware real](#17-firmware-de-los-dos-esp32-y-hardware-real) | [1](sensores.md#1-infrarrojo-de-presencia), [2](sensores.md#2-sensor-capacitivo), [3](sensores.md#3-sensor-inductivo), [5](sensores.md#5-sensor-del-interior-del-vaso), [6](sensores.md#6-sensor-hall-del-carrusel), [8](sensores.md#8-cortina-de-seguridad), [9](sensores.md#9-arreglo-de-5-infrarrojos-de-línea), [10](sensores.md#10-ultrasónico-frontal-respaldo), [11](sensores.md#11-encoders-de-las-ruedas), [12](sensores.md#12-infrarrojo-de-la-cuna-de-carga), [13](sensores.md#13-láser-de-distancia-frontal) | ⏸️ en pausa (montaje real) |
 
 ## 1. Carga del elemento y estación 1 (presencia)
 
@@ -310,7 +310,7 @@ Con el vaso cargado, el carro sale del muelle siguiendo la línea negra con sus 
 
 ## 15. Telemetría, protocolo y 3D
 
-**Revisión:** 🔵 preaprobado
+**Revisión:** ✅ aprobado
 
 El ESP32 fijo manda cada evento por USB serial al PC (y reenvía los del carro que le llegan por ESP-NOW). En el PC, el supervisor guarda todo en SQLite; el dashboard y este visor 3D lo muestran en vivo. Todos los mensajes van numerados y se confirman (ack), y hay latido en los dos sentidos. Contrato completo en CLAUDE.md, 10.1.
 
@@ -327,7 +327,7 @@ El ESP32 fijo manda cada evento por USB serial al PC (y reenvía los del carro q
 
 ## 16. Asistente (DeepSeek) y órdenes al carro
 
-**Revisión:** ⏳ pendiente
+**Revisión:** ⏸️ en pausa (montaje real)
 
 Fase 7. En el dashboard (pestaña Asistente) se le pregunta al asistente por escrito o por voz, en palabras normales, por las cifras de la corrida o por cualquier parte del proyecto, y se le puede pedir que mueva el carro o la línea. Igual que en el tema 4 del repositorio, la frase va a la API de DeepSeek, que responde SOLO con un JSON {"respuesta", "acciones"}; el programa lo valida y las órdenes permitidas van a la misma tabla `ordenes` que los botones. Al carro le llegan por la radio (PC → ESP32 fijo → ESP-NOW): detenerse, avanzar, retroceder, girar, ir a un punto (x, y), ir a la meta, volver al muelle o retomar la línea. En el visor 3D se ve como una nube sobre el portátil (la API, por el Wi-Fi del PC) y una pestaña de solo lectura con la conversación.
 
@@ -344,9 +344,11 @@ Fase 7. En el dashboard (pestaña Asistente) se le pregunta al asistente por esc
 
 **Cómo está implementado hoy:** app/asistente.py (búsqueda en la documentación, estado en vivo, DeepSeek con JSON, lista blanca, intérprete local, voz con SpeechRecognition y gTTS); control/vehiculo.py (`ordenar`, odometría, revisión del camino, atascado); pruebas en tests/test_asistente.py y tests/test_vehiculo.py, entre ellas un punto detrás de un muro (no lo toca) y, desde fuera de la línea, ir a la meta y volver al muelle (20 semillas de error sin tocar muros). Falta una clave de DeepSeek válida: la del tema 4 fue rechazada (401).
 
+**Nota de revisión:** En pausa, necesita el montaje real para probarse (usuario, 2026-09-27).
+
 ## 17. Firmware de los dos ESP32 y hardware real
 
-**Revisión:** ⏳ pendiente
+**Revisión:** ⏸️ en pausa (montaje real)
 
 Fase 8. El ESP32 fijo (USB al PC) mueve las cintas, el carrusel y los 6 servos y lee los sensores de la estación; el ESP32 del carro corre el MISMO control de la simulación (control/vehiculo.py compilado para MicroPython). Se comunican por ESP-NOW y el fijo hace de puente con el PC. Cambiar `hardware.backend: sim` por `real` en config/parametros.yaml pasa el supervisor, el dashboard, el asistente y el visor de la simulación a las placas.
 
@@ -360,3 +362,5 @@ Fase 8. El ESP32 fijo (USB al PC) mueve las cintas, el carrusel y los 6 servos y
 ```
 
 **Cómo está implementado hoy:** firmware/ (MicroPython) con su README; pines generados de sim/conexiones.py y valores de config/parametros.yaml por firmware/preparar.py; todo compila con mpy-cross; tests/test_firmware.py prueba la estación, el carro y el puente de punta a punta con una estación EMULADA (mismo firmware, hardware falso), que es también lo que usa el supervisor si no hay placa conectada. Falta probarlo en las placas reales y medir los valores PROVISIONALES; la línea automática con hardware necesita la visión real (fase 5).
+
+**Nota de revisión:** En pausa, necesita el montaje real para probarse (usuario, 2026-09-27).
