@@ -124,6 +124,9 @@ def main() -> None:
         pasos = yaml.safe_load(archivo)["pasos"]
     (DESTINO / "pasos.json").write_text(json.dumps(pasos, ensure_ascii=False), encoding="utf-8")
     print(f"{len(cuadros)} cuadros grabados en {DESTINO.relative_to(RAIZ)}")
+    # visor-portable.html lleva esta demo adentro: se rehace para que no quede con la vieja.
+    from app import portable
+    portable.generar()
 
 
 if __name__ == "__main__":

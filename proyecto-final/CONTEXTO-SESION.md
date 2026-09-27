@@ -42,28 +42,19 @@ app corriendo escondida (`python -m app.lanzar --auto prueba_completa --reemplaz
 para que él vea visor y Streamlit cuando quiera; ahorrar tokens: antes de escribir lógica desde
 cero, revisar el repo `Sensores-Teoria` (temas 1-9) que ya tiene patrones resueltos.
 
-**Pedido del 2026-09-28:**
-> le dije que contestara en español; al modelado de la laptop le falta; cuando use el modelo local
-> no tiene que hacer la animación de enviarlo a la nube sino de que la laptop está "pensando"; me
-> gustaría que respondiera con más información (si la gráfica y el contexto de la IA local lo
-> permiten); auditoría y revisión general (lógica, integración, organización); pruebas adicionales,
-> distintas a las hechas, a la IA local y al diseño 3D; laptop más grande y la respuesta ajustada a su
-> pantalla; más detalle a todo (ver la carpeta "Blender with claude" para el nivel de modelado); no
-> sobreponer elementos y centrar la nube de DeepSeek.
-
-Puntos:
-- [x] a. Español SIEMPRE, también en los avisos intermedios.
-- [x] b. Nivel de modelado de referencia: carpeta Blender with claude.
-- [x] c. Laptop más grande y más detallada; respuesta proporcionada a la pantalla.
-- [x] d. Modelo local: animación de "pensando" en la laptop (no la nube); nube centrada.
-- [x] e. Respuestas más completas del modelo local (probar contexto mayor en la RTX 3050).
-- [x] f. Pruebas nuevas a la IA local (variables distintas) y al 3D (solapes, centrado).
-- [x] g. Auditoría general: lógica, integración, organización; corregir lo que salga.
-- [x] h. Contexto, docs, pruebas, commit y push.
+**Pedido del 2026-09-28 (2):** "que el .bat abra un html y, si la simulación está (localhost),
+se abra sola sin hacer nada". Es decir: visor.bat abre `visor-portable.html` (un solo archivo:
+visor + Three.js + demo grabada, funciona sin servidor ni internet); ese archivo pregunta cada
+pocos segundos por `127.0.0.1:8765` y, cuando la simulación responde, la pestaña pasa sola al
+visor en vivo.
+- [x] a. Generador del HTML portable (python -m app.portable) + demo embebida.
+- [x] b. visor.js: base de URLs para file://, datos embebidos, vigía que pasa a vivo solo.
+- [x] c. visor.bat abre el portable y arranca la simulación por detrás.
+- [x] d. Probar con Chrome headless (file://, con y sin supervisor), pruebas, docs, commit.
 
 ## 3. Estado actual (2026-09-27, fin de sesión)
 
-- Pruebas: `entorno/Scripts/python -m pytest -q` → todas deben pasar (555, ~4 min).
+- Pruebas: `entorno/Scripts/python -m pytest -q` → todas deben pasar (560, ~4 min).
 - Forma de trabajar (usuario, 2026-09-26): dejar SIEMPRE una corrida escondida con el código
   actual (`python -m app.lanzar --auto prueba_completa --reemplazar` en segundo plano; cierra la
   anterior y su consola). El usuario la mira cuando quiere con `visor.bat` (un clic). NO

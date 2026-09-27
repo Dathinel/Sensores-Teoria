@@ -953,3 +953,14 @@ fotos); clave de DeepSeek válida (la dada da 401).
   placa). Sin código muerto. Solapes restantes (24): montajes, ejes dentro de rodillos, vasos en
   la bandeja, piezas del carro; la auditoría trata cilindros como cajas y exagera.
 
+## 2026-09-28 — Visor portable que pasa solo al vivo
+
+- `visor.bat` abre `visor-portable.html` (un solo archivo de ~2 MB: Three.js y OrbitControls como
+  módulos embebidos en el importmap, el visor y la demo grabada) y arranca la simulación por
+  detrás, sin abrir otra pestaña. La página muestra la demo y pregunta cada 3 s a
+  `127.0.0.1:8765/api/estado` (el servidor ya permite CORS); cuando responde, la pestaña pasa sola
+  al visor en vivo. Si la simulación ya estaba corriendo, va directo (en ~1 s).
+- Probado con Chrome sin ventana: con la simulación corriendo → vivo en 1 s; sin ella → demo, y
+  al arrancarla 12 s después → vivo a los 22 s, sin errores. Sin Python ni internet (otro PC) se
+  queda en la demo. `tests/test_portable.py` (5 pruebas).
+

@@ -387,7 +387,8 @@ esquemas) se crean cuando empiece esa fase, no antes.
   CLAUDE.md                     este archivo
   CONTEXTO-SESION.md            reglas del usuario y en qué quedó el trabajo (leer primero)
   README.md                     resumen público y cómo verlo
-  visor.bat                     doble clic: abre el visor (arranca la simulación si hace falta)
+  visor.bat                     doble clic: abre visor-portable.html y arranca la simulación por detrás
+  visor-portable.html           visor en UN archivo (demo embebida); pasa solo al vivo (generado)
   .env.example                  cómo poner DEEPSEEK_API_KEY (el .env real queda fuera de git)
   requirements.txt
   config/parametros.yaml        umbrales, valores físicos, tiempos y errores de sensores
@@ -432,7 +433,8 @@ esquemas) se crean cuando empiece esa fase, no antes.
     asistente.py                fase 7: DeepSeek (JSON), búsqueda en la documentación, estado en vivo, intérprete local, voz
     db.py                       esquema y acceso a SQLite
     configuracion.py            carga de config/parametros.yaml
-    grabar_demo.py              graba una corrida para el modo demo del visor
+    grabar_demo.py              graba una corrida para el modo demo del visor (y rehace el portable)
+    portable.py                 arma visor-portable.html (three.js en data: URLs + visor + demo)
     documentos.py               genera los .md de docs/ (incluido costos.md)
     costos.py                   lee config/precios.yaml: totales por subsistema, ahorros
     evaluar_asistente.py        batería REAL del asistente (24 casos) -> docs/pruebas-asistente.md

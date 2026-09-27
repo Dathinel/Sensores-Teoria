@@ -18,8 +18,13 @@ visor 3D.
 
 ## Cómo verlo
 
-Doble clic en **`visor.bat`**. Si la simulación ya está corriendo, abre el visor 3D; si no,
-la arranca (en una ventana minimizada: cerrarla la detiene) y lo abre.
+Doble clic en **`visor.bat`**. Abre al instante `visor-portable.html` con una corrida grabada y
+arranca la simulación por detrás (en una ventana minimizada: cerrarla la detiene). Apenas la
+simulación responde, la misma pestaña pasa sola al visor en vivo: no hay que recargar nada.
+
+`visor-portable.html` es un solo archivo (Three.js, el visor y la demo van adentro): abierto en
+otro PC, sin Python ni internet, muestra la demo grabada. Se rehace con `python -m app.portable`
+(y solo, cada vez que se abre `visor.bat` o se graba la demo con `python -m app.grabar_demo`).
 
 - **Visor 3D** (Three.js): la línea completa en vivo, con el paso a paso guiado, los
   sensores y los componentes, y botones de sabotaje (retirar o cambiar un vaso, meter la
@@ -33,7 +38,9 @@ la arranca (en una ventana minimizada: cerrarla la detiene) y lo abre.
 
 ```mermaid
 flowchart LR
-    B[visor.bat] --> L[app/lanzar.py]
+    B[visor.bat] --> P[visor-portable.html<br/>demo grabada]
+    P -. cuando la simulación responde .-> V
+    B --> L[app/lanzar.py]
     L --> S[app/supervisor.py<br/>simulación: sim/planta.py + sim/vehiculo_sim.py]
     L --> D[app/dashboard.py<br/>Streamlit + asistente]
     D -- pregunta + estado + docs --> API[API de DeepSeek]
@@ -102,6 +109,7 @@ Los `.md` de `docs/` se generan con `python -m app.documentos` (no se editan a m
 
 ```
 visor.bat              abre el visor (y arranca la simulación si hace falta)
+visor-portable.html    el visor en un solo archivo, con la demo (generado: python -m app.portable)
 config/                parametros.yaml (todo número del diseño) y monedas.yaml
 control/               lógica pura, sin PyBullet: filtrado, cintas, almacén, carro
   hal/                 interfaces de sensores/actuadores y su versión simulada

@@ -18,6 +18,13 @@
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
 
+// Abierto como ARCHIVO (visor-portable.html, lo que abre visor.bat): no hay servidor en la
+// misma direccion, asi que se le pregunta al de la simulacion en este PC. El puerto es el de
+// config/parametros.yaml (supervisor.puerto_http); app/portable.py lo deja escrito aqui.
+const EN_ARCHIVO = location.protocol === 'file:';
+const URL_VIVO = window.__URL_VIVO || 'http://127.0.0.1:8765/';
+const BASE = EN_ARCHIVO ? URL_VIVO : './';
+
 const V = (p) => new THREE.Vector3(p[0], p[2], -p[1]);
 const Vxyz = (x, y, z) => new THREE.Vector3(x, z, -y);
 
@@ -36,7 +43,7 @@ const DENOMINACIONES = [50, 100, 200, 500, 1000];
 // Modo demo: reproduce una corrida grabada (app/grabar_demo.py) sin
 // supervisor. Se activa con ?demo o solo, si no hay servidor detras (por
 // ejemplo cuando el visor esta publicado fuera del PC).
-let MODO_DEMO = new URLSearchParams(location.search).has('demo');
+let MODO_DEMO = new URLSearchParams(location.search).has('demo') || EN_ARCHIVO;
 let cuadrosDemo = [];
 let cuadroDemo = 0;
 
@@ -3847,7 +3854,7 @@ async function consultarAsistente() {
   if (ahora - ultimaConsultaAsistente < (pensando ? 500 : 1500)) return;
   ultimaConsultaAsistente = ahora;
   try {
-    asistenteDatos = await cargarJSON('./api/asistente');
+    asistenteDatos = await cargarJSON(BASE + 'api/asistente');
     const n = asistenteDatos.mensajes.length ? asistenteDatos.mensajes[asistenteDatos.mensajes.length - 1].ts : '';
     const ultimo = asistenteDatos.mensajes[asistenteDatos.mensajes.length - 1];
     // Solo la respuesta de DeepSeek baja de la nube (el modelo local y las reglas no salen del portatil).
@@ -4241,7 +4248,7 @@ function seleccionarSensor(id, enfocar) {
 async function enviarOrden(orden) {
   if (MODO_DEMO) return;
   try {
-    await fetch('./api/orden', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(orden) });
+    await fetch(BASE + 'api/orden', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(orden) });
   } catch (e) { /* el aviso de conexion ya lo muestra */ }
 }
 
@@ -4276,7 +4283,7 @@ async function consultar() {
       estado = cuadrosDemo[cuadroDemo];
       cuadroDemo = (cuadroDemo + 1) % cuadrosDemo.length;
     } else {
-      const r = await fetch('./api/estado', { cache: 'no-store' });
+      const r = await fetch(BASE + 'api/estado', { cache: 'no-store' });
       estado = await r.json();
     }
     fallos = 0;
@@ -4311,7 +4318,8 @@ async function consultar() {
     }
     if (estado.casillas_monedas) sincronizarAlmacen();
     const chip = document.getElementById('chipEstado');
-    chip.textContent = MODO_DEMO ? `demo grabada · ${estado.linea || ''}` : (estado.linea || '—');
+    chip.textContent = MODO_DEMO ? (EN_ARCHIVO ? 'demo grabada · esperando la simulación de este PC'
+      : `demo grabada · ${estado.linea || ''}`) : (estado.linea || '—');
     chip.className = 'chip ' + (estado.linea || '');
     document.getElementById('chipTick').textContent = `tick ${estado.tick ?? '—'}`;
     const avisos = [];
@@ -4354,12 +4362,43 @@ function bucle() {
 }
 
 async function cargarJSON(url) {
+  // La demo puede venir EMBEBIDA en la pagina (visor-portable.html): no hace falta pedirla.
+  const embebida = window.__DEMO && url.startsWith('./demo/') ? window.__DEMO[url.slice(7, -5)] : null;
+  if (embebida) return embebida;
   const r = await fetch(url, { cache: 'no-store' });
   if (!r.ok) throw new Error(`${url}: ${r.status}`);
   return r.json();
 }
 
+// Vigia del visor portable: mientras muestra la demo grabada, pregunta cada 3 s si la
+// simulacion ya esta corriendo en este PC y, cuando responde, la pestaña pasa sola al visor en
+// vivo (sin que el usuario haga nada). No necesita internet: es un servidor local.
+async function simulacionCorriendo() {
+  try {
+    const r = await fetch(URL_VIVO + 'api/estado', { cache: 'no-store', signal: AbortSignal.timeout(1500) });
+    return r.ok;
+  } catch (e) { return false; }
+}
+
+function vigilarSimulacion() {
+  const aviso = document.getElementById('chipEstado');
+  const revisar = async () => {
+    if (await simulacionCorriendo()) {
+      if (aviso) { aviso.textContent = 'simulación encontrada · abriendo en vivo…'; aviso.className = 'chip corriendo'; }
+      location.replace(URL_VIVO + location.search);
+      return;
+    }
+    setTimeout(revisar, 3000);
+  };
+  revisar();
+}
+
 async function iniciar() {
+  if (EN_ARCHIVO && await simulacionCorriendo()) {
+    // La simulacion ya estaba corriendo: directo al visor en vivo.
+    location.replace(URL_VIVO + location.search);
+    return;
+  }
   if (!MODO_DEMO) {
     try { G = await cargarJSON('./api/geometria'); } catch (e) { MODO_DEMO = true; }
   }
@@ -4370,6 +4409,7 @@ async function iniciar() {
   } else {
     try { PASOS = await cargarJSON('./api/pasos'); } catch (e) { PASOS = []; }
   }
+  if (EN_ARCHIVO) vigilarSimulacion();
   construirCintaMonedas();
   construirCintaVasos();
   construirCanaleta();
