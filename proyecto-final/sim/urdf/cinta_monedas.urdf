@@ -1,0 +1,69 @@
+<?xml version="1.0"?>
+<!--
+  Cinta indexada de la estacion de filtrado y conteo (CLAUDE.md, seccion 4 y
+  seccion 5, pasos 2 a 8). Modela solo la estructura fisica: bancada y cinta
+  negra mate con separadores cada 40 mm. Grupo (2026-09-25): "filtro total"
+  -- 4 estaciones (presencia, material, vision, descarga) y UNA sola salida
+  de rechazo, la compuerta de desvio de la descarga; ya no hay expulsores
+  laterales. Las estaciones son posiciones fijas a lo largo de esta cinta;
+  quien avanza los ELEMENTOS por encima de ellas es sim/mundo.py, moviendolos
+  por control de posicion en pasos discretos (seccion 11: "no hay que simular
+  una banda flexible").
+
+  Unidades en metros. Casillas de 0.04 m (config/parametros.yaml:
+  cinta_monedas.separacion_casilla_mm). Debe coincidir con sim/mundo.py
+  (_ORIGEN_X_MONEDAS, NUM_ESTACIONES_MONEDAS, ALTURA_MESA_MONEDAS).
+-->
+<robot name="cinta_monedas">
+
+  <material name="azul_bancada"><color rgba="0.15 0.22 0.35 1.0"/></material>
+  <material name="negro_cinta"><color rgba="0.04 0.04 0.04 1.0"/></material>
+  <material name="gris_separador"><color rgba="0.75 0.75 0.78 1.0"/></material>
+  <material name="aluminio"><color rgba="0.66 0.69 0.73 1.0"/></material>
+
+  <link name="bancada">
+    <inertial>
+      <mass value="3.0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.02" iyz="0.0" izz="0.02"/>
+    </inertial>
+
+    <!-- Placa de la bancada: 4 casillas de 40 mm, de x=-0.08 a x=0.08. -->
+    <visual>
+      <geometry><box size="0.16 0.061 0.02"/></geometry>
+      <origin xyz="0 0 0.01" rpy="0 0 0"/>
+      <material name="azul_bancada"/>
+    </visual>
+    <collision>
+      <geometry><box size="0.16 0.061 0.02"/></geometry>
+      <origin xyz="0 0 0.01" rpy="0 0 0"/>
+    </collision>
+
+    <!-- Patas de perfil 2020: la mesa va a 43 cm del piso (sim/mundo.py,
+         ALTURA_MESA_MONEDAS) para que la moneda aceptada baje por gravedad
+         al almacen y de ahi al vaso. Solo visuales. -->
+    <visual><geometry><box size="0.02 0.02 0.43"/></geometry><origin xyz="-0.06 -0.02 -0.215" rpy="0 0 0"/><material name="aluminio"/></visual>
+    <visual><geometry><box size="0.02 0.02 0.43"/></geometry><origin xyz="-0.06 0.02 -0.215" rpy="0 0 0"/><material name="aluminio"/></visual>
+    <visual><geometry><box size="0.02 0.02 0.43"/></geometry><origin xyz="0.06 0.02 -0.215" rpy="0 0 0"/><material name="aluminio"/></visual>
+    <visual><geometry><box size="0.02 0.02 0.43"/></geometry><origin xyz="0.06 -0.02 -0.215" rpy="0 0 0"/><material name="aluminio"/></visual>
+
+    <!-- Superficie de la cinta: negra mate, fondo de contraste para la
+         camara de vision (seccion 5, paso 6). -->
+    <visual>
+      <geometry><box size="0.16 0.055 0.002"/></geometry>
+      <origin xyz="0 0 0.021" rpy="0 0 0"/>
+      <material name="negro_cinta"/>
+    </visual>
+    <collision>
+      <geometry><box size="0.16 0.055 0.002"/></geometry>
+      <origin xyz="0 0 0.021" rpy="0 0 0"/>
+    </collision>
+
+    <!-- Separadores cada 40 mm: 5 separadores delimitan las 4 casillas.
+         Solo visuales. -->
+    <visual><geometry><box size="0.003 0.055 0.003"/></geometry><origin xyz="-0.08 0 0.0235" rpy="0 0 0"/><material name="gris_separador"/></visual>
+    <visual><geometry><box size="0.003 0.055 0.003"/></geometry><origin xyz="-0.04 0 0.0235" rpy="0 0 0"/><material name="gris_separador"/></visual>
+    <visual><geometry><box size="0.003 0.055 0.003"/></geometry><origin xyz="0.0 0 0.0235" rpy="0 0 0"/><material name="gris_separador"/></visual>
+    <visual><geometry><box size="0.003 0.055 0.003"/></geometry><origin xyz="0.04 0 0.0235" rpy="0 0 0"/><material name="gris_separador"/></visual>
+    <visual><geometry><box size="0.003 0.055 0.003"/></geometry><origin xyz="0.08 0 0.0235" rpy="0 0 0"/><material name="gris_separador"/></visual>
+  </link>
+</robot>

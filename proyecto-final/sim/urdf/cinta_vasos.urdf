@@ -1,0 +1,189 @@
+<?xml version="1.0"?>
+<!--
+  Cinta indexada de la estacion de embalaje (CLAUDE.md, seccion 4 y seccion
+  5, pasos 9 a 13). 5 estaciones: verificacion antes de llenado, llenado,
+  estacion de tapa (con re-verificacion), prensa, descarga.
+
+  Unidades en metros. Casillas de 0.08 m (config/parametros.yaml,
+  vasos.separacion_casilla_mm): a diferencia de la cinta de monedas (0.04
+  m), aqui cada casilla tiene que encajar la base de un vaso de 62 mm de
+  diametro con margen, y con la separacion de 0.04 m que se uso en la fase
+  2 dos vasos en casillas vecinas quedaban encimados (no se notaba porque
+  la demo de la fase 2 solo ponia un vaso a la vez en la cinta). Si cambia
+  el diametro real del vaso (valor PROVISIONAL), hay que regenerar las
+  posiciones de separadores/empujador de este archivo y
+  `SEPARACION_CASILLA_VASOS_M` / `_ORIGEN_X_VASOS` en sim/mundo.py.
+
+  Estaciones en x local: -0.16, -0.08, 0.00, 0.08, 0.16.
+
+  El tubo de tapas, la prensa y el embudo son SOLO visuales (sin
+  <collision>): sirven para que en el GUI se entienda que pasa en cada
+  estacion, pero no deben interceptar los rayTest de las barreras ni de la
+  cortina de seguridad (sim/sensores_sim.py), que solo ven geometria de
+  colision. El empujador tambien es visual-only, igual que los expulsores
+  de la cinta de monedas: el desplazamiento real del vaso lo hace
+  sim/mundo.py por control de posicion, no por contacto fisico.
+-->
+<robot name="cinta_vasos">
+
+  <material name="azul_bancada"><color rgba="0.15 0.22 0.35 1.0"/></material>
+  <material name="negro_cinta"><color rgba="0.04 0.04 0.04 1.0"/></material>
+  <material name="gris_separador"><color rgba="0.75 0.75 0.78 1.0"/></material>
+  <material name="verde_empujador"><color rgba="0.15 0.55 0.25 1.0"/></material>
+  <material name="gris_salida"><color rgba="0.6 0.6 0.65 0.9"/></material>
+  <material name="tubo_tapas"><color rgba="0.95 0.55 0.15 0.45"/></material>
+  <material name="acero_prensa"><color rgba="0.45 0.47 0.52 1.0"/></material>
+  <material name="embudo"><color rgba="0.8 0.8 0.85 0.5"/></material>
+
+  <link name="bancada">
+    <inertial>
+      <mass value="4.0"/>
+      <inertia ixx="0.02" ixy="0.0" ixz="0.0" iyy="0.06" iyz="0.0" izz="0.06"/>
+    </inertial>
+
+    <visual>
+      <geometry><box size="0.40 0.08 0.02"/></geometry>
+      <origin xyz="0 0 0.01" rpy="0 0 0"/>
+      <material name="azul_bancada"/>
+    </visual>
+    <collision>
+      <geometry><box size="0.40 0.08 0.02"/></geometry>
+      <origin xyz="0 0 0.01" rpy="0 0 0"/>
+    </collision>
+
+    <visual>
+      <geometry><box size="0.395 0.075 0.002"/></geometry>
+      <origin xyz="0 0 0.021" rpy="0 0 0"/>
+      <material name="negro_cinta"/>
+    </visual>
+    <collision>
+      <geometry><box size="0.395 0.075 0.002"/></geometry>
+      <origin xyz="0 0 0.021" rpy="0 0 0"/>
+    </collision>
+
+    <!-- Patas: la cinta de vasos va sobre una mesa de 10 cm (ver
+         ALTURA_MESA_VASOS en sim/mundo.py: la canaleta de entrega necesita
+         esa altura para que el vaso colgado no toque el piso). -->
+    <visual><geometry><box size="0.014 0.014 0.10"/></geometry><origin xyz="-0.19 -0.03 -0.05" rpy="0 0 0"/><material name="azul_bancada"/></visual>
+    <visual><geometry><box size="0.014 0.014 0.10"/></geometry><origin xyz="-0.19 0.03 -0.05" rpy="0 0 0"/><material name="azul_bancada"/></visual>
+    <visual><geometry><box size="0.014 0.014 0.10"/></geometry><origin xyz="0.19 0.03 -0.05" rpy="0 0 0"/><material name="azul_bancada"/></visual>
+    <visual><geometry><box size="0.014 0.014 0.10"/></geometry><origin xyz="0.19 -0.03 -0.05" rpy="0 0 0"/><material name="azul_bancada"/></visual>
+
+    <!-- Separadores: 6 delimitan las 5 casillas/estaciones, de x=-0.20 a x=0.20.
+         Visual-only a proposito: un separador con colision chocaria con la
+         base del vaso cada vez que sim/mundo.py lo reposiciona. -->
+    <visual><geometry><box size="0.003 0.08 0.015"/></geometry><origin xyz="-0.20 0 0.0295" rpy="0 0 0"/><material name="gris_separador"/></visual>
+    <visual><geometry><box size="0.003 0.08 0.015"/></geometry><origin xyz="-0.12 0 0.0295" rpy="0 0 0"/><material name="gris_separador"/></visual>
+    <visual><geometry><box size="0.003 0.08 0.015"/></geometry><origin xyz="-0.04 0 0.0295" rpy="0 0 0"/><material name="gris_separador"/></visual>
+    <visual><geometry><box size="0.003 0.08 0.015"/></geometry><origin xyz="0.04 0 0.0295" rpy="0 0 0"/><material name="gris_separador"/></visual>
+    <visual><geometry><box size="0.003 0.08 0.015"/></geometry><origin xyz="0.12 0 0.0295" rpy="0 0 0"/><material name="gris_separador"/></visual>
+    <visual><geometry><box size="0.003 0.08 0.015"/></geometry><origin xyz="0.20 0 0.0295" rpy="0 0 0"/><material name="gris_separador"/></visual>
+
+    <!-- Tolva sobre la estacion de llenado (x=-0.08): recibe el lote que
+         suelta la compuerta de un tubo del almacen y lo lleva al vaso. Los 5
+         tubos y el compartimiento "otras" (POSICIONES_CARRUSEL en sim/mundo.py) van justo encima; aqui se dibujan
+         como cilindros traslucidos, solo visuales. -->
+    <visual>
+      <geometry><cylinder radius="0.05" length="0.035"/></geometry>
+      <origin xyz="-0.08 0 0.1475" rpy="0 0 0"/>
+      <material name="embudo"/>
+    </visual>
+    <visual><geometry><cylinder radius="0.0155" length="0.065"/></geometry><origin xyz="-0.08000 0.03300 0.2025" rpy="0 0 0"/><material name="embudo"/></visual>
+    <visual><geometry><cylinder radius="0.0155" length="0.065"/></geometry><origin xyz="-0.10858 0.01650 0.2025" rpy="0 0 0"/><material name="embudo"/></visual>
+    <visual><geometry><cylinder radius="0.0155" length="0.065"/></geometry><origin xyz="-0.10858 -0.01650 0.2025" rpy="0 0 0"/><material name="embudo"/></visual>
+    <visual><geometry><cylinder radius="0.0155" length="0.065"/></geometry><origin xyz="-0.08000 -0.03300 0.2025" rpy="0 0 0"/><material name="embudo"/></visual>
+    <visual><geometry><cylinder radius="0.0155" length="0.065"/></geometry><origin xyz="-0.05142 -0.01650 0.2025" rpy="0 0 0"/><material name="embudo"/></visual>
+    <visual><geometry><cylinder radius="0.0155" length="0.065"/></geometry><origin xyz="-0.05142 0.01650 0.2025" rpy="0 0 0"/><material name="embudo"/></visual>
+
+    <!-- Tubo vertical de tapas sobre la estacion de tapa (x=0.00). Arranca
+         por encima de la cortina de seguridad (vasos 90 mm + margen 20 mm). -->
+    <visual>
+      <geometry><cylinder radius="0.034" length="0.10"/></geometry>
+      <origin xyz="0.0 0 0.20" rpy="0 0 0"/>
+      <material name="tubo_tapas"/>
+    </visual>
+
+    <!-- Prensa sobre la estacion de prensa (x=0.08): columna + cabezal. -->
+    <visual>
+      <geometry><box size="0.02 0.02 0.19"/></geometry>
+      <origin xyz="0.08 0.05 0.115" rpy="0 0 0"/>
+      <material name="acero_prensa"/>
+    </visual>
+    <visual>
+      <geometry><box size="0.02 0.06 0.015"/></geometry>
+      <origin xyz="0.08 0.02 0.20" rpy="0 0 0"/>
+      <material name="acero_prensa"/>
+    </visual>
+    <visual>
+      <geometry><cylinder radius="0.028" length="0.012"/></geometry>
+      <origin xyz="0.08 0 0.185" rpy="0 0 0"/>
+      <material name="acero_prensa"/>
+    </visual>
+  </link>
+
+  <!-- ===================== EMPUJADOR DE DESCARGA (estacion 5) =====================
+       Reparte el vaso hacia la canaleta de entrega (paso 13, vaso valido con
+       tapa) o hacia la bandeja de rechazo (cualquier otro caso). La
+       canaleta de entrega real (rieles a 15 grados, seccion 4) se
+       construye completa en la fase 6, junto con el vehiculo. -->
+  <link name="empujador_descarga">
+    <inertial>
+      <mass value="0.01"/>
+      <inertia ixx="1e-6" ixy="0.0" ixz="0.0" iyy="1e-6" iyz="0.0" izz="1e-6"/>
+    </inertial>
+    <visual>
+      <geometry><box size="0.08 0.005 0.02"/></geometry>
+      <origin xyz="0.04 0 0" rpy="0 0 0"/>
+      <material name="verde_empujador"/>
+    </visual>
+  </link>
+  <joint name="junta_empujador_descarga" type="revolute">
+    <parent link="bancada"/>
+    <child link="empujador_descarga"/>
+    <origin xyz="0.12 -0.04 0.032" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="0" upper="1.45" effort="5" velocity="4"/>
+  </joint>
+
+  <link name="bandeja_rechazo_vasos">
+    <inertial>
+      <mass value="0.2"/>
+      <inertia ixx="1e-5" ixy="0.0" ixz="0.0" iyy="1e-5" iyz="0.0" izz="1e-5"/>
+    </inertial>
+    <visual>
+      <geometry><box size="0.08 0.10 0.004"/></geometry>
+      <origin xyz="0 0 0" rpy="-0.35 0 0"/>
+      <material name="gris_salida"/>
+    </visual>
+    <collision>
+      <geometry><box size="0.08 0.10 0.004"/></geometry>
+      <origin xyz="0 0 0" rpy="-0.35 0 0"/>
+    </collision>
+  </link>
+  <joint name="junta_bandeja_rechazo" type="fixed">
+    <parent link="bancada"/>
+    <child link="bandeja_rechazo_vasos"/>
+    <origin xyz="0.16 0.10 0.005" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Marca de referencia (solo visual) de por donde sale un vaso
+       entregado con exito, hacia la canaleta de entrega que se construye
+       en la fase 6. -->
+  <link name="marca_salida_entrega">
+    <inertial>
+      <mass value="0.01"/>
+      <inertia ixx="1e-6" ixy="0.0" ixz="0.0" iyy="1e-6" iyz="0.0" izz="1e-6"/>
+    </inertial>
+    <visual>
+      <geometry><box size="0.08 0.08 0.002"/></geometry>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <material name="verde_empujador"/>
+    </visual>
+  </link>
+  <joint name="junta_marca_salida_entrega" type="fixed">
+    <parent link="bancada"/>
+    <child link="marca_salida_entrega"/>
+    <origin xyz="0.16 -0.10 0.001" rpy="0 0 0"/>
+  </joint>
+
+</robot>

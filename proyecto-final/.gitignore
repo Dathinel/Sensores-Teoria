@@ -1,0 +1,20 @@
+# El entorno virtual se autoexcluye con su propio .gitignore (entorno/.gitignore)
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# bases de datos locales generadas por el supervisor / las pruebas
+*.db
+*.sqlite3
+
+# pesos entrenados y datasets grandes: se documentan, no se versionan aqui
+vision/modelos/*.h5
+vision/modelos/*.tflite
+vision/modelos/*.onnx
+
+# claves y variables de entorno (seccion 14: la API key nunca va en el repo)
+.env
+
+# base de datos en modo WAL (archivos auxiliares)
+*.db-shm
+*.db-wal

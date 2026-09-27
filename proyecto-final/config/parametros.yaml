@@ -1,0 +1,403 @@
+# Parametros de configuracion del sistema (CLAUDE.md, seccion 17: "todo
+# numero magico va a configuracion"). No hardcodear estos valores en el
+# codigo; leerlos de aqui.
+#
+# Los valores marcados "PROVISIONAL" son medidas fisicas reales que todavia
+# no se han tomado sobre las piezas que se van a imprimir/comprar. Se usan
+# para poder avanzar el URDF y la simulacion (fase 2 en adelante) sin
+# bloquear el trabajo, pero deben reemplazarse por la medida real antes de
+# construir el modulo fisico correspondiente.
+
+filtrado:
+  # Etapa de geometria (seccion 7): rango de diametro aceptado, en mm.
+  diametro_min_mm: 16.5
+  diametro_max_mm: 27.5
+  # Etapa de geometria: circularidad minima (1.0 = circulo perfecto).
+  circularidad_minima: 0.90
+  # Etapa de clasificacion: confianza minima del modelo para aceptar.
+  confianza_minima: 0.85
+  # Etapa de coherencia: diferencia maxima tolerada entre el diametro medido
+  # y el diametro nominal de la clase predicha, en mm.
+  tolerancia_coherencia_mm: 1.2
+
+cinta_monedas:
+  # Separacion entre casillas de la cinta indexada, en mm.
+  separacion_casilla_mm: 40
+  # Pausa tras cada avance de casilla, en ms.
+  pausa_casilla_ms: 300
+
+vasos:
+  # Sensor del interior del vaso (VL53L0X mirando hacia abajo, en la
+  # verificacion): si la distancia al fondo es menor que la del vaso vacio
+  # menos este margen (mm), el vaso trae algo adentro y no entra. PROVISIONAL.
+  margen_interior_mm: 10
+  # PROVISIONAL: altura total del vaso a imprimir/comprar, en mm. Ajustar
+  # con la medida real antes de la fase 2 (construccion del URDF).
+  altura_mm: 90
+  # PROVISIONAL: diametro exterior del vaso, en mm.
+  diametro_mm: 62
+  # PROVISIONAL: altura del separador de la cinta de vasos, en mm. Debe
+  # quedar por debajo del reborde de la boca del vaso para no estorbar el
+  # colgado en la canaleta (seccion 4).
+  separador_altura_mm: 15
+  # PROVISIONAL (se deriva del diametro del vaso, que tambien lo es):
+  # separacion entre casillas de la cinta de vasos, en mm. Tiene que encajar
+  # la base del vaso con margen; no puede ser la misma de la cinta de
+  # monedas (40 mm) porque dos vasos de 62 mm quedarian encimados. Si
+  # cambia, regenerar sim/urdf/cinta_vasos.urdf y SEPARACION_CASILLA_VASOS_M
+  # en sim/mundo.py.
+  separacion_casilla_mm: 80
+  # Lineas de medida de la camara de vasos (grupo, 2026-09-25: las 6
+  # barreras IR se reemplazaron por vision). En la imagen de cada estacion
+  # se miran dos franjas horizontales -- "barreras virtuales" -- a estas
+  # fracciones de la altura del vaso. borde > 1.0 a proposito: la franja va
+  # JUSTO POR ENCIMA del reborde, asi que un vaso normal NO la ocupa; solo
+  # algo mas alto que un vaso (la condicion de "invalida" de la seccion 7).
+  barrera_media_altura_frac: 0.5
+  barrera_borde_altura_frac: 1.05
+  # PROVISIONAL: ancho de la pestana del reborde de la boca del vaso
+  # personalizado, en mm. Es lo que se apoya en los rieles de la canaleta y
+  # de la cuna del carro (el cuerpo pasa entre los rieles, la pestana no).
+  # Usuario (2026-09-26): 8 mm (antes 5). Con rieles a 69 mm la pestana
+  # quedaba solo 1,5 mm mas alla del centro de cada riel: un vaso corrido
+  # 1,5 mm se caia entre los rieles. Con 8 mm queda 4,5 mm mas alla. Boca
+  # de 78 mm: con casillas de 80 mm quedan 2 mm entre bocas vecinas.
+  reborde_mm: 8
+
+motor_paso_a_paso:
+  # PROVISIONAL: modelo del motor paso a paso de las cintas indexadas.
+  # Confirmar antes de dimensionar el driver y el torque necesario.
+  modelo: "NEMA17 17HS4401 (provisional)"
+  pasos_por_revolucion: 200
+  microstepping: 16
+
+canaleta_entrega:
+  # Inclinacion de los rieles de la canaleta, en grados (seccion 4).
+  inclinacion_grados: 15
+
+cortina_seguridad:
+  # Usuario (2026-09-26): UN solo VL53L0X a media altura (el del medio de
+  # los 3 que habia), que detenga la zona si ve una mano. No es un equipo de
+  # seguridad certificado: lo que se busca es que el sistema se detenga. Si
+  # alguien logra sacar un vaso sin cruzar el haz (por encima), lo ve la
+  # camara de vasos, que revisa en cada tick que ninguna casilla haya
+  # quedado sin su vaso.
+  altura_mm: 65
+  # El VL53L0X no es un rayo: mira en un CONO de unos 25 grados (dato de la
+  # hoja de datos). A ~140 mm (largo de la zona) el cono ya mide ~31 mm de
+  # radio. Con el eje a 85 mm del eje de la cinta, el cono queda a ~16 mm
+  # del reborde de los vasos (39 mm de radio) en el punto mas abierto: aguanta
+  # que el sensor quede torcido unos 6 grados sin ver los vasos. Por abajo
+  # el cono llega a ~34 mm sobre la cinta y queda por fuera de su ancho.
+  # El sensor va 20 mm pasado el eje de la prensa: mas alla estorbaria al
+  # vaso que el empujador pasa a la canaleta.
+  angulo_cono_grados: 25
+  desplazamiento_lateral_mm: 85
+  # PROVISIONAL: tiempo maximo desde que entra la mano hasta que la linea
+  # sube la prensa y congela tapa y empujador. Confirmar con la velocidad real de la
+  # leva de la prensa (una mano no deberia alcanzar a llegar debajo).
+  reaccion_max_ms: 200
+
+planta:
+  # Decision de operacion, no medida fisica: tamano del LOTE. Cada tubo del
+  # almacen (uno por denominacion) junta monedas hasta tener este numero y
+  # entonces las suelta todas juntas en un vaso vacio: cada vaso lleva UNA
+  # sola denominacion (regla del grupo). El enunciado no fija el numero.
+  # Grupo (2026-09-22): 10 por defecto, pero depende de cuantas monedas
+  # traiga el profesor ese dia: se cambia en caliente desde el dashboard
+  # (orden "lote"), entre 1 y capacidad_tubo.
+  monedas_por_vaso: 10
+  # Grupo (2026-09-22): lo que queda en los tubos al terminar un turno se
+  # puede empacar en vasos incompletos (boton "Embalar lo guardado") o se
+  # queda guardado para el siguiente turno: si esto es true, al iniciar una
+  # corrida nueva los tubos arrancan con lo que dejo la anterior (tabla
+  # `almacen_turno` de SQLite, que no se borra entre corridas).
+  conservar_almacen_entre_turnos: true
+  # PROVISIONAL: cuantas monedas caben en cada tubo del almacen (depende
+  # de la altura del tubo del CAD). Si un tubo se llena, la cinta de
+  # monedas espera: una moneda aceptada nunca se descarta.
+  capacidad_tubo: 25
+  # Fotos por moneda en la estacion de vision (aprobado por el grupo: 2).
+  # Se combinan con control.reglas.combinar_fotos.
+  fotos_por_moneda: 2
+  # Cada estacion lee su sensor esta cantidad de veces durante la pausa de
+  # la cinta (cada lectura tarda 2-5 ms, la pausa 300 ms) y decide por
+  # mayoria: baja el error de una lectura suelta de p a ~3p^2.
+  lecturas_por_decision: 3
+  # Altura (mm) de la figura con la que el sabotaje "cambiar vaso"
+  # reemplaza al vaso: por debajo de la franja de media altura (45 mm con
+  # el vaso provisional de 90 mm), para que la re-verificacion la rechace.
+  altura_figura_sabotaje_mm: 35
+
+supervisor:
+  # Base de datos SQLite que escribe el supervisor y lee el dashboard.
+  ruta_bd: datos/planta.db
+  # (El ritmo del supervisor ya no es un numero aparte: a velocidad 1 cada
+  # tick dura lo mismo que un ciclo real de la cinta de monedas,
+  # tiempos_ms.avance_casilla_monedas + pausa_casilla_monedas.)
+  # Cada cuanto se revisa la tabla de ordenes cuando la linea esta quieta.
+  intervalo_ordenes_s: 0.2
+  # Puerto del servidor HTTP del supervisor: sirve el visor 3D y el estado
+  # en vivo (/api/estado) y es el punto de entrada futuro de los dos ESP32.
+  puerto_http: 8765
+
+dashboard:
+  # Cada cuanto se refrescan las pestanas en vivo, en s.
+  refresco_s: 1.0
+
+# ---------------------------------------------------------------------
+# Canaleta de entrega, pista y vehiculo (seccion 4 y fase 6). Por ahora
+# alimentan la geometria del visor 3D (sim/geometria.py); la simulacion del
+# carro en PyBullet va a leer exactamente estos mismos valores.
+# ---------------------------------------------------------------------
+
+canaleta:
+  # PROVISIONAL: largo horizontal de los rieles desde el final de la cinta
+  # de vasos hasta la cuna del carro, en mm (la inclinacion esta arriba en
+  # canaleta_entrega.inclinacion_grados).
+  largo_mm: 280
+  # PROVISIONAL: separacion entre los ejes de los dos rieles. El hueco entre
+  # rieles (separacion - diametro del riel = 65 mm) tiene que dejar pasar el
+  # cuerpo del vaso (62 mm) y la pestana del reborde (62 + 2x8 = 78 mm) tiene
+  # que quedar apoyada encima. Antes era 56 mm: el cuerpo no cabia.
+  separacion_rieles_mm: 69
+  # PROVISIONAL: varilla lisa de acero (o tubo de aluminio) de cada riel,
+  # FORRADA con cinta adhesiva de PTFE (teflon, ~0,13 mm) donde apoya la
+  # pestana (usuario, 2026-09-26): plastico sobre metal roza casi lo mismo
+  # que la pendiente de 15 grados (el vaso se quedaria quieto o avanzaria a
+  # tirones); sobre PTFE el roce baja a ~0,1 y desliza parejo. Cinta y no
+  # tubo: un tubo de 6 mm de diametro exterior dejaria 0,5 mm entre el cuerpo
+  # del vaso y cada riel; la cinta no cambia las medidas.
+  diametro_riel_mm: 4
+  # Entrada en embudo (usuario, 2026-09-26): los rieles arrancan mas
+  # separados y un poco mas abajo que la pestana, y se cierran a
+  # `separacion_rieles_mm` en los primeros `largo_embudo_mm`. Un vaso que
+  # llega corrido (hasta ~2 mm de lado) o un poco bajo (hasta
+  # `caida_entrada_mm`) cae sobre los rieles en vez de chocar con su punta.
+  # 73 mm: la pestana de 78 mm todavia queda 2,5 mm mas alla del centro de
+  # cada riel en la boca del embudo.
+  separacion_entrada_mm: 73
+  largo_embudo_mm: 40
+  caida_entrada_mm: 3
+  # Cuantos vasos caben en fila contra el escape de dos dedos.
+  capacidad_vasos: 4
+
+pista:
+  # PROVISIONAL: todo este bloque es un trazado propuesto, no medido. Forma
+  # en S como la del enunciado (varias curvas, tres muros sobre la pista,
+  # meta al final). Se describe como una lista de tramos para que el visor
+  # y la simulacion generen exactamente la misma linea central.
+  ancho_mm: 160
+  ancho_linea_mm: 19          # cinta aislante negra estandar
+  tramos:
+    # Primera recta de 60 cm (2026-09-26, antes 30): a la vuelta el carro da
+    # media vuelta en la marca de giro y se endereza siguiendo la linea antes
+    # de entrar de reversa al muelle; con 30 cm eso pasaba sobre la curva.
+    - {tipo: recta, largo_mm: 600}
+    - {tipo: curva, radio_mm: 300, angulo_grados: 180}    # positivo = izquierda
+    # Rectas con muro de 90 cm (antes 60) y el muro en el medio: la maniobra
+    # de evasion ocupa ~30 cm antes del muro y ~35 cm despues hasta que el
+    # carro vuelve a la linea. Con 60 cm volvia justo donde empieza la curva
+    # y, con errores de motor, la perdia (visto en la simulacion). Si la pista
+    # real que entregue el profesor tiene los muros mas cerca de una curva,
+    # este es el dato a revisar.
+    - {tipo: recta, largo_mm: 900}
+    - {tipo: curva, radio_mm: 300, angulo_grados: -180}
+    - {tipo: recta, largo_mm: 900}
+    - {tipo: curva, radio_mm: 300, angulo_grados: 180}
+    # La ultima, mas larga: la meta queda 65 cm despues del tercer muro.
+    - {tipo: recta, largo_mm: 1100}
+  # Posicion de cada muro sobre la linea, como distancia recorrida desde la
+  # salida (mm): en el medio de cada recta de 90 cm (y a 45 cm del inicio de
+  # la ultima).
+  obstaculos_mm: [1992, 3834, 5676]
+  obstaculo_largo_mm: 100
+  obstaculo_alto_mm: 80
+  obstaculo_grueso_mm: 30     # a lo largo de la pista (el visor lo dibuja igual)
+
+vehiculo:
+  # PROVISIONAL: dimensiones de un chasis tipico de 2 ruedas + rueda loca.
+  largo_mm: 180
+  ancho_mm: 120
+  alto_mm: 55
+  diametro_rueda_mm: 65
+  # Arreglo de 5 infrarrojos de linea (TCRT5000 o similar), bajo el frente.
+  sensores_linea: 5
+  separacion_sensores_linea_mm: 15
+  # Ultrasonico frontal (HC-SR04): rango util y distancia a la que se
+  # considera que hay un obstaculo y hay que empezar la evasion.
+  ultrasonico_rango_min_mm: 20
+  ultrasonico_rango_max_mm: 4000
+  # El HC-SR04 ve lejos (4 m) pero mide LENTO: ~60 ms entre disparos (si no,
+  # se mezclan los ecos). Queda de RESPALDO (usuario, 2026-09-26): no le
+  # afectan las superficies negras o brillantes ni el sol, que si confunden
+  # al laser.
+  ultrasonico_periodo_ms: 60
+  # Sensor principal adelante: laser de tiempo de vuelo VL53L0X (el mismo
+  # modelo de la cortina y del interior del vaso, en el mismo bus I2C del
+  # ESP32 del carro): una medicion cada 33 ms, hasta ~1,2 m, cono de ~25 grados.
+  tof_periodo_ms: 33
+  tof_rango_max_mm: 1200
+  # Con algo a menos de `distancia_frenado_mm` (cualquiera de los dos
+  # sensores) el carro baja a velocidad de maniobra; a menos de
+  # `distancia_obstaculo_mm` en 3 mediciones seguidas del laser (o 2 del
+  # ultrasonico) se detiene y esquiva. Asi puede ir rapido en las rectas sin
+  # llegar rapido al muro.
+  distancia_frenado_mm: 500
+  distancia_obstaculo_mm: 200
+  # --- Punto 14 (usuario, 2026-09-26): movimiento, estabilidad y evasion ---
+  # 2 ruedas motrices + rueda loca (bola): tres apoyos SIEMPRE tocan el piso
+  # (un plano pasa por 3 puntos), gira sobre su propio eje sin patinar y los
+  # encoders cuentan lo que de verdad avanzo. Con 4 ruedas rigidas, en un piso
+  # desparejo una rueda motriz queda en el aire y el encoder cuenta de mas; y
+  # al girar sobre su eje las 4 patinan (giro por derrape).
+  masa_kg: 0.60                      # PROVISIONAL: chasis + bateria + electronica
+  # Rodillos guia (rodamiento 623) en las esquinas traseras, un poco mas
+  # afuera que las llantas: las guias del muelle empujan ESTOS (5 cm detras
+  # del eje) y el carro gira hacia el centro al entrar de reversa. Son la
+  # parte mas ancha del carro: la evasion cuenta con ellos.
+  rodillo_guia_y_mm: 86             # 86 + 5 de radio = 91 mm: 7 mm mas afuera que las llantas (84)
+  rodillo_guia_radio_mm: 5
+  masa_vaso_lleno_kg: 0.10           # vaso + 10 monedas grandes, aprox.
+  # Encoders: disco ranurado de 20 ranuras en el eje de la rueda (kit comun).
+  # PROVISIONAL: 1 pulso = 2*pi*32,5/20 ~ 10 mm; la simulacion cuenta con esa
+  # resolucion, no con el angulo exacto de la rueda.
+  encoder_pulsos_por_vuelta: 20
+  # El vaso va tomado en 4 puntos a media altura (espuma adelante, lengueta
+  # atras, dos guias a los costados; usuario 2026-09-26) ademas de colgar de
+  # los rieles: no cabecea, asi que el carro puede ir mas rapido. La
+  # aceleracion sigue limitada (rampa) para no patinar ni golpear el vaso.
+  velocidad_linea_m_s: 0.40
+  velocidad_maniobra_m_s: 0.12
+  velocidad_giro_rueda_m_s: 0.10     # cada rueda al girar sobre el eje
+  aceleracion_max_m_s2: 1.0
+  control_hz: 50
+  # Obstaculo: distancia < distancia_obstaculo_mm en N lecturas SEGUIDAS (un
+  # pie o una mano que pasa no dispara la maniobra).
+  lecturas_obstaculo: 3
+  # Antes de esquivar, el carro gira sobre su eje +-30 grados y mide con el
+  # mismo ultrasonico: esquiva hacia el lado con mas espacio. Empate (los dos
+  # lados libres mas alla de `distancia_libre_mm`): por la izquierda, siempre
+  # igual (repetible).
+  angulo_mirar_grados: 30
+  distancia_libre_mm: 500
+  # Maniobra: sale a 45 grados hasta quedar `margen_evasion_mm` afuera del
+  # muro, pasa derecho, vuelve a 45 grados hacia la linea y la reengancha con
+  # los infrarrojos (no depende de haber contado bien los pulsos).
+  margen_evasion_mm: 30
+  # PROVISIONAL (2026-09-27): cuanto mas pasa el muro antes de volver en
+  # diagonal a la linea. Con ruedas que patinan, el carro llega a ese punto
+  # con varios grados de error y con 30 mm la esquina de atras llego a rozar
+  # el extremo del muro (1 de 11 semillas). No cambia cuanto se sale de lado.
+  margen_pasar_muro_mm: 70
+  # Vuelve a la linea en diagonal a este angulo (60: la maniobra ocupa menos
+  # pista despues del muro que a 45).
+  angulo_regreso_grados: 60
+  # Marca de giro (franja negra transversal) antes del muelle: a la vuelta el
+  # carro se detiene ahi, gira 180 grados sobre su eje y entra de reversa.
+  marca_giro_mm: 170                 # distancia desde la salida (centro del carro en el muelle)
+  franja_giro_ancho_mm: 20
+  franja_meta_ancho_mm: 50           # la meta tambien es una franja negra (se ve con los 5 infrarrojos)
+  # En la meta el operador saca el vaso (se levanta: cuelga de los rieles);
+  # el infrarrojo de la cuna ve que ya no esta y el carro vuelve solo.
+  espera_descarga_meta_s: 4
+  espera_meta_sin_enlace_s: 20      # sin radio, en la meta espera como mucho esto y vuelve (con el vaso si no se lo sacaron)
+
+# ---------------------------------------------------------------------
+# REPLICACION EN LA VIDA REAL (docs/replicacion.md se genera de aqui).
+# Todo este bloque es PROVISIONAL: sale de hojas de datos y de valores
+# tipicos, NO de mediciones del montaje. Cada valor se reemplaza por lo que
+# se mida en banco (el procedimiento esta en docs/replicacion.md).
+# ---------------------------------------------------------------------
+
+# Protocolo (punto 15): mensajes numerados y confirmados, latido y reglas del
+# enlace. Logica en control/protocolo.py; contrato en CLAUDE.md, 10.1.
+protocolo:
+  pc_reintento_ms: 300          # PC -> ESP32 fijo: sin ack, un reintento y despues fallo
+  pc_reintentos: 1
+  pc_latido_ms: 500             # latido PC <-> ESP32 fijo (los dos sentidos)
+  pc_sin_latido_ms: 2000        # el ESP32 fijo sin el PC: parada segura
+  carro_latido_ms: 250          # latido carro <-> ESP32 fijo (ESP-NOW)
+  carro_enlace_perdido_ms: 1000 # sin oir nada en este tiempo: enlace perdido
+  carro_reintento_ms: 500       # el carro reenvia lo que no tiene ack (sin limite)
+  carro_cola_max: 32            # eventos guardados como maximo mientras no hay enlace
+
+tiempos_ms:
+  # Tiempos LENTOS a proposito (pedido del grupo, 2026-09-22): el montaje
+  # real necesita verificar con calma. La simulacion corre con ESTOS mismos
+  # tiempos (supervisor a velocidad 1 y ventana de PyBullet), asi que lo que
+  # se ve es lo que va a pasar. El detalle de los motores de las cintas
+  # (pasos, micropasos, rampas) va en su seccion mas adelante.
+  # Cinta de monedas: 40 mm por avance.
+  avance_casilla_monedas: 600         # ~70 mm/s con rampas suaves
+  pausa_casilla_monedas: 1000         # todo lo que se verifica en la casilla pasa aqui (incluye reintentar una expulsion)
+  presencia_lectura: 2                # TCRT5000 + comparador: respuesta < 1 ms
+  material_lectura: 5                 # LJC18A3 / LJ18A3: conmutan a 100-500 Hz
+  intervalo_entre_lecturas: 30        # separa las lecturas repetidas (antirrebote, que sean independientes)
+  vision_captura_inferencia: 400      # foto + segmentacion + clasificador, con holgura para el portatil
+  desvio: 150                         # compuerta de desvio de la descarga (SG90, ~30 grados)
+  carrusel_giro: 500                  # carrusel del almacen: hasta 180 grados con el 28BYJ-48 (~15 rpm con engranaje)
+  compuerta_tubo: 600                 # abrir el obturador, caer el lote, cerrar
+  # Cinta de vasos: 80 mm por avance, mas carga.
+  avance_casilla_vasos: 1000
+  pausa_casilla_vasos: 800
+  camara_vasos_cuadro: 60             # un cuadro de la webcam (30 fps) + silueta + ArUco en el PC
+  tapa_caida: 500                     # caida de la tapa por gravedad desde el tubo
+  prensa_ciclo: 1400                  # servo MG996R con la leva: 0 -> 180 -> 0 grados (~0,6 s por lado con carga)
+  empujador: 700
+  cortina_lectura: 33                 # VL53L0X (seguridad: esta NO se hace lenta)
+  # Comunicaciones.
+  serial_ida_vuelta: 20               # 115200 baud: ~80 bytes por linea = ~7 ms por sentido + parseo
+  esp_now_latencia: 10                # tipico < 5 ms en linea de vista, con reintentos
+
+errores_sensores:
+  # Probabilidad por lectura (0.005 = 0,5 %) y ruido de medida. En las
+  # pruebas automaticas se apagan (resultado exacto); el supervisor y la
+  # demo los usan para ver como reacciona la linea a errores reales.
+  presencia:  {falso_negativo: 0.005, falso_positivo: 0.001}    # piezas muy oscuras o brillantes, luz ambiente
+  capacitivo: {falso_negativo: 0.002, falso_positivo: 0.001}    # humedad, polvo sobre la cara del sensor
+  inductivo:  {falso_negativo: 0.01,  falso_positivo: 0.0}      # metales poco ferrosos (bronce, cuproniquel) a 4 mm
+  cortina:    {falso_negativo: 0.001, falso_positivo: 0.002}    # VL53L0X: ruido ±3 % a corta distancia
+  # Sensor del interior del vaso (VL53L0X): falso negativo = no ve un objeto
+  # chico adentro; falso positivo = ve algo en un vaso vacio (reflejo).
+  sensor_interior: {falso_negativo: 0.005, falso_positivo: 0.002}
+  # Infrarrojo de la cuna del carro (punto 13): falso negativo = no ve el
+  # vaso que si llego (se reintenta la lectura; si sigue sin verlo, alarma).
+  cuna: {falso_negativo: 0.005, falso_positivo: 0.002}
+  # Carro (punto 14): cada motor gira un poco distinto al otro con el mismo
+  # PWM (en la simulacion, hasta este +- porcentaje, fijo por corrida);
+  # ruido del ultrasonico; lectura cambiada de un infrarrojo de linea.
+  carro: {diferencia_motores: 0.05, ruido_ultrasonico_mm: 5, ruido_tof: 0.03, error_linea: 0.01}
+  # Posicion de cada cinta medida por su camara (reemplaza al sensor de
+  # ranura): falso_negativo = no ve bien el separador y cree que la cinta se
+  # corrio (se re-sincroniza de gusto); falso_positivo = no nota un desfase.
+  posicion_camara: {falso_negativo: 0.001, falso_positivo: 0.0005}
+  # Camara de vasos con panel de luz detras (silueta a contraluz): no_lee es
+  # el marcador ArUco (reflejo, tapado, fuera de foco); falso_* es la silueta
+  # de UNA franja de medida en UN cuadro (sombra, reflejo en el vaso);
+  # no_ve_tapa es no ver la tapa naranja sobre la boca en un cuadro.
+  # error_fondo: en un cuadro ve monedas en un vaso vacio o no las ve en uno lleno.
+  camara_vasos: {no_lee: 0.02, no_ve_tapa: 0.005, error_fondo: 0.003, falso_negativo: 0.002, falso_positivo: 0.001}
+  camara:
+    ruido_diametro_mm: 0.08           # calibracion de escala + borde difuso (1 px ~ 0,1 mm)
+    ruido_circularidad: 0.01
+    probabilidad_error_clase: 0.02    # por foto: no reconoce la cara (reflejo, sombra); matriz de confusion en la fase 5
+    probabilidad_confusion_clase: 0.005  # por foto: la reconoce como OTRA clase colombiana
+
+errores_actuadores:
+  # PROVISIONAL: probabilidad por avance de que la cinta patine o alguien la
+  # frene (la marca de referencia no llega a tiempo); se re-sincroniza.
+  cinta: {desfase: 0.002}
+
+simulacion:
+  # Carro: "fisico" = el carro con fisica real (sim/vehiculo_sim.py, punto
+  # 14): sale del muelle, esquiva, llega a la meta y vuelve solo.
+  # "reemplazo" = uno que se lleva el primer vaso de la canaleta cada
+  # `carro_retira_cada_ticks` ticks (lo usan las pruebas de la planta: mas
+  # rapido).
+  carro: fisico
+  carro_retira_cada_ticks: 6
+  # Usar los errores de arriba en el supervisor (dashboard y visor). Semilla
+  # fija: la misma corrida da el mismo resultado, para poder mostrarla.
+  errores_sensores: true
+  semilla: 7

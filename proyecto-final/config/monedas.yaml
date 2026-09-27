@@ -1,0 +1,65 @@
+# Tabla de referencia de monedas colombianas (CLAUDE.md, seccion 6).
+#
+# Se lee en control/monedas.py. Cada fila es una CLASE del clasificador de
+# vision ("<denominacion>_<familia>") y un tubo o compartimiento de destino
+# en el almacen (control/almacen.py).
+#
+# Familias, de la mas reciente a la mas vieja (pedido del grupo: "las nuevas
+# son las ultimas que salieron, las viejas las penultimas, y un par de
+# generaciones mas por si acaso"):
+#   nueva        serie actual (2012 en adelante)
+#   antigua      la serie anterior (anos 90 hasta 2012)
+#   muy_antigua  la serie de finales de los 80 y comienzos de los 90
+#   historica    series anteriores (anos 70 y 80)
+#
+# `verificado: true` = valor nominal de referencia (tabla original de
+# CLAUDE.md). `verificado: false` = PROVISIONAL: valor aproximado puesto
+# para poder simular, SIN VERIFICAR. Antes de entrenar el clasificador o
+# fijar los rangos de filtrado hay que medir monedas reales: diametro con
+# calibrador (±0,02 mm) en 3 direcciones y masa con bascula de 0,01 g, al
+# menos 5 piezas por clase (incluidas gastadas). Ver docs/replicacion.md.
+#
+# Nota: con tantas generaciones el diametro se solapa mucho entre clases;
+# la decision final sigue siendo por reconocimiento de la cara (seccion 6).
+
+monedas:
+  # --- nueva (verificada) ---
+  - {denominacion: 50,   familia: nueva, diametro_mm: 17.0, masa_g: 2.0,  material: acero niquelado,       ferromagnetica: true,  bimetalica: false, verificado: true}
+  - {denominacion: 100,  familia: nueva, diametro_mm: 20.3, masa_g: 3.3,  material: acero recubierto,      ferromagnetica: true,  bimetalica: false, verificado: true}
+  - {denominacion: 200,  familia: nueva, diametro_mm: 22.4, masa_g: 4.6,  material: cuproniquel-zinc,      ferromagnetica: false, bimetalica: false, verificado: true}
+  - {denominacion: 500,  familia: nueva, diametro_mm: 23.7, masa_g: 7.1,  material: bimetalica,            ferromagnetica: false, bimetalica: true,  verificado: true}
+  - {denominacion: 1000, familia: nueva, diametro_mm: 26.7, masa_g: 10.0, material: bimetalica,            ferromagnetica: false, bimetalica: true,  verificado: true}
+
+  # --- antigua (verificada) ---
+  - {denominacion: 50,   familia: antigua, diametro_mm: 21.5, masa_g: 4.5, material: cuproniquel-zinc,     ferromagnetica: false, bimetalica: false, verificado: true}
+  - {denominacion: 100,  familia: antigua, diametro_mm: 23.0, masa_g: 5.3, material: bronce-aluminio,      ferromagnetica: false, bimetalica: false, verificado: true}
+  - {denominacion: 200,  familia: antigua, diametro_mm: 24.4, masa_g: 7.1, material: cuproniquel-zinc,     ferromagnetica: false, bimetalica: false, verificado: true}
+  - {denominacion: 500,  familia: antigua, diametro_mm: 23.5, masa_g: 7.4, material: bimetalica,           ferromagnetica: false, bimetalica: true,  verificado: true}
+
+  # --- muy_antigua (PROVISIONAL: sin verificar, medir) ---
+  - {denominacion: 10,   familia: muy_antigua, diametro_mm: 19.0, masa_g: 3.4, material: laton,            ferromagnetica: false, bimetalica: false, verificado: false}
+  - {denominacion: 20,   familia: muy_antigua, diametro_mm: 21.0, masa_g: 4.0, material: bronce-aluminio,  ferromagnetica: false, bimetalica: false, verificado: false}
+  - {denominacion: 50,   familia: muy_antigua, diametro_mm: 22.0, masa_g: 4.8, material: cuproniquel,      ferromagnetica: false, bimetalica: false, verificado: false}
+  - {denominacion: 100,  familia: muy_antigua, diametro_mm: 26.0, masa_g: 8.0, material: bronce-aluminio,  ferromagnetica: false, bimetalica: false, verificado: false}
+
+  # --- historica (PROVISIONAL: sin verificar, medir) ---
+  - {denominacion: 1,    familia: historica, diametro_mm: 18.0, masa_g: 2.5, material: cobre-niquel,       ferromagnetica: false, bimetalica: false, verificado: false}
+  - {denominacion: 2,    familia: historica, diametro_mm: 20.0, masa_g: 3.0, material: bronce,             ferromagnetica: false, bimetalica: false, verificado: false}
+  - {denominacion: 5,    familia: historica, diametro_mm: 21.5, masa_g: 4.0, material: bronce-aluminio,    ferromagnetica: false, bimetalica: false, verificado: false}
+  - {denominacion: 10,   familia: historica, diametro_mm: 23.0, masa_g: 5.0, material: cuproniquel,        ferromagnetica: false, bimetalica: false, verificado: false}
+  - {denominacion: 20,   familia: historica, diametro_mm: 24.5, masa_g: 6.0, material: bronce-aluminio,    ferromagnetica: false, bimetalica: false, verificado: false}
+
+# Familias con las que se entrena el clasificador (Keras + MobileNetV2, fase 5).
+# TEMPORAL (decision del grupo, 2026-09-22): todavia no hay piezas fisicas de
+# las familias muy_antigua e historica para fotografiarlas, asi que el modelo
+# no las conoce y salen como no_reconocida (cubeta de rechazo 2, guardadas).
+# Cuando se consigan las monedas: fotografiarlas, agregarlas aqui y reentrenar.
+familias_entrenadas: [nueva, antigua]
+
+# Denominaciones con TUBO propio en el almacen: de estas se arman vasos (un
+# vaso = una denominacion). Las aceptadas de cualquier otra denominacion
+# ($1, $2, $5, $10, $20 de las series viejas) van al compartimiento "otras" y
+# se empacan juntas en su propio vaso de "otras denominaciones". (Mientras sus
+# familias no esten en familias_entrenadas, ni siquiera llegan: salen como
+# no_reconocida.)
+denominaciones_con_tubo: [50, 100, 200, 500, 1000]

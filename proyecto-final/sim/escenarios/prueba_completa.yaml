@@ -1,0 +1,134 @@
+nombre: prueba_completa
+descripcion: >
+  La UNICA prueba de la linea (usuario, 2026-09-26): un turno completo que
+  junta todo lo que antes estaba repartido en varias pruebas. 24 monedas
+  colombianas (6 de 500, 5 de 200, 5 de 100, 5 de 50 y 3 de 1000, de ambas
+  familias) y un caso de CADA filtro de rechazo: no metalico (botones de
+  plastico), perforado, fuera de rango (10 mm y 32 mm), no circular
+  (bloque metalico), no reconocida (moneda de 1 euro y dos monedas de series
+  viejas que el clasificador todavia no conoce -- TEMPORAL: cuando se
+  entrenen iran al vaso de "otras"), incoherente (cara de $500 con otro
+  diametro), dos casillas vacias y dos sabotajes de mano en la casilla de
+  carga. Los demas sabotajes (retirar o cambiar un vaso, manos en la
+  cortina, vaso con algo adentro) se disparan con los botones del visor o
+  del dashboard durante la corrida.
+  Con lotes de 5 monedas por vaso, se llenan vasos de 500, 200, 100 y 50 --
+  cada uno de una sola denominacion -- y lo que no completa lote (1 de 500 y
+  3 de 1000) queda guardado en su tubo: ninguna moneda aceptada se descarta.
+
+elementos:
+  - tipo: moneda   # serie historica: el modelo aun no la conoce -> no_reconocida (TEMPORAL)
+    clase_real: 20_historica
+    destino_esperado: rechazo
+  - tipo: moneda
+    clase_real: 200_nueva
+    destino_esperado: vaso
+  - tipo: moneda
+    clase_real: 500_nueva
+    destino_esperado: vaso
+  - tipo: moneda
+    clase_real: 100_antigua
+    destino_esperado: vaso
+  - tipo: moneda
+    clase_real: 50_nueva
+    destino_esperado: vaso
+  - tipo: boton_plastico
+    destino_esperado: rechazo
+  - tipo: moneda
+    clase_real: 500_antigua
+    destino_esperado: vaso
+  - tipo: moneda
+    clase_real: 500_nueva
+    destino_esperado: vaso
+  - tipo: moneda
+    clase_real: 50_antigua
+    destino_esperado: vaso
+  - tipo: moneda
+    clase_real: 500_antigua
+    destino_esperado: vaso
+  - tipo: boton_metalico   # perforado
+    metal: true
+    destino_esperado: rechazo
+  - tipo: boton_metalico   # fuera_de_rango: disco metalico redondo de 10 mm (muy chico para moneda)
+    metal: true
+    diametro_mm: 10.0
+    circularidad: 0.99
+    contornos_internos: 0
+    destino_esperado: rechazo
+  - tipo: vacia            # casilla vacia: ninguna estacion gasta tiempo en ella
+  - tipo: moneda
+    clase_real: 100_nueva
+    destino_esperado: vaso
+  - tipo: moneda
+    clase_real: 200_antigua
+    destino_esperado: vaso
+  - tipo: moneda
+    clase_real: 500_nueva
+    destino_esperado: vaso
+  - tipo: moneda
+    clase_real: 200_nueva
+    destino_esperado: vaso
+  - tipo: mano   # sabotaje punto 1: pone la mano en la carga y la quita
+    destino_esperado: rechazo
+  - tipo: moneda
+    clase_real: 50_nueva
+    destino_esperado: vaso
+  - tipo: moneda
+    clase_real: 100_nueva
+    destino_esperado: vaso
+  - tipo: moneda
+    clase_real: 50_antigua
+    destino_esperado: vaso
+  - tipo: moneda
+    clase_real: 200_nueva
+    destino_esperado: vaso
+  - tipo: boton_metalico   # moneda extranjera (1 euro): diametro de 500, sin clase colombiana
+    metal: true
+    diametro_mm: 23.25
+    circularidad: 0.98
+    contornos_internos: 0
+    destino_esperado: rechazo
+  - tipo: moneda   # incoherente: la cara dice $500 pero el diametro medido no le corresponde
+    clase_real: 500_nueva
+    diametro_mm: 20.0
+    masa_g: 7.1
+    destino_esperado: rechazo
+  - tipo: moneda
+    clase_real: 1000_nueva
+    destino_esperado: vaso
+  - tipo: moneda
+    clase_real: 1000_nueva
+    destino_esperado: vaso
+  - tipo: moneda
+    clase_real: 100_antigua
+    destino_esperado: vaso
+  - tipo: moneda
+    clase_real: 200_antigua
+    destino_esperado: vaso
+  - tipo: bloque
+    metal: true
+    destino_esperado: rechazo
+  - tipo: boton_metalico   # fuera_de_rango: disco metalico redondo de 32 mm (muy grande)
+    metal: true
+    diametro_mm: 32.0
+    circularidad: 0.99
+    contornos_internos: 0
+    destino_esperado: rechazo
+  - tipo: vacia
+  - tipo: moneda
+    clase_real: 100_nueva
+    destino_esperado: vaso
+  - tipo: moneda
+    clase_real: 1000_nueva
+    destino_esperado: vaso
+  - tipo: moneda
+    clase_real: 50_nueva
+    destino_esperado: vaso
+  - tipo: moneda
+    clase_real: 500_antigua
+    destino_esperado: vaso
+  - tipo: mano
+    destino_esperado: rechazo
+  - tipo: moneda   # serie muy antigua: el modelo aun no la conoce -> no_reconocida (TEMPORAL)
+    clase_real: 10_muy_antigua
+    destino_esperado: rechazo

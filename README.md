@@ -3,7 +3,8 @@
 ![ESP32](https://img.shields.io/badge/ESP32-MicroPython%20%2B%20Arduino-4A7EBB?style=for-the-badge)
 ![PyBullet](https://img.shields.io/badge/PyBullet-simulaci%C3%B3n%20f%C3%ADsica-E8935B?style=for-the-badge)
 ![Visión y CNN](https://img.shields.io/badge/Visi%C3%B3n-YOLO%20%7C%20OpenCV%20%7C%20CNN-6BAE75?style=for-the-badge)
-![Temas](https://img.shields.io/badge/temas-9-8B8FA8?style=for-the-badge)
+![Temas](https://img.shields.io/badge/temas-9%20%2B%20proyecto%20final-8B8FA8?style=for-the-badge)
+![Streamlit](https://img.shields.io/badge/Streamlit-dashboard-FF4B4B?style=for-the-badge)
 
 ![Último commit](https://img.shields.io/github/last-commit/Dathinel/Sensores-Teoria?style=flat-square&label=último%20commit)
 ![Tamaño del repo](https://img.shields.io/github/repo-size/Dathinel/Sensores-Teoria?style=flat-square&label=tamaño)
@@ -26,6 +27,7 @@ Repositorio con las investigaciones y proyectos de la materia de Sensores, semes
 | 7 | [Brazo robótico: control por teclado (jog) + simulación URDF](./7-brazo-robotico-urdf) | PyBullet + I2C |
 | 8 | [Dígitos: brazo que dibuja + visión que reconoce](./8-digitos-brazo-y-vision) | CNN (MNIST) + PyBullet + UART2/SPI |
 | 9 | [Taller segundo corte](./9-taller-segundo-corte) | PyBullet (IK, CPG, cinemática) |
+| ★ | [**Proyecto final: logística de monedas inteligentes**](./proyecto-final) | PyBullet + Three.js + Streamlit + DeepSeek + 2 ESP32 |
 
 ## Temas
 
@@ -55,6 +57,11 @@ Dos puntos: un teclado y una LCD por I2C eligen un dígito que el brazo del tema
 
 ### 9. [Taller segundo corte: consolas de mando con ESP32 para simulaciones en PyBullet](./9-taller-segundo-corte)
 Un solo teclado matricial 4x4, con el mismo firmware de ESP32 sin cambios, controla tres simulaciones distintas: un dron líder (con otros dos en formación) que vuela entre tres puntos A, B y C; un brazo robótico de 7 grados de libertad con pinza (en base a un KUKA IIWA, por las mismas razones que se explican en el propio tema) que agarra y mueve un objeto por cinemática inversa; y un cuadrúpedo Laikago que camina con física real de punta a punta (un CPG genera el trote con senos, es el contacto pata-piso el que lo empuja). Basado en [gym-pybullet-drones](https://github.com/utiasDSL/gym-pybullet-drones) y en [pybullet_robots](https://github.com/erwincoumans/pybullet_robots) (`baxter_ik_demo.py` y `laikago.py`).
+
+### ★ [Proyecto final: Sistema de Logística de Monedas Inteligentes](./proyecto-final)
+Segundo parcial (grupo 7: **detector de elementos de monedas y vasos**). Una cinta filtra monedas colombianas —rechaza botones, arandelas, bloques y monedas de otros países con sensores capacitivo/inductivo y visión—, las guarda por denominación en un almacén tipo revólver, las empaca en vasos tapados de una sola denominación y un carro autónomo las lleva a la meta esquivando tres muros. Todo simulado con física real en PyBullet, visto en un visor 3D, con un dashboard de Streamlit y un asistente (DeepSeek) al que se le pregunta por voz o texto y que puede mover el carro.
+
+![Arquitectura del enunciado](./proyecto-final/docs/enunciado/1-arquitectura-general.png)
 
 ---
 

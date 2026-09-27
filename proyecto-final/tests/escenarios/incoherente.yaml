@@ -1,0 +1,19 @@
+nombre: incoherente
+descripcion: >
+  Filtro aislado de coherencia, CLAUDE.md seccion 7 (tolerancia 1.2 mm):
+  cruza la clase predicha contra el diametro medido. clase_real es una
+  denominacion valida (asi que la clasificacion sola la aceptaria) pero
+  diametro_mm se fuerza a un valor que no le corresponde a esa clase.
+
+elementos:
+  - tipo: moneda
+    clase_real: 500_nueva   # nominal 23.7 mm
+    diametro_mm: 20.0        # 3.7 mm de diferencia, > 1.2 mm de tolerancia
+    masa_g: 7.1
+    destino_esperado: rechazo
+  - tipo: vacia
+  - tipo: moneda
+    clase_real: 1000_nueva   # nominal 26.7 mm
+    diametro_mm: 22.0
+    masa_g: 10.0
+    destino_esperado: rechazo

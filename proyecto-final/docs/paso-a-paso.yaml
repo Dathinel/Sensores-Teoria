@@ -1,0 +1,639 @@
+# Paso a paso del sistema, punto por punto (CLAUDE.md, seccion 5).
+#
+# Fuente unica: la leen el visor 3D (recorrido guiado), la pestana "Paso a
+# paso" del dashboard y `python -m app.documentos`, que genera
+# docs/paso-a-paso.md para GitHub. No editar el .md a mano.
+#
+# `revision` es el estado de la revision con el grupo:
+#   pendiente   -> todavia no se ha revisado la logica
+#   preaprobado -> cambios pedidos ya hechos; falta que el usuario diga que si
+#   aprobado    -> el grupo confirmo que la logica esta bien
+#   cambiar    -> hay que cambiar algo (ver `nota_revision`)
+#
+# `zona` es a donde vuela la camara del visor 3D; `sensores` son numeros del
+# catalogo de sensores (sim/catalogo_sensores.py y docs/sensores/).
+
+pasos:
+  - numero: 1
+    titulo: Carga del elemento y estación 1 (presencia)
+    zona: carga
+    sensores: [1, 4]
+    que_pasa: >
+      Durante la pausa de la cinta, el operador pone UN elemento en la casilla de carga, donde
+      un infrarrojo (estación 1) mira hacia abajo. La cinta es negra mate y casi no refleja la
+      luz, así que el sensor solo "ve" algo cuando hay un elemento encima. La cinta avanza SOLO
+      si lleva algo registrado o si el infrarrojo vio algo en la carga: vacía y sin carga se
+      queda quieta esperando (usuario, 2026-09-26).
+    entra: Luz infrarroja reflejada (casi nada si la casilla está vacía; mucha si hay algo).
+    decide: >
+      Ocupada → se crea el registro de esa casilla con un número propio (#1, #2...) que la
+      acompaña por todas las estaciones. Vacía → la casilla se marca vacía y ninguna otra
+      estación gasta tiempo en ella durante todo su recorrido.
+    sale: Registro de la casilla (ocupada o vacía).
+    mensaje: '{"t":"evt","src":"e1","ev":"presencia","casilla":17,"ocupada":true}'
+    como_esta_hoy: >
+      La simulación crea el cuerpo en la casilla de carga y lee el rayo del sensor (rayTest
+      vertical de 5 cm). La decisión la toma el sensor, no el escenario: si el rayo no ve nada,
+      la casilla queda vacía aunque el escenario haya puesto algo (así se puede probar un falso
+      negativo del infrarrojo). Si el infrarrojo no ve un objeto que sí está y la cinta está
+      vacía, la cinta no avanza y el objeto se vuelve a leer en la pausa siguiente.
+    revision: aprobado
+    nota_revision: >
+      Aprobado por el grupo (2026-09-22). La carga es manual, sin tolva. Un solo infrarrojo
+      reflectivo alcanza: basta con saber que hay algo. Si alguien pone la mano en la casilla
+      de carga y la quita, el infrarrojo la ve y la casilla viaja registrada como ocupada pero
+      vacía; en E2 ni el capacitivo ni el inductivo ven nada, así que sale como no_metalico a la
+      bandeja de rechazo (simulado como sabotaje "mano en la carga" y en el escenario prueba_completa).
+    replicacion: >
+      TCRT5000: falso negativo ~0,5 % por lectura (piezas muy oscuras o brillantes), falso positivo
+      ~0,1 % (luz ambiente). Mitigación: capuchón contra la luz, 3 lecturas con voto de mayoría
+      durante la pausa (el error por decisión baja a ~0,01 %), y E2 respalda a E1: si el
+      infrarrojo no vio un elemento pero el capacitivo o el inductivo sí, la casilla se registra
+      en E2 ("presencia recuperada"). Si ambos fallan, la compuerta de desvío de la descarga (a
+      prueba de fallas) lo manda a la bandeja de rechazo: lo que ningún sensor registró se rechaza.
+
+  - numero: 2
+    titulo: Estación 2 (material)
+    zona: monedas
+    sensores: [2, 3]
+    que_pasa: >
+      Un sensor capacitivo y uno inductivo, DEBAJO de la cinta y mirando hacia arriba, leen el
+      elemento a través de la banda (2 mm) con la cinta detenida. Cada uno va centrado bajo su
+      casilla: el capacitivo bajo E1 (su lectura viaja en el registro de la casilla) y el
+      inductivo bajo E2, donde se decide. Una moneda de 17 mm no alcanza a tapar dos caras de
+      18 mm a la vez, y descentrado el inductivo pierde la mitad del alcance.
+    entra: Capacitivo → cualquier material cerca. Inductivo → solo metal.
+    decide: >
+      Capacitivo sí + inductivo no → NO metálico → rechazo con causa no_metalico: sigue en la cinta
+      sin gastar la cámara y sale en la descarga (E4) a la bandeja de rechazo. Ambos sí → metal → sigue.
+    sale: Campo "metal" del registro; causa no_metalico si aplica.
+    mensaje: '{"t":"evt","src":"e2","ev":"material","capacitivo":true,"inductivo":false}'
+    como_esta_hoy: >
+      El capacitivo responde a cualquier cuerpo en E1 (se guarda para E2); el inductivo, solo a los que tienen
+      metal=true. Si el inductivo ve metal, es metal aunque el capacitivo falle (el inductivo solo
+      reacciona a metal). Cap=0 e ind=0 (la mano que se retiró) sale como no_metalico.
+    replicacion: >
+      El inductivo va a 2 mm de la moneda (el espesor de la banda). Un M12 de 4 mm no alcanza
+      con las no ferrosas (bronce, latón, cuproníquel: ~40-60 % del alcance en acero), así que es
+      un LJ18A3-8-Z/BX (M18, 8 mm): centrado da ~2,2-4,8 mm con esas monedas. Va en un inserto
+      IMPRESO de la bancada (nada de metal cerca de su cara) y el retorno de la banda baja por
+      dos rodillos para dejarle espacio al cuerpo y al cable. Probar cada familia en banco
+      (prueba de 200 pasadas, docs/replicacion.md). Los dos sensores son NPN de 6-36 V: van por optoacoplador o divisor a
+      3,3 V, nunca directo al ESP32. Error simulado: capacitivo FN 0,2 % / FP 0,1 %; inductivo
+      FN 1 %; 3 lecturas con voto.
+    revision: aprobado
+    nota_revision: >
+      Aprobado por el grupo (2026-09-22). Todo tiene que poder replicarse en el montaje real con
+      sus tiempos, medidas y el error individual de cada sensor: quedó anotado en
+      docs/replicacion.md y en la carpeta de cada sensor. Usuario (2026-09-26): aprobados los dos sensores debajo de la
+      cinta, el capacitivo bajo E1 y el inductivo M18 de 8 mm (LJ18A3-8-Z/BX) bajo E2.
+
+  - numero: 3
+    titulo: Estación 3 (visión, dos fotos)
+    zona: vision
+    sensores: [4]
+    que_pasa: >
+      La casilla queda quieta bajo una cámara cenital con anillo de luz (lo que el material ya
+      rechazó no gasta cámara). Se toman DOS fotos de la
+      moneda; el PC segmenta el elemento sobre el fondo negro, promedia la geometría de las dos y
+      combina lo que el clasificador ve en cada una. Luego aplica los filtros en orden; el primero
+      que falla decide y ya nadie lo revierte.
+    entra: Dos imágenes de la casilla.
+    decide: >
+      1) Geometría (promedio de las dos fotos): diámetro fuera de 16,5-27,5 mm → fuera_de_rango;
+      circularidad < 0,90 → no_circular; con agujeros → perforado. 2) Clasificación con las dos
+      fotos: si las que reconocen (confianza ≥ 0,85) dicen la misma clase → esa clase, aunque la
+      otra foto no haya reconocido por un reflejo; si reconocen clases distintas → no_reconocida;
+      si ninguna reconoce → no_reconocida. 3) Coherencia: si el diámetro nominal de la clase
+      difiere más de 1,2 mm del medido → incoherente. Si pasa todo → aceptada, con su
+      denominación, valor y masa nominal.
+    sale: Veredicto de visión (sección 10.2 de CLAUDE.md), con las dos lecturas y cómo se combinaron. En la misma imagen la cámara mide si la cinta de monedas quedó en su casilla (separadores); si se corrió, se corrige con micropasos.
+    mensaje: '{"casilla":17,"diametro_mm":23.68,"circularidad":0.981,"clase":"500_nueva","confianza":0.95,"fotos":[["500_nueva",0.95],["otro",0.4]],"combinacion":"reconocida en 1 de 2 las fotos","veredicto":"aceptada"}'
+    como_esta_hoy: >
+      Modo oráculo hasta la fase 5 (por foto: diámetro ±0,08 mm, 2 % de no reconocer, 0,5 % de
+      reconocer otra clase). Clasificador elegido: Keras + MobileNetV2 (el tiempo no es problema).
+      TEMPORAL: el modelo solo conoce las familias nueva y antigua (config/monedas.yaml,
+      familias_entrenadas); las muy antiguas e históricas salen como no_reconocida hasta
+      conseguir las piezas, fotografiarlas y reentrenar.
+    replicacion: >
+      Dos fotos × 400 ms + serial = 820 de 1000 ms de pausa. Medido en 30 corridas simuladas con
+      el error de cada sensor (720 monedas reconocibles): con 1 foto, 20 monedas buenas
+      rechazadas y 1 en el vaso equivocado; con 2 fotos "deben coincidir", 39 rechazadas (casi
+      el doble: bastaba que fallara una); con la regla aprobada, 7 rechazadas y 0 en el vaso
+      equivocado. Anillo de luz difusa, cámara fija a ~9 cm, cinta negra mate; calibrar la escala
+      con una moneda patrón. Dataset: 80-150 fotos por clase del propio montaje (anverso,
+      reverso y gastadas) para las 9 clases entrenadas + "otro".
+    revision: aprobado
+    nota_revision: >
+      Aprobado por el grupo (2026-09-22): dos fotos por moneda y Keras con MobileNetV2. La regla
+      que se propuso primero ("si las dos coinciden se acepta, si no se rechaza") duplicaba el
+      rechazo de monedas buenas; se cambió por la de arriba y se midió. Las familias muy antigua
+      e histórica quedan temporalmente como no_reconocida (no hay piezas físicas todavía).
+
+  - numero: 4
+    titulo: Estación 4 (descarga y desvío, filtro total)
+    zona: almacen
+    sensores: []
+    que_pasa: >
+      Es la última casilla de la cinta de monedas. En el siguiente avance la pieza cae por el
+      extremo de la cinta (sobre el rodillo) a un embudo; abajo, una compuerta de desvío con servo
+      A PRUEBA DE FALLAS la manda por uno de dos canales cortos y empinados (~60°): al carrusel del
+      almacén o a la ÚNICA bandeja de rechazo. En reposo apunta al rechazo; solo se mueve hacia el
+      almacén para una moneda registrada y aceptada. Ya no hay expulsores a mitad de la cinta:
+      "todo lo que no pase se saca y todo lo que sí pase se deja" (filtro total).
+    entra: El registro de la casilla (aceptada o no, y su causa) y la denominación que decidió la visión.
+    decide: >
+      Moneda registrada y aceptada → desvío hacia el almacén → tubo de su denominación (si está
+      lleno, la moneda espera aquí y la cinta de monedas se detiene: nunca se bota). Cualquier otra
+      cosa (no metálico, geometría, no reconocida, incoherente, algo que ningún sensor registró) →
+      el desvío sigue en reposo → bandeja de rechazo. La causa queda en el registro de cada pieza.
+    sale: Moneda camino a su tubo, o pieza en la bandeja de rechazo con su causa.
+    mensaje: '{"t":"evt","src":"e4","ev":"rechazo","casilla":17,"motivo":"no_metalico","causa":"no_metalico"}'
+    como_esta_hoy: >
+      La cinta de monedas pasó de 7 a 4 estaciones (16 cm en vez de 28): se quitan los dos
+      expulsores con sus servos, los dos sensores de confirmación de expulsión y dos canaletas y
+      cubetas. Los filtros se siguen demostrando uno por uno en la sustentación: cada rechazo trae
+      su causa en el dashboard, en el visor y en el escenario de ese filtro. Si se corta la
+      comunicación o el ESP32 se reinicia, el desvío queda en reposo: nada desconocido entra al
+      almacén.
+    replicacion: >
+      Desvío: servo SG90, ~30°, 150 ms, se mueve mientras la cinta trae la pieza (hay 600 ms). El
+      embudo va justo después del rodillo de cabeza; los dos canales, impresos en U, con más de
+      45° para que la moneda no se frene. Bandeja de rechazo en el piso, del lado opuesto al
+      almacén.
+    revision: aprobado
+    nota_revision: >
+      Aprobado por el grupo (2026-09-25): una sola bandeja de rechazo también para las monedas
+      (antes eran tres: expulsor 1, expulsor 2 y rechazo final). Así se eliminan sensores y servos
+      y se acorta la cinta: queda un filtro total donde todo lo que no pase se saca y todo lo que
+      sí pase se deja. Reemplaza a los puntos "expulsor 1", "estación libre" y "expulsor 2", que
+      estaban aprobados con la versión anterior.
+
+  - numero: 5
+    titulo: Almacén tipo revólver (por denominación)
+    zona: almacen
+    sensores: [6]
+    que_pasa: >
+      Seis tubos ($50, $100, $200, $500, $1.000 y "otras") van en un carrusel que GIRA sobre una
+      placa fija. Para guardar una moneda, un motor paso a paso pone su tubo justo debajo del punto
+      de carga, y la moneda cae casi vertical desde el canal corto directo a la boca del tubo: no
+      hay un pico giratorio que tenga que desviar una moneda en movimiento. La placa fija tiene un
+      solo agujero, sobre el vaso de llenado, cerrado por un obturador (servo): para soltar un lote,
+      el carrusel pone ese tubo sobre el agujero, se abre el obturador y la pila entera cae por un
+      embudo corto al vaso.
+    entra: Denominación de la moneda (de la visión) o el tubo que completó su lote.
+    decide: >
+      Guardar → girar al tubo de esa denominación en la carga. Soltar lote → girar ese tubo al
+      agujero, abrir, cerrar. La carga y el agujero están a 210° uno del otro: cuando un tubo está
+      en la carga el agujero queda ENTRE dos tubos, y al revés, así que nunca se guarda y se suelta
+      a la vez ni se derrama nada al girar (el obturador está cerrado mientras gira).
+    sale: Moneda apilada en el tubo de su denominación; lote completo al vaso.
+    mensaje: '{"t":"evt","src":"e4","ev":"almacen","casilla":17,"denominacion":500,"tubo":500,"en_tubo":3}'
+    como_esta_hoy: >
+      Reemplaza al selector con un pico corto (poco creíble: la moneda llega con velocidad y un pico
+      de 3 cm no la desvía con seguridad) y a las 6 compuertas con servo: ahora son un motor y un
+      servo. La pila resbala sobre la placa fija al girar (placa lisa). Capacidad por tubo: 25
+      monedas (58 mm de alto); "otras": 40 (PROVISIONALES). En PyBullet el carrusel queda quieto
+      en su posición de reposo; el visor 3D lo gira.
+    replicacion: >
+      Motor 28BYJ-48 (5 V, con reducción) y driver ULN2003; al encender gira hasta que el sensor
+      Hall ve el imán del carrusel (homing) y desde ahí cuenta pasos. Giro de hasta 180° en ~500
+      ms: tiene un ciclo de la cinta (1,6 s) para poner el tubo antes de que llegue la moneda, y
+      soltar un lote y volver (2 × 500 + 600 ms) también cabe en un ciclo. Tubos de 29 mm interior
+      (entra la de $1.000, 26,7 mm). Placa fija de acrílico o impresión lisa; obturador SG90.
+    revision: aprobado
+    nota_revision: >
+      Aprobado por el usuario (2026-09-26): almacén tipo revólver (un motor paso a paso + un servo
+      obturador), con su sensor Hall de referencia.
+
+  - numero: 6
+    titulo: Verificación del vaso (antes de llenar)
+    zona: vasos
+    sensores: [5, 7]
+    que_pasa: >
+      Una webcam al costado de la cinta de vasos (cámara de vasos, sensor 7) ve la casilla de
+      entrada con un panel de luz detrás: lo que haya en la casilla se ve como una silueta oscura
+      sobre fondo blanco. En la imagen se miran dos franjas horizontales, como dos "barreras
+      virtuales": una a media altura del vaso y otra justo por encima del borde. La misma cámara
+      lee el marcador ArUco del vaso y anota su número: el marcador va impreso en una CINTA que
+      rodea todo el vaso (el mismo marcador repetido 6 veces), así siempre hay uno de frente a la
+      cámara, gire como gire el vaso. Los vasos son opacos: que llegue VACÍO lo comprueba un
+      sensor de distancia (VL53L0X, sensor 5) que mira desde arriba hacia el interior del vaso. Con los separadores a contraluz la
+      misma cámara mide, después de cada avance, si la cinta quedó en su casilla o se corrió; si
+      se corrió, el PC manda los micropasos que faltan en la misma pausa (reemplaza al sensor de
+      ranura).
+    entra: Silueta en la franja de media altura y en la del borde, número del marcador y posición de los separadores.
+    decide: >
+      Media ocupada, borde libre y nada adentro → vaso válido. Si el sensor del interior ve algo
+      (un vaso puesto con un objeto adentro) → inválido: cada vaso arranca de cero. Cualquier otra combinación → inválido. El
+      número del marcador queda en el registro de la casilla: si en el llenado o en la tapa se lee
+      otro número, alguien cambió el vaso por otro igual (mismo tamaño, la silueta no lo nota).
+      Si la cámara no alcanza a leer el marcador (reflejo, tapado), decide solo con la silueta y
+      queda anotado: la línea nunca se para por el marcador.
+    sale: Estado del vaso (valida / invalida / vacia) y su número de marcador.
+    mensaje: '{"t":"evt","src":"vasos","ev":"verificacion","vaso":4,"media":true,"borde":false,"marcador":104}'
+    como_esta_hoy: >
+      Antes eran dos barreras IR por estación (6 en total, más 2 sensores de presencia); desde el
+      2026-09-25 las reemplaza la cámara de vasos, que ya estaba ahí para el marcador: menos
+      cableado y la misma decisión. Los vasos personalizados todavía no existen: altura (90 mm),
+      diámetro (62 mm), pestaña del reborde (8 mm) y separación de casillas (80 mm) siguen
+      PROVISIONALES en config/parametros.yaml. La simulación tiene el sabotaje "Cambiar por un
+      vaso igual" (dashboard y visor) y el desfase de la cinta (errores_actuadores.cinta.desfase).
+    replicacion: >
+      Panel LED difuso (panel pequeño o tira LED detrás de acrílico opalino) detrás de las 4
+      primeras casillas, desde la cinta hasta ~2,5 cm sobre el borde del vaso. Cámara al costado, a
+      ~30 cm y a la altura de la boca del vaso, viendo verificación, llenado, tapa y prensa a la vez
+      (el almacén y el tubo de tapas ocupan el espacio de arriba). Cinta de papel mate alrededor del
+      vaso, de 2 cm de alto, con el mismo ArUco 4x4 (diccionario 4x4_50) de 18 x 18 mm impreso 6
+      veces (el vaso de 62 mm tiene ~195 mm de contorno: uno cada 60°, siempre hay al menos uno de
+      frente). Calibrar las dos franjas con un vaso real (medir en píxeles la boca y la mitad).
+      Medir en píxeles dónde quedan los separadores con la cinta bien puesta (referencia para el
+      desfase).
+    revision: aprobado
+    nota_revision: >
+      Aprobado por el grupo (2026-09-22). El profesor también puede cambiar los vasos: además de
+      la silueta se verifica la identidad de cada vaso con visión (marcador ArUco en los vasos
+      personalizados) y la posición de cada cinta (no se confía solo en los pasos que dio el
+      motor; desde el 2026-09-25 la mide la cámara, antes era un sensor de ranura). Grupo (2026-09-25): optimizar
+      sensores reemplazando por visión lo que se pueda; las barreras IR pasan a ser franjas de la
+      imagen de la cámara de vasos. Grupo (2026-09-25): el identificador rodea todo el vaso como
+      una cinta (no un cuadrado de un solo lado), y los vasos NO son transparentes: el contenido lo
+      comprueba un sensor que mira al interior del vaso (no celdas de carga: el grupo las prohíbe).
+      Valores provisionales hasta tener los vasos.
+
+  - numero: 7
+    titulo: Llenado por lotes de una sola denominación
+    zona: almacen
+    sensores: [7]
+    que_pasa: >
+      Cuando un tubo junta un lote completo (10 monedas por defecto,
+      ajustable desde el dashboard), el carrusel pone ese tubo sobre el agujero, se abre el
+      obturador y el lote entero cae por el embudo al vaso. Justo antes, la cámara de vasos vuelve
+      a comprobar que ahí hay un VASO (las mismas dos franjas de la verificación): si lo cambiaron
+      por una figura o lo retiraron, no se suelta nada. Así cada vaso sale con una sola denominación.
+    entra: >
+      Cantidad de monedas de cada tubo; silueta en las franjas de media altura y borde del
+      llenado y número del marcador (cámara de vasos).
+    decide: >
+      Lote listo + vaso válido y vacío → soltar el lote; el vaso queda lleno y avanza a tapa.
+      Lote listo + lo que hay no es un vaso, o es otro vaso (marcador distinto del de la
+      verificación) → no se suelta nada, el vaso se marca inválido y la
+      cinta de vasos salta a la siguiente casilla (no hay paro de línea). Sin lote listo → el
+      vaso vacío espera en llenado y las monedas siguen guardadas.
+    sale: Vaso lleno con un lote de una sola denominación, camino a la tapa.
+    mensaje: '{"t":"evt","src":"vasos","ev":"embalado","vaso":4,"denominacion":500,"cantidad":10,"valor":5000,"masa_g":71.0}'
+    como_esta_hoy: >
+      La cámara de vasos re-verifica en el llenado igual que en la entrada: una figura que
+      reemplace al vaso no recibe monedas. El tamaño del lote se cambia en caliente
+      desde el dashboard ("Monedas por vaso", entre 1 y la capacidad de un tubo); los vasos ya
+      llenos no cambian. Al final del turno hay dos opciones: "Embalar lo guardado" empaca los
+      tubos incompletos (cada vaso sigue siendo de una sola denominación), o no se hace nada y el
+      turno siguiente arranca con esas monedas en sus tubos (tabla `almacen_turno` de SQLite,
+      casilla "Arrancar con lo que quedó en los tubos"). Un vaso bueno que nunca recibió lote
+      no se cuenta como rechazo: se desecha vacío (puntos 8 y 10); que está vacío lo dice la
+      sensor del interior en la verificación, no solo el registro. Sabotaje nuevo "Vaso con algo
+      adentro" (dashboard y visor): por fuera se ve igual; lo detecta ese sensor.
+      Los vasos son genéricos: la denominación de un vaso la decide el tubo que se abre sobre él.
+      Si un tubo se llena (25 monedas, 2,5 lotes) y no hay vaso donde soltarlo (no pusieron vasos o
+      la cortina tiene congelada la cinta de vasos), la moneda siguiente de esa denominación
+      espera en la descarga (E4) y la cinta de monedas se detiene: nada se bota. Se prende la alarma "tubo
+      lleno" / "faltan vasos" en el dashboard y en el visor para que el operador ponga vasos; en
+      cuanto llega uno, se suelta primero el tubo más lleno y la línea sigue sola.
+    replicacion: >
+      Medir cuántas monedas caben de verdad en cada tubo (capacidad_tubo, hoy 25 PROVISIONAL) y
+      que el vaso personalizado aloje un lote de 10 de la moneda más grande ($1000, 26,7 mm)
+      sin rebosar. Cronometrar el obturador: abrir, caer el lote
+      por el embudo y cerrar
+      (tiempos_ms.compuerta_tubo, hoy 600 ms).
+    revision: aprobado
+    nota_revision: >
+      Grupo (2026-09-25): los vasos no serán transparentes (alguien puede poner un vaso con algo
+      adentro); eso lo revisa un sensor que mira al interior del vaso en la verificación (punto 6).
+      Aprobado por el grupo (2026-09-22). 10 monedas por vaso por defecto, pero depende de
+      cuántas monedas traiga el profesor ese día: se cambia desde el dashboard sin reiniciar.
+      Lo que queda en los tubos al final del turno se puede empacar en vasos incompletos o
+      dejar guardado para el turno siguiente (las dos opciones quedan disponibles).
+
+  - numero: 8
+    titulo: Estación de tapa
+    zona: tapa
+    sensores: [7]
+    que_pasa: >
+      Se repite la verificación EN ESE INSTANTE con la cámara de vasos (no se confía en lo
+      registrado antes). Si el vaso está lleno y sigue válido, el escape del tubo de tapas suelta
+      UNA tapa, que cae por gravedad poco más de 1 cm y se centra sola en la boca por su borde
+      cónico. La misma cámara confirma que la tapa quedó puesta: no hace falta otro sensor. Un vaso
+      vacío (nunca le cayó un lote) no se tapa: se desecha en la descarga.
+    entra: Silueta en las franjas de media altura y borde de esta estación; número del marcador; tapa vista o no.
+    decide: >
+      Lleno, válido y mismo marcador → soltar tapa y confirmarla con la cámara; si no se ve, se
+      suelta otra una vez; si tampoco, el vaso queda inválido (no se entrega sin tapa). Vacío → no
+      se tapa. Retirado, cambiado por una figura o por otro vaso igual (marcador distinto) → no se
+      suelta tapa, el vaso queda inválido.
+    sale: Vaso tapado, vaso vacío que sigue sin tapa, o marcado para rechazo.
+    mensaje: '{"t":"evt","src":"vasos","ev":"tapa","vaso":4,"media":true,"borde":false,"tapado":true,"tapa_vista":true}'
+    como_esta_hoy: >
+      El tubo de tapas termina poco más de 1 cm por encima de la boca del vaso (la tapa cae poco y
+      no se voltea) y cuelga del pórtico detrás de la cinta, fuera de la vista de la cámara.
+    replicacion: >
+      Tapas de 74 mm (pestaña del vaso + 1 mm) con borde cónico de ~3 mm. Tubo de tapas de 78 mm
+      de diámetro interior con un escape de dos dedos movido por un servo (uno retiene la pila, el
+      otro suelta la de abajo). Medir la caída real y el tiempo (tiempos_ms.tapa_caida, hoy
+      500 ms) y que la cámara distinga la tapa (color que contraste con el panel de luz).
+    revision: aprobado
+    nota_revision: >
+      Aprobado por el grupo (2026-09-25). No hace falta un sensor que confirme la caída de la tapa:
+      lo hace la cámara de vasos. Primero se decidió tapar y entregar los vasos vacíos; en la
+      misma revisión el grupo lo cambió: los vasos vacíos NO se tapan ni se prensan, se desechan,
+      para que la cinta quede libre en cada medición y cada corrida arranque de cero.
+
+  - numero: 9
+    titulo: Prensa
+    zona: tapa
+    sensores: [7]
+    que_pasa: >
+      Con la cinta quieta, un servo MG996R gira una leva excéntrica de 0 a 180 grados y la
+      devuelve: el pistón baja 13 mm (2 × 6,5 mm de excentricidad) y asienta la tapa a presión. Un
+      resorte en el vástago limita la fuerza, así que un objeto extraño no rompe nada. Antes de
+      prensar, la cámara de vasos (que también ve esta casilla) revisa que el vaso siga ahí, que
+      sea el mismo y que tenga tapa.
+    entra: Estado del vaso (tapada) + lo que ve la cámara en la casilla de prensa.
+    decide: >
+      Tapado y la cámara lo confirma → prensar. Retirado, cambiado o sin tapa → no se prensa, el
+      vaso queda inválido. Vacío → no se prensa (se desecha).
+    sale: Tapa asentada.
+    mensaje: '{"t":"cmd","id":45,"dst":"vasos","act":"prensar"}'
+    como_esta_hoy: >
+      Fuerza: con 10 kg·cm y 6,5 mm de excentricidad la leva empuja con al menos ~150 N (más cerca
+      del punto muerto de abajo); una tapa a presión de vaso pide del orden de 30-50 N, así que el
+      servo alcanza con margen y no hace falta motorreductor, puente H ni sensor de posición (el
+      servo sabe en qué ángulo quedó y siempre vuelve arriba antes de que avance la cinta).
+    replicacion: >
+      Medir la fuerza real para asentar una tapa (empujarla sobre una báscula de cocina: kg × 9,8
+      = N) y confirmar que sobra margen con el MG996R. Resorte que empiece a ceder un poco por
+      encima de esa fuerza. Cronometrar el ciclo (tiempos_ms.prensa_ciclo, hoy 1400 ms).
+    revision: aprobado
+    nota_revision: >
+      Aprobado por el grupo (2026-09-25): el actuador depende de la fuerza que se necesite; con el
+      cálculo, el servo alcanza. Los vasos vacíos no se prensan, se desechan. La visión confirma
+      la posición de la cinta en cada movimiento (reemplaza al sensor de ranura).
+
+  - numero: 10
+    titulo: Descarga de vasos
+    zona: vasos
+    sensores: [7]
+    que_pasa: >
+      En la última casilla, si el vaso llegó tapado, un empujador (servo con manivela) lo pasa de
+      lado a la canaleta de entrega: la pestaña del reborde se apoya en los rieles y el cuerpo
+      queda colgando entre ellos. Si no, no se empuja: en el siguiente avance la cinta lo deja
+      caer por su extremo a la bandeja de rechazo de vasos (un empujador solo empuja hacia un
+      lado; así no hace falta un segundo actuador). Los vasos vacíos también caen ahí
+      (desechados): que llegaron vacíos lo confirmó el sensor del interior en la verificación. Si la canaleta
+      está llena (4 vasos, el carro no ha venido), el vaso tapado ESPERA en la descarga y la cinta
+      de vasos se detiene; la cinta de monedas sigue guardando en los tubos.
+    entra: Estado del vaso y cuántos vasos hay en la canaleta.
+    decide: >
+      Tapado → empujador a la canaleta (si hay lugar; si no, espera). Vacío → desechado. Cualquier
+      otro → rechazo. Los dos últimos caen por el extremo a la UNA sola bandeja de rechazo de vasos.
+    sale: Vaso en la canaleta (colgado del reborde) o en la bandeja.
+    mensaje: '{"t":"evt","src":"vasos","ev":"descarga","vaso":4,"destino":"entrega"}'
+    como_esta_hoy: >
+      Mientras el carro no se simule (puntos 13 y 14), un "carro de reemplazo" se lleva el primer
+      vaso de la canaleta cada 6 ticks (simulacion.carro_retira_cada_ticks), para que la línea no se
+      quede trabada en las demos. Prueba automática: con la canaleta llena y sin carro, la cinta de
+      vasos se detiene y la de monedas sigue.
+    revision: aprobado
+    nota_revision: >
+      Aprobado por el grupo (2026-09-25): canaleta llena → el vaso espera en la descarga y la cinta
+      de vasos se detiene; una sola bandeja para rechazados y vacíos (la misma idea se aplicó a las
+      monedas: una sola bandeja, punto 4).
+
+  - numero: 11
+    titulo: Cortina de seguridad
+    zona: tapa
+    sensores: [8]
+    que_pasa: >
+      UN sensor láser de distancia (VL53L0X) a media altura del vaso, 65 mm sobre la cinta, en el
+      extremo de la prensa mirando hacia la tapa, del lado del operador. No mide en un rayo sino en
+      un cono de unos 25°; con el eje a 85 mm del eje de la cinta, el cono no toca los vasos, la
+      tapa, la prensa ni la cinta. Solo cuenta lo que esté más cerca que el largo de la zona (~140
+      mm): lo de más allá (los vasos de llenado y verificación) no. No es un equipo de seguridad
+      certificado: lo que se busca es que el sistema se detenga si ve una mano. La zona por
+      donde cae el lote al vaso de llenado (entre la boca del vaso y el almacén) no la cubre el
+      sensor: la vigila la cámara de vasos, que ya la ve. Ahí no tiene que haber nada; cualquier
+      objeto (una mano) cuenta igual que la cortina.
+    entra: Distancia al primer objeto dentro del cono; silueta de la cámara sobre la boca del vaso de llenado.
+    decide: >
+      Algo dentro del cono o sobre el vaso de llenado (una mano) → el almacén NO suelta ningún
+      lote, la prensa SUBE y se detiene arriba (no se queda apretando
+      donde iba), tapa y empujador se congelan y la cinta de vasos se detiene. La cinta de monedas
+      SIGUE. Al despejarse, ANTES de seguir, la cámara revisa todos los vasos que ve: si alguien se
+      llevó uno (o lo cambió), ese vaso queda inválido y sus monedas se cuentan como retiradas a mano;
+      los demás siguen donde iban. Además, como una mano puede sacar un vaso por encima sin cruzar
+      el cono, la cámara revisa en CADA avance que ninguna de sus 4 casillas haya quedado sin su
+      vaso; si falta uno, queda inválido igual.
+    sale: Bandera de cortina activa; prensa arriba.
+    mensaje: '{"t":"evt","src":"seguridad","ev":"cortina","activa":true,"prensa":"arriba"}'
+    como_esta_hoy: >
+      La simulación reparte 19 rayos dentro del cono real del sensor. Mientras la cortina está
+      activa, las monedas aceptadas se siguen guardando en sus tubos y los lotes esperan a que la
+      cinta de vasos pueda avanzar. Sabotajes: "Mano en tapa/prensa" (a media altura) y "Mano que
+      saca un vaso". Para que un error suelto de la cámara no invalide un vaso que sí está, un "no
+      está" se confirma en la misma pausa con un segundo voto de cuadros nuevos (no se espera al
+      siguiente avance: el vaso de prensa ya se habría ido a la descarga).
+    revision: aprobado
+    nota_revision: >
+      Aprobado por el usuario (2026-09-26): un solo sensor a media altura con su cono real, la
+      prensa sube y se detiene, la cámara revisa los vasos al despejarse y en cada avance, y la
+      misma cámara vigila la zona de caída del lote al vaso de llenado (sabotaje "Mano en el
+      llenado" en el visor).
+
+  - numero: 12
+    titulo: Canaleta de entrega
+    zona: canaleta
+    sensores: []
+    que_pasa: >
+      Dos rieles inclinados 15° y forrados con cinta de teflón (PTFE: el vaso desliza parejo, sin
+      quedarse pegado) sostienen el vaso colgado de la pestaña del reborde, de 8 mm (el
+      centro de masa queda abajo, no se vuelca). La pestaña queda 4,5 mm más allá del centro de
+      cada riel: un vaso corrido 1,5 mm (lo que deja el cuerpo entre los rieles) sigue apoyado.
+      La entrada es un embudo: los rieles arrancan 4 mm más separados y 3 mm por debajo de la boca
+      del vaso y se cierran en los primeros 40 mm, así un vaso que llega algo corrido o bajo cae
+      sobre ellos en vez de chocar con la punta. Los vasos se acumulan en fila contra un escape de
+      dos dedos movido por UN servo (como el del tubo de tapas).
+    entra: Vasos entregados.
+    decide: >
+      El escape solo suelta cuando el carro avisa que está en la cuna (punto 13): el dedo de
+      adelante sale y el de atrás entra entre el primer y el segundo vaso (los cuerpos dejan 16 mm
+      entre ellos aunque las bocas se toquen), así se va UN solo vaso; después se invierten y la
+      fila baja un lugar.
+    sale: Fila de vasos esperando al carro; un vaso a la vez hacia la cuna.
+    como_esta_hoy: >
+      Modelado en 3D (rieles en embudo, escape con su servo y su soporte). La simulación lleva la
+      fila (capacidad 4) y, mientras el carro no se simule, un carro de reemplazo se lleva un vaso
+      cada 6 avances; el visor anima el escape en cada salida.
+    revision: aprobado
+    nota_revision: >
+      Aprobado por el usuario (2026-09-26): rieles a 15° forrados con cinta de PTFE, entrada en embudo, pestaña del vaso de 8 mm y escape de dos dedos con un servo.
+
+  - numero: 13
+    titulo: Acople con el carro (ESP-NOW)
+    zona: canaleta
+    sensores: [12]
+    que_pasa: >
+      El carro no depende de qué tan bien siguió la línea para quedar alineado: entra de REVERSA
+      a un muelle de carga, como un camión. Dos guías en V en el piso (boca 9 cm más ancha, cierran
+      a 1,5 mm de holgura) lo centran por el costado de las ruedas, y dos topes con espuma, a los
+      lados del paso del vaso, paran la cola del chasis con la cuna justo bajo el final de la
+      canaleta. Es mecánico: repetible aunque el carro llegue con mucho error. La cuna son los
+      mismos rieles forrados con teflón, 3 mm más bajos que la canaleta y con entrada en embudo,
+      y su tope delantero tiene espuma para que el vaso no rebote. Atrás, una lengüeta con resorte
+      (trinquete pasivo, sin sensor ni servo): el vaso la empuja al entrar, ella vuelve detrás del
+      cuerpo y un pasador de tope no la deja abrirse hacia atrás, así el vaso no se sale cuando el
+      carro arranca (sobre teflón bastaría ~1 m/s²). En la meta el vaso se saca levantándolo.
+    entra: Encoders del carro, aviso por ESP-NOW e infrarrojo de la cuna.
+    decide: >
+      Secuencia segura: (1) el carro sabe que llegó porque sus encoders dejan de contar contra el
+      tope y avisa por ESP-NOW; (2) el infrarrojo de la cuna tiene que verla vacía, si no, alarma y
+      no se suelta nada; (3) el escape de dos dedos suelta UN vaso; (4) el infrarrojo de la cuna
+      confirma la carga y el carro puede arrancar. Si no lo confirma, alarma: el carro no se va y
+      no se suelta otro vaso hasta que lo vea.
+    sale: Carro cargado.
+    mensaje: '{"t":"cmd","id":46,"dst":"canaleta","act":"soltar"}'
+    como_esta_hoy: >
+      Muelle, guías, topes y cuna modelados en 3D. La simulación hace la secuencia completa con un
+      carro de reemplazo que llega cada 6 avances (eventos en_muelle, soltar y carga, alarmas
+      cuna_ocupada y carga_no_confirmada, con el error del infrarrojo de la cuna). El recorrido del
+      carro se simula en el punto 14.
+    revision: aprobado
+    nota_revision: >
+      Aprobado por el usuario (2026-09-26): muelle de carga (carro de reversa, guías en V y topes con espuma), cuna 3 mm más baja en embudo con PTFE, espuma y lengüeta trasera, y la secuencia segura de soltar.
+
+  - numero: 14
+    titulo: Ruta del carro con tres obstáculos (ida y vuelta sola)
+    zona: pista
+    sensores: [9, 10, 11, 13]
+    que_pasa: >
+      Con el vaso cargado, el carro sale del muelle siguiendo la línea negra con sus 5 infrarrojos.
+      Adelante lleva un láser VL53L0X (mide cada 33 ms, hasta ~1,2 m) y, de respaldo, el
+      ultrasónico (mide lento pero no lo engañan las superficies negras ni el sol). Con algo a
+      menos de 50 cm baja a velocidad de maniobra; cuando el láser ve el muro a menos de 200 mm en
+      3 mediciones seguidas (o el ultrasónico en 2), frena, gira
+      sobre su eje ±30° midiendo con el mismo ultrasónico y esquiva hacia el lado con más espacio
+      (si los dos están libres, siempre por la izquierda: repetible). La maniobra es "girar hacia
+      un lado y devolver el giro pasado el obstáculo": sale a 45°, pasa derecho, vuelve a 60° hacia
+      la línea. No vuelve contando pulsos: avanza hasta que el infrarrojo del centro VE la línea
+      (4 lecturas seguidas), sigue hasta que el eje de las ruedas queda sobre ella y recién ahí
+      gira. En la meta (franja negra) espera que saquen el vaso, da media vuelta sobre su eje y
+      vuelve solo esquivando los mismos muros. En la marca de giro antes del muelle da media
+      vuelta, se endereza siguiendo la línea 15 cm y entra de REVERSA al muelle (punto 13).
+    entra: 5 bits de línea (cada uno por mayoría de 3 lecturas), distancia del ultrasónico, pulsos de los encoders.
+    decide: >
+      Línea → control proporcional-derivativo, más lento en las curvas. Obstáculo → mirar a los
+      dos lados y esquivar. Franja con 4 o 5 infrarrojos → meta (a la ida) o marca de giro (a la
+      vuelta). Línea perdida → la busca girando hacia donde la vio por última vez; si no, se
+      detiene y avisa.
+    sale: Vaso en la meta; carro de vuelta en el muelle; eventos del recorrido (obstáculo, evasión, meta...).
+    mensaje: '{"t":"evt","src":"carro","ev":"evasion","lado":"izquierda","izq_mm":null,"der_mm":null}'
+    como_esta_hoy: >
+      Simulado con física real en PyBullet (sim/vehiculo_sim.py, su propio mundo): las ruedas
+      empujan el piso, los muros y el muelle son cuerpos sólidos y el vaso cabecea colgado de la
+      cuna. El control (control/vehiculo.py) es Python puro, el mismo que usaría el carro real.
+      El vaso va tomado en 4 puntos a media altura (espuma adelante, lengüeta atrás, guías con
+      PTFE a los costados) además de colgar de los rieles: no cabecea (±0,7°), así que el carro
+      va a 0,40 m/s en las rectas (antes 0,12) y hace el viaje de ida y vuelta en ~2,5 min: la
+      zona de frenado del láser lo hace llegar despacio a cada muro aunque vaya rápido. Los dos
+      sensores se simulan con su ritmo real (láser cada 33 ms, ultrasónico cada 60 ms).
+      Estabilidad: 2 ruedas motrices + rueda loca de bola (tres apoyos siempre tocan el piso y
+      gira sobre su eje sin patinar; con 4 ruedas rígidas una queda en el aire en un piso
+      desparejo y el encoder cuenta de más, y al girar las 4 patinan). Arranques y frenadas con
+      rampa de 1 m/s². Probado ida y vuelta sin errores, con los
+      errores de la configuración (motores ±5 % distintos, ruido del ultrasónico, 1 % de lecturas
+      cambiadas) y con el DOBLE: esquiva los 6 muros sin tocarlos y vuelve al muelle con menos de
+      3 mm de error. En el visor el carro se mueve con esa simulación a velocidad constante (la
+      trayectoria de cada ciclo se reproduce en su tiempo real) y deja su rastro; la pestaña Ruta
+      del dashboard muestra el mapa con el recorrido real y los eventos.
+    replicacion: >
+      La simulación encontró tres cosas que en el montaje real también pasan: (1) la maniobra
+      necesita ~30 cm antes del muro y ~35 cm después sobre recta: con muros a 30 cm de una curva
+      el carro volvía a la línea dentro de la curva y la perdía (por eso las rectas con muro son
+      de 90 cm; si la pista real del profesor es distinta, es lo primero a revisar); (2) las guías
+      del muelle no pueden empujar las llantas (el carro se traba torcido): empujan dos rodillos
+      en las esquinas traseras; (3) contra el tope, con el motor a toda potencia, la llanta patina
+      y el encoder sigue contando: se entra al muelle con PWM bajo para que el motor se ahogue.
+    revision: aprobado
+    nota_revision: >
+      Aprobado por el usuario (2026-09-26): carro de 2 ruedas + rueda loca con rodillos guía, vaso
+      tomado en 4 puntos, láser VL53L0X frontal + ultrasónico de respaldo con zona de frenado,
+      0,40 m/s en rectas, esquiva hacia el lado con más espacio, llega a la meta y vuelve solo al
+      muelle.
+
+  - numero: 15
+    titulo: Telemetría, protocolo y 3D
+    zona: todo
+    sensores: [12]
+    que_pasa: >
+      El ESP32 fijo manda cada evento por USB serial al PC (y reenvía los del carro que le
+      llegan por ESP-NOW). En el PC, el supervisor guarda todo en SQLite; el dashboard y este
+      visor 3D lo muestran en vivo. Todos los mensajes van numerados y se confirman (ack), y hay
+      latido en los dos sentidos. Contrato completo en CLAUDE.md, 10.1.
+    entra: Líneas JSON por serial a 115200 baudios; mensajes del carro por ESP-NOW.
+    decide: >
+      Comando sin ack en 300 ms: un reintento y después fallo de comunicación. El ESP32 fijo sin
+      el PC por 2 s: parada segura (cintas quietas, prensa arriba, desvío al rechazo). Carro sin
+      enlace: termina la vuelta y queda en el muelle, guardando sus mensajes. La estación suelta
+      un vaso al carro solo con el enlace vivo, un estado fresco del carro, el carro en el
+      muelle y la cuna vacía (infrarrojo 12). Ese mismo infrarrojo confirma en la meta que
+      sacaron el vaso.
+    sale: Métricas en vivo, historial, estado del enlace y visualización.
+    mensaje: '{"t":"evt","src":"carro","id":89,"ev":"estado","estado":"esperando_carga","cuna":false}'
+    como_esta_hoy: >
+      control/protocolo.py (numeración, ack, reintentos, latido y la regla de soltar vasos, con
+      pruebas). En la simulación el carro y la estación hablan por una radio simulada: el botón
+      "Cortar la radio del carro" muestra que el carro termina la vuelta, guarda sus mensajes,
+      y al reconectar llegan en orden; no se le carga otro vaso hasta que diga que la cuna está
+      vacía (prueba en tests/test_planta.py). El firmware (fase 8) implementa el mismo contrato.
+    revision: preaprobado
+  - numero: 16
+    titulo: Asistente (DeepSeek) y órdenes al carro
+    zona: pista
+    sensores: [9, 10, 11, 13]
+    que_pasa: >
+      Fase 7. En el dashboard (pestaña Asistente) se le pregunta al asistente por escrito o por
+      voz, en palabras normales, por las cifras de la corrida o por cualquier parte del proyecto,
+      y se le puede pedir que mueva el carro o la línea. Igual que en el tema 4 del repositorio,
+      la frase va a la API de DeepSeek, que responde SOLO con un JSON {"respuesta", "acciones"};
+      el programa lo valida y las órdenes permitidas van a la misma tabla `ordenes` que los
+      botones. Al carro le llegan por la radio (PC → ESP32 fijo → ESP-NOW): detenerse, avanzar,
+      retroceder, girar, ir a un punto (x, y), ir a la meta, volver al muelle o retomar la línea.
+      En el visor 3D se ve como una nube sobre el portátil (la API, por el Wi-Fi del PC) y una
+      pestaña de solo lectura con la conversación.
+    entra: >
+      Texto o voz de la persona; el estado en vivo de SQLite (totales, rechazos, vasos, carro,
+      alarmas, últimos eventos); las secciones de la documentación que tienen que ver con la
+      pregunta; y, en el carro, láser y ultrasónico al frente y los pulsos de los encoders.
+    decide: >
+      El asistente nunca inventa cifras (salen del estado; si no están, lo dice) y solo puede
+      dar órdenes de una lista blanca con rangos (avanzar hasta 1,5 m, reversa hasta 30 cm
+      porque atrás no hay sensor, girar ±180°). Una pregunta nunca mueve nada. El carro sabe
+      dónde está por odometría (encoders), que se vuelve a poner en cero cada vez que entra al
+      muelle. Antes de moverse mira el camino (al frente y a ±15°): si algo cae dentro de su
+      ancho, no se mueve (`camino_bloqueado`); si algo aparece adelante, se detiene
+      (`bloqueado`); si una rueda cuenta mucho más que la otra en una recta, algo lo sujeta y se
+      detiene (`atascado`). Para ir a la meta o volver al muelle solo usa la odometría para
+      llegar cerca de la línea; después la busca con los infrarrojos y la sigue como siempre,
+      esquivando los muros. Sin radio, la orden no le llega. Sin DeepSeek (sin clave o sin
+      internet), un intérprete local entiende las órdenes y las preguntas básicas.
+    sale: >
+      Respuesta en texto (y en voz, si se activa), órdenes en la tabla `ordenes`, eventos del
+      carro (orden, orden_cumplida, camino_bloqueado, bloqueado, atascado, ruta_retomada) y la
+      conversación en la tabla `asistente`, que leen el dashboard y el visor.
+    mensaje: '{"t":"cmd","id":57,"dst":"carro","act":"avanzar","distancia_m":0.3}'
+    como_esta_hoy: >
+      app/asistente.py (búsqueda en la documentación, estado en vivo, DeepSeek con JSON, lista
+      blanca, intérprete local, voz con SpeechRecognition y gTTS); control/vehiculo.py
+      (`ordenar`, odometría, revisión del camino, atascado); pruebas en tests/test_asistente.py
+      y tests/test_vehiculo.py, entre ellas un punto detrás de un muro (no lo toca) y, desde fuera
+      de la línea, ir a la meta y volver al muelle (20 semillas de error sin tocar muros). Falta
+      una clave de DeepSeek válida: la del tema 4 fue rechazada (401).
+    revision: pendiente

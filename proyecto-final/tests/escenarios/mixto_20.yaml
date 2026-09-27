@@ -1,0 +1,94 @@
+nombre: mixto_20
+descripcion: >
+  Escenario mixto largo (CLAUDE.md seccion 11 y criterio de la fase 3):
+  20 elementos combinando las 6 causas de rechazo de la seccion 7, dos
+  casillas vacias y 8 monedas colombianas validas cubriendo 8 de las 9
+  denominaciones de la tabla de referencia. Es el escenario contra el que
+  se valida que "la linea corre sola" y el resultado coincide con lo
+  esperado.
+
+elementos:
+  # 1
+  - tipo: boton_plastico
+    destino_esperado: rechazo
+  # 2
+  - tipo: moneda
+    clase_real: 500_nueva
+    destino_esperado: vaso
+  # 3
+  - tipo: vacia
+  # 4
+  - tipo: boton_metalico   # perforado (contornos_internos=1 por defecto)
+    metal: true
+    destino_esperado: rechazo
+  # 5
+  - tipo: moneda
+    clase_real: 50_nueva
+    destino_esperado: vaso
+  # 6
+  - tipo: boton_metalico   # fuera_de_rango
+    metal: true
+    diametro_mm: 10.0
+    circularidad: 0.99
+    contornos_internos: 0
+    destino_esperado: rechazo
+  # 7
+  - tipo: moneda
+    clase_real: 1000_nueva
+    destino_esperado: vaso
+  # 8
+  - tipo: boton_plastico
+    destino_esperado: rechazo
+  # 9
+  - tipo: boton_metalico   # no_reconocida (diametro de un euro)
+    metal: true
+    diametro_mm: 23.25
+    circularidad: 0.98
+    contornos_internos: 0
+    destino_esperado: rechazo
+  # 10
+  - tipo: moneda
+    clase_real: 100_antigua
+    destino_esperado: vaso
+  # 11
+  - tipo: bloque            # no_circular (bloque metalico a proposito)
+    metal: true
+    circularidad: 0.5
+    destino_esperado: rechazo
+  # 12
+  - tipo: moneda
+    clase_real: 500_antigua
+    destino_esperado: vaso
+  # 13
+  - tipo: vacia
+  # 14
+  - tipo: boton_plastico
+    destino_esperado: rechazo
+  # 15
+  - tipo: moneda            # incoherente: clase 200_nueva pero diametro de otra cosa
+    clase_real: 200_nueva
+    diametro_mm: 18.0
+    masa_g: 4.6
+    destino_esperado: rechazo
+  # 16
+  - tipo: moneda
+    clase_real: 200_antigua
+    destino_esperado: vaso
+  # 17
+  - tipo: boton_metalico   # no_reconocida de nuevo, otro diametro
+    metal: true
+    diametro_mm: 21.0
+    circularidad: 0.96
+    contornos_internos: 0
+    destino_esperado: rechazo
+  # 18
+  - tipo: moneda
+    clase_real: 100_nueva
+    destino_esperado: vaso
+  # 19
+  - tipo: boton_plastico
+    destino_esperado: rechazo
+  # 20
+  - tipo: moneda
+    clase_real: 50_antigua
+    destino_esperado: vaso

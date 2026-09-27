@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visor 3D de la planta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --fondo: #0e1116; --panel: rgba(18, 22, 29, 0.92); --borde: #2a313c; --texto: #e6e8eb;
+    --tenue: #8b949e; --ambar: #f2b134; --verde: #3fb68b; --rojo: #e5534b; --azul: #539bf5; --morado: #b083f0;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--fondo); color: var(--texto);
+    font-family: 'Space Grotesk', system-ui, sans-serif; overflow: hidden; }
+  #lienzo { position: fixed; inset: 0; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+
+  #barra { position: fixed; top: 12px; left: 12px; right: 12px; display: flex; gap: 8px; align-items: center;
+    flex-wrap: wrap; pointer-events: none; }
+  #barra > * { pointer-events: auto; }
+  .titulo { font-weight: 700; font-size: 1.05rem; margin-right: 6px; text-shadow: 0 1px 4px #000; }
+  .chip { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; padding: 3px 10px; border-radius: 999px;
+    border: 1px solid var(--borde); background: var(--panel); color: var(--tenue); }
+  .chip.corriendo { background: var(--verde); color: #0e1116; border-color: var(--verde); }
+  .chip.pausada { background: var(--ambar); color: #0e1116; border-color: var(--ambar); }
+  .chip.paro, .chip.error { background: var(--rojo); color: #fff; border-color: var(--rojo); }
+  .chip.terminada { background: var(--azul); color: #0e1116; border-color: var(--azul); }
+  .espacio { flex: 1; }
+  button { font-family: inherit; font-size: 0.8rem; color: var(--texto); background: var(--panel);
+    border: 1px solid var(--borde); border-radius: 7px; padding: 5px 10px; cursor: pointer; }
+  button:hover { border-color: var(--ambar); }
+  .vistas { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .rotulo-vistas { font-size: 0.68rem; color: var(--tenue); text-transform: uppercase; letter-spacing: .06em; margin-right: 2px; }
+  .grupo-vista { display: inline-flex; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; background: var(--panel); }
+  .grupo-vista button { border: none; border-radius: 0; background: transparent; padding: 5px 9px; }
+  .grupo-vista button + button { border-left: 1px solid var(--borde); }
+  .grupo-vista button:hover { background: rgba(242, 177, 52, 0.12); }
+  .grupo-vista button.activo { background: rgba(242, 177, 52, 0.22); color: var(--texto); }
+  .acciones { display: inline-flex; gap: 6px; margin-left: 10px; padding-left: 12px; border-left: 2px solid var(--borde); }
+  button.accion { font-weight: 600; border-radius: 999px; padding: 5px 14px; border: 1px solid var(--ambar); color: var(--ambar);
+    background: rgba(14, 17, 22, 0.85); }
+  button.accion.activo { background: var(--ambar); color: #0e1116; }
+  button.activo { background: var(--ambar); color: #0e1116; border-color: var(--ambar); }
+  button:disabled { opacity: 0.38; cursor: not-allowed; border-color: var(--borde); }
+  button.peligro { border-color: var(--rojo); }
+  .grupo-botones { border: 1px solid var(--borde); border-radius: 9px; padding: 7px 8px 8px; margin: 8px 0; }
+  .grupo-botones h4 { margin: 0 0 6px; font-size: 0.68rem; font-weight: 500; color: var(--tenue);
+    text-transform: uppercase; letter-spacing: .06em; }
+  .fila1, .fila2, .fila4 { display: grid; gap: 6px; }
+  .fila1 { grid-template-columns: 1fr; }
+  .fila2 { grid-template-columns: 1fr 1fr; }
+  .fila4 { grid-template-columns: repeat(4, 1fr); }
+  .fila1 button, .fila2 button, .fila4 button { width: 100%; padding: 6px 4px; }
+  .respuesta-orden { font-size: 0.8rem; min-height: 0; max-height: 0; overflow: hidden; transition: max-height .2s;
+    border-radius: 7px; margin: 0 0 8px; }
+  .respuesta-orden.visible { max-height: 60px; padding: 6px 9px; }
+  .respuesta-orden.ok { background: rgba(63, 182, 139, .15); border: 1px solid var(--verde); }
+  .respuesta-orden.no { background: rgba(242, 177, 52, .13); border: 1px solid var(--ambar); }
+
+  #panel { position: fixed; top: 56px; left: 12px; bottom: 12px; width: 370px; max-width: calc(100vw - 24px);
+    background: var(--panel); border: 1px solid var(--borde); border-radius: 12px; display: flex;
+    flex-direction: column; overflow: hidden; }
+  #panel.oculto { display: none; }
+  #pestanas { display: flex; border-bottom: 1px solid var(--borde); }
+  #pestanas button { flex: 1; border: none; border-radius: 0; background: transparent; padding: 10px 4px; color: var(--tenue); }
+  #pestanas button.activo { color: var(--ambar); background: transparent; box-shadow: inset 0 -2px 0 var(--ambar); }
+  #contenido { overflow-y: auto; padding: 12px 14px 18px; flex: 1; font-size: 0.86rem; line-height: 1.45; }
+  #contenido h3 { margin: 4px 0 8px; font-size: 1rem; }
+  .item { border: 1px solid var(--borde); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; cursor: pointer; }
+  .item:hover, .item.sel { border-color: var(--ambar); }
+  .n { font-family: 'IBM Plex Mono', monospace; color: var(--ambar); margin-right: 6px; }
+  .rev { float: right; font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--borde); color: var(--tenue); }
+  .rev.aprobado { color: var(--verde); border-color: var(--verde); }
+  .rev.cambiar { color: var(--rojo); border-color: var(--rojo); }
+  .rev.simulado { color: var(--verde); border-color: var(--verde); }
+  .rev.pendiente { color: var(--ambar); border-color: var(--ambar); }
+  .rev.preaprobado { color: var(--azul); border-color: var(--azul); }
+  .rev.efecto { color: var(--azul); border-color: var(--azul); }
+  .rev.chica { font-size: 0.62rem; padding: 0 6px; margin-left: 4px; }
+  .detalle { margin: 6px 0 12px; }
+  .detalle dt { color: var(--ambar); font-size: 0.72rem; text-transform: uppercase; letter-spacing: .05em; margin-top: 8px; }
+  .detalle dd { margin: 2px 0 0; }
+  .detalle code { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: #c9d1d9; word-break: break-all;
+    background: #07090c; border-radius: 5px; padding: 4px 6px; display: block; }
+  .led { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #30363d; margin-right: 6px; vertical-align: 1px; }
+  .led.on { background: var(--verde); box-shadow: 0 0 7px var(--verde); }
+  .led.alarma { background: var(--rojo); box-shadow: 0 0 7px var(--rojo); }
+  .tenue { color: var(--tenue); }
+  .preg { margin: 4px 0 0 16px; padding: 0; }
+
+  #aviso { position: fixed; top: 56px; right: 12px; max-width: 360px; display: none; }
+  #aviso div { background: rgba(229, 83, 75, 0.18); border: 1px solid var(--rojo); border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; font-size: 0.85rem; }
+  #aviso div.ambar { background: rgba(242, 177, 52, 0.15); border-color: var(--ambar); }
+  #eventos { position: fixed; right: 12px; bottom: 12px; width: 430px; max-width: calc(100vw - 24px); max-height: 30vh; overflow: hidden;
+    background: var(--panel); border: 1px solid var(--borde); border-radius: 10px; padding: 8px 12px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--tenue); line-height: 1.5; }
+  #eventos b { color: var(--texto); font-weight: 600; }
+  #eventos .src { color: var(--ambar); }
+  #leyendaCables { position: fixed; left: 12px; bottom: 12px; width: 360px; max-height: 45vh; overflow: auto; display: none;
+    background: var(--panel); border: 1px solid var(--borde); border-radius: 10px; padding: 8px 12px; font-size: 0.76rem; }
+  #leyendaCables .ley-titulo { font-weight: 600; margin-bottom: 4px; }
+  #leyendaCables summary { cursor: pointer; padding: 2px 0; }
+  #leyendaCables .muestra { display: inline-block; width: 18px; height: 6px; border-radius: 3px; margin-right: 7px; vertical-align: 2px;
+    border: 1px solid #555; }
+  #leyendaCables .ley-cable { margin: 6px 0 2px; font-weight: 600; font-size: 0.72rem; }
+  #leyendaCables .ley-hilo { font-size: 0.68rem; color: var(--texto); padding-left: 4px; }
+  #leyendaCables .ley-hilo b { color: var(--ambar); font-weight: 600; }
+  #leyendaCables .ley-fila { display: flex; justify-content: space-between; gap: 10px; color: var(--tenue); padding-left: 25px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; }
+  #ayuda { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); font-size: 0.72rem; color: var(--tenue);
+    background: var(--panel); border: 1px solid var(--borde); border-radius: 999px; padding: 4px 12px; white-space: nowrap; }
+  @media (max-width: 900px) {
+    #panel { top: auto; height: 45vh; width: auto; right: 12px; }
+    #eventos, #ayuda { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="lienzo"></div>
+
+<div id="barra">
+  <span class="titulo">🪙 Planta de monedas · 3D</span>
+  <span id="chipEstado" class="chip">conectando…</span>
+  <span id="chipTick" class="chip">tick —</span>
+  <span class="espacio"></span>
+  <!-- Vistas: llevan la camara a cada seccion. -->
+  <nav class="vistas" aria-label="Vistas">
+    <span class="rotulo-vistas">Ver</span>
+    <span class="grupo-vista">
+      <button data-vista="todo" title="Todo el sistema">Todo</button>
+      <button data-vista="planta" title="Las dos cintas, el almacén y el pórtico">Planta</button>
+    </span>
+    <span class="grupo-vista" title="Línea de monedas">
+      <button data-vista="monedas" title="Cinta de monedas: presencia, visión y descarga">Monedas</button>
+      <button data-vista="material" title="Sensores capacitivo e inductivo, debajo de la cinta">Material</button>
+      <button data-vista="almacen" title="Almacén tipo revólver, Hall y obturador">Almacén</button>
+    </span>
+    <span class="grupo-vista" title="Línea de vasos">
+      <button data-vista="vasos" title="Cinta de vasos: verificación, llenado, tapa, prensa y descarga">Vasos</button>
+      <button data-vista="tapa" title="Tubo de tapas, prensa y cortina de seguridad">Tapa y prensa</button>
+      <button data-vista="canaleta" title="Canaleta de entrega y muelle de carga">Canaleta</button>
+    </span>
+    <span class="grupo-vista" title="Carro">
+      <button data-vista="carro" title="El carro, donde esté ahora">Carro</button>
+      <button data-vista="pista" title="Pista con los 3 obstáculos y la meta">Pista</button>
+    </span>
+    <span class="grupo-vista">
+      <button data-vista="caja" title="Caja de control: ESP32, drivers, fuente y bornera">Caja de control</button>
+    </span>
+    <span class="grupo-vista">
+      <button data-vista="asistente" title="Lo último que respondió el asistente (solo lectura)">💬 Asistente</button>
+    </span>
+  </nav>
+  <!-- Acciones: muestran u ocultan cosas; no mueven la camara. -->
+  <span class="acciones">
+    <button id="btnCables" class="accion" title="Muestra u oculta todo el cableado">⚡ Cables</button>
+    <button id="btnPanel" class="accion activo" title="Muestra u oculta el panel lateral">☰ Panel</button>
+  </span>
+</div>
+<div id="leyendaCables"></div>
+
+<div id="panel">
+  <div id="pestanas">
+    <button data-pestana="vivo" class="activo">En vivo</button>
+    <button data-pestana="pasos">Paso a paso</button>
+    <button data-pestana="sensores">Sensores</button>
+    <button data-pestana="componentes">Componentes</button>
+  </div>
+  <div id="contenido"></div>
+</div>
+
+<div id="aviso"></div>
+<div id="eventos"></div>
+<div id="ayuda">arrastrar: girar · rueda: zoom · clic derecho: mover · clic en un sensor: ver qué hace</div>
+
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
+<script type="module" src="./visor.js"></script>
+</body>
+</html>

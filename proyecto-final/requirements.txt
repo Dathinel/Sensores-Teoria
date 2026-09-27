@@ -1,0 +1,23 @@
+pybullet
+numpy
+opencv-python
+streamlit
+plotly
+pandas
+pyserial
+pyyaml
+requests
+openai
+
+# fase 7 (asistente): la clave de DeepSeek desde .env, y voz como en el tema 4
+# (reconocimiento de Google en es-CO y respuesta hablada con gTTS)
+python-dotenv
+SpeechRecognition
+gTTS
+
+# dependencias de desarrollo (no listadas en CLAUDE.md seccion 19, necesarias
+# para correr las pruebas unitarias de las fases 1 en adelante)
+pytest
+
+# agregar tensorflow u onnxruntime solo en la fase 5, segun como se entrene
+# el modelo de vision (CLAUDE.md, seccion 19)
