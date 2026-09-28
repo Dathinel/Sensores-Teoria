@@ -143,11 +143,11 @@ todo, lo de siempre, posiblemente se quede sin tokens a mitad, pero lo sigue hac
 a tener". Plan: `~/.claude/plans/complete-todo-lo-que-snappy-liskov.md`. Medido: 3.257 mallas,
 2.629 materiales, 0,62 M triángulos; cámara near 0,005 / far 30 (causa del parpadeo).
 - [x] B. Pendientes: laptop y hub en el mapa de zonas del carro (config `puesto_pc`, el visor los lee de ahí); cable del obturador con brazo portacables (revisar su captura en F).
-- [ ] A. Rendimiento (< 500 draw calls, mismo detalle) y parpadeos (near dinámico, caras coplanares).
+- [x] A. Rendimiento (< 500 draw calls, mismo detalle) y parpadeos (near dinámico, caras coplanares).
 - [x] C. Streamlit rehecho (paquete `app/dashboard/`, mismo diseño que el visor, nada perdido).
 - [x] D. Interfaz del visor rehecha (`interfaz.js`, controles de prueba ordenados, componentes).
 - [x] E. Orden del proyecto: tests por capa (control/sim/visor/app/firmware), escenarios de un filtro en `sim/escenarios/pruebas_aisladas/`, `pytest.ini` + `tests/conftest.py`, `docs/README.md`, árbol en CLAUDE.md/README (659 pruebas pasan).
-- [ ] F. Revisión final (capturas de todo, inventarios de funciones), commit, app escondida.
+- [x] F. Revisión final (capturas de todo, inventarios de funciones), commit, app escondida.
 
 ## 3. Estado actual (2026-09-27, fin de sesión)
 

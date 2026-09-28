@@ -1098,3 +1098,38 @@ fotos); clave de DeepSeek válida (la dada da 401).
   nuevas tapaban lo que mostraban.
 - Pendiente: `zonas_carro` no incluye el portátil ni el hub (en el piso, y 0,34–0,47).
 
+
+## 2026-09-28 — Visor liviano y sin parpadeos, interfaz y Streamlit rehechos, proyecto ordenado
+
+- **Rendimiento del visor** (sin quitar detalle): `piezas/optimizar.js` une las mallas quietas por
+  componente y aspecto de material (color por vértice) y hace mallas "solo sombra": de 3.221 mallas
+  a 714 y de ~3.000 a **~440 draw calls** en la vista Todo (con sombras, de ~5.200 a ~580). El
+  resaltado por componente, el clic en sensores y las animaciones siguen funcionando.
+- **Parpadeo**: dos causas. Precisión de profundidad (cámara con near 5 mm / far 30 m) → plano
+  cercano dinámico `clamp(distancia/40, 2 mm, 8 cm)` + `polygonOffset` en serigrafías; y caras
+  EXACTAMENTE coplanares (teclado de la laptop contra el canto de la cubierta, mortero de los muros
+  contra las puntas de los ladrillos, canaletas de la caja, difusor, bandejas, piso del gabinete,
+  fuente) → separadas 0,2-0,5 mm. Rótulos de la laptop y la nube con prueba de profundidad (se veían
+  encima de otras tomas).
+- **Interfaz del visor rehecha** (`interfaz.js` + `estilo.css`, ~550 líneas menos en `visor.js`):
+  barra fija, vistas en la parte libre, pestaña **Pruebas** con todos los controles en orden
+  (Línea · Probar un filtro · Colocar una pieza · Sabotajes · Carro y radio · Fin de turno), respuesta
+  del supervisor al pie, componentes agrupados por zona. Inventario verificado en
+  `docs/interfaz-visor.md`. El portable sigue los imports de `visor.js` solo.
+- **Streamlit rehecho** como paquete `app/dashboard/` (entrada `inicio.py`, `estilo.py` con el
+  sistema de diseño del visor, `datos.py`, una pestaña por módulo, pestaña **Pruebas**); solo se
+  refresca la pestaña abierta; Space Grotesk por fin aplicada. 70 funciones inventariadas en
+  `docs/interfaz-dashboard.md`; 38 pruebas de AppTest.
+- **Pendientes**: el portátil y el hub en el mapa del carro (`config/parametros.yaml: puesto_pc`,
+  que también usa el visor); brazo portacables para el cable del obturador.
+- **Orden**: `tests/` por capa (`control/`, `sim/`, `visor/`, `app/`, `firmware/`), escenarios de un
+  filtro en `sim/escenarios/pruebas_aisladas/`, `pytest.ini`, `docs/README.md` (índice). Al moverlos
+  apareció que `Supervisor` no cierra su conexión de PyBullet (`sim/mundo.py` usa la conexión 0):
+  `tests/conftest.py` las cierra entre archivos (de ~6 a ~2 min); el `cerrar()` del supervisor queda
+  pendiente.
+- **Revisión final**: vista Asistente negra (la cámara quedaba dentro del NEMA17), clic en el sensor
+  del interior (un campo transparente le robaba el clic), motivos de botones grises, textos de
+  botones cortados en el Streamlit y leyenda de cables → corregidos. 13/13 sensores con clic real.
+- Queda (menor): vista Material y foco de los M18 entre vigas; etiquetas 3D bajo la barra de vistas
+  cerca del borde; a 900 px con la barra lateral abierta el mapa del carro se aplasta; tablas de
+  Montaje con desplazamiento horizontal; aviso del micrófono de Streamlit en la primera carga.

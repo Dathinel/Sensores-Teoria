@@ -375,10 +375,17 @@ export function crearInterfaz(ctx) {
     if (!selF.options.length && demo()) selF.innerHTML = '<option>solo con la simulación en vivo</option>';
     if (!selP.options.length && demo()) selP.innerHTML = '<option>solo con la simulación en vivo</option>';
     selF.disabled = selP.disabled = demo();
+    // El motivo real primero: con la corrida terminada, "Mano sobre el llenado" decia "ya hay una mano"
+    // y "Cortar la radio" decia "sin carro simulado", cuando lo que falta es que la linea corra.
+    const motivo = (k) => {
+      if (k === 'carro' && e.carro && e.carro.radio) return 'La línea no está corriendo ni en pausa';
+      if (['vaso_vl', 'vaso_tp', 'sin_mano'].includes(k) && !corre) return MOTIVO.corriendo;
+      return MOTIVO[k];
+    };
     $$('[data-pide]', raiz).forEach((b) => {
       const ok = demo() ? false : puede[b.dataset.pide];
       b.disabled = !ok;
-      b.title = ok ? '' : (demo() ? 'Demo grabada' : MOTIVO[b.dataset.pide]);
+      b.title = ok ? '' : (demo() ? 'Demo grabada' : motivo(b.dataset.pide));
     });
     const orden = { pausar: corre, reanudar: e.linea === 'pausada', paro: corre || e.linea === 'pausada' };
     $$('[data-orden]', raiz).forEach((b) => {
@@ -801,7 +808,7 @@ export function crearInterfaz(ctx) {
     for (const c of campo) (porTipo[c.tipo] ||= []).push(c);
     for (const [tipo, lista] of Object.entries(porTipo)) {
       const t = tipos[tipo];
-      html += `<details><summary><span class="muestra" style="background:${hex(t.color)}"></span>${esc(t.nombre)} · ${lista.length}</summary>`;
+      html += `<details><summary><span class="muestra" style="background:${hex(t.color)}"></span>${esc(t.nombre)}<span class="cuenta-ley">&nbsp;·&nbsp;${lista.length}</span></summary>`;
       html += lista.map((c) => `<div class="ley-fila">${esc(c.nombre)}<span>${m(c.largo)} m</span></div>`).join('');
       html += '</details>';
     }

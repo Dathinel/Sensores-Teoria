@@ -229,6 +229,18 @@ CSS = f"""
 /* --- widgets de Streamlit, afinados ------------------------------------------ */
 .stButton button, .stDownloadButton button {{ border-radius:8px; font-weight:500; }}
 .stButton button[kind="primary"] {{ color:#1b1300; font-weight:600; }}
+/* Texto de los botones: pasa a otra línea en vez de cortarse con "…" (a 900 px el panel "Mover el
+   carro" quedaba solo con íconos y los sabotajes y ejemplos del asistente cortados; 2026-09-28). */
+.stButton button [data-testid="stMarkdownContainer"],
+.stButton button [data-testid="stMarkdownContainer"] p {{ white-space:normal; overflow:visible; text-overflow:clip; }}
+.stButton button [data-testid="stMarkdownContainer"] {{ line-height:1.25; overflow-wrap:normal; word-break:normal; }}
+/* Y en los paneles angostos, cada par de botones o de casillas pasa a una columna en vez de apretarse
+   (pantalla de ~900 px con la barra lateral abierta). */
+.st-key-panel_ordenes [data-testid="stHorizontalBlock"], .st-key-panel_sabotajes [data-testid="stHorizontalBlock"],
+[data-testid="stHorizontalBlock"]:not(:has([data-testid="stHorizontalBlock"])):has(.st-key-panel_filtro) {{ flex-wrap:wrap; }}
+.st-key-panel_ordenes [data-testid="stColumn"] {{ flex:1 1 130px; min-width:130px; }}
+.st-key-panel_sabotajes [data-testid="stColumn"] {{ flex:1 1 170px; min-width:170px; }}
+[data-testid="stHorizontalBlock"]:not(:has([data-testid="stHorizontalBlock"])):has(.st-key-panel_filtro) > [data-testid="stColumn"] {{ flex:1 1 220px; min-width:220px; }}
 [class*="st-key-paro"] button {{ border-color:rgba(229,83,75,.7); color:#ff8a80; }}
 [class*="st-key-paro"] button:hover:not(:disabled) {{ background:var(--rojo); color:#fff; border-color:var(--rojo); }}
 [data-testid="stExpander"] details {{ border-color:var(--borde); border-radius:var(--r); }}

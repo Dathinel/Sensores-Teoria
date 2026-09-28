@@ -3022,6 +3022,9 @@ function construirLaptop() {
     [1, 2].forEach((i) => pinSuelto(`pc.USB${i}`, escena, pc.getObjectByName(`pin_pc_USB${i}`).getWorldPosition(new THREE.Vector3()),
       new THREE.Vector3(1, 0, 0), 'usb'));
     const etPc = etiqueta('Portátil ASUS TUF Gaming A15 · dibujado ×1,5 para leer la pantalla', { alto: 0.012, alcance: 1.2 });
+    // Detras de la planta: con depthTest la planta la tapa; sin el, el rotulo se veia encima de
+    // las tomas de la cinta y del material (2026-09-28).
+    etPc.material.depthTest = true;
     escena.add(etPc);
     const puntaTapa = d.camara.getWorldPosition(new THREE.Vector3());
     etPc.position.copy(puntaTapa).add(new THREE.Vector3(-0.22, 0.05, 0));
@@ -3181,6 +3184,9 @@ function construirLaptop() {
     pinSuelto(`pc.USB${i + 1}`, escena, w, new THREE.Vector3(1, 0, 0), 'usb');
   });
   const etPc = etiqueta('Portátil ASUS TUF Gaming A15 · dibujado ×1,5 para leer la pantalla', { alto: 0.012, alcance: 1.2 });
+  // Detras de la planta: con depthTest la planta la tapa; sin el, el rotulo se veia encima de
+  // las tomas de la cinta y del material (2026-09-28).
+  etPc.material.depthTest = true;
   escena.add(etPc);
   const puntaTapa = new THREE.Vector3();
   cam.getWorldPosition(puntaTapa);
@@ -3219,14 +3225,23 @@ function construirEnlaceAsistente() {
   paquete.visible = false;
   grupo.add(paquete);
   const et = etiqueta('☁ API de DeepSeek (internet)', { alto: 0.014, alcance: 1.8, borde: '#539bf5' });
+  // Detras de la planta: con depthTest la planta la tapa; sin el, el rotulo se veia encima de
+  // las tomas de la cinta y del material (2026-09-28).
+  et.material.depthTest = true;
   et.position.copy(centro).add(new THREE.Vector3(0, 0.085, 0));
   grupo.add(et);
   // La misma etiqueta sin internet, en el mismo lugar: se muestra una u otra, nunca las dos.
   const etSinRed = etiqueta('☁ API de DeepSeek · sin internet', { alto: 0.014, alcance: 1.8, borde: '#e5534b', color: '#ffb4ae' });
+  // Detras de la planta: con depthTest la planta la tapa; sin el, el rotulo se veia encima de
+  // las tomas de la cinta y del material (2026-09-28).
+  etSinRed.material.depthTest = true;
   etSinRed.position.copy(et.position);
   etSinRed.userData.oculta = true;
   grupo.add(etSinRed);
   const etW = etiqueta('Wi-Fi del portátil (el carro usa ESP-NOW)', { alto: 0.009, alcance: 1.0, color: '#8b949e' });
+  // Detras de la planta: con depthTest la planta la tapa; sin el, el rotulo se veia encima de
+  // las tomas de la cinta y del material (2026-09-28).
+  etW.material.depthTest = true;
   etW.position.copy(a.clone().lerp(b, 0.5)).add(new THREE.Vector3(0.1, 0, 0));
   grupo.add(etW);
   escena.add(grupo);
@@ -5042,9 +5057,11 @@ function vista(nombre) {
     // Desde arriba: en diagonal desde el operador, la cinta de vasos remodelada (tubo de tapas,
     // prensa, portico) quedaba en medio y tapaba la caja (2026-09-28).
     caja: [Vxyz(P.caja.bx, P.caja.by, 0.02), new THREE.Vector3(0, 0.45, 0.02)],
-    // De frente a la pantalla de la laptop (la pantalla mira hacia +z de three).
+    // De frente a la pantalla de la laptop (la pantalla mira hacia +z de three), ~9° mas desde
+    // arriba que su normal: justo de frente, al correr la toma de lado por el panel, la camara
+    // caia DENTRO del NEMA17 de la cinta y la pantalla se veia negra (2026-09-28).
     asistente: [P.asistente ? P.asistente.panel.getWorldPosition(new THREE.Vector3()) : centroP,
-      new THREE.Vector3(0, 0.72 * Math.sin(LAPTOP.apertura), 0.72 * Math.cos(LAPTOP.apertura))],
+      new THREE.Vector3(0, 0.72 * Math.sin(LAPTOP.apertura + 0.16), 0.72 * Math.cos(LAPTOP.apertura + 0.16))],
     carro: [P.carro ? P.carro.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.04, 0)) : centroP,
       // ~0,6 m: el carro entero con su vaso y un poco de pista (a 0,3 m quedaba demasiado cerca).
       new THREE.Vector3(0.33, 0.29, 0.42)],
@@ -5119,7 +5136,11 @@ renderer.domElement.addEventListener('click', (ev) => {
   const golpes = rayo.intersectObjects(escena.children, true);
   // Lo MAS CERCANO de los dos (antes ganaba la laptop aunque estuviera detras: en la vista
   // Monedas, clic en un sensor de la cinta llevaba al asistente).
-  const golpe = golpes.find((g) => g.object.visible && (g.object.userData.asistente || g.object.userData.sensorId));
+  // Los campos de vision (conos y volumenes casi transparentes) solo cuentan si no hay una pieza
+  // solida: el campo de la camara de vasos tapaba al VL53L0X del interior (2026-09-28).
+  const util = (g) => g.object.visible && (g.object.userData.asistente || g.object.userData.sensorId);
+  const fantasma = (g) => g.object.userData.campo || (g.object.material && g.object.material.transparent && g.object.material.opacity < 0.5);
+  const golpe = golpes.find((g) => util(g) && !fantasma(g)) || golpes.find(util);
   if (!golpe) return;
   if (golpe.object.userData.asistente) return vista('asistente');
   ui.seleccionarSensor(golpe.object.userData.sensorId, true);

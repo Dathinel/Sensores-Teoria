@@ -325,6 +325,7 @@ code { font: var(--t-xs)/1.5 var(--mono); color: var(--suave); }
 #leyendaCables .cuerpo { font-size: var(--t-s); }
 #leyendaCables summary { cursor: pointer; padding: 3px 0; }
 #leyendaCables .muestra { display: inline-block; width: 18px; height: 6px; border-radius: 3px; margin-right: 7px; vertical-align: 2px; border: 1px solid #555; }
+#leyendaCables .cuenta-ley { white-space: nowrap; }
 #leyendaCables .ley-cable { margin: 8px 0 2px; font-weight: 600; font-size: var(--t-xs); }
 #leyendaCables .ley-hilo { font-size: var(--t-xs); color: var(--suave); padding-left: 4px; }
 #leyendaCables .ley-hilo b { color: var(--ambar); font-weight: 600; }

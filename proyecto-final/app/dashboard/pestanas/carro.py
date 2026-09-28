@@ -19,7 +19,8 @@ from ..textos import ESTADO_CARRO, NOMBRE_EVENTO_RUTA
 
 def pestana() -> None:
     estado_del_carro()
-    izq, der = st.columns([2, 1], gap="large")
+    # 3:2 (antes 2:1): con 2:1 el panel de órdenes cortaba el texto de sus botones.
+    izq, der = st.columns([3, 2], gap="large")
     with izq:
         mapa()
     with der:
