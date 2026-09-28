@@ -39,7 +39,8 @@ def _cerrar_instancia_anterior(puertos: list[int]) -> None:
         f"Get-NetTCPConnection -LocalPort {lista} -State Listen -ErrorAction SilentlyContinue | "
         "ForEach-Object { $p = Get-CimInstance Win32_Process -Filter \"ProcessId=$($_.OwningProcess)\"; "
         f"if ($p.CommandLine -and $p.CommandLine.Contains('{raiz}') -and "
-        "($p.CommandLine.Contains('app.supervisor') -or $p.CommandLine.Contains('app/dashboard.py'))) { "
+        "($p.CommandLine.Contains('app.supervisor') -or $p.CommandLine.Contains('app/dashboard'))) { "
+        # 'app/dashboard' reconoce el dashboard viejo (app/dashboard.py) y el nuevo (app/dashboard/inicio.py).
         # Con el entorno virtual hay un proceso intermedio (el python.exe de
         # entorno/Scripts relanza al real), asi que se sube hasta 4 niveles
         # buscando el app.lanzar; nunca el de esta misma corrida.
@@ -98,7 +99,7 @@ def main() -> None:
     cmd_supervisor = [sys.executable, "-m", "app.supervisor"]
     if args.auto:
         cmd_supervisor += ["--auto", args.auto]
-    cmd_dashboard = [sys.executable, "-m", "streamlit", "run", "app/dashboard.py",
+    cmd_dashboard = [sys.executable, "-m", "streamlit", "run", "app/dashboard/inicio.py",
                      "--server.port", str(args.puerto)]
 
     comandos = {"supervisor": cmd_supervisor, "dashboard": cmd_dashboard}

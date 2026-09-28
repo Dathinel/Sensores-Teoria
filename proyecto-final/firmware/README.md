@@ -121,7 +121,7 @@ Los dos buses I2C: G21/G22 (PCA9685 en el fijo, láser frontal en el carro) y G1
   emulada** (el mismo `estacion.py` con hardware falso). Muestra la telemetría, los mensajes
   perdidos y la **última línea cruda**: si no cambia, el ESP32 no está mandando nada; si cambia
   pero no se entiende, es formato, no cables.
-- `pytest tests/test_firmware.py`: compila todo con mpy-cross y prueba la estación, el carro
+- `pytest tests/firmware/test_firmware.py`: compila todo con mpy-cross y prueba la estación, el carro
   (con el `ControlCarro` real) y el puente de punta a punta.
 
 ## Valores provisionales

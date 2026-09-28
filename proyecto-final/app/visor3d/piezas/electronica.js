@@ -862,7 +862,8 @@ export function crearFuenteLRS150(opciones = {}) {
   for (const s of [-1, 1]) tapa.add(caja(lt * MM, 1.0 * MM, (H - 1.2) * MM, 0xb9bec6, Pm(-L / 2 + lt / 2, s * (W / 2 - 0.5), 1.2 + (H - 1.2) / 2), { metalness: 0.7, roughness: 0.4 }));
   tapa.add(caja(1.0 * MM, W * MM, (H - 1.2) * MM, 0xb9bec6, Pm(-L / 2 + 0.5, 0, 1.2 + (H - 1.2) / 2), { metalness: 0.7, roughness: 0.4 }));
   g.add(tapa);
-  _cj(g, 1.0, W - 2, H - 1.2, 0x2a2e33, xTapa, 0, 1.2 + (H - 1.2) / 2, {});                      // frente interior (oscuro)
+  // Frente interior (oscuro), 0,3 mm por debajo de la tapa: arriba quedaban en el mismo plano.
+  _cj(g, 1.0, W - 2, H - 1.5, 0x2a2e33, xTapa, 0, 1.2 + (H - 1.5) / 2, {});
   // Bornera de barrera.
   const nombres = ['L', 'N', 'PE', '-V1', '-V2', '+V1', '+V2'];
   _cj(g, 13, 70, 12, 0x151515, xB, 0, 1.2 + 6, PLASTICO, 'bornera');
@@ -1266,12 +1267,12 @@ export function crearServo(opciones = {}) {
     geo.rotateX(-Math.PI / 2);
     const m = new THREE.Mesh(geo, mat(blanco, PLASTICO)); m.position.copy(Pm(0, 0, zBrazo - hC / 2)); b.add(m);
     const nAg = Math.max(3, Math.round(largo / 3.2));
-    for (let i = 1; i < nAg; i++) b.add(cilindro(0.45 * MM, (hC + 0.1) * MM, 0x2a2a2a, Pm(largo * i / nAg + 1.5, 0, zBrazo), {}, 8));
+    for (let i = 1; i < nAg; i++) b.add(cilindro(0.45 * MM, (hC + 0.3) * MM, 0x2a2a2a, Pm(largo * i / nAg + 1.5, 0, zBrazo), {}, 8));
     c.add(b);
   };
   if (cuerno === 'disco') {
     c.add(cilindro((d.brazo * 0.55) * MM, hC * MM, blanco, Pm(0, 0, zBrazo), PLASTICO, 40));
-    for (let i = 0; i < 8; i++) c.add(cilindro(0.5 * MM, (hC + 0.1) * MM, 0x2a2a2a, Pm(Math.cos(i * Math.PI / 4) * d.brazo * 0.42, Math.sin(i * Math.PI / 4) * d.brazo * 0.42, zBrazo), {}, 8));
+    for (let i = 0; i < 8; i++) c.add(cilindro(0.5 * MM, (hC + 0.3) * MM, 0x2a2a2a, Pm(Math.cos(i * Math.PI / 4) * d.brazo * 0.42, Math.sin(i * Math.PI / 4) * d.brazo * 0.42, zBrazo), {}, 8));
   } else {
     brazo(0, d.brazo);
     if (cuerno === 'doble' || cuerno === 'cruz') brazo(Math.PI, d.brazo * 0.85);

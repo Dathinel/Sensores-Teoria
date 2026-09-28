@@ -1,8 +1,9 @@
 """Cada filtro por separado y el escenario mixto de 20 elementos (CLAUDE.md,
 seccion 16, fase 3): corridos en la planta completa, en modo DIRECT y con la
 camara oraculo sin ruido, cada elemento tiene que terminar donde dice el
-escenario. Los escenarios estan en tests/escenarios/ (la interfaz solo
-muestra la prueba completa)."""
+escenario. Los escenarios estan en sim/escenarios/pruebas_aisladas/ (la
+interfaz solo los corre como "prueba de un filtro"; la corrida normal es la
+prueba completa)."""
 
 import pytest
 

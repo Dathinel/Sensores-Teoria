@@ -327,7 +327,7 @@ vehiculo:
   reversa_tope_pwm_normal_mm: 50
   # Boca del muelle: cuanto avanza el carro desde el tope hasta que su cola queda en la boca de las
   # guias en V (rectas hasta pasar las ruedas + 20 cm de V; mismas medidas que sim/vehiculo_sim.py,
-  # lo revisa tests/test_vehiculo.py). De ahi hacia adentro la reversa NO corrige el rumbo con los
+  # lo revisa tests/control/test_vehiculo.py). De ahi hacia adentro la reversa NO corrige el rumbo con los
   # pulsos: la centra la guia (2026-09-27: corrigiendo adentro de la V se trababa torcido).
   # El margen cubre el error de la odometria (se pone en su lugar en la marca de giro). PROVISIONAL.
   boca_muelle_mm: 305
@@ -355,6 +355,17 @@ zonas_carro:
   # PROVISIONAL: piso libre alrededor de la pista (desde el borde de la pista) por el que el carro
   # puede andar por orden. Depende del salon: medirlo el dia de la sustentacion.
   margen_zona_libre_mm: 300
+
+# Puesto del PC en el piso, al costado de la planta (2026-09-28): el portatil (ASUS TUF A15 de
+# 359 x 256 mm, dibujado x1,5 en el visor para leer la pantalla) y el hub USB (100 x 35 mm). Los usa
+# el visor para dibujarlos y el mapa del carro (`zonas_carro`) para no mandarlo encima de ellos.
+# Medidas del DIBUJO (la huella real del portatil es mas chica: el mapa queda del lado seguro).
+puesto_pc:
+  laptop_centro_mm: [0, 535]
+  laptop_tamano_mm: [539, 384]       # ancho (x) y fondo (y), ya x1,5
+  hub_centro_mm: [360, 330]
+  hub_tamano_mm: [100, 35]
+  margen_mm: 30                      # holgura del carro alrededor (cables al piso incluidos)
 
 # ---------------------------------------------------------------------
 # REPLICACION EN LA VIDA REAL (docs/replicacion.md se genera de aqui).

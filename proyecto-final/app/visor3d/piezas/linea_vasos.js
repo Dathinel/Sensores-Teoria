@@ -524,7 +524,9 @@ export function crearPanelLuz(o = {}) {
   const Lx = (o.largo ?? 0.33) / MM, Hz = (o.alto ?? 0.1) / MM;
   const g = new THREE.Group();
   g.name = 'panel_luz';
-  const dif = cjL(g, -Lx / 2, Lx / 2, 0, 3, -Hz / 2, Hz / 2, 0xf4f7fb, { emissive: 0xeaf2ff, emissiveIntensity: 0.55, roughness: 0.9 }, 'difusor');
+  // El difusor queda 0,3 mm adentro del marco en los cantos y 0,2 mm antes de su cara de atras:
+  // con las caras en el mismo plano, la tarjeta de video las mezclaba (parpadeo, 2026-09-28).
+  const dif = cjL(g, -Lx / 2 + 0.3, Lx / 2 - 0.3, 0, 2.8, -Hz / 2 + 0.3, Hz / 2 - 0.3, 0xf4f7fb, { emissive: 0xeaf2ff, emissiveIntensity: 0.55, roughness: 0.9 }, 'difusor');
   dif.receiveShadow = false;
   const m = (x0, x1, z0, z1) => cjL(g, x0, x1, -0.8, 3, z0, z1, COLOR.aluminio, ALU);
   m(-Lx / 2, Lx / 2, Hz / 2 - 5, Hz / 2);

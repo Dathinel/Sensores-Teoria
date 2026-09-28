@@ -1,5 +1,5 @@
 """Batería de pruebas REALES del asistente (usuario, 2026-09-27: "pruebas adicionales a la IA
-en local ... probar muchas más variables"). A diferencia de tests/test_asistente.py (que usa
+en local ... probar muchas más variables"). A diferencia de tests/app/test_asistente.py (que usa
 clientes falsos y no necesita nada instalado), esto le pregunta de verdad al proveedor elegido y
 revisa cada respuesta contra la base de datos y la documentación.
 

@@ -1,5 +1,5 @@
 # Logica del ESP32 FIJO (fase 8). MicroPython en la placa; CPython en las
-# pruebas del PC (tests/test_firmware.py) con un hardware falso.
+# pruebas del PC (tests/firmware/test_firmware.py) con un hardware falso.
 #
 # Este archivo NO toca pines: recibe un objeto `hw` (firmware/fijo/hw.py en la
 # placa) que sabe mover motores y leer sensores. Aqui solo vive la decision:

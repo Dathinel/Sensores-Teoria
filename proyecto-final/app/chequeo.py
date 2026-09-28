@@ -172,8 +172,9 @@ def archivos() -> list[tuple[str, str, str]]:
     else:
         out.append((BIEN, "Base de datos", "se crea sola al arrancar"))
     portable = RAIZ / "visor-portable.html"
-    fuentes = [RAIZ / "app" / "visor3d" / n for n in ("visor.js", "index.html")] + \
-        list((RAIZ / "app" / "visor3d" / "demo").glob("*.json"))
+    visor = RAIZ / "app" / "visor3d"
+    fuentes = [visor / "index.html"] + list(visor.glob("*.js")) + list(visor.glob("*.css")) + \
+        list((visor / "piezas").glob("*.js")) + list((visor / "demo").glob("*.json"))
     if not portable.exists():
         out.append((AVISO, "visor-portable.html", "no está: lo arma visor.bat (o `python -m app.portable`)"))
     elif portable.stat().st_mtime < max(f.stat().st_mtime for f in fuentes):

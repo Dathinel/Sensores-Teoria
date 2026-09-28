@@ -3,7 +3,7 @@
 
 # Conexiones (pin a pin)
 
-Fuente única: `sim/conexiones.py`. De ahí salen los cables del visor 3D (botón **Cables**) y esta tabla; `tests/test_conexiones.py` verifica que cada pin exista, que ningún pin de header reciba dos hilos, que los bornes lleven como mucho dos y que los GPIO sean los de la tabla de pines de [revision-final.md](revision-final.md).
+Fuente única: `sim/conexiones.py`. De ahí salen los cables del visor 3D (botón **Cables**) y esta tabla; `tests/sim/test_conexiones.py` verifica que cada pin exista, que ningún pin de header reciba dos hilos, que los bornes lleven como mucho dos y que los GPIO sean los de la tabla de pines de [revision-final.md](revision-final.md).
 
 Convenciones: placas GVS con el jumper en 3,3 V (**G** = GND, **V** = 3,3 V, **S** = señal del GPIO). Bornera X2 con puentes 2-3 (+12 V sensores), 5-6 (+5 V) y 7 a 13 (GND en estrella).
 

@@ -380,8 +380,10 @@ Esta separación no es negociable.
 
 Reorganizada el 2026-09-26 a pedido del usuario: solo lo que se usa. Lo que se visualiza
 es el visor 3D (`visor.bat`); el dashboard de Streamlit se mantiene porque lo pide el
-enunciado. Las carpetas de fases futuras (firmware/, vision/, cad/, docs de planos y
-esquemas) se crean cuando empiece esa fase, no antes.
+enunciado. Las carpetas de fases futuras (cad/, docs de planos y esquemas) se crean cuando
+empiece esa fase, no antes. Ordenada otra vez el 2026-09-28: `tests/` por capa, los escenarios
+de un solo filtro en `sim/escenarios/pruebas_aisladas/`, `pytest.ini` en vez del `conftest.py` de la raíz
+y un índice de `docs/` (`docs/README.md`).
 
 ```
 /
@@ -390,16 +392,23 @@ esquemas) se crean cuando empiece esa fase, no antes.
   README.md                     resumen público y cómo verlo
   visor.bat                     doble clic: abre visor-portable.html y arranca la simulación por detrás
   visor-portable.html           visor en UN archivo (demo embebida); pasa solo al vivo (generado)
+  instalar.bat                  deja todo listo en un PC nuevo (entorno, firmware, Ollama, Whisper, chequeo)
   .env.example                  cómo poner DEEPSEEK_API_KEY (el .env real queda fuera de git)
-  requirements.txt
+  requirements.txt              dependencias; requirements-lock.txt: versiones exactas con las que se probó
+  pytest.ini                    testpaths = tests y pythonpath = . (la raíz importable sin instalar nada)
+  datos/                        planta.db, la base SQLite local (fuera de git)
   config/parametros.yaml        umbrales, valores físicos, tiempos y errores de sensores
   config/monedas.yaml           tabla de monedas: 4 generaciones (sección 6)
   config/precios.yaml           precio en Colombia de cada componente + ahorros propuestos (→ docs/costos.md)
   .streamlit/config.toml        tema del dashboard
-  docs/
+  docs/                         índice en docs/README.md
     paso-a-paso.yaml            los 17 puntos con su estado de revisión (fuente única)
     paso-a-paso.md, sensores.md, componentes.md, replicacion.md, conexiones.md   generados (python -m app.documentos)
+    costos.md                   generado desde config/precios.yaml; pruebas-asistente.md: python -m app.evaluar_asistente
     bitacora.md                 avance y decisiones por sesión
+    revision-final.md           revisión total del diseño antes del protocolo
+    interfaz-visor.md, interfaz-dashboard.md   inventarios de funciones de las dos interfaces
+    capturas/                   capturas que usa el README.md
     enunciado/                  la guia del parcial (segundo-parcial-umng.pdf) y sus figuras, numeradas; README.md
   control/                      lógica pura (sin PyBullet ni pyserial)
     hal/interfaces.py           clases abstractas de sensores y actuadores
@@ -423,15 +432,26 @@ esquemas) se crean cuando empiece esa fase, no antes.
     geometria.py                geometría de todo el sistema para el visor 3D
     catalogos.py                sensores numerados y lista de materiales (sin dependencias)
     conexiones.py               conexionado pin a pin: módulos, pines, cada hilo (fuente única)
-    carga_escenarios.py         lectura de escenarios YAML
-    escenarios/                 prueba_completa.yaml (la única prueba de la interfaz)
+    carga_escenarios.py         lectura de escenarios YAML, pruebas de un filtro y piezas sueltas
+    escenarios/                 prueba_completa.yaml (la corrida normal de la interfaz)
+      pruebas_aisladas/         un escenario por filtro + mixto_20 (pytest y "probar un filtro")
+    urdf/                       las cintas en URDF
   app/
     lanzar.py                   supervisor + dashboard (lo usa visor.bat)
     supervisor.py               corre la simulación, escribe SQLite, sirve el visor
     servidor.py                 HTTP del supervisor: visor 3D + /api/estado (127.0.0.1)
-    visor3d/                    visor 3D en Three.js (vendor/ local, sin CDN; demo/ grabada)
+    visor3d/                    visor 3D en Three.js (vendor/ local, sin CDN; demo/ grabada); inventario en docs/interfaz-visor.md
+      index.html, visor.js      página y escena: cámara, render, optimización, animación
+      interfaz.js, estilo.css   el panel (pestañas, avisos, controles de prueba en un solo lugar) y su diseño
       piezas/                   piezas reutilizables (una por módulo; copia en Blender with claude/piezas-threejs)
-    dashboard.py                aplicación Streamlit (incluye la pestaña Asistente y los botones de órdenes al carro)
+    dashboard/                  aplicación Streamlit (streamlit run app/dashboard/inicio.py); inventario en docs/interfaz-dashboard.md
+      inicio.py                 entrada: cabecera, barra lateral y 9 pestañas (solo se dibuja la abierta)
+      estilo.py                 sistema de diseño (el del visor): colores, CSS, tarjetas, chips, avisos, tema de Plotly
+      datos.py, textos.py       consultas a SQLite/supervisor y las frases simples de cada evento
+      cabecera.py, controles.py avisos grandes (no en vivo, emulado, sin internet) y barra lateral (manejar la línea)
+      dibujos.py                cintas, almacén y vasos en HTML
+      pestanas/                 una por módulo; `pruebas.py` junta probar un filtro, colocar pieza, sabotajes y fin de turno
+    chequeo.py                  revisión previa a la sustentación (python -m app.chequeo)
     asistente.py                fase 7: DeepSeek (JSON), búsqueda en la documentación, estado en vivo, intérprete local, voz
     db.py                       esquema y acceso a SQLite
     configuracion.py            carga de config/parametros.yaml
@@ -444,7 +464,14 @@ esquemas) se crean cuando empiece esa fase, no antes.
   firmware/                     fase 8, MicroPython (ver firmware/README.md)
     fijo/  carro/  comun/       lógica pura (se prueba en el PC) + hw.py (pines) + main.py
     preparar.py, subir.py       arma salida/<placa>/ (pines y config generados, .mpy) y la sube con mpremote
-  tests/                        pruebas (+ escenarios/ de un solo filtro y el mixto de 20)
+  vision/                       fase 5: capturar_dataset.py y entrenar.py (dataset y modelos fuera de git)
+  tests/                        pruebas por capa, sin __init__.py (cada test_*.py con nombre único)
+    conftest.py                 cierra los mundos de PyBullet que un archivo deje abiertos (si no, ensucian al siguiente)
+    control/                    reglas, linea, embalaje, registro, almacen, monedas, tiempos, protocolo, vehiculo
+    sim/                        planta, backend_sim, escenarios, conexiones
+    visor/                      visualizacion (geometría, servidor HTTP, docs generados), portable
+    app/                        supervisor, db, dashboard, asistente, asistente_planta, voz, costos, chequeo, pruebas_filtro
+    firmware/                   firmware (mpy-cross y las dos placas contra la estación emulada)
 ```
 
 ---

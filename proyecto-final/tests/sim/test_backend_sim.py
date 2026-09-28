@@ -151,7 +151,7 @@ def test_el_cono_de_la_cortina_no_toca_vasos_ni_cinta(backend):
     import yaml
     from pathlib import Path
     from sim.mundo import posicion_estacion_vasos
-    vaso = yaml.safe_load((Path(__file__).resolve().parents[1] / "config" / "parametros.yaml")
+    vaso = yaml.safe_load((Path(__file__).resolve().parents[2] / "config" / "parametros.yaml")
                           .read_text(encoding="utf-8"))["vasos"]
     radio_reborde = (vaso["diametro_mm"] / 2 + vaso["reborde_mm"]) / 1000
     c = backend.sensor_cortina

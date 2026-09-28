@@ -28,6 +28,9 @@ import * as PIEZAS_LINEA_MONEDAS from './piezas/linea_monedas.js';
 import * as PIEZAS_CARRO from './piezas/carro.js';
 import * as PIEZAS_SENSORES_CARRO from './piezas/sensores.js';
 import * as PIEZAS_VASOS from './piezas/linea_vasos.js';
+import * as PIEZAS_OPTIMIZAR from './piezas/optimizar.js';
+// La interfaz (barra, vistas, panel, avisos, bitacora): ver interfaz.js y docs/interfaz-visor.md.
+import { crearInterfaz, SEL, simulacionCorriendo } from './interfaz.js';
 
 // Abierto como ARCHIVO (visor-portable.html, lo que abre visor.bat): no hay servidor en la
 // misma direccion, asi que se le pregunta al de la simulacion en este PC. El puerto es el de
@@ -62,9 +65,7 @@ let G = null;          // geometria
 let PASOS = [];        // docs/paso-a-paso.yaml
 let estado = null;     // ultimo /api/estado
 let ultimoTick = -1;
-let pestana = 'vivo';
-let seleccion = { tipo: null, valor: null };   // {tipo:'paso'|'sensor', valor}
-const resaltados = new Set();                   // ids de sensores resaltados
+const resaltados = SEL.resaltados;              // ids de sensores resaltados (los elige la interfaz)
 
 // ---------------------------------------------------------------------------
 // escena basica
@@ -372,7 +373,6 @@ const CINTAS = {};
 // Componentes fisicos (sim/catalogos.py): id -> objetos 3D que
 // lo representan, para resaltarlo cuando se elige en la pestana Componentes.
 const COMP = {};
-let compResaltado = null;
 function registrar(id, ...objetos) {
   for (const o of objetos) if (o) { o.userData.parte = true; (COMP[id] ||= []).push(o); }
 }
@@ -644,8 +644,10 @@ function mesa(grupo, xs, ys, alto, id) {
 
 function cubeta(pos, colorPiso, colorPared) {
   const g = new THREE.Group();
-  g.add(caja(0.07, 0.07, 0.003, colorPiso, Vxyz(0, 0, 0.0015)));
-  for (const [dx, dy, sx, sy] of [[0.035, 0, 0.003, 0.07], [-0.035, 0, 0.003, 0.07], [0, 0.035, 0.07, 0.003], [0, -0.035, 0.07, 0.003]]) {
+  // Piso y paredes sin caras en el mismo plano (se ven a traves de las paredes transparentes y
+  // parpadeaban, 2026-09-28): el piso y las paredes cortas quedan entre las largas.
+  g.add(caja(0.067, 0.067, 0.003, colorPiso, Vxyz(0, 0, 0.0015)));
+  for (const [dx, dy, sx, sy] of [[0.035, 0, 0.003, 0.07], [-0.035, 0, 0.003, 0.07], [0, 0.035, 0.0668, 0.003], [0, -0.035, 0.0668, 0.003]]) {
     g.add(caja(sx, sy, 0.03, colorPared, Vxyz(dx, dy, 0.015), { transparent: true, opacity: 0.8 }));
   }
   g.position.copy(pos);
@@ -1253,8 +1255,9 @@ function construirCintaVasos() {
   // Bandeja de rechazo de vasos al final de la cinta, con un labio inclinado.
   const bj = G.bandeja_rechazo_vasos;
   const bandeja = new THREE.Group();
-  bandeja.add(caja(0.10, 0.12, 0.004, 0x5a616c, Vxyz(0, 0, 0.002)));
-  for (const [dx, dy, sx, sy] of [[0.05, 0, 0.004, 0.12], [-0.05, 0, 0.004, 0.12], [0, 0.06, 0.10, 0.004], [0, -0.06, 0.10, 0.004]]) {
+  // (Piso y paredes cortas entre las largas: sin caras en el mismo plano, que parpadeaban.)
+  bandeja.add(caja(0.0958, 0.1158, 0.004, 0x5a616c, Vxyz(0, 0, 0.002)));
+  for (const [dx, dy, sx, sy] of [[0.05, 0, 0.004, 0.12], [-0.05, 0, 0.004, 0.12], [0, 0.06, 0.0957, 0.004], [0, -0.06, 0.0957, 0.004]]) {
     bandeja.add(caja(sx, sy, 0.06, 0x8b939f, Vxyz(dx, dy, 0.03), { transparent: true, opacity: 0.55 }));
   }
   bandeja.position.copy(Vxyz(bj[0], bj[1], 0));
@@ -1423,6 +1426,38 @@ function construirAlmacen(grupo) {
     const pin = servoObt.getObjectByName('pin_servo_obturador_CABLE').getWorldPosition(new THREE.Vector3());
     P.rutasServo.servo_obturador = [pin, pin.clone().add(new THREE.Vector3(0, 0.006, 0)),
       A.clone().add(new THREE.Vector3(0, 0.006, 0)), B.clone().add(new THREE.Vector3(0, 0.006, 0))];
+    // Brazo portacables (2026-09-28): el tramo horizontal del cable (de encima del servo hasta
+    // donde baja, x = 0,1445) pasaba ~72 mm suelto, unos 2 cm por fuera del borde de la placa fija.
+    // Un brazo impreso de 8 x 3 mm atornillado al canto de la placa lo toma por la mitad con una
+    // abrazadera. (El tramo va a lo largo de x, a la altura del pin + 6 mm.)
+    try {
+      const yC = pin.y + 0.006;
+      const M = new THREE.Vector3((pin.x + 0.1445) / 2, yC, pin.z);
+      const cen = placa.getWorldPosition(new THREE.Vector3());
+      const radial = new THREE.Vector3(M.x - cen.x, 0, M.z - cen.z);
+      const dist = radial.length();
+      radial.normalize();
+      const rPlaca = 0.058;
+      if (dist > rPlaca + 0.004) {
+        const brazo = new THREE.Group();
+        const matImp = new THREE.MeshStandardMaterial({ color: 0x2b2f36, roughness: 0.8 });
+        const largo = dist - rPlaca + 0.012;                        // se mete 12 mm bajo el canto
+        const bar = new THREE.Mesh(new THREE.BoxGeometry(largo, 0.003, 0.008), matImp);
+        bar.position.set(rPlaca - 0.012 + largo / 2, -0.0045, 0);  // pegado por debajo del cable
+        const aro = new THREE.Mesh(new THREE.TorusGeometry(0.0035, 0.0009, 8, 20), matImp);
+        aro.position.set(dist, 0, 0);
+        aro.rotation.y = Math.PI / 2;                               // abraza el cable, que va a lo largo de x
+        const tornillo = new THREE.Mesh(new THREE.CylinderGeometry(0.0028, 0.0028, 0.0016, 12),
+          new THREE.MeshStandardMaterial({ color: 0x9aa0a8, metalness: 0.8, roughness: 0.35 }));
+        tornillo.position.set(rPlaca - 0.006, -0.0022, 0);
+        brazo.add(bar, aro, tornillo);
+        brazo.position.set(cen.x, yC, cen.z);
+        brazo.rotation.y = -Math.atan2(radial.z, radial.x);
+        brazo.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+        brazo.name = 'portacables_obturador';
+        escena.add(brazo);
+      }
+    } catch (e) { console.warn('portacables del obturador', e); }
   } catch (e) {
     console.warn('obturador del almacen: se usa el modelo simple', e);
     obturador.clear();
@@ -2771,8 +2806,10 @@ function construirCajaControl() {
       for (let i = 0; i < n; i++) {
         const t = -largo / 2 + (i + 0.5) * (largo / n);
         if (cortes.some(([c0, c1]) => t > c0 - 0.002 && t < c1 + 0.002)) continue;
-        const r = alongX ? caja(0.0035, 0.0017, 0.02, 0x7d848e, en(dx + t, dy + s * ancho / 2, z0 + 0.018))
-          : caja(0.0017, 0.0035, 0.02, 0x7d848e, en(dx + s * ancho / 2, dy + t, z0 + 0.018));
+        // Terminan 0,4 mm antes del borde de la pared: con la cara de arriba en el mismo plano que
+        // la de la pared, las dos parpadeaban (2026-09-28).
+        const r = alongX ? caja(0.0035, 0.0017, 0.0196, 0x7d848e, en(dx + t, dy + s * ancho / 2, z0 + 0.0178))
+          : caja(0.0017, 0.0035, 0.0196, 0x7d848e, en(dx + s * ancho / 2, dy + t, z0 + 0.0178));
         g.add(r);
       }
     }
@@ -2892,7 +2929,9 @@ function construirCajaControl() {
   // la derecha del portatil: sus puertos miran a la caja con 8 mm libres detras de los enchufes
   // (antes, en (0,26; 0,30), los USB chocaban con la pared de atras), y el USB-B de subida queda
   // delante del costado derecho del portatil sin tocarlo.
-  conPieza('hub_usb', 'crearHubUSB4', escena, Vxyz(0.36, 0.33, 0), yaw(0), { idComponente: 'hub_usb', etiquetaSobre: 0.02 });
+  // Posicion del hub desde config/parametros.yaml (puesto_pc): la misma que usa el mapa del carro.
+  const hubC = (G.puesto_pc && G.puesto_pc.hub_centro_mm) || [360, 330];
+  conPieza('hub_usb', 'crearHubUSB4', escena, Vxyz(hubC[0] / 1000, hubC[1] / 1000, 0), yaw(0), { idComponente: 'hub_usb', etiquetaSobre: 0.02 });
   construirLaptop();
   construirEnlaceAsistente();
 }
@@ -2960,6 +2999,12 @@ function teclasTuf() {
 const WASD = new Set(['W', 'A', 'S', 'D']);
 
 function construirLaptop() {
+  // Centro del portatil desde config/parametros.yaml (puesto_pc): la misma huella que el mapa del
+  // carro marca como prohibida (2026-09-28).
+  if (G.puesto_pc && G.puesto_pc.laptop_centro_mm) {
+    LAPTOP.cx = G.puesto_pc.laptop_centro_mm[0] / 1000;
+    LAPTOP.cy = G.puesto_pc.laptop_centro_mm[1] / 1000;
+  }
   // Pieza detallada (piezas/control.js: crearLaptopTUFA15, la misma laptop con rejillas traseras,
   // barra de bisagra, lineas del A15 en la tapa y muesca del frente). Si falla, el modelo de abajo.
   let pcPieza = null;
@@ -3852,40 +3897,8 @@ function construirCables() {
 // Boton "Cables": los muestra u oculta por completo, con su leyenda (tipo,
 // cantidad y largo de cada cable, con 20 % de holgura para amarras y curvas).
 function mostrarCables(si) {
+  // La leyenda y el boton los maneja la interfaz (interfaz.js).
   for (const g of CAPAS_CABLES) g.visible = si;
-  const b = document.getElementById('btnCables');
-  if (b) b.classList.toggle('activo', si);
-  const ley = document.getElementById('leyendaCables');
-  if (!ley) return;
-  ley.style.display = si ? 'block' : 'none';
-  if (!si || ley.dataset.hecha) return;
-  ley.dataset.hecha = '1';
-  const cx = G.conexiones;
-  const hex = (n) => '#' + n.toString(16).padStart(6, '0');
-  const m = (x) => (x * 1.2).toFixed(2).replace('.', ',');
-  const campo = CABLES.filter((c) => c.zona === 'planta' || c.zona === 'mesa');
-  const total = campo.reduce((s, c) => s + c.largo, 0);
-  const hilos = cx.cables.reduce((s, c) => s + c.hilos.length, 0);
-  let html = `<div class="ley-titulo">Conexiones · ${cx.cables.length} cables · ${hilos} hilos · campo ${m(total)} m ` +
-    '<span class="tenue">(+20 %; tabla completa en docs/conexiones.md)</span></div>';
-  const porTipo = {};
-  for (const c of campo) (porTipo[c.tipo] ||= []).push(c);
-  for (const [tipo, lista] of Object.entries(porTipo)) {
-    const t = TIPOS_CABLE[tipo];
-    html += `<details><summary><span class="muestra" style="background:${hex(t.color)}"></span>${esc(t.nombre)} · ${lista.length}</summary>`;
-    html += lista.map((c) => `<div class="ley-fila">${esc(c.nombre)}<span>${m(c.largo)} m</span></div>`).join('');
-    html += '</details>';
-  }
-  const nombre = (ref) => `${esc(cx.dispositivos[ref.split('.', 1)[0]].nombre.split(' (')[0])} <b>${esc(ref.split('.', 1)[1])}</b>`;
-  html += '<details><summary>Pin a pin</summary>';
-  for (const c of cx.cables) {
-    if (!c.hilos.length) continue;
-    html += `<div class="ley-cable">${esc(c.nombre)}</div>`;
-    html += c.hilos.map((h) => `<div class="ley-hilo"><span class="muestra" style="background:${h.color}"></span>` +
-      `${nombre(h.de)} → ${nombre(h.a)} <span class="tenue">${esc(h.funcion)}</span></div>`).join('');
-  }
-  html += '</details>';
-  ley.innerHTML = html;
 }
 
 // Cableado del carro: cada hilo de su pin al otro, en tres niveles (marco del carro, simulacion):
@@ -4905,8 +4918,6 @@ function caerTapa(v, retraso = 0) {
 // animaciones de actuadores disparadas por eventos
 // ---------------------------------------------------------------------------
 
-const bitacora = [];
-
 function ciclarPrensa(retraso = 0) {
   const pr = P.prensa;
   // El servo lleva la leva de 0 a 180 grados y la devuelve: el piston baja
@@ -4932,11 +4943,6 @@ function subirPrensa() {
   }, { dueno: pr });
 }
 
-const TEXTO_ALARMA = {
-  tubo_lleno: 'tubo lleno sin vaso', faltan_vasos: 'faltan vasos',
-  cuna_ocupada: 'la cuna del carro no está vacía: no se suelta', carga_no_confirmada: 'el infrarrojo de la cuna no ve el vaso soltado',
-};
-
 function procesarEventos() {
   if (!estado.eventos_tick || estado.tick === ultimoTick) return;
   const primero = ultimoTick === -1;
@@ -4947,60 +4953,10 @@ function procesarEventos() {
   for (const e of estado.eventos_tick) {
     if (e.ev === 'prensa') ciclarPrensa(seg('avance_casilla_vasos', 1000));
     if (e.ev === 'cortina' && e.activa) subirPrensa();
-    if (e.ev === 'alarma') bitacora.unshift(`<span class="src">  alarma</span> <b style="color:#e5534b">${TEXTO_ALARMA[e.tipo] || e.tipo}</b>`);
     if (e.ev === 'embalado') animarEmbalado(e);
     if (e.ev === 'presencia' && e.tipo_real === 'mano') P.manoCarga.hasta = performance.now() + 1200;
-    const txt = describirEvento(e);
-    if (txt) bitacora.unshift(`<span class="src">${e.src.padStart(9, ' ')}</span> ${txt}`);
   }
-  bitacora.length = Math.min(bitacora.length, 12);
-  document.getElementById('eventos').innerHTML = bitacora.join('<br>') || '<span class="tenue">sin eventos todavía</span>';
-}
-
-function describirEvento(e) {
-  switch (e.ev) {
-    case 'presencia': return e.tipo_real === 'mano' ? `#${e.casilla} <b style="color:#e5534b">mano en la carga</b> (el IR la ve)` : e.ocupada ? `#${e.casilla} cargado (${e.tipo_real})` : `#${e.casilla} casilla vacía`;
-    case 'material': return `#${e.casilla} material: <b>${e.metal ? 'metal' : 'no metálico'}</b>`;
-    case 'vision': return `#${e.casilla} visión (${(e.fotos || []).length || 1} fotos): ${e.diametro_mm.toFixed(1)} mm, ${e.clase} (${e.confianza.toFixed(2)})`;
-    case 'rechazo': return `#${e.casilla} → <b style="color:#e5534b">bandeja de rechazo</b> (${e.causa || e.motivo})`;
-    case 'elemento_final': return e.veredicto === 'aceptada' ? `#${e.casilla} aceptada <b>${e.clase}</b>` : `#${e.casilla} rechazada <b>${e.causa}</b>`;
-    case 'llenado': return `vaso ${e.vaso}: ${e.cantidad} monedas`;
-    case 'verificacion': return `vaso ${e.vaso} verificado (cámara): <b>${e.estado}</b>`;
-    case 'tapa': return e.tapado ? `vaso ${e.vaso} <b>tapado</b>` : e.vacio && e.estado === 'valida' ? `vaso ${e.vaso} vacío: no se tapa (se desecha)` : `vaso ${e.vaso} sin tapa (${e.estado})`;
-    case 'tapa_no_confirmada': return `<b style="color:#e5534b">vaso ${e.vaso}: la cámara no ve la tapa</b>`;
-    case 'prensa': return `vaso ${e.vaso} prensado`;
-    case 'descarga': return e.destino === 'vacio' ? `vaso ${e.vaso} vacío → <b>desechado</b>` : `vaso ${e.vaso} → <b>${e.destino}</b>`;
-    case 'cortina': return e.activa ? `<b style="color:#e5534b">${e.fuente === 'camara_llenado' ? 'la cámara ve algo sobre el llenado' : 'cortina ACTIVA'}</b> (prensa arriba, no se suelta el lote)` : '<b style="color:#3fb68b">cortina despejada</b>';
-    case 'desfase_corregido': return `<b style="color:#f2b134">cinta de ${e.cinta} corrida</b>: la cámara vio los separadores fuera de lugar, re-sincronizada`;
-    case 'sabotaje_detectado': return `<b style="color:#e5534b">sabotaje detectado</b> vaso ${e.vaso}: ${e.motivo}${e.estacion === 'camara' ? ' (la cámara ve la casilla sin vaso)' : ''}`;
-    case 'salto_casilla': return 'salto de casilla en la cinta de vasos';
-    case 'espera': return `#${e.casilla} espera: no hay vaso válido`;
-    case 'fin': return '<b>fin de la corrida</b>';
-    case 'almacen': return e.tubo === 'otras' ? `#${e.casilla} ${e.clase} → <b>otras</b> (va a su propio vaso)` : `#${e.casilla} ${e.clase} → <b>tubo $${e.denominacion}</b> (${e.en_tubo})`;
-    case 'presencia_recuperada': return `#${e.casilla} <b style="color:#f2b134">presencia recuperada</b> (E1 falló, E2 la vio)`;
-    case 'canaleta_llena': return `<b style="color:#f2b134">canaleta llena</b>: el vaso ${e.vaso} espera en la descarga`;
-    case 'carga': return `carro: se lleva el vaso ${e.vaso}`;
-    case 'en_muelle': return 'carro en el muelle (encoders quietos contra el tope)';
-    case 'salida': return 'carro: sale del muelle con el vaso';
-    case 'obstaculo': return `<b style="color:#f2b134">carro: obstáculo</b> a ${Math.round(e.distancia_mm)} mm (3 lecturas seguidas)`;
-    case 'evasion': return `carro: esquiva por la <b>${e.lado}</b>${e.izq_mm || e.der_mm ? ` (izq ${e.izq_mm ?? 'libre'} mm, der ${e.der_mm ?? 'libre'} mm)` : ' (los dos lados libres)'}`;
-    case 'linea_recuperada': return 'carro: vuelve a la línea';
-    case 'linea_perdida': return '<b style="color:#f2b134">carro: perdió la línea</b>, la busca girando';
-    case 'meta': return '<b style="color:#3fb68b">carro en la META</b>: esperan que saquen el vaso';
-    case 'entregado': return `vaso ${e.vaso} <b style="color:#3fb68b">entregado en la meta</b>`;
-    case 'sin_enlace': return `<b style="color:#e5534b">radio del carro sin enlace</b>: termina la vuelta solo; no se le carga otro vaso`;
-    case 'enlace_recuperado': return `radio del carro <b style="color:#3fb68b">con enlace</b> (${e.en_espera || 0} mensajes guardados llegan en orden)`;
-    case 'estado': return `el carro informa: ${esc(e.estado)}, cuna ${e.cuna ? 'ocupada' : 'vacía'}`;
-    case 'vaso_retirado': return 'el infrarrojo de la cuna ve que sacaron el vaso: vuelve';
-    case 'vuelve_con_vaso': return '<b style="color:#f2b134">sin radio: vuelve con el vaso</b>';
-    case 'devuelto': return `vaso ${e.vaso} devuelto al muelle y retirado a mano`;
-    case 'vuelta': return 'carro: media vuelta, regresa solo';
-    case 'marca_giro': return 'carro: marca de giro, entra de reversa al muelle';
-    case 'error': return `<b style="color:#e5534b">carro detenido</b>: ${e.motivo}`;
-    case 'soltar': return `escape: suelta el vaso ${e.vaso} a la cuna`;
-    case 'embalado': return `<b style="color:#3fb68b">lote de ${e.denominacion === 'otras' ? 'otras' : '$' + e.denominacion}</b> → vaso ${e.vaso} (${e.cantidad} monedas)`;
-    default: return null;
-  }
+  ui.eventos(estado.eventos_tick);   // la bitacora (interfaz.js)
 }
 
 function animarActuadores(dt) {
@@ -5073,7 +5029,7 @@ function vista(nombre) {
     planta: [centroV.clone().lerp(centroM, 0.5).add(new THREE.Vector3(0.05, 0, 0.05)), new THREE.Vector3(0.45, 0.45, 0.75)],
     carga: [em[0], new THREE.Vector3(-0.1, 0.14, 0.24)],
     monedas: [centroM, new THREE.Vector3(0.02, 0.22, 0.4)],
-    vision: [em[4], new THREE.Vector3(0.06, 0.12, 0.22)],
+    vision: [em[2], new THREE.Vector3(0.06, 0.12, 0.22)],
     almacen: [almacen, new THREE.Vector3(0.12, 0.12, 0.26)],
     vasos: [centroV.clone().add(new THREE.Vector3(0, 0.07, 0)), new THREE.Vector3(0.02, 0.2, 0.52)],
     tapa: [ev[2].clone().lerp(ev[3], 0.5).add(new THREE.Vector3(0, 0.09, 0)), new THREE.Vector3(0.05, 0.1, 0.32)],
@@ -5093,17 +5049,29 @@ function vista(nombre) {
       // ~0,6 m: el carro entero con su vaso y un poco de pista (a 0,3 m quedaba demasiado cerca).
       new THREE.Vector3(0.33, 0.29, 0.42)],
   };
-  document.querySelectorAll('[data-vista]').forEach((b) => b.classList.toggle('activo', b.dataset.vista === nombre));
+  ui.marcarVista(nombre);
   const [objetivo, desplazamiento] = vistas[nombre] || vistas.todo;
-  // El panel lateral tapa la izquierda de la pantalla: se corre el punto de
-  // mira hacia -x (en proporcion a la distancia) para que la zona quede a la
-  // derecha, a la vista.
-  const panelVisible = !document.getElementById('panel').classList.contains('oculto') && window.innerWidth > 900;
-  const corrimiento = panelVisible ? new THREE.Vector3(-desplazamiento.length() * 0.22, 0, 0) : new THREE.Vector3();
-  volarA(objetivo.clone().add(corrimiento), objetivo.clone().add(corrimiento).add(desplazamiento), { seguir: nombre === 'carro' });
+  // La laptop esta detras de la cinta: alejarse por el panel la taparia con la cinta.
+  volarA(objetivo.clone(), objetivo.clone().add(desplazamiento), { seguir: nombre === 'carro', alejar: nombre !== 'asistente' });
 }
 
-function volarA(objetivo, posicion, { seguir = false } = {}) {
+function volarA(objetivo, posicion, { seguir = false, alejar = true } = {}) {
+  // El panel lateral tapa la izquierda de la pantalla: TODA toma (vistas, sensor, componente) se
+  // corre de lado (en el plano de la pantalla) para que lo enfocado quede en el centro de la
+  // parte libre. A la distancia d, media pantalla de ancho son d*tan(fov/2)*aspecto metros.
+  // Y se aleja en proporcion (W / ancho libre, hasta x1,4): lo encuadrado para la pantalla
+  // entera cabe en la parte libre (la pantalla de la laptop quedaba cortada por el panel).
+  const tapado = ui.anchoTapado();
+  if (tapado > 0) {
+    const lejos = alejar ? Math.min(1.4, window.innerWidth / Math.max(1, window.innerWidth - tapado)) : 1;
+    posicion = objetivo.clone().addScaledVector(posicion.clone().sub(objetivo), lejos);
+    const d = posicion.distanceTo(objetivo);
+    const derecha = new THREE.Vector3().subVectors(objetivo, posicion).cross(camara.up).normalize();
+    const mitad = d * Math.tan(THREE.MathUtils.degToRad(camara.fov) / 2) * camara.aspect;
+    const corr = derecha.multiplyScalar(-mitad * tapado / window.innerWidth);
+    objetivo = objetivo.clone().add(corr);
+    posicion = posicion.clone().add(corr);
+  }
   seguirCarro = seguir && P.carroGrupo ? { ultimo: P.carroGrupo.getWorldPosition(new THREE.Vector3()) } : null;
   vuelo = { t: 0, desdeT: controles.target.clone(), hastaT: objetivo, desdeP: camara.position.clone(), hastaP: posicion };
 }
@@ -5143,38 +5111,23 @@ function enfocarSensor(id) {
   volarA(p, p.clone().add(new THREE.Vector3(0.08, 0.1, 0.16)));
 }
 
-document.querySelectorAll('[data-vista]').forEach((b) => b.addEventListener('click', () => vista(b.dataset.vista)));
-
 // Clic en un sensor -> lo selecciona.
 const rayo = new THREE.Raycaster();
 renderer.domElement.addEventListener('click', (ev) => {
   const m = new THREE.Vector2((ev.clientX / window.innerWidth) * 2 - 1, -(ev.clientY / window.innerHeight) * 2 + 1);
   rayo.setFromCamera(m, camara);
   const golpes = rayo.intersectObjects(escena.children, true);
-  if (golpes.find((g) => g.object.userData.asistente)) return vista('asistente');
-  const golpe = golpes.find((g) => g.object.userData.sensorId && g.object.visible);
-  if (golpe) seleccionarSensor(golpe.object.userData.sensorId, true);
+  // Lo MAS CERCANO de los dos (antes ganaba la laptop aunque estuviera detras: en la vista
+  // Monedas, clic en un sensor de la cinta llevaba al asistente).
+  const golpe = golpes.find((g) => g.object.visible && (g.object.userData.asistente || g.object.userData.sensorId));
+  if (!golpe) return;
+  if (golpe.object.userData.asistente) return vista('asistente');
+  ui.seleccionarSensor(golpe.object.userData.sensorId, true);
 });
 
 // ---------------------------------------------------------------------------
-// panel lateral
+// pantalla del asistente en la laptop 3D
 // ---------------------------------------------------------------------------
-
-const contenido = document.getElementById('contenido');
-document.getElementById('btnPanel').addEventListener('click', () => {
-  const oculto = document.getElementById('panel').classList.toggle('oculto');
-  document.getElementById('btnPanel').classList.toggle('activo', !oculto);
-});
-document.querySelectorAll('[data-pestana]').forEach((b) => b.addEventListener('click', () => {
-  pestana = b.dataset.pestana;
-  document.querySelectorAll('[data-pestana]').forEach((x) => x.classList.toggle('activo', x === b));
-  if (pestana === 'vivo') { resaltados.clear(); seleccion = { tipo: null, valor: null }; }
-  if (pestana !== 'componentes') compResaltado = null;
-  contenido.innerHTML = '';
-  pintarPanel();
-}));
-
-const esc = (t) => String(t ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
 // Pestana "Asistente": espejo de solo lectura de la conversacion del
 // dashboard (fase 7) y de lo que paso con cada orden que dio.
@@ -5199,376 +5152,6 @@ async function consultarAsistente() {
   } catch (e) { /* sin supervisor: se reintenta */ }
 }
 
-function pintarPanel() {
-  if (pestana === 'componentes') return pintarComponentes();
-  if (pestana === 'pasos') return pintarPasos();
-  if (pestana === 'sensores') return pintarSensores();
-  pintarVivo();
-}
-
-function pintarVivo() {
-  // Los controles (botones) se construyen UNA vez; cada
-  // segundo solo se actualiza #vivoDatos. Antes se reconstruia todo el
-  // panel y el menu desplegable se cerraba solo mientras se usaba.
-  if (!contenido.querySelector('#vivoDatos')) {
-    contenido.innerHTML = `
-      <h3>Línea en vivo</h3>
-      <div id="vivoDatos"></div>
-      <div class="grupo-botones controles">
-        <h4>Línea</h4>
-        <div class="fila4">
-          <button data-orden="iniciar" title="Corrida nueva con la prueba completa">▶ Iniciar</button>
-          <button data-orden="pausar" title="Pausa la línea">⏸ Pausa</button>
-          <button data-orden="reanudar" title="Sigue después de una pausa">⏵ Seguir</button>
-          <button data-orden="paro" class="peligro" title="Paro de emergencia: todo queda quieto; sale con Iniciar">⛔ Paro</button>
-        </div>
-      </div>
-      <div class="grupo-botones controles">
-        <h4>Probar un filtro (uno por uno)</h4>
-        <div class="fila1">
-          <select id="selFiltro" title="Cada prueba trae solo piezas que ese filtro debe rechazar"></select>
-          <button id="botonFiltro" data-pide="libre">🧪 Probar solo este filtro</button>
-        </div>
-        <h4 style="margin-top:8px">Colocar una pieza</h4>
-        <div class="fila1">
-          <select id="selPieza"></select>
-          <button id="botonPieza" data-pide="colocar" title="Entra en la próxima carga, antes que lo que falta de la corrida">⬇ Ponerla en la próxima carga</button>
-        </div>
-      </div>
-      <div class="grupo-botones controles">
-        <h4>Sabotajes a los vasos</h4>
-        <div class="fila2">
-          <button data-sab="retirar_vaso" data-pide="vaso_vl">Retirar un vaso</button>
-          <button data-sab="cambiar_vaso" data-pide="vaso_vl">Cambiar por figura</button>
-          <button data-sab="vaso_igual" data-pide="vaso_vl">Cambiar por vaso igual</button>
-          <button data-sab="vaso_con_algo" data-pide="corriendo">Vaso con algo adentro</button>
-        </div>
-      </div>
-      <div class="grupo-botones controles">
-        <h4>Manos en la línea</h4>
-        <div class="fila2">
-          <button data-sab="mano_carga" data-pide="corriendo">✋ En la carga</button>
-          <button data-sab="mano_llenado" data-pide="sin_mano">✋ Sobre el llenado</button>
-          <button data-sab="intruso" data-pide="corriendo" id="botonIntruso">✋ En tapa/prensa</button>
-          <button data-sab="mano_saca_vaso" data-pide="vaso_tp">✋ Saca un vaso</button>
-        </div>
-      </div>
-      <div class="grupo-botones controles">
-        <h4>Radio del carro</h4>
-        <div class="fila1">
-          <button data-sab="radio" data-pide="carro" id="botonRadio" title="Corta o reconecta la radio (ESP-NOW) del carro">📡 Cortar la radio del carro</button>
-        </div>
-      </div>
-      <div class="grupo-botones controles">
-        <h4>Fin de turno</h4>
-        <div class="fila1">
-          <button data-orden="embalar_parciales" data-pide="guardado" title="Empaca lo que quedó en los tubos (cada vaso de una sola denominación)">📦 Embalar lo guardado</button>
-        </div>
-      </div>
-      <div id="respuestaOrden" class="respuesta-orden"></div>
-      <div class="tenue demo-aviso" style="display:none;font-size:.8rem;margin-bottom:10px">Demo grabada: los botones están desactivados. Para manejar la línea, abrir <code>visor.bat</code> en el PC.</div>
-      <dt class="tenue" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em">Sensores de la planta</dt>
-      <div id="vivoLeds" style="margin-top:6px;line-height:1.8"></div>`;
-    contenido.querySelectorAll('[data-orden]').forEach((b) => b.addEventListener('click', () => {
-      const orden = { cmd: b.dataset.orden };
-      // Una sola prueba (prueba_completa): el supervisor la usa por defecto.
-      if (orden.cmd === 'iniciar') orden.escenario = 'prueba_completa';
-      enviarOrden(orden);
-    }));
-    contenido.querySelector('#botonFiltro').addEventListener('click', () => {
-      const v = contenido.querySelector('#selFiltro').value;
-      if (v) enviarOrden({ cmd: 'iniciar', escenario: v });
-    });
-    contenido.querySelector('#botonPieza').addEventListener('click', () => {
-      const v = contenido.querySelector('#selPieza').value;
-      if (v) enviarOrden({ cmd: 'colocar', pieza: v });
-    });
-    contenido.querySelectorAll('[data-sab]').forEach((b) => b.addEventListener('click', () => {
-      let tipo = b.dataset.sab;
-      if (tipo === 'intruso') tipo = estado && estado.intruso ? 'intruso_off' : 'intruso_on';
-      if (tipo === 'radio') tipo = estado && estado.carro && estado.carro.radio && !estado.carro.radio.conectada ? 'radio_on' : 'radio_off';
-      enviarOrden({ cmd: 'sabotaje', tipo });
-    }));
-    if (MODO_DEMO) {
-      contenido.querySelectorAll('.controles button, .controles select').forEach((b) => { b.disabled = true; b.style.opacity = 0.45; });
-      contenido.querySelector('.demo-aviso').style.display = 'block';
-    }
-  }
-  actualizarVivo();
-}
-
-// Cada boton se habilita solo cuando puede hacer algo; si no, dice por que
-// (al pasar el mouse). Y la respuesta del supervisor a la ultima orden.
-const MOTIVO = {
-  corriendo: 'La línea no está corriendo',
-  vaso_vl: 'Hace falta un vaso en verificación o en llenado',
-  vaso_tp: 'Hace falta un vaso en tapa o en prensa (y que no haya otra mano)',
-  sin_mano: 'Ya hay una mano en la línea',
-  guardado: 'Los tubos están vacíos',
-  carro: 'Sin carro simulado (carro de reemplazo)',
-  colocar: 'La corrida tiene que estar andando o terminada',
-  libre: 'Esta simulación no trae las pruebas de un filtro (reiniciarla)',
-};
-let ultimaRespuesta = 0;
-function actualizarBotones(e) {
-  const corre = e.linea === 'corriendo';
-  const cv = e.casillas_vasos || [];
-  const mano = e.mano_sacando !== null && e.mano_sacando !== undefined;
-  const puede = {
-    corriendo: corre,
-    vaso_vl: corre && !!(cv[0] || cv[1]),
-    vaso_tp: corre && !!(cv[2] || cv[3]) && !mano,
-    sin_mano: corre && !mano,
-    guardado: (e.almacen_valor || 0) > 0,
-    carro: !!(e.carro && e.carro.radio) && (corre || e.linea === 'pausada'),
-    colocar: (corre || e.linea === 'terminada') && !!(e.piezas && e.piezas.length),
-    libre: !!(e.pruebas_filtro && e.pruebas_filtro.length),
-  };
-  // Las listas vienen del supervisor (sim/carga_escenarios.py): se llenan una vez.
-  const selF = contenido.querySelector('#selFiltro');
-  if (selF && !selF.options.length && e.pruebas_filtro) {
-    selF.innerHTML = e.pruebas_filtro.map((pr) => `<option value="${esc(pr.escenario)}">${esc(pr.estacion)} · ${esc(pr.nombre)}</option>`).join('');
-  }
-  const selP = contenido.querySelector('#selPieza');
-  if (selP && !selP.options.length && e.piezas) {
-    selP.innerHTML = e.piezas.map((pz) => `<option value="${esc(pz.id)}">${esc(pz.nombre)}</option>`).join('');
-  }
-  contenido.querySelectorAll('[data-pide]').forEach((b) => {
-    const ok = MODO_DEMO ? false : puede[b.dataset.pide];
-    b.disabled = !ok;
-    b.title = ok ? '' : (MODO_DEMO ? 'Demo grabada' : MOTIVO[b.dataset.pide]);
-  });
-  const orden = { pausar: corre, reanudar: e.linea === 'pausada', paro: corre || e.linea === 'pausada' };
-  contenido.querySelectorAll('[data-orden]').forEach((b) => {
-    if (b.dataset.orden in orden) b.disabled = MODO_DEMO || !orden[b.dataset.orden];
-  });
-  const bi = contenido.querySelector('#botonIntruso');
-  if (bi) bi.textContent = e.intruso ? '✋ Quitar la mano (tapa/prensa)' : '✋ En tapa/prensa';
-  const br = contenido.querySelector('#botonRadio');
-  if (br) br.textContent = e.carro && e.carro.radio && !e.carro.radio.conectada ? '📡 Reconectar la radio del carro' : '📡 Cortar la radio del carro';
-  const r = e.ultima_orden;
-  const caja = contenido.querySelector('#respuestaOrden');
-  if (caja && r && r.n !== ultimaRespuesta) {
-    ultimaRespuesta = r.n;
-    caja.textContent = (r.ok ? '✔ ' : '✖ ') + r.detalle;
-    caja.className = 'respuesta-orden visible ' + (r.ok ? 'ok' : 'no');
-    clearTimeout(caja._t);
-    caja._t = setTimeout(() => { caja.className = 'respuesta-orden'; }, 7000);
-  }
-}
-
-function actualizarVivo() {
-  const e = estado || {};
-  actualizarBotones(e);
-  const vs = e.vasos_salida || [];
-  const enVasos = [...(e.casillas_vasos || []).filter(Boolean), ...vs];
-  const monedas = enVasos.reduce((a, v) => a + (v.cantidad || 0), 0);
-  const valor = enVasos.reduce((a, v) => a + (v.valor || 0), 0);
-  const rech = (e.salidas || {}).rechazo || [];
-  const porCausa = {};
-  for (const r of rech) porCausa[r.causa || 'sin registro'] = (porCausa[r.causa || 'sin registro'] || 0) + 1;
-  const al = e.almacen || {};
-  const tubos = DENOMINACIONES.map((d) => `$${d.toLocaleString('es-CO')}: <b>${al[String(d)] || 0}</b>`).join(' · ') + ` · otras: <b>${al.otras || 0}</b>`;
-  document.getElementById('vivoDatos').innerHTML = `
-    <div class="tenue">Escenario <b>${esc(e.escenario || '—')}</b> · quedan ${e.pendientes ?? '—'} por cargar</div>
-    <dl class="detalle">
-      <dt>En vasos</dt><dd>${monedas} monedas · $${valor.toLocaleString('es-CO')}</dd>
-      <dt>Guardado en tubos (lote de ${e.monedas_por_vaso ?? '—'})</dt><dd>${tubos}<br><span class="tenue">$${(e.almacen_valor || 0).toLocaleString('es-CO')} guardados · ninguna moneda aceptada se descarta</span></dd>
-      <dt>Rechazos (una sola bandeja)</dt><dd>${rech.length}${rech.length ? ' · ' + Object.entries(porCausa).map(([c, n]) => `${esc(c)}: ${n}`).join(' · ') : ''}</dd>
-      <dt>Errores de sensor (simulados)</dt><dd>${e.errores_sensores_activos ? `colombianas rechazadas por error: ${(e.errores_filtrado || {}).falsos_rechazos || 0} · no colombianas aceptadas: ${(e.errores_filtrado || {}).falsas_aceptaciones || 0} · vaso equivocado: ${(e.errores_filtrado || {}).clase_equivocada || 0}` : 'sensores perfectos en esta corrida'}</dd>
-      <dt>Vasos</dt><dd>Entregados: ${vs.filter((v) => v.destino === 'entrega').length} · rechazados: ${vs.filter((v) => v.destino === 'rechazo').length} · vacíos desechados: ${vs.filter((v) => v.destino === 'vacio').length}<br><span class="tenue">En la canaleta: ${(e.canaleta || []).length} de ${G.canaleta.capacidad}${e.vaso_esperando_canaleta ? ` · el vaso ${e.vaso_esperando_canaleta} espera en la descarga` : ''} ${e.carro ? ` · carro: ${esc(e.carro.fase)} (${esc(e.carro.estado)})${e.carro.vaso_id ? `, lleva el vaso ${e.carro.vaso_id}` : ''}` : ' (sin carro simulado: uno de reemplazo se los lleva)'}</span>${e.carro && e.carro.radio ? `<br><span class="tenue">Radio del carro: ${e.carro.radio.enlace ? '<b style="color:#3fb68b">con enlace</b>' : '<b style="color:#e5534b">sin enlace</b>'}${e.carro.radio.en_espera ? ` · ${e.carro.radio.en_espera} mensajes guardados en el carro` : ''} · cuna según el carro: ${e.carro.radio.cuna_reportada === null ? 'sin saber (no se le carga)' : e.carro.radio.cuna_reportada ? 'ocupada' : 'vacía'}${e.carro.radio.enlace ? '' : ' (último dato: no se le carga hasta que informe de nuevo)'}</span>` : ''}</dd>
-    </dl>`;
-  document.getElementById('vivoLeds').innerHTML = G.sensores.filter((s) => s.geometria).map((s) => {
-    const on = sensorActivo(s.id);
-    const cls = on ? (sensorEnAlarma(s.id) ? 'led alarma' : 'led on') : 'led';
-    return `<div><span class="${cls}"></span><span class="n mono">${s.numero}</span>${esc(s.nombre)}</div>`;
-  }).join('');
-}
-
-function pintarPasos() {
-  const sel = seleccion.tipo === 'paso' ? seleccion.valor : null;
-  const lista = PASOS.map((p) => `
-    <div class="item ${sel === p.numero ? 'sel' : ''}" data-paso="${p.numero}">
-      <span class="rev ${p.revision}">${p.revision}</span><span class="n">${p.numero}</span>${esc(p.titulo)}
-    </div>${sel === p.numero ? detallePaso(p) : ''}`).join('');
-  contenido.innerHTML = `<h3>Paso a paso</h3>
-    <p class="tenue" style="margin-top:0">Cada punto de la secuencia (sección 5). Al elegir uno, la cámara va a esa zona y se resaltan sus sensores.</p>${lista}`;
-  contenido.querySelectorAll('[data-paso]').forEach((d) => d.addEventListener('click', () => seleccionarPaso(Number(d.dataset.paso))));
-  contenido.querySelectorAll('[data-ir]').forEach((b) => b.addEventListener('click', (ev) => { ev.stopPropagation(); seleccionarPaso(Number(b.dataset.ir)); }));
-  const elegido = contenido.querySelector('.item.sel');
-  if (elegido) elegido.scrollIntoView({ block: 'nearest' });
-}
-
-function detallePaso(p) {
-  const sens = (p.sensores || []).map((n) => G.sensores.find((s) => s.numero === n)).filter(Boolean)
-    .map((s) => `<span class="n mono">${s.numero}</span>${esc(s.nombre)}`).join('<br>') || '<span class="tenue">ninguno (usa el registro)</span>';
-  const preguntas = (p.preguntas || []).map((q) => `<li>${esc(q)}</li>`).join('');
-  return `<dl class="detalle">
-    <dt>Qué pasa</dt><dd>${esc(p.que_pasa)}</dd>
-    <dt>Sensores</dt><dd>${sens}</dd>
-    <dt>Entra</dt><dd>${esc(p.entra)}</dd>
-    <dt>Decide</dt><dd>${esc(p.decide)}</dd>
-    <dt>Sale</dt><dd>${esc(p.sale)}</dd>
-    ${p.mensaje ? `<dt>Mensaje</dt><dd><code>${esc(p.mensaje)}</code></dd>` : ''}
-    ${p.como_esta_hoy ? `<dt>Cómo está hoy</dt><dd>${esc(p.como_esta_hoy)}</dd>` : ''}
-    ${p.replicacion ? `<dt>Para replicarlo en la vida real</dt><dd>${esc(p.replicacion)}</dd>` : ''}
-    ${preguntas ? `<dt>Por revisar con el grupo</dt><dd><ul class="preg">${preguntas}</ul></dd>` : ''}
-    ${p.nota_revision ? `<dt>Nota de revisión</dt><dd>${esc(p.nota_revision)}</dd>` : ''}
-    <dd style="margin-top:10px;display:flex;gap:6px">
-      ${p.numero > 1 ? `<button data-ir="${p.numero - 1}">← ${p.numero - 1}</button>` : ''}
-      ${p.numero < PASOS.length ? `<button data-ir="${p.numero + 1}">${p.numero + 1} →</button>` : ''}
-    </dd></dl>`;
-}
-
-function seleccionarPaso(n) {
-  const p = PASOS.find((x) => x.numero === n);
-  if (!p) return;
-  seleccion = { tipo: 'paso', valor: n };
-  resaltados.clear();
-  for (const num of p.sensores || []) {
-    const s = G.sensores.find((x) => x.numero === num);
-    if (s) resaltados.add(s.id);
-  }
-  vista(p.zona);
-  pintarPasos();
-}
-
-// Prueba UNICA de cada sensor (usuario, 2026-09-27): en la sustentacion los filtros se prueban uno
-// por uno. Cada boton manda la orden que hace trabajar SOLO a ese sensor (una prueba de un filtro,
-// una pieza puesta a mano, un sabotaje o una orden al carro) y la camara se queda mirandolo.
-const PRUEBA_SENSOR = {
-  presencia: [['Poner una moneda en la carga', { cmd: 'colocar', pieza: '500_nueva' }],
-    ['Mano en la carga (la ve y no es moneda)', { cmd: 'sabotaje', tipo: 'mano_carga' }]],
-  capacitivo: [['Prueba del filtro de material (botones de plástico)', { cmd: 'iniciar', escenario: 'no_metalico' }]],
-  inductivo: [['Prueba del filtro de material (botones de plástico)', { cmd: 'iniciar', escenario: 'no_metalico' }]],
-  camara: [['Diámetro fuera de rango', { cmd: 'iniciar', escenario: 'fuera_de_rango' }],
-    ['No circular (bloques)', { cmd: 'iniciar', escenario: 'no_circular' }],
-    ['Perforado (botones con agujero)', { cmd: 'iniciar', escenario: 'perforado' }],
-    ['No reconocida (sin cara colombiana)', { cmd: 'iniciar', escenario: 'no_reconocida' }],
-    ['Incoherente (cara y diámetro no cuadran)', { cmd: 'iniciar', escenario: 'incoherente' }]],
-  sensor_interior: [['El próximo vaso trae algo adentro', { cmd: 'sabotaje', tipo: 'vaso_con_algo' }]],
-  hall_carrusel: [['Moneda al almacén (el carrusel busca su tubo)', { cmd: 'colocar', pieza: '200_nueva' }]],
-  camara_vasos: [['Retirar un vaso', { cmd: 'sabotaje', tipo: 'retirar_vaso' }],
-    ['Cambiar un vaso por una figura', { cmd: 'sabotaje', tipo: 'cambiar_vaso' }],
-    ['Cambiar un vaso por otro igual (otro marcador)', { cmd: 'sabotaje', tipo: 'vaso_igual' }]],
-  cortina: [['Meter o quitar la mano en tapa y prensa', { cmd: 'sabotaje', tipo: 'intruso' }]],
-  linea_ir: [['Retomar la línea', { cmd: 'carro', accion: 'seguir_linea' }]],
-  ultrasonico: [['Ir a la meta esquivando los muros', { cmd: 'carro', accion: 'ir_meta' }]],
-  laser_frontal: [['Ir a la meta esquivando los muros', { cmd: 'carro', accion: 'ir_meta' }]],
-  encoders: [['Avanzar 30 cm (cuenta los pulsos)', { cmd: 'carro', accion: 'avanzar', distancia_m: 0.3 }]],
-  cuna: [['Volver al muelle (la cuna confirma la carga)', { cmd: 'carro', accion: 'volver_muelle' }]],
-};
-let pruebaEnviada = null;   // { sensor, n }: para mostrar la respuesta del supervisor a esa prueba
-
-function botonesPruebaSensor(id) {
-  const pruebas = PRUEBA_SENSOR[id] || [];
-  if (!pruebas.length) return '';
-  const r = estado && estado.ultima_orden;
-  const resp = pruebaEnviada && pruebaEnviada.sensor === id && r && r.n > pruebaEnviada.n
-    ? `<div class="respuesta-orden visible ${r.ok ? 'ok' : 'no'}">${r.ok ? '✔' : '✖'} ${esc(r.detalle)}</div>` : '';
-  return `<div class="grupo-botones controles"><h4>Ver la prueba de este sensor</h4><div class="fila1">`
-    + pruebas.map((pr, i) => `<button data-prueba="${i}" ${MODO_DEMO ? 'disabled title="Demo grabada"' : ''}>▶ ${esc(pr[0])}</button>`).join('')
-    + `</div>${resp}${MODO_DEMO ? '<div class="tenue" style="font-size:.78rem;margin-top:6px">Demo grabada: para probarlo, abrir visor.bat.</div>' : ''}</div>`;
-}
-
-function probarSensor(id, i) {
-  const orden = { ...PRUEBA_SENSOR[id][i][1] };
-  if (orden.tipo === 'intruso') orden.tipo = estado && estado.intruso ? 'intruso_off' : 'intruso_on';
-  pruebaEnviada = { sensor: id, n: (estado && estado.ultima_orden && estado.ultima_orden.n) || 0 };
-  enviarOrden(orden);
-  enfocarSensor(id);
-}
-
-function pintarSensores() {
-  const sel = seleccion.tipo === 'sensor' ? seleccion.valor : null;
-  const grupos = {};
-  for (const s of G.sensores) (grupos[s.subsistema] ||= []).push(s);
-  let html = '<h3>Sensores</h3><p class="tenue" style="margin-top:0">Qué recibe cada sensor, qué entrega y qué mensaje termina llegando al PC. Clic para verlo en la escena.</p>';
-  for (const [nombre, lista] of Object.entries(grupos)) {
-    html += `<div class="tenue" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;margin:10px 0 6px">${esc(nombre)}</div>`;
-    for (const s of lista) {
-      const on = sensorActivo(s.id);
-      const cls = on ? (sensorEnAlarma(s.id) ? 'led alarma' : 'led on') : 'led';
-      html += `<div class="item ${sel === s.id ? 'sel' : ''}" data-sensor="${s.id}"><span class="${cls}"></span><span class="n">${s.numero}</span>${esc(s.nombre)}</div>`;
-      if (sel === s.id) {
-        html += `<dl class="detalle">
-          <dt>Dónde</dt><dd>${esc(s.estacion)}</dd>
-          <dt>Modelo propuesto</dt><dd>${esc(s.modelo)}</dd>
-          <dt>Qué lo activa</dt><dd>${esc(s.fenomeno)}</dd>
-          <dt>Recibe</dt><dd>${esc(s.entrada)}</dd>
-          <dt>Entrega</dt><dd>${esc(s.salida)}</dd>
-          <dt>Lectura ahora</dt><dd><span class="${cls}"></span>${on ? 'activo' : 'inactivo'}</dd>
-          <dt>Mensaje al PC</dt><dd><code>${esc(s.mensaje)}</code></dd>
-          <dt>Cómo se simula</dt><dd>${esc(s.simulacion)}</dd>
-          <dt>Rango</dt><dd>${esc(s.rango)}</dd>
-          <dt>Tiempo de respuesta</dt><dd>${esc(s.tiempo_respuesta)}</dd>
-          <dt>Error típico</dt><dd>${esc(s.error_tipico)}</dd>
-          <dt>Cómo mitigarlo</dt><dd>${esc(s.mitigacion)}</dd>
-          <dt>Conexión</dt><dd>${esc(s.conexion)}</dd></dl>` + botonesPruebaSensor(s.id);
-      }
-    }
-  }
-  contenido.innerHTML = html;
-  contenido.querySelectorAll('[data-sensor]').forEach((d) => d.addEventListener('click', () => seleccionarSensor(d.dataset.sensor, true)));
-  contenido.querySelectorAll('[data-prueba]').forEach((b) => b.addEventListener('click', () => probarSensor(sel, Number(b.dataset.prueba))));
-}
-
-function pintarComponentes() {
-  const sel = compResaltado;
-  const lista = G.componentes || [];
-  const total = lista.reduce((a, c) => a + c.cantidad, 0);
-  const servos = lista.filter((c) => c.id.startsWith('servo')).reduce((a, c) => a + c.cantidad, 0);
-  let html = `<h3>Componentes</h3><p class="tenue" style="margin-top:0">Lista de materiales del proyecto: ${total} piezas
-    (+ ${G.sensores.length} sensores). ${servos} servos en el PCA9685 de 16 canales. Clic para verlo en la escena.</p>
-    <p class="tenue" style="margin-top:0;font-size:.74rem"><span class="rev simulado">simulado</span> la simulación hace lo que hace
-    la pieza · <span class="rev efecto">efecto simulado</span> su efecto lo hace otra pieza en la simulación ·
-    <span class="rev">solo visual</span> nada en la simulación depende de ella. Además: <span class="rev chica">3D</span> está
-    modelada y <span class="rev chica">N hilos</span> tiene su conexionado pin a pin.</p>`;
-  for (const cat of G.categorias_componentes || []) {
-    const deCat = lista.filter((c) => c.categoria === cat);
-    if (cat === 'Sensores') {
-      html += `<div class="tenue" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;margin:10px 0 6px">Sensores (${G.sensores.length})</div>`;
-      for (const s of G.sensores) {
-        const en3d = mallasDeSensor(s.id).length > 0;
-        html += `<div class="item" data-sensorcomp="${s.id}"><span class="rev simulado">simulado</span>`
-          + (s.hilos ? `<span class="rev chica">${s.hilos} hilos</span>` : '')
-          + (en3d ? '<span class="rev chica">3D</span>' : '')
-          + `<span class="n">${s.numero}</span>${esc(s.nombre)}</div>`;
-      }
-      html += `<div class="item" data-irsensores="1"><span class="n">→</span>Ver cada sensor con su error y mitigación</div>`;
-      continue;
-    }
-    html += `<div class="tenue" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;margin:10px 0 6px">${esc(cat)}</div>`;
-    for (const c of deCat) {
-      const clase = { propia: 'simulado', efecto: 'efecto', no: '' }[c.simulacion] ?? '';
-      const insignias = `<span class="rev ${clase}">${esc(c.estado)}</span>`
-        + (c.hilos ? `<span class="rev chica">${c.hilos} hilos</span>` : '')
-        + (COMP[c.id] ? '<span class="rev chica">3D</span>' : '<span class="rev pendiente chica">sin 3D</span>');
-      html += `<div class="item ${sel === c.id ? 'sel' : ''}" data-comp="${c.id}">${insignias}`
-        + `<span class="n">${c.cantidad}×</span>${esc(c.nombre)}</div>`;
-      if (sel === c.id) {
-        html += `<dl class="detalle"><dt>Modelo propuesto</dt><dd>${esc(c.modelo)}</dd>
-          <dt>Para qué sirve</dt><dd>${esc(c.funcion)}</dd>
-          <dt>Estado en la simulación</dt><dd>${esc(c.estado)}${COMP[c.id] ? '' : ' (todavía no dibujado)'}</dd>
-          <dt>Conexión (pin a pin)</dt><dd>${esc(c.conexion)}</dd></dl>`;
-      }
-    }
-  }
-  contenido.innerHTML = html;
-  contenido.querySelectorAll('[data-comp]').forEach((d) => d.addEventListener('click', () => seleccionarComponente(d.dataset.comp)));
-  contenido.querySelectorAll('[data-sensorcomp]').forEach((d) => d.addEventListener('click', () => {
-    resaltados.clear();
-    resaltados.add(d.dataset.sensorcomp);
-    enfocarSensor(d.dataset.sensorcomp);
-  }));
-  const ir = contenido.querySelector('[data-irsensores]');
-  if (ir) ir.addEventListener('click', () => {
-    pestana = 'sensores';
-    document.querySelectorAll('[data-pestana]').forEach((x) => x.classList.toggle('activo', x.dataset.pestana === 'sensores'));
-    pintarPanel();
-  });
-}
-
 // Lleva la camara a ver `mallas` enteras: la distancia sale del tamaño
 // real de la pieza (y del campo de vision de la camara), y la mira es desde
 // afuera de la planta hacia adentro, un poco desde arriba (o desde abajo si
@@ -5578,7 +5161,7 @@ function encuadrar(mallas, { desdeAbajo = false } = {}) {
   escena.updateMatrixWorld(true);
   let enCarro = false;
   for (const o of mallas) o.traverse((m) => {
-    if (!m.isMesh || m.userData.campo || m.isInstancedMesh) return;
+    if (!m.isMesh || m.userData.campo || m.userData.soloSombra || m.isInstancedMesh) return;
     // Lineas guia, conos y LED (materiales basicos) no cuentan para el tamaño.
     if (m.material && (m.material.isMeshBasicMaterial || (m.material.transparent && m.material.opacity < 0.3))) return;
     caja.expandByObject(m);
@@ -5626,146 +5209,37 @@ function mallasDeSensor(id) {
   return out;
 }
 
-function seleccionarComponente(id) {
-  compResaltado = compResaltado === id ? null : id;
-  resaltados.clear();
-  if (compResaltado && COMP[id]) encuadrar(COMP[id]);
-  pintarComponentes();
-}
-
 // Resalta (pulso ambar) las mallas del componente elegido.
 let compPintado = null;
 function resaltarComponente(t) {
-  if (compPintado && compPintado !== compResaltado) {
+  if (compPintado && compPintado !== SEL.componente) {
     for (const o of COMP[compPintado] || []) o.traverse((m) => { if (m.isMesh && m.material.emissive) m.material.emissive.setHex(0x000000); });
     compPintado = null;
   }
-  if (!compResaltado) return;
+  if (!SEL.componente) return;
   const k = 0.35 + 0.3 * Math.sin(t * 5);
-  for (const o of COMP[compResaltado] || []) o.traverse((m) => {
+  for (const o of COMP[SEL.componente] || []) o.traverse((m) => {
     if (m.isMesh && m.material.emissive) { m.material.emissive.setHex(COLOR.ambar); m.material.emissiveIntensity = k; }
   });
-  compPintado = compResaltado;
+  compPintado = SEL.componente;
 }
 
-function seleccionarSensor(id, enfocar) {
-  seleccion = { tipo: 'sensor', valor: id };
-  resaltados.clear();
-  resaltados.add(id);
-  if (pestana !== 'sensores') {
-    pestana = 'sensores';
-    document.querySelectorAll('[data-pestana]').forEach((x) => x.classList.toggle('activo', x.dataset.pestana === 'sensores'));
-    document.getElementById('panel').classList.remove('oculto');
-  }
-  if (enfocar) enfocarSensor(id);
-  pintarSensores();
-}
-
-async function enviarOrden(orden) {
-  if (MODO_DEMO) return;
-  try {
-    await fetch(BASE + 'api/orden', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(orden) });
-  } catch (e) { /* el aviso de conexion ya lo muestra */ }
-}
-
-// ---------------------------------------------------------------------------
-// avisos grandes: demo grabada, sin conexion, sin internet (usuario, 2026-09-27)
-// ---------------------------------------------------------------------------
-
-// null = todavia no se sabe. Se revisa cada 20 s y cuando el navegador avisa que cambio la red.
-// Antes (2026-09-27) el visor probaba UNA vez al arrancar, con la escena 3D todavia armandose (el
-// navegador ocupado varios segundos): el intento se pasaba del tiempo y decia "sin internet" con
-// internet. Ahora:
-// - En vivo decide la simulacion (`/api/internet`, el mismo chequeo en Python que usan el asistente
-//   y el dashboard): el visor y el Streamlit nunca se contradicen.
-// - En la demo (sin simulacion) prueba el navegador, con varios sitios y solo tras 2 fallos seguidos.
-let hayInternet = null;
-let fallosInternet = 0;
-
-async function alcanza(url) {
-  try {
-    // no-cors: no se lee la respuesta, solo se ve si el servidor se alcanza.
-    await fetch(url, { mode: 'no-cors', cache: 'no-store', signal: AbortSignal.timeout(8000) });
-    return true;
-  } catch (e) { return false; }
-}
-
-async function revisarInternet() {
-  let hay = null;
-  if (!MODO_DEMO) {
-    try {
-      const r = await fetch(BASE + 'api/internet', { cache: 'no-store', signal: AbortSignal.timeout(8000) });
-      if (r.ok) hay = !!(await r.json()).internet;
-    } catch (e) { /* supervisor viejo o caido: prueba el navegador */ }
-  }
-  if (hay === null) {
-    const ok = navigator.onLine && (await alcanza('https://api.deepseek.com/') || await alcanza('https://www.google.com/generate_204'));
-    fallosInternet = ok ? 0 : fallosInternet + 1;
-    if (!ok && fallosInternet < 2) { setTimeout(revisarInternet, 4000); return; }   // una sola falla no basta
-    hay = ok;
-  }
-  if (hay !== hayInternet) { hayInternet = hay; pintarModo(); }
-}
-
-function pintarModo() {
-  const caja = document.getElementById('modo');
-  if (!caja) return;
-  const partes = [];
-  if (MODO_DEMO) {
-    partes.push('<div class="demo"><b>▶ DEMO GRABADA</b><span>' + (EN_ARCHIVO
-      ? 'No es la simulación en vivo. Cuando la simulación de este PC arranque, esta pestaña pasa sola a en vivo.'
-      : 'No es la simulación en vivo: es una corrida grabada que se repite.') + '</span></div>');
-  } else if (fallos > 3) {
-    partes.push('<div class="desconectado"><b>⚠ SIN CONEXIÓN CON LA SIMULACIÓN</b><span>Lo que se ve está congelado. '
-      + 'Vuelva a abrir visor.bat.</span></div>');
-  }
-  // Sin internet lo dice el chip rojo de la barra (al lado de los ticks, como en el dashboard).
-  const html = partes.join('');
-  if (html !== pintarModo.ultimo) {
-    pintarModo.ultimo = html;
-    // Aviso nuevo: completo 10 s y despues compacto.
-    caja.innerHTML = html;
-    caja.classList.remove('compacto');
-    clearTimeout(pintarModo.temporizador);
-    pintarModo.temporizador = setTimeout(() => caja.classList.add('compacto'), 10000);
-  }
-  // Centrado sobre la parte libre de la vista (a la derecha del panel, si esta abierto).
-  const panel = document.getElementById('panel');
-  const izq = panel && !panel.classList.contains('oculto') && window.innerWidth > 900 ? panel.getBoundingClientRect().right : 0;
-  caja.style.left = ((izq + window.innerWidth) / 2) + 'px';
-  const barra = document.getElementById('barra');
-  if (barra) caja.style.top = (barra.getBoundingClientRect().bottom + 10) + 'px';
-  const chipRed = document.getElementById('chipRed');
-  if (chipRed) {
-    chipRed.textContent = hayInternet === null ? '🌐 revisando…' : hayInternet ? '🌐 con internet' : '📴 SIN INTERNET';
-    chipRed.className = 'chip' + (hayInternet === false ? ' sinred' : '');
-  }
-  if (P.asistente) {
-    const sinRed = hayInternet === false;
-    P.asistente.et.userData.oculta = sinRed;
-    P.asistente.etSinRed.userData.oculta = !sinRed;
-    P.asistente.matNube.color.set(sinRed ? 0x5b6270 : 0xdfe7f5);
-    P.asistente.matNube.emissive.set(sinRed ? 0x000000 : 0x539bf5);
-    P.asistente.linea.material.color.set(sinRed ? 0xe5534b : 0x539bf5);
-  }
-}
-
-function vigilarInternet() {
-  // La primera revision espera a que la escena termine de armarse.
-  setTimeout(revisarInternet, 1500);
-  setInterval(revisarInternet, 20000);
-  window.addEventListener('online', revisarInternet);
-  window.addEventListener('offline', revisarInternet);
-  window.addEventListener('resize', pintarModo);
-  document.getElementById('btnPanel').addEventListener('click', () => setTimeout(pintarModo, 0));
+// Sin internet (lo decide la interfaz): la nube del asistente queda gris, con la linea roja y la
+// etiqueta "sin internet".
+function nubeSinInternet(hay) {
+  if (!P.asistente) return;
+  const sinRed = hay === false;
+  P.asistente.et.userData.oculta = sinRed;
+  P.asistente.etSinRed.userData.oculta = !sinRed;
+  P.asistente.matNube.color.set(sinRed ? 0x5b6270 : 0xdfe7f5);
+  P.asistente.matNube.emissive.set(sinRed ? 0x000000 : 0x539bf5);
+  P.asistente.linea.material.color.set(sinRed ? 0xe5534b : 0x539bf5);
 }
 
 // ---------------------------------------------------------------------------
 // estado en vivo
 // ---------------------------------------------------------------------------
 
-let fallos = 0;
-let ultimoPintado = 0;
 let tickAnterior = -1;
 
 // Corrida nueva (el tick vuelve a empezar): se borra todo lo dinamico.
@@ -5781,7 +5255,7 @@ function limpiarCorrida() {
   for (const c of Object.values(enCubeta)) c.clear();
   // Las fichas que quedaron en las cubetas tambien son de la corrida vieja.
   for (const o of [...escena.children]) if (o.userData.deCubeta) escena.remove(o);
-  bitacora.length = 0;
+  ui.limpiarBitacora();
   ultimoTick = -1;
 }
 
@@ -5794,9 +5268,6 @@ async function consultar() {
       const r = await fetch(BASE + 'api/estado', { cache: 'no-store' });
       estado = await r.json();
     }
-    const volvio = fallos > 3;
-    fallos = 0;
-    if (volvio) pintarModo();
     VEL = MODO_DEMO ? 1 : Math.max(0.25, Number(estado.velocidad) || 1);
     if (estado.tick !== undefined && estado.tick < tickAnterior) limpiarCorrida();
     const cicloNuevo = estado.tick !== tickAnterior || ultimoTick === -1;
@@ -5827,35 +5298,91 @@ async function consultar() {
       if (P.manoSaca.visible) P.manoSaca.position.copy(posEstacionVasos(c).add(new THREE.Vector3(0, estado.mano_altura || 0.045, 0.06)));
     }
     if (estado.casillas_monedas) sincronizarAlmacen();
-    const chip = document.getElementById('chipEstado');
-    chip.textContent = MODO_DEMO ? (EN_ARCHIVO ? 'demo grabada · esperando la simulación de este PC'
-      : `demo grabada · ${estado.linea || ''}`) : (estado.linea || '—');
-    chip.className = 'chip ' + (MODO_DEMO ? 'pausada' : (estado.linea || ''));   // demo: ámbar, nunca verde
-    document.getElementById('chipTick').textContent = `tick ${estado.tick ?? '—'}`;
-    const avisos = [];
-    if (estado.cortina_activa) avisos.push('<div>🖐 <b>Cortina activa</b>: la prensa sube y se detiene; tapa y empujador congelados. La cinta de monedas sigue.</div>');
-    if (estado.moneda_en_espera) avisos.push('<div class="ambar">Tubo lleno: la moneda espera en E7 y la cinta de monedas se detiene hasta que un vaso reciba ese lote (no se descarta nada).</div>');
-    if ((estado.alarmas || []).includes('faltan_vasos')) avisos.push('<div class="ambar">Hay un lote listo y no hay vaso válido en el llenado: poner vasos en la entrada.</div>');
-    const aviso = document.getElementById('aviso');
-    aviso.innerHTML = avisos.join('');
-    aviso.style.display = avisos.length ? 'block' : 'none';
-    // El panel se repinta como mucho una vez por segundo (no molesta al hacer clic).
-    const ahora = performance.now();
-    if (ahora - ultimoPintado > 1000 && pestana !== 'pasos' && pestana !== 'componentes') { pintarPanel(); ultimoPintado = ahora; }
+    // Chips, avisos, respuesta a la ultima orden y el panel: interfaz.js.
+    ui.estadoNuevo(estado);
   } catch (e) {
-    fallos++;
-    if (fallos > 3) {
-      const chip = document.getElementById('chipEstado');
-      chip.textContent = 'sin conexión con el supervisor';
-      chip.className = 'chip error';
-    }
-    pintarModo();
+    ui.falloConexion();
   }
 }
 
 // ---------------------------------------------------------------------------
 // arranque
 // ---------------------------------------------------------------------------
+
+// Menos llamadas de dibujo con el MISMO detalle (usuario, 2026-09-28: "quedo algo pesado").
+// Al terminar de construir, las mallas quietas que se ven igual se unen en una sola
+// (piezas/optimizar.js explica que se une y que no). ?sinoptimizar deja la escena como se
+// construyo (para comparar); ?auditar muestra el resumen en window.__visor.optimizacion.
+let resumenOptimizacion = null;
+function optimizar() {
+  if (new URLSearchParams(location.search).has('sinoptimizar')) return;
+  try {
+    resumenOptimizacion = PIEZAS_OPTIMIZAR.optimizarEscena(escena, {
+      renderer,
+      auditar: new URLSearchParams(location.search).has('auditar'),
+      comp: COMP,
+      // Todo lo que las animaciones, los sensores y los botones mueven, ocultan o recolorean.
+      referencias: [P, SENS, CINTAS, CAPAS_CABLES, fichas, vasos],
+      // Se buscan por nombre mientras corre (el cuerno del servo del empujador).
+      nombresVivos: ['cuerno'],
+      // Listas que solo se usan al construir (componentes de cada pieza, partes de cada sensor):
+      // lo que se anima de un sensor va aparte (rayos, franjas, led, cono, campos).
+      ignorarDatos: ['fijas', 'estructura', 'motor', 'objetos'],
+    });
+  } catch (e) { console.warn('optimizar escena: se deja sin unir', e); }
+}
+
+// Camara de la sombra del sol ajustada a lo que hay (2026-09-28): antes era un cuadrado fijo de
+// 2,8 m que dejaba sin sombra el final de la pista. Se mide la caja de toda la escena vista desde
+// el sol y el mapa crece para que cada pixel de sombra siga midiendo ~1,4 mm (lo mismo de antes).
+function ajustarSombra() {
+  escena.updateMatrixWorld(true);
+  sol.shadow.updateMatrices(sol);
+  const vista = sol.shadow.camera.matrixWorldInverse;
+  const caja = new THREE.Box3(), p = new THREE.Vector3(), tam = new THREE.Vector3();
+  escena.traverse((m) => {
+    if (!m.isMesh || !(m.castShadow || m.receiveShadow)) return;
+    for (let q = m; q; q = q.parent) if (!q.visible) return;
+    if (!m.geometry.boundingBox) m.geometry.computeBoundingBox();
+    const b = m.geometry.boundingBox;
+    if (b.getSize(tam).length() > 4) return;   // el piso del salon (14 m) no cuenta
+    for (let i = 0; i < 8; i++) {
+      p.set(i & 1 ? b.max.x : b.min.x, i & 2 ? b.max.y : b.min.y, i & 4 ? b.max.z : b.min.z);
+      caja.expandByPoint(p.applyMatrix4(m.matrixWorld).applyMatrix4(vista));
+    }
+  });
+  if (caja.isEmpty()) return;
+  const margen = 0.06;
+  // La camara de la luz mira hacia -z: lo mas cerca tiene z mas alta.
+  Object.assign(sol.shadow.camera, { left: caja.min.x - margen, right: caja.max.x + margen, bottom: caja.min.y - margen,
+    top: caja.max.y + margen, near: Math.max(0.05, -caja.max.z - 0.5), far: -caja.min.z + 0.5 });
+  sol.shadow.camera.updateProjectionMatrix();
+  const lado = Math.max(caja.max.x - caja.min.x, caja.max.y - caja.min.y) + 2 * margen;
+  const px = THREE.MathUtils.clamp(Math.ceil(lado / 0.00137 / 256) * 256, 1024, 4096);
+  if (px !== sol.shadow.mapSize.x) {
+    sol.shadow.mapSize.set(px, px);
+    if (sol.shadow.map) { sol.shadow.map.dispose(); sol.shadow.map = null; }
+  }
+}
+
+// Planos de recorte de la camara segun lo lejos que mira (anti-parpadeo, 2026-09-28). La
+// precision del z-buffer depende casi solo del plano cercano: con near fijo en 5 mm, de lejos
+// dos caras a 0,1 mm (las capas de la pista, la placa del teclado) caian en el mismo valor de
+// profundidad y "parpadeaban" al mover la camara. Cerca de la pieza near baja hasta 2 mm (se
+// puede acercar sin que se corte); de lejos sube (hasta 8 cm) y la precision alcanza.
+// ?planosfijos deja los de antes (5 mm y 30 m), para comparar.
+const PLANOS_FIJOS = new URLSearchParams(location.search).has('planosfijos');
+function ajustarPlanos() {
+  if (PLANOS_FIJOS) return;
+  const d = camara.position.distanceTo(controles.target);
+  const near = THREE.MathUtils.clamp(d / 40, 0.002, 0.08);
+  const far = THREE.MathUtils.clamp(d * 6 + 6, 12, 40);
+  if (Math.abs(near - camara.near) > camara.near * 0.02 || far !== camara.far) {
+    camara.near = near;
+    camara.far = far;
+    camara.updateProjectionMatrix();
+  }
+}
 
 const reloj = new THREE.Clock();
 function bucle() {
@@ -5867,6 +5394,7 @@ function bucle() {
   animarAsistente(dt);
   if (G) { actualizarSensores(t); resaltarComponente(t); }
   controles.update();
+  ajustarPlanos();
   actualizarEtiquetas();
   renderer.render(escena, camara);
   requestAnimationFrame(bucle);
@@ -5881,31 +5409,8 @@ async function cargarJSON(url) {
   return r.json();
 }
 
-// Vigia del visor portable: mientras muestra la demo grabada, pregunta cada 3 s si la
-// simulacion ya esta corriendo en este PC y, cuando responde, la pestaña pasa sola al visor en
-// vivo (sin que el usuario haga nada). No necesita internet: es un servidor local.
-async function simulacionCorriendo() {
-  try {
-    const r = await fetch(URL_VIVO + 'api/estado', { cache: 'no-store', signal: AbortSignal.timeout(1500) });
-    return r.ok;
-  } catch (e) { return false; }
-}
-
-function vigilarSimulacion() {
-  const aviso = document.getElementById('chipEstado');
-  const revisar = async () => {
-    if (await simulacionCorriendo()) {
-      if (aviso) { aviso.textContent = 'simulación encontrada · abriendo en vivo…'; aviso.className = 'chip corriendo'; }
-      location.replace(URL_VIVO + location.search);
-      return;
-    }
-    setTimeout(revisar, 3000);
-  };
-  revisar();
-}
-
 async function iniciar() {
-  if (EN_ARCHIVO && await simulacionCorriendo()) {
+  if (EN_ARCHIVO && await simulacionCorriendo(URL_VIVO)) {
     // La simulacion ya estaba corriendo: directo al visor en vivo.
     location.replace(URL_VIVO + location.search);
     return;
@@ -5920,9 +5425,10 @@ async function iniciar() {
   } else {
     try { PASOS = await cargarJSON('./api/pasos'); } catch (e) { PASOS = []; }
   }
-  if (EN_ARCHIVO) vigilarSimulacion();
-  vigilarInternet();
-  pintarModo();
+  // Vigia del portable: pasa solo a en vivo cuando la simulacion de este PC responde.
+  if (EN_ARCHIVO) ui.vigilarSimulacion();
+  ui.vigilarInternet();
+  ui.pintarModo();
   construirCintaMonedas();
   construirCintaVasos();
   construirCanaleta();
@@ -5932,48 +5438,27 @@ async function iniciar() {
   construirCajaControl();
   construirSensores();
   construirCables();
-  let verCables = false;
-  try { verCables = localStorage.getItem('verCables') === '1'; } catch { /* sin almacenamiento */ }
-  if (new URLSearchParams(location.search).has('cables')) verCables = true;
-  mostrarCables(verCables);
-  document.getElementById('btnCables').addEventListener('click', () => {
-    verCables = !verCables;
-    try { localStorage.setItem('verCables', verCables ? '1' : '0'); } catch { /* nada */ }
-    mostrarCables(verCables);
-  });
+  ui.iniciarCables();
   for (const s of Object.values(SENS)) s.marcador.userData.baseX = s.marcador.scale.x, s.marcador.userData.baseY = s.marcador.scale.y;
+  ajustarSombra();
+  optimizar();
 
-  // ?vista=pista, ?paso=3 o ?sensor=cortina en la URL abren directo ahi.
+  // ?vista=pista, ?paso=3, ?sensor=cortina o ?componente=<id> en la URL abren directo ahi
+  // (?panel=0 lo aplica la interfaz antes de ubicar la camara: la toma se corre si el panel tapa).
   const q = new URLSearchParams(location.search);
-  // Antes de ubicar la camara: la vista se corre segun si el panel tapa.
-  if (q.get('panel') === '0') {
-    document.getElementById('panel').classList.add('oculto');
-    document.getElementById('btnPanel').classList.remove('activo');
-  }
-  if (q.get('paso')) {
-    pestana = 'pasos';
-    document.querySelectorAll('[data-pestana]').forEach((x) => x.classList.toggle('activo', x.dataset.pestana === 'pasos'));
-    seleccionarPaso(Number(q.get('paso')));
-    if (vuelo) { vuelo.t = 0.999; }
-  } else if (q.get('componente')) {
-    pestana = 'componentes';
-    document.querySelectorAll('[data-pestana]').forEach((x) => x.classList.toggle('activo', x.dataset.pestana === 'componentes'));
-    seleccionarComponente(q.get('componente'));
-    if (vuelo) { vuelo.t = 0.999; }
-  } else if (q.get('sensor')) {
-    seleccionarSensor(q.get('sensor'), true);
-    if (vuelo) { vuelo.t = 0.999; }
+  if (ui.aplicarURL(q)) {
+    // ya ubico la camara
   } else if (q.get('cam') && q.get('mira')) {
     // ?cam=x,y,z&mira=x,y,z en coordenadas de la simulacion (metros): una
     // toma exacta, para capturas del informe o revisar medidas.
     const num = (t) => t.split(',').map(Number);
     controles.target.copy(V(num(q.get('mira'))));
     camara.position.copy(V(num(q.get('cam'))));
-    pintarPanel();
+    ui.pintarPanel();
   } else {
     vista(q.get('vista') || 'todo');
     vuelo.t = 0.999;
-    pintarPanel();
+    ui.pintarPanel();
   }
   await consultar();
   // En vivo se pregunta 5 veces por segundo; la demo avanza un tick por
@@ -5984,7 +5469,22 @@ async function iniciar() {
 
 // Revision de espacio (?auditar): expone la escena para que un script mida
 // si alguna pieza atraviesa a otra. No cambia nada del visor.
-if (new URLSearchParams(location.search).has('auditar')) window.__visor = { THREE, escena, COMP, SENS, P, CABLES, G: () => G, camara, controles, PIN, PINES_REALES };
+if (new URLSearchParams(location.search).has('auditar')) window.__visor = { THREE, escena, COMP, SENS, P, CABLES, G: () => G, camara, controles, PIN, PINES_REALES, renderer, vista, vuelo: () => vuelo,
+  // Rendimiento: renderer.info (llamadas de dibujo, triangulos, geometrias, texturas) y lo que unio optimizar().
+  info: () => ({ calls: renderer.info.render.calls, triangulos: renderer.info.render.triangles, ...renderer.info.memory, programas: renderer.info.programs.length }),
+  optimizacion: () => resumenOptimizacion };
+
+// La interfaz: le pasa lo que necesita de la escena (interfaz.js no toca Three.js).
+const ui = crearInterfaz({
+  enArchivo: EN_ARCHIVO, urlVivo: URL_VIVO, base: BASE,
+  modoDemo: () => MODO_DEMO, G: () => G, estado: () => estado, pasos: () => PASOS,
+  vista, saltarVuelo: () => { if (vuelo) vuelo.t = 0.999; },
+  enfocarSensor, encuadrarComponente: (id) => encuadrar(COMP[id]),
+  tiene3D: (id) => !!COMP[id], sensorEn3D: (id) => mallasDeSensor(id).length > 0,
+  sensorActivo, sensorEnAlarma,
+  mostrarCables3D: mostrarCables, datosCables: () => ({ cables: CABLES, tipos: TIPOS_CABLE }),
+  alCambiarInternet: nubeSinInternet,
+});
 
 bucle();
 iniciar();

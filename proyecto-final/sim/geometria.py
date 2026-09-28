@@ -230,6 +230,7 @@ def geometria_completa(parametros: dict) -> dict:
         # barrido y caida con lo mismo que tarda en el montaje.
         "tiempos_ms": parametros["tiempos_ms"],
         "canaleta": canaleta,
+        "puesto_pc": parametros.get("puesto_pc"),
         "pista": {
             "linea": [[round(q.x, 4), round(q.y, 4)] for q in linea[::2]],
             "largo": round(linea[-1].s, 3),
@@ -342,6 +343,18 @@ def zonas_carro(parametros: dict, geo: dict | None = None) -> dict:
     poste = {"clave": "poste_camara", "nombre": "el poste de la cámara de vasos", "atravesar": "atravesarlo",
              "cx": cam[0], "cy": cam[1], "rumbo": 0.0, "ml": lado, "ma": lado}
 
+    # 5. El puesto del PC en el piso: portatil y hub USB (2026-09-28: antes no estaban en el mapa y
+    # una orden podia mandar el carro encima de ellos).
+    pc = parametros.get("puesto_pc")
+    puesto = []
+    if pc:
+        mg = pc.get("margen_mm", 0) / 1000
+        for clave, nombre in (("laptop", "el portátil"), ("hub", "el hub USB")):
+            (cx, cy), (w, h) = pc[f"{clave}_centro_mm"], pc[f"{clave}_tamano_mm"]
+            puesto.append({"clave": clave, "nombre": nombre, "atravesar": "pasarle por encima",
+                           "cx": cx / 1000, "cy": cy / 1000, "rumbo": 0.0,
+                           "ml": w / 2000 + mg, "ma": h / 2000 + mg})
+
     # Piso libre: la pista (su linea central, mas medio ancho) con un margen.
     linea = geo["pista"]["linea"]
     borde = geo["pista"]["ancho"] / 2 + z["margen_zona_libre_mm"] / 1000
@@ -350,4 +363,5 @@ def zonas_carro(parametros: dict, geo: dict | None = None) -> dict:
     redondo = lambda d: {k: (round(v, 4) if isinstance(v, float) else v) for k, v in d.items()}
     return {"libre": [round(v, 4) for v in libre],
             "muelle": redondo(caja_muelle),
-            "prohibidas": [redondo(planta), redondo(canaleta)] + [redondo(m) for m in muelle] + [redondo(poste)]}
+            "prohibidas": [redondo(planta), redondo(canaleta)] + [redondo(m) for m in muelle] + [redondo(poste)]
+            + [redondo(x) for x in puesto]}

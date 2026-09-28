@@ -93,8 +93,11 @@ export function planoDibujado(largo, ancho, dibujar, { ppm = 16, fondo = null } 
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 8;
+  // polygonOffset: el plano va pegado a la cara de la pieza (decimas de mm); se "adelanta" en el
+  // z-buffer para que la tarjeta de video nunca lo mezcle con esa cara (parpadeo de lejos).
   const m = new THREE.Mesh(new THREE.PlaneGeometry(largo, ancho),
-    new THREE.MeshBasicMaterial({ map: tex, transparent: !fondo, depthWrite: false }));
+    new THREE.MeshBasicMaterial({ map: tex, transparent: !fondo, depthWrite: false,
+      polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }));
   m.rotation.x = -Math.PI / 2;
   return m;
 }

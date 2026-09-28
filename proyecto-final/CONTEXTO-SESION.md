@@ -131,9 +131,29 @@ vienen guardando. Plan: `~/.claude/plans/complete-todo-lo-que-snappy-liskov.md`.
 - [x] f. Verificación: solapes, cables, capturas.
 - [x] g. Pruebas, docs, commit, relanzar.
 
+**Pedido del 2026-09-28 (8):** "revise esas 2 cosas que quedaron pendientes, me gustaría que optimizara
+un poco el visor 3d, ya que quedó algo pesado pero sin quitarle detalle, y también algunos materiales
+o zonas como la parte interna del teclado o los muros quedaron parpadeando, de resto quedó excelente
+... también utilice ese nivel de orden y detalle para rehacer la parte gráfica del visor y del
+streamlit sin perder funcionalidades, ya que fue hecho por tantas partes que se pierde la línea y por
+tantos prototipos que se mira feo, si la quiere rehacer de 0 hágala, pero que no se pierdan
+funcionalidades, igual con streamlit, tanto las pruebas que están desordenadas como los componentes,
+y así, trate de darle orden a todo, igual que a los archivos del proyecto ... revisiones de cómo queda
+todo, lo de siempre, posiblemente se quede sin tokens a mitad, pero lo sigue haciendo hasta que vuelva
+a tener". Plan: `~/.claude/plans/complete-todo-lo-que-snappy-liskov.md`. Medido: 3.257 mallas,
+2.629 materiales, 0,62 M triángulos; cámara near 0,005 / far 30 (causa del parpadeo).
+- [x] B. Pendientes: laptop y hub en el mapa de zonas del carro (config `puesto_pc`, el visor los lee de ahí); cable del obturador con brazo portacables (revisar su captura en F).
+- [ ] A. Rendimiento (< 500 draw calls, mismo detalle) y parpadeos (near dinámico, caras coplanares).
+- [x] C. Streamlit rehecho (paquete `app/dashboard/`, mismo diseño que el visor, nada perdido).
+- [x] D. Interfaz del visor rehecha (`interfaz.js`, controles de prueba ordenados, componentes).
+- [x] E. Orden del proyecto: tests por capa (control/sim/visor/app/firmware), escenarios de un filtro en `sim/escenarios/pruebas_aisladas/`, `pytest.ini` + `tests/conftest.py`, `docs/README.md`, árbol en CLAUDE.md/README (659 pruebas pasan).
+- [ ] F. Revisión final (capturas de todo, inventarios de funciones), commit, app escondida.
+
 ## 3. Estado actual (2026-09-27, fin de sesión)
 
-- Pruebas: `entorno/Scripts/python -m pytest -q` → todas deben pasar (623, ~6 min).
+- Pruebas: `entorno/Scripts/python -m pytest -q` → todas deben pasar (659 el 2026-09-28, ~2 min).
+  Están por capa en `tests/control`, `tests/sim`, `tests/visor`, `tests/app` y `tests/firmware`
+  (una sola capa: `... -m pytest -q tests/control`).
 - Forma de trabajar (usuario, 2026-09-26): dejar SIEMPRE una corrida escondida con el código
   actual (`python -m app.lanzar --auto prueba_completa --reemplazar` en segundo plano; cierra la
   anterior y su consola). El usuario la mira cuando quiere con `visor.bat` (un clic). NO
@@ -166,14 +186,14 @@ vienen guardando. Plan: `~/.claude/plans/complete-todo-lo-que-snappy-liskov.md`.
 
 - Revisión final hecha (`docs/revision-final.md`). Sensores de material bajo la cinta APROBADOS.
   Conexionado pin a pin en `sim/conexiones.py` (fuente única → visor, `docs/conexiones.md`,
-  `tests/test_conexiones.py`). Punto 15 hecho y APROBADO (protocolo en
+  `tests/sim/test_conexiones.py`). Punto 15 hecho y APROBADO (protocolo en
   `control/protocolo.py`, contrato en CLAUDE.md 10.1).
   Mejora de interfaz hecha el 2026-09-27 (dashboard para cualquier persona, visor con
   encuadre automático, componentes completos). Fase 7 hecha el 2026-09-27. Siguiente: que el
   usuario apruebe el 15 y el 16, ponga la clave de DeepSeek, y elija la próxima fase (5 visión real,
   8 firmware o 9 documentación para la entrega del 29-09).
-- UNA sola prueba en la interfaz: `prueba_completa` (las aisladas quedan en
-  `tests/escenarios/`, solo para pytest).
+- UNA corrida normal en la interfaz: `prueba_completa`. Las de un solo filtro (y el mixto de 20)
+  están en `sim/escenarios/pruebas_aisladas/`: las usan pytest y la "prueba de un filtro" de la interfaz.
 - Soportes de servos (cuna con torres y tornillos), Hall a 4 mm del imán y poste de la cortina corregidos el 2026-09-26; revisar con el usuario.
 
 ## 5. Dónde está cada cosa (para no buscar)
@@ -182,12 +202,14 @@ vienen guardando. Plan: `~/.claude/plans/complete-todo-lo-que-snappy-liskov.md`.
 - Historial de decisiones: `docs/bitacora.md`. Paso a paso: `docs/paso-a-paso.yaml` (el `.md`
   se genera con `python -m app.documentos`).
 - Lógica pura: `control/` (linea.py, embalaje.py, reglas.py, almacen.py, tiempos.py, vehiculo.py).
-- Asistente: `app/asistente.py` (+ pestaña en `app/dashboard.py`, `/api/asistente` en `app/servidor.py`,
+- Asistente: `app/asistente.py` (+ pestaña en `app/dashboard/pestanas/asistente.py`, `/api/asistente` en `app/servidor.py`,
   pestaña y nube en `app/visor3d/visor.js`). Guía del parcial: `docs/enunciado/`.
 - Simulación: `sim/planta.py` (todo el flujo tick a tick), `sim/mundo.py` (PyBullet y medidas),
   `sim/sensores_sim.py`, `control/hal/backend_sim.py`, `sim/geometria.py` (lo que ve el visor).
 - Catálogos: `sim/catalogos.py` (13 sensores + lista de materiales).
 - Configuración y valores provisionales: `config/parametros.yaml`.
+- Pruebas: `tests/<capa>/` (índice en CLAUDE.md §9); escenarios de un solo filtro en
+  `sim/escenarios/pruebas_aisladas/`. Índice de los documentos: `docs/README.md`.
 - Visor 3D: `app/visor3d/visor.js`. Demo grabada: `python -m app.grabar_demo`.
 - Capturas en tiempo real para revisar el 3D (no usar `--virtual-time-budget`, engaña):
   script `captura.mjs` con Chrome headless por CDP (ver bitácora 2026-09-25).

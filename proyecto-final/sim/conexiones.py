@@ -12,7 +12,7 @@ Tres partes:
   ("dispositivo.pin"), su color y su funcion.
 
 El visor 3D arma los modulos y dibuja los hilos desde aca, `app.documentos`
-genera `docs/conexiones.md` y `tests/test_conexiones.py` verifica que no haya
+genera `docs/conexiones.md` y `tests/sim/test_conexiones.py` verifica que no haya
 pines repetidos, que cada pin exista y que los GPIO coincidan con la tabla de
 pines de `docs/revision-final.md`. Sin dependencias (no importa PyBullet).
 """

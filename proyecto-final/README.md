@@ -425,7 +425,7 @@ flowchart LR
     P -. "cuando la simulación responde" .-> V
     B --> L["app/lanzar.py"]
     L --> S["app/supervisor.py<br/>simulación o ESP32 real"]
-    L --> D["app/dashboard.py<br/>Streamlit + asistente"]
+    L --> D["app/dashboard/<br/>Streamlit + asistente"]
     S -- "estado en vivo" --> V["visor 3D<br/>app/visor3d"]
     S -- "eventos, telemetría, ruta" --> DB[("SQLite<br/>datos/planta.db")]
     DB --> D
@@ -451,8 +451,8 @@ flowchart LR
 - **SQLite** (`app/db.py`). Tablas de eventos, elementos, vasos, ruta, órdenes, la conversación del
   asistente y lo que quedó en los tubos entre turnos. En modo WAL, para que el dashboard lea mientras
   el supervisor escribe.
-- **Dashboard** (`app/dashboard.py`). Solo lee de SQLite y escribe órdenes; se refresca con
-  `st.fragment` sin bucles. Supervisor y dashboard son **procesos separados a propósito**:
+- **Dashboard** (`app/dashboard/`, un módulo por pestaña y un sistema de diseño común con el visor). Solo lee
+  de SQLite y escribe órdenes; se refresca con `st.fragment` sin bucles (solo la pestaña abierta). Supervisor y dashboard son **procesos separados a propósito**:
   Streamlit reejecuta el script en cada clic, y mezclar ahí la simulación, la cámara o el puerto
   serial lo volvería inestable.
 - **Visor 3D** (`app/visor3d/`). Three.js en local (sin CDN, para no depender del internet del
@@ -561,7 +561,8 @@ pero no se entiende, es formato, no cables). Todo el detalle, con la tabla de pi
 
 ### Pruebas automáticas
 
-Tenemos **más de 560 pruebas** en `tests/`, y todas corren sin ventana (PyBullet en modo DIRECT):
+Tenemos **más de 650 pruebas** en `tests/` (ordenadas por capa: `control/`, `sim/`, `visor/`,
+`app/` y `firmware/`), y todas corren sin ventana (PyBullet en modo DIRECT):
 reglas de decisión, registro de casillas, máquinas de estado de las dos cintas, almacén, protocolo,
 control del carro (incluida la ida y vuelta con 20 semillas de error sin tocar muros), la planta
 completa con cada sabotaje, un escenario por cada filtro por separado más uno mixto, el supervisor,
@@ -723,11 +724,13 @@ fuentes: no se editan a mano.
 ```
 visor.bat              abre el visor y el dashboard (y arranca la simulación si hace falta)
 instalar.bat           deja todo listo en un PC nuevo (entorno, firmware, Ollama, Whisper, chequeo)
-requirements-lock.txt  versiones exactas con las que se probó
+requirements.txt       dependencias; requirements-lock.txt: versiones exactas con las que se probó
+pytest.ini             configuración de las pruebas (carpeta tests/, raíz importable)
 visor-portable.html    el visor en un solo archivo, con la demo (generado: python -m app.portable)
+datos/                 la base SQLite local de la corrida (fuera de git)
 config/                parametros.yaml (todo número del diseño), monedas.yaml, precios.yaml
-control/               lógica pura, sin PyBullet ni pyserial: línea, embalaje, reglas,
-                       almacén, carro, protocolo, tiempos
+control/               lógica pura, sin PyBullet ni pyserial: línea, embalaje, registro, reglas,
+                       almacén, monedas, carro, protocolo, tiempos
   hal/                 interfaces de sensores y actuadores, backend sim y backend real
 sim/                   simulación en PyBullet
   planta.py            LA simulación de la línea: cintas, almacén, canaleta, carro
@@ -735,13 +738,33 @@ sim/                   simulación en PyBullet
   sensores_sim.py      sensores emulados (incluida la cámara en modo oráculo)
   vehiculo_sim.py      el carro con física real, en su propio mundo
   pista.py             línea central de la pista
-  geometria.py         la geometría que dibuja el visor
+  geometria.py         la geometría que dibuja el visor (y las zonas prohibidas del carro)
   catalogos.py         los 13 sensores y la lista de materiales
   conexiones.py        conexionado pin a pin (fuente única del visor, los docs y el firmware)
-  escenarios/          prueba_completa.yaml (la prueba de la interfaz)
-app/                   supervisor, servidor, visor 3D, dashboard, asistente, base de datos,
-                       puente serial, documentos
-firmware/              MicroPython de los dos ESP32 (fijo/, carro/, comun/) y cómo subirlo
-tests/                 pruebas automáticas (+ escenarios de un solo filtro)
-docs/                  documentación generada, bitácora, capturas y enunciado
+  carga_escenarios.py  lectura de escenarios, pruebas de un filtro y piezas sueltas
+  escenarios/          prueba_completa.yaml (la corrida de la interfaz)
+    pruebas_aisladas/  un escenario por filtro y el mixto de 20 (pytest y "probar un filtro")
+app/
+  lanzar.py            supervisor + dashboard (lo usa visor.bat)
+  supervisor.py        corre la simulación y escribe SQLite; servidor.py: HTTP del visor y /api
+  dashboard/           el Streamlit (python -m app.dashboard): inicio.py, estilo.py, datos.py,
+                       textos.py, cabecera.py, controles.py, dibujos.py y pestanas/ (una por módulo)
+  visor3d/             visor 3D en Three.js: index.html, visor.js (escena y render),
+                       interfaz.js y estilo.css (panel), piezas/ (una por módulo), demo/, vendor/
+  asistente.py         asistente (DeepSeek u Ollama local) con voz
+  db.py, configuracion.py, costos.py, documentos.py, portable.py, grabar_demo.py
+  chequeo.py           revisión previa a la sustentación (python -m app.chequeo)
+  evaluar_asistente.py batería real del asistente (docs/pruebas-asistente.md)
+  puente_serial.py     PC <-> ESP32 fijo (o estación emulada si no hay placa)
+firmware/              MicroPython de los dos ESP32 (fijo/, carro/, comun/), preparar.py y subir.py
+vision/                captura del dataset y entrenamiento del clasificador de monedas (fase 5)
+tests/                 pruebas automáticas, por capa (python -m pytest -q)
+  control/             reglas, línea, embalaje, registro, almacén, monedas, tiempos, protocolo, carro
+  sim/                 planta completa, sensores emulados, escenarios, conexionado
+  visor/               geometría del visor, servidor HTTP, documentos generados, visor portable
+  app/                 supervisor, base de datos, dashboard, asistente, voz, costos, chequeo,
+                       prueba de un filtro
+  firmware/            la lógica de las dos placas probada en el PC
+docs/                  documentación (índice en docs/README.md): generada, bitácora, inventarios
+                       de la interfaz, capturas y enunciado
 ```

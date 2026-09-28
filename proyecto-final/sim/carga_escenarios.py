@@ -22,10 +22,11 @@ from control import monedas
 
 DIRECTORIO_ESCENARIOS = Path(__file__).parent / "escenarios"
 # Usuario (2026-09-26): la corrida normal de la interfaz es UNA (prueba_completa.yaml, con un
-# caso de cada filtro). Los escenarios de un solo filtro de tests/escenarios (los de las pruebas
-# automaticas) se pueden correr ademas desde la interfaz como "prueba de un filtro"
-# (usuario, 2026-09-27: ver PRUEBAS_DE_UN_FILTRO al final).
-DIRECTORIO_PRUEBAS_AISLADAS = Path(__file__).parent.parent / "tests" / "escenarios"
+# caso de cada filtro). Los escenarios de un solo filtro de sim/escenarios/pruebas_aisladas (los de
+# las pruebas automaticas) se pueden correr ademas desde la interfaz como "prueba de un filtro"
+# (usuario, 2026-09-27: ver PRUEBAS_DE_UN_FILTRO al final). Antes estaban en tests/escenarios; se
+# movieron aqui (2026-09-28) porque tambien los usa la interfaz, no solo pytest.
+DIRECTORIO_PRUEBAS_AISLADAS = DIRECTORIO_ESCENARIOS / "pruebas_aisladas"
 ESCENARIO_UNICO = "prueba_completa"
 
 TIPOS_VALIDOS = ("vacia", "moneda", "boton_plastico", "boton_metalico", "bloque", "mano")
@@ -99,7 +100,7 @@ def _construir_elemento(datos: dict) -> EspecificacionElemento:
 
 def cargar_escenario(nombre_archivo: str) -> Escenario:
     """`nombre_archivo` es el nombre del YAML dentro de sim/escenarios/ (o de
-    tests/escenarios/), con o sin extension (p. ej.
+    sim/escenarios/pruebas_aisladas/), con o sin extension (p. ej.
     "prueba_completa" o "mixto_20.yaml")."""
     ruta = DIRECTORIO_ESCENARIOS / nombre_archivo
     if not ruta.suffix:
@@ -123,7 +124,7 @@ def listar_escenarios() -> list[str]:
 # ---------------------------------------------------------------------------
 # El enunciado dice que los filtros "se van a probar uno por uno" en la sustentacion. La interfaz
 # sigue teniendo UNA corrida normal (prueba_completa), y ademas puede correr cada escenario de un
-# solo filtro de tests/escenarios (los mismos que usan las pruebas automaticas, asi que lo que se
+# solo filtro de sim/escenarios/pruebas_aisladas (los mismos que usan las pruebas automaticas, asi que lo que se
 # muestra es lo que esta probado) o poner una pieza concreta en la proxima carga.
 
 PRUEBAS_DE_UN_FILTRO = [

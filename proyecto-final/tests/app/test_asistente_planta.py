@@ -46,3 +46,11 @@ def test_un_destino_en_la_pista_si_se_manda(monkeypatch, tmp_path):
     monkeypatch.setattr(asistente, "preguntar_deepseek", lambda *a, **k: dict(propuesta))
     r = asistente.atender("vaya al punto 1.2, -0.3", db.conectar(tmp_path / "a.db"), usar="deepseek", cliente=object())
     assert [o["accion"] for o in r.ordenes] == ["ir_a"]
+
+
+@pytest.mark.parametrize("x, y, que", [(0.0, 0.45, "portátil"), (0.36, 0.33, "hub USB")])
+def test_el_puesto_del_pc_tambien_esta_prohibido(x, y, que):
+    """2026-09-28: el portátil y el hub están en el piso, al lado de la planta; antes no estaban en el
+    mapa y una orden podía mandar el carro encima de ellos."""
+    motivo = asistente.destino_imposible(x, y)
+    assert que in motivo

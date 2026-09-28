@@ -4,9 +4,24 @@ primaryColor = "#f2b134"
 backgroundColor = "#0e1116"
 secondaryBackgroundColor = "#161b22"
 textColor = "#e6e8eb"
+# Mismo sistema de diseño que el visor 3D (app/dashboard/estilo.py): bordes, radios y los colores
+# con significado (verde bien, ámbar en proceso, rojo alarma, azul información, morado visión).
+borderColor = "#2a313c"
+baseRadius = "medium"
+greenColor = "#3fb68b"
+yellowColor = "#f2b134"
+orangeColor = "#f2b134"
+redColor = "#e5534b"
+blueColor = "#539bf5"
+violetColor = "#b083f0"
+grayColor = "#8b949e"
 
 [server]
 headless = true
 
 [browser]
 gatherUsageStats = false
+
+[client]
+# Sin el menú de desarrollador ("Deploy", "Rerun"...): es un tablero para usarlo, no para editarlo.
+toolbarMode = "viewer"

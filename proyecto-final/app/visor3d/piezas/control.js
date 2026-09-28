@@ -228,8 +228,10 @@ export function crearGabineteControl(opciones = {}) {
   const g = new THREE.Group();
   g.name = 'gabinete_control';
   const L = largo, W = ancho, H = alto, e = grueso;
-  // Placa de montaje (aluminio anodizado gris oscuro, 3 mm).
-  const piso = caja(L * MM, W * MM, e * MM, 0x2a2f36, Pm(0, 0, e / 2), { metalness: 0.35, roughness: 0.55 });
+  // Placa de montaje (aluminio anodizado gris oscuro, 3 mm). 0,2 mm mas chica por lado que el
+  // borde de las paredes: sus cantos quedaban en el mismo plano que los de las paredes de acrilico
+  // y se veian parpadear a traves de ellas (2026-09-28).
+  const piso = caja((L - 0.4) * MM, (W - 0.4) * MM, e * MM, 0x2a2f36, Pm(0, 0, e / 2), { metalness: 0.35, roughness: 0.55 });
   piso.name = 'piso';
   g.add(piso);
   // Paredes de acrilico: casi invisibles, con los cantos marcados (el canto del acrilico se ve
@@ -442,9 +444,12 @@ export function crearLaptopTUFA15(opciones = {}) {
   }
   pc.add(caja(0.12, 0.0008, 0.011, C.oscuro, P(0, L.fondo / 2 + 0.0001, 0.0085)));   // panel del medio (bisagra)
   for (let i = 0; i < 12; i++) pc.add(caja(0.0012, 0.0035, 0.006, matRej, P(-L.ancho / 2 - 0.0002, 0.03 + i * 0.007, 0.009)));
-  // Placa del teclado hundida + teclas en relieve.
+  // Placa del teclado + teclas en relieve. La placa asoma 0,2 mm sobre el canto de la cubierta
+  // (antes su cara de arriba quedaba EXACTAMENTE a la altura del canto, L.base + 0,1 mm, y las dos
+  // se turnaban al mover la camara: el "parpadeo del interior del teclado", 2026-09-28). Las
+  // teclas arrancan dentro de la placa.
   const zTec = L.base + 0.0002;
-  pc.add(caja(0.33, 0.112, 0.0006, C.oscuro, P(0, 0.052, zTec - 0.0004)));
+  pc.add(caja(0.33, 0.112, 0.0006, C.oscuro, P(0, 0.052, L.base)));
   const teclas = teclasTuf();
   const kc = new THREE.Vector2(0, 0.052);
   const matTecla = mat(C.tecla, { roughness: 0.7 });

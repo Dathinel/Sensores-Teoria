@@ -70,7 +70,7 @@ sin tocar el mismo archivo, y la misma pieza se puede reutilizar en otro visor.
    ```
    Ejemplo real: el ESP32 de las placas GVS, en `construirModulo` (busca `PIEZAS_ELECTRONICA`).
 3. Verificar: `node --check` de `visor.js` y del módulo, `python -m app.portable` y
-   `python -m pytest -q tests/test_portable.py tests/test_visualizacion.py`, y una captura del
+   `python -m pytest -q tests/visor/test_portable.py tests/visor/test_visualizacion.py`, y una captura del
    visor (servido con `?demo` y el `visor-portable.html`) sin errores de consola.
 
 `app/portable.py` mete TODOS los `.js` de esta carpeta en el importmap del HTML de un solo
@@ -95,3 +95,15 @@ su fila en `CATALOGO_COMPONENTES.md`, sección "Piezas Three.js": función, qué
 | `linea_monedas.js` | `crearRodilloCinta`, `crearCojinete608`, `crearAcople`, `crearSoporteNEMA17`, `crearPlatinaM18`, `crearCompuertaDesvio`, `crearOrejaBisagra`, `crearBridaServo`, `crearBandejaRechazo`, `crearPlacaFijaAlmacen`, `crearDiscoCarrusel`, `crearTuboMonedas`, `crearObturadorAlmacen`, `crearSoporteMotorCarrusel`, `crearListon`, `crearPosteCamaraCenital` | Cinta de monedas (rodillo motriz con goma y tensor, 608ZZ en bloques impresos, jaula del NEMA17 con acople flexible, platinas M18 bajo E1/E2), descarga (compuerta en Y coaxial con el SG90, bandeja de rechazo) y almacén revólver (placa fija con un agujero, disco de acrílico con imán, 6 tubos de policarbonato rotulados, obturador coaxial con su SG90, placa del 28BYJ-48). Se usa en `construirCintaMonedas`, `construirBanda` y `construirAlmacen`. |
 | `linea_vasos.js` | `crearVaso`, `crearTapa`, `crearTacoCasilla`, `crearTuboTapas`, `crearPrensaLeva`, `crearEmpujador`, `crearAccionamientoCinta`, `crearPanelLuz`, `crearPosteCamara`, `crearCamaraVasos`, `crearPortaVL53Interior` | Cinta de vasos: vaso con pestaña y cinta ArUco, tapa con cono (apilable), tacos de casilla, tubo de tapas con escape de SG90, prensa de leva en MG996R (resorte que se comprime en vivo), empujador biela-manivela, NEMA17 con acople, panel de luz, cámara de vasos en su poste, porta del VL53L0X del interior. Los que se mueven traen `userData.poner(u)`. |
 | `carro.js` | `disposicionCarro`, `crearChasisCarro`, `crearPerfboard`, `crearSeparadorM3`, `crearMotorTT`, `crearRuedaTT`, `crearRuedaLocaBola`, `crearRodilloGuia623`, `crearSoporteEncoder`, `crearEscuadraFrontal`, `crearCunaCarro`, `crearMuelleCarga` | Carro de entrega y muelle de carga: chasis de acrílico con hueco del vaso y ranuras, motorreductores TT en soportes en T, ruedas de 65 mm con dibujo, disco de encoder en el eje, rueda loca de bola, rodillos 623, escuadra de los sensores del frente, cuna (rieles con PTFE, mampara con espumas, lengüeta) y guías en V con topes. Cotas en `disposicionCarro` (placa 11,5 mm sobre el eje). |
+
+## `optimizar.js` (no es una pieza)
+
+`optimizarEscena(escena, {...})`: el paso que `visor.js` corre al terminar de construir la escena.
+Une las mallas quietas que se ven igual (por ancla, componente y material; color y rugosidad por
+vértice) y deja una malla "solo sombra" por ancla: ~3.200 mallas → ~700 y de ~3.000 a < 500
+llamadas de dibujo, con el mismo detalle. Vive aquí porque `app/portable.py` embebe esta carpeta.
+Para una pieza nueva: lo que se anime tiene que quedar referenciado (en `P`, en `userData` o con
+`name` buscado en vivo); si no, se une con lo quieto y deja de moverse. `?sinoptimizar` en la URL
+deja la escena sin unir (para comparar) y `?auditar` revisa que nada toque las mallas unidas.
+Las piezas deben evitar caras en el MISMO plano con otra de distinto color (parpadean): separar
+0,2–0,5 mm o usar `polygonOffset` en calcomanías (`planoDibujado` ya lo trae).

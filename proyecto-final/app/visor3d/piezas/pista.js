@@ -181,7 +181,10 @@ export function crearMuroLadrillo({ largo = 100 * MM, grueso = 30 * MM, alto = 8
   const medio = (largo - 4 * junta - entero) / 2;       // 23 mm (hiladas trabadas)
   // Mortero: el nucleo gris que asoma en las juntas.
   // (un poco mas bajo y mas corto que los ladrillos: asoma solo en las juntas, sin encimarse).
-  g.add(caja(grueso - 3 * MM, largo - 4 * MM, alto - 3 * MM, mat(0xb9b3a8, { roughness: 1 }), P(0, 0, (alto - 3 * MM) / 2)));
+  // Largo: 1 mm menos que la hilada (los ladrillos terminan a largo/2 - junta = 48 mm del centro;
+  // con largo - 4 mm el mortero terminaba en el MISMO plano y las puntas del muro parpadeaban
+  // entre gris y ladrillo, 2026-09-28).
+  g.add(caja(grueso - 3 * MM, largo - 2 * junta - 1 * MM, alto - 3 * MM, mat(0xb9b3a8, { roughness: 1 }), P(0, 0, (alto - 3 * MM) / 2)));
   const enteros = [], medios = [];
   for (let k = 0; k < hiladas; k++) {
     const z = k * (hAlto + junta) + junta / 2 + hAlto / 2;
@@ -313,7 +316,8 @@ export function crearPista({
     tapa.castShadow = false;
     g.add(tapa);
   }
-  const matBorde = mat(0xb23a2e, { roughness: 0.8 });
+  // polygonOffset (como la cinta): el borde va 0,1 mm sobre la lamina y de lejos se mezclaban.
+  const matBorde = mat(0xb23a2e, { roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
   const bordeIzq = tira(ext, mrcExt, W - borde, W, Z_BORDE, matBorde);
   const bordeDer = tira(ext, mrcExt, -W, -W + borde, Z_BORDE, matBorde);
   bordeIzq.name = 'borde_lamina'; bordeDer.name = 'borde_lamina';

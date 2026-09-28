@@ -323,7 +323,7 @@ El ESP32 fijo manda cada evento por USB serial al PC (y reenvía los del carro q
 {"t":"evt","src":"carro","id":89,"ev":"estado","estado":"esperando_carga","cuna":false}
 ```
 
-**Cómo está implementado hoy:** control/protocolo.py (numeración, ack, reintentos, latido y la regla de soltar vasos, con pruebas). En la simulación el carro y la estación hablan por una radio simulada: el botón "Cortar la radio del carro" muestra que el carro termina la vuelta, guarda sus mensajes, y al reconectar llegan en orden; no se le carga otro vaso hasta que diga que la cuna está vacía (prueba en tests/test_planta.py). El firmware (fase 8) implementa el mismo contrato.
+**Cómo está implementado hoy:** control/protocolo.py (numeración, ack, reintentos, latido y la regla de soltar vasos, con pruebas). En la simulación el carro y la estación hablan por una radio simulada: el botón "Cortar la radio del carro" muestra que el carro termina la vuelta, guarda sus mensajes, y al reconectar llegan en orden; no se le carga otro vaso hasta que diga que la cuna está vacía (prueba en tests/sim/test_planta.py). El firmware (fase 8) implementa el mismo contrato.
 
 ## 16. Asistente (DeepSeek) y órdenes al carro
 
@@ -342,7 +342,7 @@ Fase 7. En el dashboard (pestaña Asistente) se le pregunta al asistente por esc
 {"t":"cmd","id":57,"dst":"carro","act":"avanzar","distancia_m":0.3}
 ```
 
-**Cómo está implementado hoy:** app/asistente.py (búsqueda en la documentación, estado en vivo, DeepSeek con JSON, lista blanca, intérprete local, voz con SpeechRecognition y gTTS); control/vehiculo.py (`ordenar`, odometría, revisión del camino, atascado); pruebas en tests/test_asistente.py y tests/test_vehiculo.py, entre ellas un punto detrás de un muro (no lo toca) y, desde fuera de la línea, ir a la meta y volver al muelle (20 semillas de error sin tocar muros). Falta una clave de DeepSeek válida: la del tema 4 fue rechazada (401).
+**Cómo está implementado hoy:** app/asistente.py (búsqueda en la documentación, estado en vivo, DeepSeek con JSON, lista blanca, intérprete local, voz con SpeechRecognition y gTTS); control/vehiculo.py (`ordenar`, odometría, revisión del camino, atascado); pruebas en tests/app/test_asistente.py y tests/control/test_vehiculo.py, entre ellas un punto detrás de un muro (no lo toca) y, desde fuera de la línea, ir a la meta y volver al muelle (20 semillas de error sin tocar muros). Falta una clave de DeepSeek válida: la del tema 4 fue rechazada (401).
 
 **Nota de revisión:** En pausa, necesita el montaje real para probarse (usuario, 2026-09-27).
 
@@ -361,6 +361,6 @@ Fase 8. El ESP32 fijo (USB al PC) mueve las cintas, el carrusel y los 6 servos y
 {"t":"tel","n":27,"ms":3933,"seguridad":"ok","presencia":false,"cortina_mm":null}
 ```
 
-**Cómo está implementado hoy:** firmware/ (MicroPython) con su README; pines generados de sim/conexiones.py y valores de config/parametros.yaml por firmware/preparar.py; todo compila con mpy-cross; tests/test_firmware.py prueba la estación, el carro y el puente de punta a punta con una estación EMULADA (mismo firmware, hardware falso), que es también lo que usa el supervisor si no hay placa conectada. Falta probarlo en las placas reales y medir los valores PROVISIONALES; la línea automática con hardware necesita la visión real (fase 5).
+**Cómo está implementado hoy:** firmware/ (MicroPython) con su README; pines generados de sim/conexiones.py y valores de config/parametros.yaml por firmware/preparar.py; todo compila con mpy-cross; tests/firmware/test_firmware.py prueba la estación, el carro y el puente de punta a punta con una estación EMULADA (mismo firmware, hardware falso), que es también lo que usa el supervisor si no hay placa conectada. Falta probarlo en las placas reales y medir los valores PROVISIONALES; la línea automática con hardware necesita la visión real (fase 5).
 
 **Nota de revisión:** En pausa, necesita el montaje real para probarse (usuario, 2026-09-27).

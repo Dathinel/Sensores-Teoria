@@ -201,7 +201,7 @@ es metal). Al modelarlo salieron cuatro cosas que no se veían en el papel:
 
 Fuente única: `sim/conexiones.py`, con cada módulo (su medida y sus pines con nombre), cada
 dispositivo y cada hilo de un pin a otro. De ahí salen el visor 3D y
-[conexiones.md](conexiones.md), y `tests/test_conexiones.py` verifica:
+[conexiones.md](conexiones.md), y `tests/sim/test_conexiones.py` verifica:
 - que cada pin exista;
 - que ningún pin de header reciba dos hilos y que los bornes lleven como mucho dos;
 - que los GPIO sean los de la tabla de la sección 3, sin pines de arranque ni de memoria;

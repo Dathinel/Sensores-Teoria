@@ -593,7 +593,7 @@ pasos:
       pruebas). En la simulación el carro y la estación hablan por una radio simulada: el botón
       "Cortar la radio del carro" muestra que el carro termina la vuelta, guarda sus mensajes,
       y al reconectar llegan en orden; no se le carga otro vaso hasta que diga que la cuna está
-      vacía (prueba en tests/test_planta.py). El firmware (fase 8) implementa el mismo contrato.
+      vacía (prueba en tests/sim/test_planta.py). El firmware (fase 8) implementa el mismo contrato.
     revision: aprobado
   - numero: 16
     titulo: Asistente (DeepSeek) y órdenes al carro
@@ -633,8 +633,8 @@ pasos:
     como_esta_hoy: >
       app/asistente.py (búsqueda en la documentación, estado en vivo, DeepSeek con JSON, lista
       blanca, intérprete local, voz con SpeechRecognition y gTTS); control/vehiculo.py
-      (`ordenar`, odometría, revisión del camino, atascado); pruebas en tests/test_asistente.py
-      y tests/test_vehiculo.py, entre ellas un punto detrás de un muro (no lo toca) y, desde fuera
+      (`ordenar`, odometría, revisión del camino, atascado); pruebas en tests/app/test_asistente.py
+      y tests/control/test_vehiculo.py, entre ellas un punto detrás de un muro (no lo toca) y, desde fuera
       de la línea, ir a la meta y volver al muelle (20 semillas de error sin tocar muros). Falta
       una clave de DeepSeek válida: la del tema 4 fue rechazada (401).
     nota_revision: En pausa, necesita el montaje real para probarse (usuario, 2026-09-27).
@@ -659,7 +659,7 @@ pasos:
     como_esta_hoy: >
       firmware/ (MicroPython) con su README; pines generados de sim/conexiones.py y valores de
       config/parametros.yaml por firmware/preparar.py; todo compila con mpy-cross;
-      tests/test_firmware.py prueba la estación, el carro y el puente de punta a punta con una
+      tests/firmware/test_firmware.py prueba la estación, el carro y el puente de punta a punta con una
       estación EMULADA (mismo firmware, hardware falso), que es también lo que usa el supervisor
       si no hay placa conectada. Falta probarlo en las placas reales y medir los valores
       PROVISIONALES; la línea automática con hardware necesita la visión real (fase 5).

@@ -272,7 +272,7 @@ def generar_conexiones() -> str:
     nombre = lambda ref: f"{cx.DISPOSITIVOS[ref.split('.', 1)[0]]['nombre']} · **{ref.split('.', 1)[1]}**"
     L = [AVISO, "# Conexiones (pin a pin)\n",
          "Fuente única: `sim/conexiones.py`. De ahí salen los cables del visor 3D (botón **Cables**) y esta "
-         "tabla; `tests/test_conexiones.py` verifica que cada pin exista, que ningún pin de header reciba "
+         "tabla; `tests/sim/test_conexiones.py` verifica que cada pin exista, que ningún pin de header reciba "
          "dos hilos, que los bornes lleven como mucho dos y que los GPIO sean los de la tabla de pines de "
          "[revision-final.md](revision-final.md).\n",
          "Convenciones: placas GVS con el jumper en 3,3 V (**G** = GND, **V** = 3,3 V, **S** = señal del GPIO). "
