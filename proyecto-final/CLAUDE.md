@@ -430,6 +430,7 @@ esquemas) se crean cuando empiece esa fase, no antes.
     supervisor.py               corre la simulación, escribe SQLite, sirve el visor
     servidor.py                 HTTP del supervisor: visor 3D + /api/estado (127.0.0.1)
     visor3d/                    visor 3D en Three.js (vendor/ local, sin CDN; demo/ grabada)
+      piezas/                   piezas reutilizables (una por módulo; copia en Blender with claude/piezas-threejs)
     dashboard.py                aplicación Streamlit (incluye la pestaña Asistente y los botones de órdenes al carro)
     asistente.py                fase 7: DeepSeek (JSON), búsqueda en la documentación, estado en vivo, intérprete local, voz
     db.py                       esquema y acceso a SQLite

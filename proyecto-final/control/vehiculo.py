@@ -346,6 +346,11 @@ class ControlCarro:
         self.reversa_avance_min = v.get("reversa_tope_avance_min_mm", 20) / 1000
         self.reversa_salida = v.get("reversa_tope_salida_mm", 150) / 1000
         self.reversa_fuerte_extra = v.get("reversa_tope_pwm_normal_mm", 50) / 1000
+        # Boca de las guias en V: distancia que avanza el carro desde el tope
+        # hasta que su cola queda en la boca. Mas cerca que esto la reversa ya
+        # no corrige el rumbo con los pulsos (manda la guia).
+        self.boca_muelle = v.get("boca_muelle_mm", 305) / 1000
+        self.margen_boca = v.get("boca_muelle_margen_mm", 30) / 1000
         self.ang_regreso = math.radians(v.get("angulo_regreso_grados", 45))
         self.largo_linea = largo_linea_m
         self.muro_medio_ancho = v.get("_muro_largo_mm", 100) / 2000
@@ -595,6 +600,21 @@ class ControlCarro:
                        self._fin_orden("llego_al_punto")], {"accion": "ir_a", "x": x, "y": y})
         return True, (("Primero sale del muelle derecho; después " if salir else "")
                       + f"va a ({x:.2f}, {y:.2f}) m, a {d:.2f} m: gira hacia el punto y avanza vigilando adelante")
+
+    def _reversa_hasta_boca(self) -> float:
+        """Metros de reversa (desde la pose de ahora) hasta que la cola del
+        carro llega a la boca de las guias en V, menos un margen por el error
+        de la odometria. 0 si ya esta en la boca o si no sabe donde esta: en
+        ese caso manda la guia desde el principio (corregir el rumbo con los
+        pulsos adentro de la V es lo que lo traba)."""
+        if self.pose_odo is None or self.pose_muelle is None:
+            return 0.0
+        mx, my, mr = self.pose_muelle
+        # Eje de las ruedas con el carro estacionado vs. el de ahora, a lo
+        # largo del muelle (+ = afuera).
+        ex, ey = mx + self.x_eje * math.cos(mr), my + self.x_eje * math.sin(mr)
+        afuera = (self.pose_odo[0] - ex) * math.cos(mr) + (self.pose_odo[1] - ey) * math.sin(mr)
+        return max(0.0, afuera - self.boca_muelle - self.margen_boca)
 
     def _en_el_muelle(self) -> bool:
         """Segun la odometria, el carro esta dentro del muelle o pegado a el
@@ -1068,7 +1088,17 @@ class ControlCarro:
             # donde se trabo (con el bajo no alcanza a correr el rodillo por la
             # guia en V) y vuelve al bajo antes de llegar al tope.
             self.pwm_bajo = atras >= a.get("fuerte_hasta", 0.0)
-            corr = 2.0 * (di - dd) if atras < 0.25 else 0.0
+            # Cuanto falta para que la cola llegue a la boca de las guias: se
+            # mide UNA vez, al empezar, con la odometria (que se puso en su
+            # lugar en la marca de giro). Antes se corregia "hasta 25 cm de
+            # reversa" suponiendo que la reversa empezaba en la marca de giro
+            # (~44 cm), pero empieza tras enderezarse, a 32-35 cm del tope: la
+            # cola ya esta en la boca a los 2-5 cm y la correccion seguia
+            # ~20 cm DENTRO de la V, peleando con la guia. Con 2-3 grados de
+            # entrada eso lo trababa (semilla 2: parado en la V a 3,4 grados).
+            if "hasta_boca" not in a:
+                a["hasta_boca"] = self._reversa_hasta_boca()
+            corr = 2.0 * (di - dd) if abs((di + dd) / 2) < a["hasta_boca"] else 0.0
             v = -0.04
             self._objetivo = [v - corr, v + corr]
             a["quieto"] = 0.0 if self._movio else a["quieto"] + dt

@@ -39,13 +39,16 @@ def _fila(nombres, x0, y, paso=PASO, tipo="macho", eje="x"):
 
 # ESP32 DevKit V1 de 38 pines (antena a la izquierda, -x; USB a la derecha).
 # Header de arriba (+y) y de abajo (-y), leidos de la antena al USB.
-ESP38_ARRIBA = ["3V3", "EN", "G36", "G39", "G34", "G35", "G32", "G33", "G25", "G26", "G27", "G14", "G12",
-                "GND", "G13", "SD2", "SD3", "CMD", "5V"]
-ESP38_ABAJO = ["GND", "G23", "G22", "TX", "RX", "G21", "GND", "G19", "G18", "G5", "G17", "G16", "G4", "G0",
-               "G2", "G15", "SD1", "SD0", "CLK"]
+# Pinout REAL (corregido el 2026-09-27, estaba espejado): con la antena ARRIBA y los
+# componentes hacia quien mira, el header de EN queda a la IZQUIERDA; con la antena a -x y
+# vista desde arriba, ese lado es -y ("abajo"). Igual en app/visor3d/piezas/electronica.js.
+ESP38_ABAJO = ["3V3", "EN", "G36", "G39", "G34", "G35", "G32", "G33", "G25", "G26", "G27", "G14", "G12",
+               "GND", "G13", "SD2", "SD3", "CMD", "5V"]
+ESP38_ARRIBA = ["GND", "G23", "G22", "TX", "RX", "G21", "GND", "G19", "G18", "G5", "G17", "G16", "G4", "G0",
+                "G2", "G15", "SD1", "SD0", "CLK"]
 # ESP32 DevKit V1 de 30 pines (el de los labs; para el carro).
-ESP30_ARRIBA = ["EN", "G36", "G39", "G34", "G35", "G32", "G33", "G25", "G26", "G27", "G14", "G12", "G13", "GND", "VIN"]
-ESP30_ABAJO = ["G23", "G22", "TX", "RX", "G21", "G19", "G18", "G5", "G17", "G16", "G4", "G2", "G15", "GND", "3V3"]
+ESP30_ABAJO = ["EN", "G36", "G39", "G34", "G35", "G32", "G33", "G25", "G26", "G27", "G14", "G12", "G13", "GND", "VIN"]
+ESP30_ARRIBA = ["G23", "G22", "TX", "RX", "G21", "G19", "G18", "G5", "G17", "G16", "G4", "G2", "G15", "GND", "3V3"]
 
 
 def _es_gpio(n: str) -> bool:
@@ -192,8 +195,10 @@ PLANTILLAS: dict[str, dict] = {
                  "partes": []},
 
     # --- Sensores y actuadores de la planta ---
+    # Headers "acodado": [sx, sy] = pines a 90 grados, acostados sobre la placa y saliendo hacia
+    # ese lado (como las piezas reales de app/visor3d/piezas/sensores.js).
     "fc51": {"tamano": [32, 14, 1.6], "color": "#1d4f9c",
-             "pines": _fila(["OUT", "GND", "VCC"], 14.0, -PASO, eje="y"),
+             "pines": [dict(p, acodado=[1, 0]) for p in _fila(["OUT", "GND", "VCC"], 14.0, -PASO, eje="y")],
              "partes": [{"cilindro": [2.5, 5], "p": [-13, 3, -2.5], "color": "#e8e8e8", "nombre": "emisor"},
                         {"cilindro": [2.5, 5], "p": [-13, -3, -2.5], "color": "#111111"},
                         {"caja": [5, 5, 4], "p": [2, 0, 2.8], "color": "#2d6fd0"}]},
@@ -206,7 +211,7 @@ PLANTILLAS: dict[str, dict] = {
     # Sensor de proximidad M18 con su cable de 3 hilos (sale del cuerpo).
     "npn_m18": {"tamano": [18, 18, 0], "color": "#b8bec6",
                 "pines": [{"n": c, "x": 0, "y": 0, "tipo": "cable"} for c in ("CAFE", "AZUL", "NEGRO")], "partes": []},
-    "nema17": {"tamano": [42, 42, 34], "color": "#2b2f36",
+    "nema17": {"tamano": [42, 42, 40], "color": "#2b2f36",   # 17HS4401: 42,3 x 42,3 x 40 mm
                "pines": [{"n": "JST", "x": 0, "y": 0, "tipo": "jst"}], "partes": []},
     "byj48": {"tamano": [28, 28, 19], "color": "#c9c9c9",
               "pines": [{"n": "CABLE", "x": 0, "y": 0, "tipo": "cable"}], "partes": []},
@@ -215,6 +220,11 @@ PLANTILLAS: dict[str, dict] = {
     "tira_led": {"tamano": [20, 8, 1], "color": "#f4f7fb",
                  "pines": [{"n": "+5V", "x": -3, "y": 0, "tipo": "pad"}, {"n": "GND", "x": 3, "y": 0, "tipo": "pad"}],
                  "partes": []},
+    # Ventilador 4010 de 5 V (0,1 A) de la caja: sus dos hilos salen del marco y entran por un
+    # agujero de 4 mm de la pared derecha (anclas pin_ventilador_+5V / GND de piezas/control.js).
+    "ventilador4010": {"tamano": [40, 10, 40], "color": "#141517",
+                       "pines": [{"n": "+5V", "x": 21.2, "y": 0, "tipo": "cable"}, {"n": "GND", "x": 22.8, "y": 0, "tipo": "cable"}],
+                       "partes": []},
     "webcam": {"tamano": [30, 22, 22], "color": "#20242b",
                "pines": [{"n": "USB", "x": 0, "y": 0, "tipo": "cable"}], "partes": []},
 
@@ -223,11 +233,12 @@ PLANTILLAS: dict[str, dict] = {
                "pines": _dos_filas(["PWMA", "AIN2", "AIN1", "STBY", "BIN1", "BIN2", "PWMB", "GND_L"],
                                    ["VM", "VCC", "GND_P", "AO1", "AO2", "BO2", "BO1", "GND_P2"], 17.8),
                "partes": [{"caja": [7, 5, 1.2], "p": [0, 0, 1.4], "color": "#111111", "nombre": "TB6612"}]},
-    "h206": {"tamano": [22, 14, 1.6], "color": "#1e5aa8",
-             # Pines por detras (la horquilla va del lado de los componentes).
-             "pines": [dict(p, abajo=True) for p in _fila(["VCC", "GND", "D0"], 8.0, -PASO, eje="y")],
-             "partes": [{"caja": [12, 9, 9], "p": [-3, 0, 5.3], "color": "#111111", "nombre": "horquilla"}]},
-    "ir5": {"tamano": [14, 60, 1.6], "color": "#1e5aa8",
+    # Modulo H206 real: placa 32 x 14 mm, horquilla en la punta -x y header acodado por +x.
+    "h206": {"tamano": [32, 14, 1.6], "color": "#1e5aa8",
+             "pines": [dict(p, acodado=[1, 0]) for p in _fila(["VCC", "GND", "D0"], 14.0, -PASO, eje="y")],
+             "partes": [{"caja": [12, 11, 11], "p": [-9.5, 0, 7.1], "color": "#111111", "nombre": "horquilla"}]},
+    # 5 canales a 15 mm: 4 x 15 + 14 = 74 mm de largo (el quinto sensor queda sobre la placa).
+    "ir5": {"tamano": [14, 74, 1.6], "color": "#1e5aa8",
             "pines": _fila(["VCC", "GND", "OUT1", "OUT2", "OUT3", "OUT4", "OUT5"], 4.5, -7.6, eje="y"),
             "partes": [{"caja": [6, 10, 5.5], "p": [-3, -30 + 7.5 + i * 15, -2.75], "color": "#1b2b5a"} for i in range(5)]},
     "hcsr04": {"tamano": [45, 20, 1.6], "color": "#1e5aa8",
@@ -235,14 +246,14 @@ PLANTILLAS: dict[str, dict] = {
                "partes": [{"cilindro": [8, 12], "p": [-13, 1, 6.8], "color": "#c9ccd1", "metal": True},
                           {"cilindro": [8, 12], "p": [13, 1, 6.8], "color": "#c9ccd1", "metal": True},
                           {"caja": [5, 3, 2], "p": [0, 5, 1.8], "color": "#c9ccd1", "metal": True}]},
-    "tcrt_mod": {"tamano": [32, 10.5, 1.6], "color": "#1e5aa8",
-                 "pines": _fila(["VCC", "GND", "DO", "AO"], 14.0, -3.8, eje="y"),
+    "tcrt_mod": {"tamano": [32, 14, 1.6], "color": "#1e5aa8",
+                 "pines": [dict(p, acodado=[1, 0]) for p in _fila(["VCC", "GND", "DO", "AO"], 14.0, -3.81, eje="y")],
                  "partes": [{"caja": [6, 10, 5.5], "p": [-13, 0, -2.75], "color": "#1b2b5a", "nombre": "TCRT5000"}]},
     "motor_tt": {"tamano": [28, 21, 21], "color": "#c9ccd1",
                  "pines": [{"n": "M+", "x": 0, "y": 4, "tipo": "pad"}, {"n": "M-", "x": 0, "y": -4, "tipo": "pad"}],
                  "partes": []},
-    "pack2s": {"tamano": [41, 77, 12], "color": "#151515",
-               "pines": [{"n": "B+", "x": 20, "y": 30, "tipo": "pad"}, {"n": "B-", "x": 20, "y": -30, "tipo": "pad"}],
+    "pack2s": {"tamano": [41, 76.6, 20.7], "color": "#151515",   # porta 2 x 18650: 76,6 x 41 x 20,7 mm
+               "pines": [{"n": "B+", "x": 20.5, "y": 30, "tipo": "pad"}, {"n": "B-", "x": 20.5, "y": -30, "tipo": "pad"}],
                "partes": []},
     "interruptor": {"tamano": [8, 12, 6], "color": "#111111",
                     "pines": [{"n": "1", "x": 0, "y": -3, "tipo": "pad"}, {"n": "2", "x": 0, "y": 3, "tipo": "pad"}],
@@ -267,6 +278,7 @@ DISPOSITIVOS: dict[str, dict] = {
     "fusibles": {"plantilla": "fusibles4", "nombre": "Fusibles F1 5 A · F2 2 A · F3 3 A · F4 1 A", "zona": "caja"},
     "x2": {"plantilla": "bornera16", "nombre": "Bornera X2", "zona": "caja"},
     "iec": {"plantilla": "iec", "nombre": "Entrada de red con interruptor", "zona": "caja"},
+    "ventilador": {"plantilla": "ventilador4010", "nombre": "Ventilador 4010 5 V (saca el aire de los drivers)", "zona": "caja"},
     "hub_usb": {"plantilla": "hub_usb4", "nombre": "Hub USB con fuente", "zona": "mesa"},
     "pc": {"plantilla": "portatil", "nombre": "Portátil", "zona": "mesa"},
     # Planta
@@ -349,6 +361,10 @@ CABLES: list[dict] = [
         _h("x2.5", "uln2003.+", ROJO, "+5 V"), _h("x2.10", "uln2003.−", NEGRO, "GND")]},
     {"id": "p_opto", "nombre": "Bornera → optoacopladores (+12)", "tipo": "interno", "hilos": [
         _h("x2.2", "opto.+12", ROJO, "+12 V")]},
+    # El ventilador (5 V, 0,1 A) va directo a la salida del buck de 5 V (los pads aceptan dos
+    # hilos soldados; la bornera X2 ya tiene sus bornes de 5 V y GND con dos hilos cada uno).
+    {"id": "p_vent", "nombre": "Buck 5 V → ventilador 4010 (0,1 A)", "tipo": "interno", "hilos": [
+        _h("buck5.OUT+", "ventilador.+5V", ROJO, "+5 V ventilador"), _h("buck5.OUT-", "ventilador.GND", NEGRO, "GND ventilador")]},
     {"id": "p_gnd", "nombre": "GND común ESP32 ↔ bornera", "tipo": "interno", "hilos": [
         _h("esp32_fijo.GND.1", "x2.11", NEGRO, "GND común")]},
 

@@ -77,6 +77,13 @@ Convenciones: placas GVS con el jumper en 3,3 V (**G** = GND, **V** = 3,3 V, **S
 |---|---|---|---|
 | <span style="color:#d23a2a">■</span> | Bornera X2 · **2** | Optoacopladores PC817 · **+12** | +12 V |
 
+### Buck 5 V → ventilador 4010 (0,1 A)
+
+| Hilo | De | A | Función |
+|---|---|---|---|
+| <span style="color:#d23a2a">■</span> | Buck 5 V 3 A · **OUT+** | Ventilador 4010 5 V (saca el aire de los drivers) · **+5V** | +5 V ventilador |
+| <span style="color:#1a1a1a">■</span> | Buck 5 V 3 A · **OUT-** | Ventilador 4010 5 V (saca el aire de los drivers) · **GND** | GND ventilador |
+
 ### GND común ESP32 ↔ bornera
 
 | Hilo | De | A | Función |

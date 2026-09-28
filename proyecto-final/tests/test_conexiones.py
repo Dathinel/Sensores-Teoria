@@ -82,3 +82,24 @@ def test_cada_dispositivo_es_de_un_componente_o_de_un_sensor():
     assert all(v in ids_sensores for v in DISPOSITIVOS_DE_SENSOR.values())
     sueltos = set(cx.DISPOSITIVOS) - de_componentes - set(DISPOSITIVOS_DE_SENSOR)
     assert sueltos == set()
+
+
+def test_ventilador_de_la_caja_va_al_buck_de_5v():
+    hilos = {(h["de"], h["a"]) for c in cx.CABLES for h in c["hilos"] if "ventilador." in h["de"] + h["a"]}
+    assert hilos == {("buck5.OUT+", "ventilador.+5V"), ("buck5.OUT-", "ventilador.GND")}
+
+
+def test_plantillas_con_la_medida_de_las_piezas_reales():
+    # Medidas de ficha (las mismas de app/visor3d/piezas/): el cableado sale de sus pines reales.
+    tam = {k: cx.PLANTILLAS[k]["tamano"] for k in ("h206", "tcrt_mod", "ir5", "pack2s", "nema17")}
+    assert tam == {"h206": [32, 14, 1.6], "tcrt_mod": [32, 14, 1.6], "ir5": [14, 74, 1.6],
+                   "pack2s": [41, 76.6, 20.7], "nema17": [42, 42, 40]}
+    for k in ("h206", "tcrt_mod", "fc51"):
+        assert all(p.get("acodado") == [1, 0] for p in cx.PLANTILLAS[k]["pines"]), k
+
+
+def test_placa_gvs_38_con_el_pinout_real_del_esp32():
+    # Antena a -x, header de EN en -y (el mismo de piezas/electronica.js, crearPlacaGVS38P).
+    en = [p for p in cx.PLANTILLAS["shield38"]["pines"] if p["n"] == "esp.EN.1"][0]
+    g23 = [p for p in cx.PLANTILLAS["shield38"]["pines"] if p["n"] == "G23.S"][0]
+    assert en["y"] < 0 and g23["y"] > 0

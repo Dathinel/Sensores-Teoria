@@ -233,9 +233,15 @@ def html_ficha(c: dict) -> str:
     if tipo == "vacia_registrada":
         # Casilla que el infrarrojo vio ocupada (una mano) pero viaja vacia.
         return '<div class="ficha" style="width:40px;height:40px;border:2px dashed #e5534b;border-radius:50%;color:#e5534b">✋</div>'
+    apariencia = c.get("apariencia")
+    if apariencia == "moneda_extranjera":
+        return '<div class="ficha moneda" style="width:44px;height:44px;filter:saturate(.35)">€</div>'
     if tipo in ("boton_plastico", "boton_metalico"):
-        return f'<div class="ficha {tipo}" style="width:40px;height:40px"><span class="ojal"></span><span class="ojal"></span></div>'
-    return '<div class="ficha bloque" style="width:36px;height:36px"></div>'
+        # Ojales solo si de verdad tiene agujeros (un disco liso o una moneda extranjera no).
+        ojales = '<span class="ojal"></span><span class="ojal"></span>' if (c.get("contornos_internos") or 0) > 0 else ""
+        return f'<div class="ficha {tipo}" style="width:40px;height:40px">{ojales}</div>'
+    color = "background:#8d939b" if apariencia == "bloque_metalico" else ""
+    return f'<div class="ficha bloque" style="width:36px;height:36px;{color}"></div>'
 
 
 def html_veredicto(c: dict) -> str:
@@ -357,7 +363,10 @@ def html_leds(pares: list[tuple[str, bool, bool]]) -> str:
 # ---------------------------------------------------------------------
 
 NOMBRE_TIPO_REAL = {"moneda": "moneda", "boton_plastico": "botón de plástico", "boton_metalico": "botón metálico",
-                    "bloque": "bloque", "vacia": "casilla vacía", "mano": "mano"}
+                    "bloque": "bloque", "vacia": "casilla vacía", "mano": "mano",
+                    # apariencia (la pieza es "metal redondo" para los sensores, pero no se llama boton)
+                    "moneda_extranjera": "moneda extranjera", "disco": "disco metálico",
+                    "bloque_metalico": "bloque metálico"}
 ESTADO_VASO_TXT = {"vacia": "vacío", "valida": "listo para llenar", "invalida": "no sirve", "llenando": "llenándose",
                    "llena": "lleno", "tapada": "tapado", "rechazada": "rechazado", "entregada": "entregado"}
 
@@ -809,7 +818,7 @@ def matriz_aciertos() -> pd.DataFrame:
     for f in filas:
         p = json.loads(f["payload"])
         if f["tipo"] == "presencia" and p.get("tipo_real"):
-            real[p["casilla"]] = (p["tipo_real"], p.get("clase_real"))
+            real[p["casilla"]] = (p.get("apariencia") or p["tipo_real"], p.get("clase_real"))
         elif f["tipo"] == "elemento_final":
             decision[p["casilla"]] = "Aceptada" if p["veredicto"] == "aceptada" else NOMBRE_CAUSA.get(p.get("causa"), "No reconocida")
     datos = []

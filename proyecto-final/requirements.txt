@@ -29,3 +29,11 @@ pytest
 mpremote
 esptool
 mpy-cross
+
+# fase 5 (vision): entrenar el clasificador en el MISMO entorno. TensorFlow no existe para Python 3.14,
+# pero Keras 3 corre sobre PyTorch (KERAS_BACKEND=torch, lo pone vision/entrenar.py). torch en su
+# version CPU: pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
+keras
+matplotlib

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Muestrario de sensores</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; height: 100%; background: #0e1116; color: #e6e8eb; font-family: 'Space Grotesk', sans-serif; overflow: hidden; }
+  #info { position: fixed; top: 10px; left: 12px; font-size: 0.85rem; color: #8b949e; }
+  #info b { color: #f2b134; }
+</style>
+</head>
+<body>
+<div id="info"><b>Muestrario de sensores</b> · piezas/sensores.js · <span class="mono">?solo=&lt;clave&gt;</span> para ver una sola · electrónica: piezas/electronica.js (<span class="mono">?grupo=electronica</span>)</div>
+<script type="importmap">
+{ "imports": { "three": "../vendor/three.module.min.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from '../vendor/OrbitControls.js';
+import * as S from './sensores.js';
+import * as E from './electronica.js';
+
+const escena = new THREE.Scene();
+escena.background = new THREE.Color(0x0e1116);
+const render = new THREE.WebGLRenderer({ antialias: true });
+render.setPixelRatio(Math.min(2, devicePixelRatio));
+render.setSize(innerWidth, innerHeight);
+document.body.appendChild(render.domElement);
+const camara = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 0.002, 20);
+const ctl = new OrbitControls(camara, render.domElement);
+escena.add(new THREE.HemisphereLight(0xdfe8ff, 0x303030, 1.4));
+const sol = new THREE.DirectionalLight(0xffffff, 2.2);
+sol.position.set(0.4, 1, 0.6);
+escena.add(sol);
+const rel = new THREE.DirectionalLight(0x9fc0ff, 0.8);
+rel.position.set(-0.6, 0.4, -0.5);
+escena.add(rel);
+
+function etiqueta(texto) {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 64;
+  const x = c.getContext('2d');
+  x.fillStyle = 'rgba(14,17,22,0.85)'; x.fillRect(0, 0, 512, 64);
+  x.fillStyle = '#f2b134'; x.font = '600 30px "IBM Plex Mono", monospace'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText(texto, 256, 33, 500);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false }));
+  s.scale.set(0.08, 0.01, 1);
+  return s;
+}
+
+// [clave, nombre, constructor, giro para mostrarla mejor]
+const disco = () => { const g = new THREE.Group(); const d = S.crearDiscoEncoder20(); d.rotation.x = Math.PI / 2; g.add(d); return g; };
+const lista = [
+  ['fc51', 'FC-51 (presencia)', () => S.crearFC51()],
+  ['capacitivo', 'LJC18A3-H-Z/BX', () => { const g = S.crearCapacitivoLJC18A3(); g.rotation.x = 0.35; g.position.y = 0.06; return g; }],
+  ['inductivo', 'LJ18A3-8-Z/BX', () => { const g = S.crearInductivoLJ18A3(); g.rotation.x = 0.35; g.position.y = 0.06; return g; }],
+  ['webcam', 'Webcam 1080p + anillo', () => { const g = S.crearWebcam(); g.position.y = 0.03; return g; }],
+  ['webcam720', 'Webcam 720p (vasos)', () => { const g = S.crearWebcam({ id: 'cam_vasos', sensorId: 'camara_vasos', anillo: false, resolucion: '720p' }); g.position.y = 0.03; return g; }],
+  ['vl53', 'VL53L0X GY-VL53L0XV2', () => S.crearVL53L0X()],
+  ['hall', 'KY-003 (A3144)', () => S.crearHallKY003()],
+  ['iman', 'Imán 6×3 mm', () => { const g = S.crearIman6x3(); g.scale.setScalar(3); return g; }],
+  ['hcsr04', 'HC-SR04', () => { const g = S.crearHCSR04(); g.rotation.x = -Math.PI / 2 + 0.5; return g; }],
+  ['tcrt5', '5 × TCRT5000', () => { const g = S.crearArregloTCRT5000(); g.rotation.y = Math.PI / 2; return g; }],
+  ['h206', 'Encoder H206', () => S.crearEncoderH206()],
+  ['disco', 'Disco 20 ranuras', disco],
+  ['cuna', 'IR cuna (TCRT5000)', () => S.crearIRCuna()],
+];
+// Electronica (piezas/electronica.js): van en filas propias, mas separadas (la fuente mide 16 cm).
+// `?grupo=electronica` o `?grupo=sensores` muestra solo ese grupo.
+const listaE = [
+  ['gvs30', 'Placa GVS 30P + ESP32', () => E.crearPlacaGVS30P()],
+  ['gvs38', 'Placa GVS 38P + ESP32', () => E.crearPlacaGVS38P()],
+  ['tb6612', 'TB6612FNG', () => E.crearTB6612FNG()],
+  ['a4988', 'A4988', () => E.crearA4988()],
+  ['tmc2208', 'TMC2208', () => E.crearTMC2208()],
+  ['drivers', 'Placa 2 drivers', () => E.crearPlacaDriversPasoAPaso()],
+  ['pca9685', 'PCA9685', () => E.crearPCA9685()],
+  ['uln2003', 'ULN2003', () => E.crearULN2003()],
+  ['opto', 'PC817 ×2', () => E.crearPlacaOptoPC817()],
+  ['i2c', 'Reparto I2C', () => E.crearRepartoI2C()],
+  ['xl4016', 'Buck XL4016 6 V', () => E.crearBuckXL4016()],
+  ['lm2596', 'Buck LM2596 5 V', () => E.crearBuckLM2596()],
+  ['fuente', 'Fuente LRS-150-12', () => E.crearFuenteLRS150()],
+  ['fusibles', 'Fusibles ×4', () => E.crearPortafusibles4()],
+  ['x2', 'Bornera DIN X2', () => E.crearBorneraDIN16()],
+  ['iec', 'Entrada IEC', () => { const g = E.crearEntradaIEC(); g.position.y = 0.014; return g; }],
+  ['hub', 'Hub USB 4', () => E.crearHubUSB4()],
+  ['interruptor', 'Interruptor + fusible', () => E.crearInterruptorFusible()],
+  ['bateria', '2 × 18650', () => E.crearPortaBaterias18650x2()],
+  ['nema17', 'NEMA17', () => { const g = E.crearNEMA17(); g.position.y = 0.04; return g; }],
+  ['byj48', '28BYJ-48', () => { const g = E.crear28BYJ48(); g.position.y = 0.019; return g; }],
+  ['sg90', 'Servo SG90', () => { const g = E.crearServoSG90({ angulo: 30 }); g.position.y = 0.016; return g; }],
+  ['mg996r', 'Servo MG996R', () => { const g = E.crearServoMG996R({ cuerno: 'cruz', angulo: 20 }); g.position.y = 0.027; return g; }],
+];
+const qs = new URLSearchParams(location.search);
+const solo = qs.get('solo'), grupo = qs.get('grupo');
+const abajo = qs.has('abajo');
+const COL = 5, PASO = 0.13, COLE = 6, PASOE = 0.19;
+const listaS = grupo === 'electronica' ? [] : lista;
+const listaEl = grupo === 'sensores' ? [] : listaE;
+const filasS = Math.ceil(listaS.length / COL);
+const z0E = filasS * PASO + (filasS ? 0.08 : 0);
+const todas = [
+  ...listaS.map((l, i) => [...l, (i % COL - (Math.min(COL, listaS.length) - 1) / 2) * PASO, Math.floor(i / COL) * PASO, 0.042]),
+  ...listaEl.map((l, i) => [...l, (i % COLE - (Math.min(COLE, listaEl.length) - 1) / 2) * PASOE, z0E + Math.floor(i / COLE) * PASOE, 0.075]),
+];
+const usar = solo ? todas.filter((l) => l[0] === solo).map((l) => [l[0], l[1], l[2], 0, 0, l[5]]) : todas;
+const pinMat = new THREE.MeshBasicMaterial({ color: 0x3fb68b });
+usar.forEach(([clave, nombre, f, cx, cz, dzEt]) => {
+  const base = new THREE.Group();
+  base.position.set(cx, 0, cz);
+  let pieza;
+  try { pieza = f(); } catch (e) { console.error(clave, e); return; }
+  if (abajo) pieza.rotation.x += Math.PI;
+  base.add(pieza);
+  // Marcar las anclas pin_* con una bolita verde para revisarlas.
+  pieza.updateMatrixWorld(true);
+  pieza.traverse((o) => { if (o.name.startsWith('pin_')) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.0006, 8, 6), pinMat); o.add(b); } });
+  const et = etiqueta(nombre);
+  et.position.set(0, -0.012, dzEt);
+  base.add(et);
+  escena.add(base);
+});
+const zMax = usar.reduce((m, l) => Math.max(m, l[4]), 0);
+if (solo) { camara.position.set(0.05, 0.07, 0.09); ctl.target.set(0, 0.005, 0); }
+else { camara.position.set(0, 0.6 + zMax * 1.1, 0.5 + zMax * 1.25); ctl.target.set(0, 0, zMax / 2 + 0.03); }
+const cam = qs.get('cam');   // cam=x,y,z,tx,ty,tz para revisar de cerca
+if (cam) { const v = cam.split(',').map(Number); camara.position.set(v[0], v[1], v[2]); ctl.target.set(v[3], v[4], v[5]); }
+ctl.update();
+window.listo = true;
+(function bucle() { requestAnimationFrame(bucle); render.render(escena, camara); })();
+addEventListener('resize', () => { camara.aspect = innerWidth / innerHeight; camara.updateProjectionMatrix(); render.setSize(innerWidth, innerHeight); });
+</script>
+</body>
+</html>

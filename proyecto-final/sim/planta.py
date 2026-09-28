@@ -78,6 +78,12 @@ ETIQUETAS_ESTACIONES_VASOS = ("Verificacion", "Llenado", "Tapa", "Prensa", "Desc
 def _crear_desde_especificacion(escena: EscenaEstacion, especificacion: EspecificacionElemento) -> Elemento:
     """El cuerpo de PyBullet de un elemento del escenario (moneda, boton,
     bloque), con su verdad de terreno (clase, material, medidas)."""
+    elemento = _crear_cuerpo(escena, especificacion)
+    elemento.apariencia = especificacion.apariencia
+    return elemento
+
+
+def _crear_cuerpo(escena: EscenaEstacion, especificacion: EspecificacionElemento) -> Elemento:
     if especificacion.tipo == "moneda":
         return escena.crear_elemento(
             tipo="moneda",
@@ -757,7 +763,8 @@ class PlantaSimulada:
         self._capacitivo_e1[id_registro] = capacitivo
         self.linea.estacion_1_presencia(id_registro, ocupada=ocupada)
         self._evento("e1", "presencia", casilla=id_registro, ocupada=ocupada,
-                     tipo_real=especificacion.tipo, clase_real=especificacion.clase_real)
+                     tipo_real=especificacion.tipo, clase_real=especificacion.clase_real,
+                     apariencia=especificacion.apariencia)
         if not ocupada:
             self.destinos_finales[id_registro] = Destino.VACIA
         if especificacion.tipo == "vacia" and ocupada:
@@ -1355,6 +1362,8 @@ class PlantaSimulada:
             casillas_monedas[elemento.casilla] = {
                 "id": elemento.id_registro,
                 "tipo": elemento.tipo,
+                "apariencia": elemento.apariencia,
+                "contornos_internos": elemento.contornos_internos,
                 "clase_real": elemento.clase_real,
                 "diametro_mm": elemento.diametro_mm,
                 "metal": r.metal,

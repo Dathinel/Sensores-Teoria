@@ -50,6 +50,7 @@ elementos:
     metal: true
     destino_esperado: rechazo
   - tipo: boton_metalico   # fuera_de_rango: disco metalico redondo de 10 mm (muy chico para moneda)
+    apariencia: disco
     metal: true
     diametro_mm: 10.0
     circularidad: 0.99
@@ -83,6 +84,7 @@ elementos:
     clase_real: 200_nueva
     destino_esperado: vaso
   - tipo: boton_metalico   # moneda extranjera (1 euro): diametro de 500, sin clase colombiana
+    apariencia: moneda_extranjera
     metal: true
     diametro_mm: 23.25
     circularidad: 0.98
@@ -109,6 +111,7 @@ elementos:
     metal: true
     destino_esperado: rechazo
   - tipo: boton_metalico   # fuera_de_rango: disco metalico redondo de 32 mm (muy grande)
+    apariencia: disco
     metal: true
     diametro_mm: 32.0
     circularidad: 0.99

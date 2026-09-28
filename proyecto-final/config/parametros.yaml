@@ -325,6 +325,13 @@ vehiculo:
   # no alcanza a correr el rodillo por la guia en V; en la simulacion, seeds 2 y 3, se trababa otra
   # vez en el mismo punto) y vuelve al bajo antes del tope, donde el motor se tiene que ahogar.
   reversa_tope_pwm_normal_mm: 50
+  # Boca del muelle: cuanto avanza el carro desde el tope hasta que su cola queda en la boca de las
+  # guias en V (rectas hasta pasar las ruedas + 20 cm de V; mismas medidas que sim/vehiculo_sim.py,
+  # lo revisa tests/test_vehiculo.py). De ahi hacia adentro la reversa NO corrige el rumbo con los
+  # pulsos: la centra la guia (2026-09-27: corrigiendo adentro de la V se trababa torcido).
+  # El margen cubre el error de la odometria (se pone en su lugar en la marca de giro). PROVISIONAL.
+  boca_muelle_mm: 305
+  boca_muelle_margen_mm: 30
 
 # Donde PUEDE andar el carro por orden (usuario, 2026-09-27: el asistente lo mando "a donde esta
 # el filtro de monedas" y se trabo contra el muelle). El laser (7,4 cm del piso) y el ultrasonico
@@ -335,11 +342,13 @@ vehiculo:
 zonas_carro:
   # PROVISIONAL: cuanto sobresale la estructura de la planta (patas de las mesas, portico,
   # cubetas, postes de las camaras) mas alla de los puntos conocidos (estaciones de las dos
-  # cintas, almacen y bandejas). El visor la dibuja hasta ~7 cm afuera; medir en el montaje.
-  margen_planta_mm: 100
+  # cintas, almacen y bandejas). Medir en el montaje. 150 (revision de solapes, 2026-09-27): en el
+  # visor el NEMA17 de la cinta de vasos llega a y = -218 mm (12 cm mas alla de las estaciones,
+  # con 100 quedaba 1,8 cm fuera) y el gabinete de control a y = +268 mm (14 cm detras del rechazo).
+  margen_planta_mm: 150
   # PROVISIONAL: soportes de la canaleta a cada lado de su eje (el visor: 28 mm afuera de cada
-  # riel + el perfil).
-  medio_ancho_canaleta_mm: 75
+  # riel + el perfil 2020; el poste del escape llega a 90 mm del eje, 2026-09-27) + 10 mm de margen.
+  medio_ancho_canaleta_mm: 100
   # PROVISIONAL: poste de la camara de vasos, que llega al piso al lado de la cinta (pie de
   # 3 cm, 2 cm detras de la camara): cuadrado de este medio lado alrededor de la camara.
   medio_lado_poste_camara_mm: 40

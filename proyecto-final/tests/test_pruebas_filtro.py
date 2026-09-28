@@ -82,3 +82,19 @@ def test_colocar_una_pieza_desconocida_se_rechaza(supervisor):
     db.insertar_orden(supervisor.conexion, {"cmd": "colocar", "pieza": "tornillo"})
     supervisor.vuelta()
     assert _respuestas(supervisor)[-1]["ok"] is False
+
+
+def test_el_euro_colocado_se_publica_como_moneda_extranjera_sin_agujeros(supervisor):
+    """Usuario, 2026-09-27: el euro y el disco colocados se veian como botones perforados."""
+    db.insertar_orden(supervisor.conexion, {"cmd": "iniciar", "escenario": "no_metalico"})
+    _hasta_terminar(supervisor)
+    db.insertar_orden(supervisor.conexion, {"cmd": "colocar", "pieza": "euro"})
+    vistas = []
+    for _ in range(12):
+        supervisor.vuelta()
+        tel = db.ultima_telemetria(supervisor.conexion)
+        vistas += [c for c in (tel.get("casillas_monedas") or []) if c and c.get("apariencia")]
+    assert vistas and all(c["apariencia"] == "moneda_extranjera" and c["contornos_internos"] == 0 for c in vistas)
+    presencia = [json.loads(f["payload"]) for f in supervisor.conexion.execute(
+        "SELECT payload FROM eventos WHERE tipo = 'presencia' ORDER BY id DESC LIMIT 1")][0]
+    assert presencia["apariencia"] == "moneda_extranjera"

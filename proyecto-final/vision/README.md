@@ -14,19 +14,24 @@ monedas y el montaje:
    (extranjeras, botones metálicos, arandelas), espacio guarda la foto, q sale. Meta: 80-150 fotos
    por clase, anverso y reverso, incluidas piezas gastadas. Quedan en `vision/dataset/` (fuera de git).
 
-2. **Entrenar** (Keras + MobileNetV2, transferencia de aprendizaje). TensorFlow no tiene versión para
-   Python 3.14 (el del proyecto), así que se usa un entorno aparte con Python 3.12, una sola vez:
+2. **Entrenar** (Keras + MobileNetV2, transferencia de aprendizaje) en el **mismo entorno** del
+   proyecto. TensorFlow no tiene versión para Python 3.14, pero Keras 3 ya no depende de él: corre
+   sobre PyTorch (`KERAS_BACKEND=torch`, lo pone el script solo), que sí la tiene. `torch`, `keras` y
+   `matplotlib` ya vienen en `requirements-lock.txt` (torch en su versión CPU):
 
    ```
-   py -3.12 -m venv vision\entorno
-   vision\entorno\Scripts\python -m pip install tensorflow opencv-python matplotlib pyyaml
-   vision\entorno\Scripts\python -m vision.entrenar
+   entorno\Scripts\python -m vision.entrenar
    ```
 
    La primera vez descarga los pesos de MobileNetV2 (necesita internet). Deja en
    `vision/resultados/` la **matriz de confusión**, la **curva de confianza** y `metricas.json`
    (con la confianza mínima sugerida para `config/parametros.yaml`); esos sí se suben, son material
    del informe. El modelo (`vision/modelos/monedas.keras`) no se sube: pesa.
+
+   Para probar que el script funciona sin fotos reales ni internet:
+   `entorno\Scripts\python -m vision.entrenar --dataset <carpeta> --epocas 1 --sin-imagenet --salida <otra carpeta>`
+   (probado el 2026-09-27 con 36 imágenes sintéticas de 3 clases: entrena, guarda el modelo y deja
+   las dos gráficas y las métricas).
 
 Pendiente, antes de usar el modelo en la línea: el pipeline geométrico con OpenCV (segmentar la
 pieza sobre la cinta negra, diámetro en mm con la calibración, circularidad, agujeros y bandera

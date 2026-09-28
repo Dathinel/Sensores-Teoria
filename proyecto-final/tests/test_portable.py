@@ -16,10 +16,28 @@ def test_todo_va_adentro_del_archivo():
     # Nada que el navegador tenga que ir a buscar a la carpeta (file:// no lo deja).
     assert "./vendor/" not in html and "src=\"./visor.js\"" not in html
     mapa = json.loads(re.search(r'<script type="importmap">\s*(.*?)\s*</script>', html, re.S).group(1))
-    assert set(mapa["imports"]) == {"three", "three/addons/OrbitControls.js"}
+    piezas = {f"piezas/{r.name}" for r in (portable.VISOR / "piezas").glob("*.js")}
+    assert "piezas/electronica.js" in piezas
+    assert set(mapa["imports"]) == {"three", "three/addons/OrbitControls.js"} | piezas
     orbit = base64.b64decode(mapa["imports"]["three/addons/OrbitControls.js"].split(",", 1)[1]).decode()
     assert "OrbitControls" in orbit
     assert "from 'three/addons/OrbitControls.js'" in html
+
+
+def test_las_piezas_van_embebidas_sin_rutas_relativas():
+    # Un módulo de una data: URL no resuelve './x.js': todo import local pasa al importmap.
+    html = _html()
+    mapa = json.loads(re.search(r'<script type="importmap">\s*(.*?)\s*</script>', html, re.S).group(1))
+    visor = html[html.index('<script type="module">'):]
+    assert "from 'piezas/electronica.js'" in visor
+    assert not re.search(r"""from\s*['"]\./piezas/""", visor)
+    for nombre, url in mapa["imports"].items():
+        if not nombre.startswith("piezas/"):
+            continue
+        codigo = base64.b64decode(url.split(",", 1)[1]).decode()
+        assert not re.search(r"""from\s*['"]\.{1,2}/""", codigo), nombre
+        for usado in re.findall(r"""from\s*['"]([^'"]+)['"]""", codigo):
+            assert usado in mapa["imports"], (nombre, usado)
 
 
 def test_la_demo_embebida_es_la_grabada():

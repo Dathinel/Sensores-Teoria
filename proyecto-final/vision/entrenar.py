@@ -1,9 +1,11 @@
-"""Entrenamiento del clasificador de monedas (fase 5, CLAUDE.md sección 12): Keras + MobileNetV2.
+r"""Entrenamiento del clasificador de monedas (fase 5, CLAUDE.md sección 12): Keras + MobileNetV2.
 
-Se corre UNA vez, cuando ya hay fotos (python -m vision.capturar_dataset), y en el entorno de
-visión (TensorFlow no tiene versión para Python 3.14; ver vision/README.md):
+Se corre UNA vez, cuando ya hay fotos (python -m vision.capturar_dataset), en el MISMO entorno del
+proyecto. TensorFlow no tiene versión para Python 3.14, pero Keras 3 ya no depende de él: corre sobre
+PyTorch ("backend torch"), que sí la tiene. El código de Keras es el mismo de siempre.
 
-    vision\\entorno\\Scripts\\python -m vision.entrenar
+    entorno\Scripts\python -m vision.entrenar
+    entorno\Scripts\python -m vision.entrenar --epocas 1 --sin-imagenet --dataset <carpeta>   # prueba rápida
 
 Genera (y se versionan en git, porque son material del informe):
     vision/resultados/matriz_confusion.png    qué clase real terminó predicha como qué
@@ -14,10 +16,16 @@ y el modelo en vision/modelos/monedas.keras (NO se versiona: pesa; ver .gitignor
 
 from __future__ import annotations
 
+import argparse
 import json
+import os
 import random
 import sys
 from pathlib import Path
+
+# Keras 3 elige su motor por esta variable ANTES de importarse: torch (el único con versión para
+# Python 3.14). Con TensorFlow instalado en otro entorno también correría igual.
+os.environ.setdefault("KERAS_BACKEND", "torch")
 
 RAIZ = Path(__file__).resolve().parent.parent
 DATASET = RAIZ / "vision" / "dataset"
@@ -35,17 +43,17 @@ SEMILLA = 7
 PROPORCION_VALIDACION = 0.2
 
 
-def cargar_imagenes():
+def cargar_imagenes(dataset=DATASET):
     """(imágenes 96x96x3 en float 0-255, etiquetas enteras, nombres de clase) desde vision/dataset/."""
     import cv2
     import numpy as np
 
-    nombres = sorted(p.name for p in DATASET.iterdir() if p.is_dir() and any(p.glob("*.jpg")))
+    nombres = sorted(p.name for p in dataset.iterdir() if p.is_dir() and any(p.glob("*.jpg")))
     if len(nombres) < 2:
         sys.exit("Hacen falta fotos de al menos 2 clases en vision/dataset/ (python -m vision.capturar_dataset).")
     imagenes, etiquetas = [], []
     for i, nombre in enumerate(nombres):
-        for ruta in sorted((DATASET / nombre).glob("*.jpg")):
+        for ruta in sorted((dataset / nombre).glob("*.jpg")):
             cuadro = cv2.imread(str(ruta))
             alto, ancho = cuadro.shape[:2]
             cy, cx, m = alto // 2, ancho // 2, min(RECORTE_PX, alto, ancho) // 2
@@ -73,54 +81,54 @@ def separar(imagenes, etiquetas):
     return (imagenes[ent], etiquetas[ent]), (imagenes[val], etiquetas[val])
 
 
-def construir_modelo(n_clases: int):
-    import tensorflow as tf
+def construir_modelo(n_clases: int, imagenet: bool = True):
+    import keras
 
     # Aumento de datos: SOLO lo que de verdad cambia en el montaje. La moneda cae con cualquier
     # giro (rotación completa), se corre unos milímetros dentro de la casilla (traslación chica) y
     # la luz varía un poco entre días (brillo/contraste). No se voltea: una cara espejada no existe.
-    aumento = tf.keras.Sequential([
-        tf.keras.layers.RandomRotation(0.5, fill_mode="constant"),   # 0,5 = ±180°
-        tf.keras.layers.RandomTranslation(0.05, 0.05, fill_mode="constant"),
-        tf.keras.layers.RandomBrightness(0.15, value_range=(0, 255)),
-        tf.keras.layers.RandomContrast(0.15),
+    aumento = keras.Sequential([
+        keras.layers.RandomRotation(0.5, fill_mode="constant"),   # 0,5 = ±180°
+        keras.layers.RandomTranslation(0.05, 0.05, fill_mode="constant"),
+        keras.layers.RandomBrightness(0.15, value_range=(0, 255)),
+        keras.layers.RandomContrast(0.15),
     ], name="aumento")
     # Transferencia de aprendizaje: MobileNetV2 ya sabe reconocer bordes, texturas y formas (la
     # entrenaron con millones de fotos de ImageNet); solo le falta aprender NUESTRAS clases. Se
     # congela ("trainable = False") para que las pocas fotos del dataset no la desarmen, y encima
     # se entrena una capa chica. alpha=0.35: la versión más liviana, de sobra para 10 clases.
-    base = tf.keras.applications.MobileNetV2(input_shape=(LADO, LADO, 3), include_top=False,
-                                             weights="imagenet", alpha=0.35)
+    base = keras.applications.MobileNetV2(input_shape=(LADO, LADO, 3), include_top=False,
+                                          weights="imagenet" if imagenet else None, alpha=0.35)
     base.trainable = False
-    entrada = tf.keras.Input((LADO, LADO, 3))
+    entrada = keras.Input((LADO, LADO, 3))
     x = aumento(entrada)
     # preprocess_input lleva los píxeles de 0-255 a -1..1, la escala con la que se preentrenó.
-    x = tf.keras.applications.mobilenet_v2.preprocess_input(x)
+    x = keras.applications.mobilenet_v2.preprocess_input(x)
     x = base(x, training=False)
     # Promedio de cada mapa de características: de 3x3x1280 a un vector de 1280 números.
-    x = tf.keras.layers.GlobalAveragePooling2D()(x)
+    x = keras.layers.GlobalAveragePooling2D()(x)
     # Dropout: apaga al azar el 30 % de esos números al entrenar, para que no memorice las fotos.
-    x = tf.keras.layers.Dropout(0.3)(x)
+    x = keras.layers.Dropout(0.3)(x)
     # Softmax: una probabilidad por clase, que suman 1. Esa probabilidad es la "confianza" que la
     # línea compara con 0,85 (config: filtrado.confianza_minima).
-    salida = tf.keras.layers.Dense(n_clases, activation="softmax")(x)
-    return tf.keras.Model(entrada, salida), base
+    salida = keras.layers.Dense(n_clases, activation="softmax")(x)
+    return keras.Model(entrada, salida), base
 
 
-def entrenar(modelo, base, datos_ent, datos_val):
-    import tensorflow as tf
+def entrenar(modelo, base, datos_ent, datos_val, epocas=(40, 20)):
+    import keras
 
-    parar = tf.keras.callbacks.EarlyStopping(patience=6, restore_best_weights=True, monitor="val_accuracy")
+    parar = keras.callbacks.EarlyStopping(patience=6, restore_best_weights=True, monitor="val_accuracy")
     # Fase 1: solo la capa nueva, con un paso de aprendizaje normal.
-    modelo.compile(tf.keras.optimizers.Adam(1e-3), "sparse_categorical_crossentropy", ["accuracy"])
-    modelo.fit(*datos_ent, validation_data=datos_val, epochs=40, batch_size=16, callbacks=[parar])
+    modelo.compile(optimizer=keras.optimizers.Adam(1e-3), loss="sparse_categorical_crossentropy", metrics=["accuracy"])
+    modelo.fit(*datos_ent, validation_data=datos_val, epochs=epocas[0], batch_size=16, callbacks=[parar])
     # Fase 2 (ajuste fino): se descongelan las últimas 30 capas de MobileNetV2 con un paso 100 veces
     # más chico, para que se adapten a las caras de las monedas sin olvidar lo que ya sabían.
     base.trainable = True
     for capa in base.layers[:-30]:
         capa.trainable = False
-    modelo.compile(tf.keras.optimizers.Adam(1e-5), "sparse_categorical_crossentropy", ["accuracy"])
-    modelo.fit(*datos_ent, validation_data=datos_val, epochs=20, batch_size=16, callbacks=[parar])
+    modelo.compile(optimizer=keras.optimizers.Adam(1e-5), loss="sparse_categorical_crossentropy", metrics=["accuracy"])
+    modelo.fit(*datos_ent, validation_data=datos_val, epochs=epocas[1], batch_size=16, callbacks=[parar])
 
 
 def informe(modelo, datos_val, nombres):
@@ -181,15 +189,27 @@ def informe(modelo, datos_val, nombres):
 
 
 def main() -> None:
+    analizador = argparse.ArgumentParser(description="Entrena el clasificador de monedas (Keras 3 + torch).")
+    analizador.add_argument("--dataset", type=Path, default=DATASET, help="carpeta con una subcarpeta por clase")
+    analizador.add_argument("--epocas", type=int, default=0,
+                            help="épocas de cada fase (0 = las normales: 40 + 20 con parada temprana)")
+    analizador.add_argument("--sin-imagenet", action="store_true",
+                            help="sin los pesos preentrenados (no descarga nada; solo para probar el script)")
+    analizador.add_argument("--salida", type=Path, default=None,
+                            help="carpeta para modelos/ y resultados/ (por defecto vision/; para pruebas, otra)")
+    args = analizador.parse_args()
+    global MODELOS, RESULTADOS
+    if args.salida:
+        MODELOS, RESULTADOS = args.salida / "modelos", args.salida / "resultados"
     try:
-        import tensorflow  # noqa: F401
+        import keras  # noqa: F401
     except ImportError:
-        sys.exit("Falta TensorFlow: usar el entorno de visión (Python 3.12), ver vision/README.md.")
-    imagenes, etiquetas, nombres = cargar_imagenes()
+        sys.exit(r"Falta Keras/torch: entorno\Scripts\python -m pip install -r requirements-lock.txt")
+    imagenes, etiquetas, nombres = cargar_imagenes(args.dataset)
     datos_ent, datos_val = separar(imagenes, etiquetas)
     print(f"{len(nombres)} clases, {len(datos_ent[1])} fotos de entrenamiento y {len(datos_val[1])} de validación")
-    modelo, base = construir_modelo(len(nombres))
-    entrenar(modelo, base, datos_ent, datos_val)
+    modelo, base = construir_modelo(len(nombres), imagenet=not args.sin_imagenet)
+    entrenar(modelo, base, datos_ent, datos_val, (args.epocas, args.epocas) if args.epocas else (40, 20))
     MODELOS.mkdir(parents=True, exist_ok=True)
     modelo.save(MODELOS / "monedas.keras")
     (MODELOS / "clases.json").write_text(json.dumps(nombres, ensure_ascii=False), encoding="utf-8")

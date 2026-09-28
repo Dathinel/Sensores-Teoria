@@ -185,7 +185,8 @@ def geometria_completa(parametros: dict) -> dict:
         pto = punto_en(linea, s_mm / 1000)
         obstaculos.append({"s": s_mm / 1000, "x": pto.x, "y": pto.y, "rumbo": pto.rumbo,
                            "largo": pista_cfg["obstaculo_largo_mm"] / 1000,
-                           "alto": pista_cfg["obstaculo_alto_mm"] / 1000})
+                           "alto": pista_cfg["obstaculo_alto_mm"] / 1000,
+                           "grueso": pista_cfg.get("obstaculo_grueso_mm", 30) / 1000})
     meta = linea[-1]
 
     rayos = _rayos_de_sensores(parametros["vasos"])
@@ -235,6 +236,9 @@ def geometria_completa(parametros: dict) -> dict:
             "ancho": pista_cfg["ancho_mm"] / 1000,
             "ancho_linea": pista_cfg["ancho_linea_mm"] / 1000,
             "obstaculos": obstaculos,
+            # Piso libre alrededor de la pista por el que el carro anda por orden (el visor dibuja
+            # ahi el piso del salon): el mismo margen del mapa de zonas del carro.
+            "margen_zona_libre": parametros.get("zonas_carro", {}).get("margen_zona_libre_mm", 300) / 1000,
             "salida": {"x": salida[0], "y": salida[1], "rumbo": salida[2]},
             "meta": {"x": meta.x, "y": meta.y, "rumbo": meta.rumbo},
             # Franjas negras transversales que ven los 5 infrarrojos del carro

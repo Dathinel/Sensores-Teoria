@@ -137,6 +137,14 @@ def asistente(rapido: bool) -> list[tuple[str, str, str]]:
         except Exception as error:
             out.append((AVISO, "Clave de DeepSeek", f"rechazada ({type(error).__name__}): poner una válida en .env; "
                         "mientras, responde el modelo local"))
+    try:
+        os.environ.setdefault("KERAS_BACKEND", "torch")
+        import keras  # noqa: F401  (Keras 3 sobre torch: entrenar el clasificador sin TensorFlow)
+
+        out.append((BIEN, "Entrenamiento (Keras + torch)", f"listo, motor {keras.backend.backend()}"))
+    except Exception as error:
+        out.append((AVISO, "Entrenamiento (Keras + torch)", f"no está ({type(error).__name__}): solo hace falta "
+                    "para entrenar la visión; instalar con requirements-lock.txt"))
     return out
 
 

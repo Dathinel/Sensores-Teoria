@@ -41,6 +41,10 @@ class EspecificacionElemento:
     masa_g: float | None = None
     circularidad: float | None = None
     contornos_internos: int | None = None
+    # Solo para DIBUJARLA y nombrarla (la planta la decide por sus medidas, no por esto): una moneda
+    # extranjera o un disco liso son, para los sensores, "metal redondo sin cara colombiana", pero
+    # no se ven como un boton con ojales (usuario, 2026-09-27: el euro colocado se veia perforado).
+    apariencia: str | None = None
 
 
 @dataclass
@@ -89,6 +93,7 @@ def _construir_elemento(datos: dict) -> EspecificacionElemento:
         masa_g=masa_g,
         circularidad=datos.get("circularidad"),
         contornos_internos=datos.get("contornos_internos"),
+        apariencia=datos.get("apariencia"),
     )
 
 
@@ -152,14 +157,14 @@ PIEZAS = {
        for d in (50, 100, 200, 500, 1000) for f in ("nueva", "antigua") if not (d == 1000 and f == "antigua")},
     "euro": {"nombre": "Moneda de 1 euro (extranjera)",
              "datos": {"tipo": "boton_metalico", "metal": True, "diametro_mm": 23.25, "circularidad": 0.98,
-                       "contornos_internos": 0, "destino_esperado": "rechazo"}},
+                       "contornos_internos": 0, "apariencia": "moneda_extranjera", "destino_esperado": "rechazo"}},
     "boton_plastico": {"nombre": "Botón de plástico", "datos": {"tipo": "boton_plastico", "destino_esperado": "rechazo"}},
     "boton_metalico": {"nombre": "Botón metálico con ojales", "datos": {"tipo": "boton_metalico", "destino_esperado": "rechazo"}},
     "bloque": {"nombre": "Bloque de color (metálico)",
-               "datos": {"tipo": "bloque", "metal": True, "destino_esperado": "rechazo"}},
+               "datos": {"tipo": "bloque", "metal": True, "apariencia": "bloque_metalico", "destino_esperado": "rechazo"}},
     "disco_chico": {"nombre": "Disco metálico de 10 mm",
                     "datos": {"tipo": "boton_metalico", "metal": True, "diametro_mm": 10.0, "circularidad": 0.99,
-                              "contornos_internos": 0, "destino_esperado": "rechazo"}},
+                              "contornos_internos": 0, "apariencia": "disco", "destino_esperado": "rechazo"}},
     "incoherente": {"nombre": "Cara de $500 con otro diámetro",
                     "datos": {"tipo": "moneda", "clase_real": "500_nueva", "diametro_mm": 20.0, "masa_g": 7.1,
                               "destino_esperado": "rechazo"}},

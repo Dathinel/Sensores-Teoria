@@ -105,7 +105,7 @@ El diseño no se cambia sin que el grupo lo apruebe. Riesgo bajo = mismo comport
 | Reparto del bus I2C 1 | Placa perforada + resistencias 2,2 kΩ + conectores *(estimado)* | 1 | $5.000 | $5.000 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
 | Driver del carrusel | Viene con el 28BYJ-48 (ya contado en el motor del carrusel) | 1 | $0 | $0 | — |
 | Hub USB con fuente | Hub USB de 4 puertos con entrada de alimentación | 1 | $23.500 | $23.500 | [Electronilab (Bogotá)](https://electronilab.co) |
-| Canaletas y prensaestopas | Canaleta ranurada 25 x 30 mm (1 m) + prensaestopas PG *(estimado)* | 1 | $25.000 | $25.000 | [Mercado Libre Colombia](https://www.mercadolibre.com.co) |
+| Canaletas, prensaestopas y ventilador | Canaleta ranurada 25 x 30 mm (1 m) + prensaestopas PG *(estimado)* | 1 | $25.000 | $25.000 | [Mercado Libre Colombia](https://www.mercadolibre.com.co) |
 | Portátil | El portátil del grupo (no se compra) | 1 | $0 | $0 | — |
 | Cables | Cables dupont, cable 18 AWG, termoencogible, conectores JST *(estimado)* | 1 | $30.000 | $30.000 | — |
 

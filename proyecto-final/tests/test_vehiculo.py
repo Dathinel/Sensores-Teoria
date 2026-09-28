@@ -217,7 +217,7 @@ def test_desde_el_muelle_sale_derecho_antes_de_girar():
 # ---------------------------------------------------------------------
 
 
-def _hasta_media_reversa(carro: SimCarro) -> None:
+def _hasta_media_reversa(carro: SimCarro, y_min: float = -0.66) -> None:
     """Un viaje completo hasta que, de vuelta, esta entrando de reversa al
     muelle (a medio camino, en la boca): donde estaba el carro del incidente."""
     c = carro.control
@@ -229,7 +229,7 @@ def _hasta_media_reversa(carro: SimCarro) -> None:
             llegada = llegada or carro.tiempo
             if carro.tiempo - llegada >= carro.cfg["espera_descarga_meta_s"]:
                 carro.retirar_vaso()
-        if c._acciones and c._acciones[0]["tipo"] == "reversa_tope" and carro.pose()[1] > -0.66:
+        if c._acciones and c._acciones[0]["tipo"] == "reversa_tope" and carro.pose()[1] > y_min:
             return
     raise AssertionError("no llego a entrar de reversa al muelle")
 
@@ -337,7 +337,11 @@ def test_tras_detenido_atascado_volver_muelle_lo_saca():
     carro = SimCarro(cargar_parametros(), errores=True, semilla=1)
     try:
         c = carro.control
-        _hasta_media_reversa(carro)
+        # Un poco antes en la V que el incidente (-0,68 y no -0,66): desde que
+        # la reversa deja de corregir adentro de la V (2026-09-27) el carro
+        # llega ahi en otra pose, y mas adentro las dos ruedas patinan parejo
+        # contra el muelle (sin `atascado`; con el mapa esta orden ni se acepta).
+        _hasta_media_reversa(carro, y_min=-0.68)
         zonas, c.zonas = c.zonas, None           # como antes del arreglo
         eventos = _cumplir(carro, {"accion": "ir_a", "x": -0.5, "y": 0.0}, limite_s=40)
         nombres = [e["ev"] for e in eventos]
@@ -416,3 +420,77 @@ def test_reversa_normal_no_se_corta():
     c, t, eventos, intentos = _reversa_trabada(0)
     assert intentos == 1 and "reversa_reintento" not in eventos
     assert c.estado == "esperando_carga" and t < c.reversa_max_s
+
+
+# ---------------------------------------------------------------------
+# Entrada al muelle sin reintentos (2026-09-27). La reversa corregia el
+# rumbo con los pulsos "hasta 25 cm", suponiendo que empezaba en la marca de
+# giro; empieza tras enderezarse, a ~32-35 cm del tope, con la cola a 2-5 cm
+# de la boca: la correccion seguia ~20 cm DENTRO de la V peleando con la
+# guia y, con 2-3 grados de entrada, lo trababa (semilla 2: parado en la V a
+# 3,4 grados, reintento). Ahora corrige solo hasta que la cola llega a la boca.
+# ---------------------------------------------------------------------
+
+
+def test_boca_del_muelle_coincide_con_la_simulacion():
+    from sim.vehiculo_sim import LARGO_BOCA_MUELLE
+
+    v = cargar_parametros()["vehiculo"]
+    largo, r = v["largo_mm"] / 1000, v["diametro_rueda_mm"] / 2000
+    boca = -0.18 * largo + r + 0.015 + LARGO_BOCA_MUELLE        # sim/vehiculo_sim.py, _crear_muelle
+    assert abs(v["boca_muelle_mm"] / 1000 - (boca + largo / 2)) < 0.002
+
+
+def test_la_reversa_no_corrige_el_rumbo_dentro_de_la_v():
+    """Reversa desde 33 cm del tope (donde queda tras enderezarse) con la
+    rueda izquierda contando de mas: pasada la boca, las dos ruedas reciben lo
+    mismo (manda la guia). Con el codigo viejo seguia corrigiendo."""
+    from control.vehiculo import ControlCarro, LecturaCarro
+
+    cfg = cargar_parametros()["vehiculo"]
+    mx, my, mr = 1.0, 2.0, 0.5
+    c = ControlCarro(cfg, largo_linea_m=5.0, pose_muelle=(mx, my, mr))
+    afuera = 0.33
+    c.fijar_pose(mx + (afuera + c.x_eje) * math.cos(mr), my + (afuera + c.x_eje) * math.sin(mr), mr)
+    c.estado = "maniobra"
+    c._acciones = [{"tipo": "reversa_tope", "hecho": 0.0, "quieto": 0.0}]
+    dt = 1 / cfg["control_hz"]
+    izq = der = 0
+    acum = [0.0, 0.0]
+    desiguales_en_la_v = 0
+    for _ in range(int(8 / dt)):
+        cmd = c.paso(LecturaCarro((0, 0, 1, 0, 0), None, izq, der), dt)
+        # La izquierda cuenta un 10 % mas (motor distinto).
+        acum[0] += abs(cmd[0]) * dt * 1.10
+        acum[1] += abs(cmd[1]) * dt
+        while acum[0] >= c.m_por_pulso:
+            acum[0] -= c.m_por_pulso
+            izq += 1
+        while acum[1] >= c.m_por_pulso:
+            acum[1] -= c.m_por_pulso
+            der += 1
+        # Afuera: centro del carro respecto al estacionado, a lo largo del muelle.
+        x, y, _ = c.posicion_estimada()
+        dentro = (x - mx) * math.cos(mr) + (y - my) * math.sin(mr)
+        if dentro < c.boca_muelle and abs(c._objetivo[0] - c._objetivo[1]) > 1e-9:
+            desiguales_en_la_v += 1
+    assert desiguales_en_la_v == 0
+    assert c._acciones[0]["hasta_boca"] < afuera - c.boca_muelle
+
+
+@pytest.mark.parametrize("semilla, doble", [(1, False), (2, False), (3, False), (6, False), (6, True)])
+def test_entra_al_muelle_sin_reintento(semilla, doble):
+    """Viaje completo con la fisica real: entra al muelle al primer intento
+    (el reintento queda como red de seguridad). Con el codigo viejo la
+    semilla 2 se trababa en la V y reintentaba."""
+    parametros = copy.deepcopy(cargar_parametros())
+    if doble:
+        parametros["errores_sensores"]["carro"] = {"diferencia_motores": 0.10, "ruido_ultrasonico_mm": 10,
+                                                   "error_linea": 0.03}
+    carro = SimCarro(parametros, errores=True, semilla=semilla)
+    try:
+        eventos = _viaje(carro)
+        _revisar_viaje(carro, eventos)
+        assert "reversa_reintento" not in [e["ev"] for e in eventos]
+    finally:
+        carro.cerrar()

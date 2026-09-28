@@ -145,6 +145,7 @@ class Elemento:
     circularidad: float = 1.0
     contornos_internos: int = 0
     activo: bool = True
+    apariencia: str | None = None   # solo para dibujarlo/nombrarlo (ver sim/carga_escenarios.py)
     # Cuerpos que viajan pegados a este (solo para vasos): las monedas que
     # cayeron adentro y la tapa. Se mueven con el vaso en cada avance y en
     # la descarga, para que se vea el vaso llenarse de verdad.

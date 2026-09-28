@@ -1045,3 +1045,56 @@ fotos); clave de DeepSeek válida (la dada da 401).
   aparte con Python 3.12 porque TensorFlow no tiene versión para 3.14.
 - La cámara decía "E5 · Visión" (de antes del filtro total): ahora E3.
 - Prácticas 1-9 del repo revisadas y mejoradas a fondo con subagentes (`revisor-practica`).
+
+## 2026-09-27 — Muelle (causa de fondo), visión en el mismo entorno y "colocar pieza"
+
+- **Muelle, causa de fondo**: el control de reversa suponía que empezaba en la marca de giro (~44 cm)
+  y corregía el rumbo con los encoders los primeros 25 cm; pero tras `alinear` + `seguir_corto` la
+  reversa empieza a 32-35 cm, así que seguía corrigiendo ~20 cm DENTRO de la guía en V y peleaba
+  con ella (semilla 2: llegó a la boca a -2,7° y 5 mm, se trabó a +3,4° y 12 mm). Con 20 ranuras
+  (10,2 mm/pulso ≈ 4° por pulso de diferencia) el encoder no puede enderezar más fino, y 5 IR a
+  15 mm no ven ±5,5 mm. Arreglo: `_reversa_hasta_boca()` corrige solo hasta la boca (odometría +
+  `pose_muelle`, `boca_muelle_mm: 305` verificado contra la simulación, margen 30 mm PROVISIONAL);
+  adentro manda la V. **26 viajes completos, 0 reintentos** (semillas 1-16 y doble error 1-14); el
+  reintento queda de red de seguridad. Pendientes vistos: `ir_a` puede dar `llego_al_punto` en falso
+  si las dos ruedas patinan parejo (sin el mapa); a 40 Hz la semilla 1 maniobra de más en un muro.
+- **Visión sin entorno aparte**: Keras 3 corre sobre PyTorch (`KERAS_BACKEND=torch`), que sí tiene
+  versión para Python 3.14: `torch` 2.14 (CPU), `keras` 3.15 y `matplotlib` en el mismo `entorno` y
+  en `requirements-lock.txt`. Se quitó `vision/entorno` (Python 3.12). Probado: 1 época con 36
+  imágenes sintéticas de 3 clases → modelo, matriz de confusión, curva de confianza y métricas.
+  (Keras 3 cambió `compile`: el tercer argumento posicional ya no es `metrics`.)
+- **Colocar pieza**: la lógica estaba bien, pero el visor dibujaba TODO lo metálico no-moneda como
+  botón con 2 ojales: el euro y el disco de 10 mm se veían perforados aunque la cámara (bien) no les
+  encontraba agujeros, y el dashboard los llamaba "botón metálico". Ahora cada pieza lleva su
+  `apariencia` (moneda extranjera, disco, bloque metálico) y sus `contornos_internos` reales: el euro
+  se ve como moneda bimetálica "1 €", el disco liso, y se nombran bien.
+- Visor 3D: remodelado por zonas con piezas reutilizables en `app/visor3d/piezas/` (copia y catálogo
+  en `Blender with claude/piezas-threejs/`, sin abrir Blender) — en curso.
+
+## 2026-09-28 — Visor 3D remodelado a fondo con piezas reutilizables (13 agentes)
+
+- A pedido del usuario ("mejorar absolutamente todo del visor"), modelado en **Three.js** (el usuario
+  pidió no abrir Blender) con el contexto de `Blender with claude/` (catálogo, medidas, lecciones).
+  Cada pieza es un módulo en `app/visor3d/piezas/` (convención en su `README.md`: `crearX(opciones)`,
+  metros, origen = punto de montaje, anclas `pin_<id>_<PIN>` con `userData.dir`, try/catch con el
+  modelo anterior de respaldo) y se guardó una copia en `Blender with claude/piezas-threejs/` con su
+  fila en `CATALOGO_COMPONENTES.md`: `base.js`, `sensores.js` (13 sensores con medidas de ficha),
+  `electronica.js` (ESP32 30P/38P, placas GVS, TB6612, A4988/TMC2208, PCA9685, fuentes, bucks, hub,
+  NEMA17, servos…), `carro.js`, `pista.js`, `linea_monedas.js`, `linea_vasos.js`, `estructura.js`
+  (perfil 2020 con su sección real), `control.js` (gabinete, prensaestopas, laptop). El portable
+  los embebe.
+- Encontrado y corregido en el camino: **pinout del ESP32 espejado** en `sim/conexiones.py`; varias
+  plantillas más chicas que el módulo real (H206, TCRT, arreglo de 5 IR, pack 2S, NEMA17: ahora con
+  medidas de ficha); **el retorno de la banda de monedas atravesaba los sensores M18** que cuelgan bajo
+  la cinta → ahora baja 11 cm con 3 rodillos de desvío (C la tensa por arriba, B y A por debajo);
+  7 choques reales corregidos (cortina contra la canaleta, IEC contra la bornera, escape contra el
+  muelle, compuerta de desvío contra su canal, tubo de tapas, Hall contra una varilla, lámina de la
+  pista bajo el muelle), tubos del almacén con 4 mm entre agujeros; `margen_planta_mm` 150 y
+  `medio_ancho_canaleta_mm` 100 en el mapa del carro.
+- **Cables rehechos**: salen de las anclas reales de cada pin, van por canaletas/bordes/postes,
+  entran por los prensaestopas; cruces cable-pieza de ~110 a 0. Ventilador de la caja agregado a
+  `conexiones.py`; placa GVS de 38 pines como pieza real.
+- Vistas "Material" (casi desde abajo) y "Caja de control" (desde arriba) reencuadradas: las piezas
+  nuevas tapaban lo que mostraban.
+- Pendiente: `zonas_carro` no incluye el portátil ni el hub (en el piso, y 0,34–0,47).
+

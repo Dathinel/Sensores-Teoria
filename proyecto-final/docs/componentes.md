@@ -30,7 +30,7 @@
 | Controlador de servos (`pca9685`) | 1 | PCA9685 (16 canales, I2C) | Maneja los 6 servos con solo 2 pines del ESP32 (I2C; sobran 10 de sus 16 canales). | efecto simulado | 24 |
 | Fuente de 12 V (`fuente`) | 1 | Fuente conmutada 12 V 10 A (tipo LRS-150-12, 159 x 97 x 30 mm) | 12 V para los drivers de los pasos a paso, los sensores capacitivo e inductivo y los dos reguladores. Tierra comun en estrella en la bornera X2. El ESP32 fijo va por el USB del portatil. | solo visual | 6 |
 | Regulador de 6 V (servos) (`buck_servos`) | 1 | Buck XL4016, 6 V 8 A, con disipadores | Alimenta solo los servos (dos MG996R piden hasta 2,5 A cada uno trabados), a traves de la bornera V+ del PCA9685 con su 1000 uF. | solo visual | 4 |
-| Regulador de 5 V (`buck_5v`) | 1 | Buck LM2596, 5 V 3 A | 5 V para el ULN2003 y el 28BYJ-48 del carrusel, el panel de luz y el anillo de la camara. | solo visual | 4 |
+| Regulador de 5 V (`buck_5v`) | 1 | Buck LM2596, 5 V 3 A | 5 V para el ULN2003 y el 28BYJ-48 del carrusel, el panel de luz y el anillo de la camara. | solo visual | 6 |
 | Portafusibles (`fusibles`) | 1 | Portafusibles de 4 vias (cuchilla): F1 5 A, F2 2 A, F3 3 A, F4 1 A | Un fusible por rama de 12 V: regulador de servos, regulador de 5 V, drivers y sensores de 12 V. | solo visual | 5 |
 | Bornera X2 (carril DIN) (`bornera_x2`) | 1 | 16 bornes de 2,5 mm² con puentes (2-3 +12 V sensores, 5-6 +5 V, 7 a 13 GND) | Reparte +12 V, +6 V, +5 V y la tierra comun en estrella: ahi llega cada cable de alimentacion. | solo visual | 26 |
 | Entrada de red con interruptor (`entrada_red`) | 1 | Conector IEC C14 con interruptor y portafusible | Entrada de 110 V a la fuente, con su interruptor general. | solo visual | 3 |
@@ -38,7 +38,7 @@
 | Reparto del bus I2C 1 (`reparto_i2c`) | 1 | Placa perforada con pull-ups de 2,2 kΩ y 2 conectores | Reparte el bus I2C largo (100 kHz) a los dos VL53L0X (interior del vaso y cortina). | efecto simulado | 12 |
 | Driver del carrusel (`uln2003`) | 1 | Placa ULN2003 (con diodos de rueda libre) | Maneja las 4 bobinas del 28BYJ-48 del carrusel desde 4 pines del ESP32. | efecto simulado | 11 |
 | Hub USB con fuente (`hub_usb`) | 1 | Hub USB 2.0 de 4 puertos con alimentacion propia | El portatil necesita 3 USB: las dos webcams y el ESP32 fijo. | efecto simulado | 4 |
-| Canaletas y prensaestopas (`canaletas_caja`) | 1 | Canaleta ranurada 25 x 30 mm y prensaestopas PG | Todo el cableado de la caja va por las canaletas (ningun hilo cruza por encima de una placa); los cables de campo entran por prensaestopas separados. | solo visual | — |
+| Canaletas, prensaestopas y ventilador (`canaletas_caja`) | 1 | Canaleta ranurada 25 x 30 mm, prensaestopas PG y ventilador 4010 de 5 V (0,1 A, del buck de 5 V) | Todo el cableado de la caja va por las canaletas (ningun hilo cruza por encima de una placa); los cables de campo entran por prensaestopas separados. | solo visual | 2 |
 | Portátil (`pc`) | 1 | El del grupo (sin GPU) | Visión, supervisor, base de datos, dashboard y visor 3D. | simulado | 1 |
 
 ## Estructura

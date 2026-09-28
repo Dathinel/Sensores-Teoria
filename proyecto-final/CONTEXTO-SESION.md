@@ -112,9 +112,28 @@ Decisión del usuario: prácticas → "Mejorar a fondo". Plan: `~/.claude/plans/
 - [x] f. Agente `revisor-practica` + revisión y mejora a fondo de los temas 1-9 (≤4 agentes a la vez).
 - [x] g. Pruebas, capturas, docs, commit, relanzar.
 
+**Pedido del 2026-09-27 (7):** "resuelva la causa de fondo del muelle, como haría el entorno aparte, o
+actualizaría todos los .env para que no se tenga que hacer por aparte ... ahora tiene la libertad de
+colocar 5 agentes a la vez y la obligación de ayudarlos si se demoran demasiado, revise el tema de
+colocar una pieza, hay algo mal ... mejore absolutamente todos los componentes, sensores, objetos,
+estructuras y en general todo lo del visor 3d ... con múltiples agentes de modelado ... el carro, la
+pista, la laptop, los sensores, y los guarda como modelos reutilizables en blender with claude ...
+verificar ... que no se sobrepongan ... y colocar de la forma correcta los cables de todo, cambiando
+las posiciones si hace falta, solo en este prompt puede usar 10 agentes máx, lo normal serán 5".
+Aclaración del usuario: **NO modelar en Blender ni abrir Blender** (al menos hoy): seguir modelando en
+Three.js como hasta ahora, con el contexto de `Blender with claude/`, y guardar las piezas ahí como se
+vienen guardando. Plan: `~/.claude/plans/complete-todo-lo-que-snappy-liskov.md`.
+- [x] a. Muelle: causa de fondo (0 reintentos en ≥10 semillas).
+- [x] b. Keras 3 + torch en el mismo `entorno` (sin `vision/entorno`).
+- [x] c. Colocar pieza: el visor dibujaba el euro y el disco como botones perforados; nombres.
+- [x] d. Piezas reutilizables en `app/visor3d/piezas/` (+ copia y catálogo en `Blender with claude/`).
+- [x] e. Remodelado por zonas: carro+muelle, pista, cinta de monedas+almacén, cinta de vasos, canaleta+pórtico, caja+laptop.
+- [x] f. Verificación: solapes, cables, capturas.
+- [x] g. Pruebas, docs, commit, relanzar.
+
 ## 3. Estado actual (2026-09-27, fin de sesión)
 
-- Pruebas: `entorno/Scripts/python -m pytest -q` → todas deben pasar (607, ~6 min).
+- Pruebas: `entorno/Scripts/python -m pytest -q` → todas deben pasar (623, ~6 min).
 - Forma de trabajar (usuario, 2026-09-26): dejar SIEMPRE una corrida escondida con el código
   actual (`python -m app.lanzar --auto prueba_completa --reemplazar` en segundo plano; cierra la
   anterior y su consola). El usuario la mira cuando quiere con `visor.bat` (un clic). NO
