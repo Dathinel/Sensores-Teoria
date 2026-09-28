@@ -27,6 +27,7 @@
   .chip.pausada { background: var(--ambar); color: #0e1116; border-color: var(--ambar); }
   .chip.paro, .chip.error { background: var(--rojo); color: #fff; border-color: var(--rojo); }
   .chip.terminada { background: var(--azul); color: #0e1116; border-color: var(--azul); }
+  .chip.sinred { background: var(--rojo); color: #fff; border-color: var(--rojo); font-weight: 600; }
   .espacio { flex: 1; }
   button { font-family: inherit; font-size: 0.8rem; color: var(--texto); background: var(--panel);
     border: 1px solid var(--borde); border-radius: 7px; padding: 5px 10px; cursor: pointer; }
@@ -100,8 +101,6 @@
   #modo span { display: block; font-size: 0.78rem; margin-top: 1px; }
   #modo .demo { background: var(--ambar); color: #1b1300; }
   #modo .desconectado { background: var(--rojo); color: #fff; }
-  #modo .offline { background: rgba(18, 22, 29, 0.94); border: 2px solid var(--rojo); color: var(--texto); padding: 5px 14px; }
-  #modo .offline b { font-size: 0.85rem; color: #ff8a80; }
   /* A los 10 s quedan en una sola linea (siguen a la vista, pero no tapan la pantalla de la laptop). */
   #modo.compacto { flex-direction: row; }
   #modo.compacto > div { padding: 4px 14px; }
@@ -139,6 +138,7 @@
   <span class="titulo">🪙 Planta de monedas · 3D</span>
   <span id="chipEstado" class="chip">conectando…</span>
   <span id="chipTick" class="chip">tick —</span>
+  <span id="chipRed" class="chip" title="Sin internet solo cambia el asistente: responde el modelo local de la laptop">🌐 revisando…</span>
   <span class="espacio"></span>
   <!-- Vistas: llevan la camara a cada seccion. -->
   <nav class="vistas" aria-label="Vistas">

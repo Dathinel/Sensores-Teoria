@@ -61,9 +61,21 @@ visor y en el streamlit que no tiene internet, o esta viendo una demo".
 - [x] c. Visor 3D: aviso grande de "DEMO GRABADA" (no en vivo) y de "sin internet" (la nube).
 - [x] d. Pruebas, docs, commit.
 
+**Pedido del 2026-09-28 (4):** "cuando abro el bat aparece sin internet en el visor 3d en la parte
+de nube de deepseek ... no será porque no está haciendo bien el cambio de html a puerto local, o
+porque está sobrepuesto el label de sin internet sobre lo demás, además podría colocarlo en el
+label principal, como al lado de los ticks como en streamlit ... creo que ese html cuando se abre
+desde el bat está dando problemas adicionales".
+- [x] a. Falso "sin internet": el visor revisaba con UN intento al arrancar (escena cargando). En
+  vivo decide el supervisor (`/api/internet`, el mismo chequeo que Streamlit); en la demo, varios
+  sitios y 2 fallos seguidos.
+- [x] b. Chip de internet al lado de los ticks; quitar el letrero encimado de la nube.
+- [x] c. Revisar el paso HTML → en vivo desde el .bat (que en vivo todo se actualice).
+- [x] d. Pruebas, docs, commit.
+
 ## 3. Estado actual (2026-09-27, fin de sesión)
 
-- Pruebas: `entorno/Scripts/python -m pytest -q` → todas deben pasar (567, ~4 min).
+- Pruebas: `entorno/Scripts/python -m pytest -q` → todas deben pasar (569, ~4 min).
 - Forma de trabajar (usuario, 2026-09-26): dejar SIEMPRE una corrida escondida con el código
   actual (`python -m app.lanzar --auto prueba_completa --reemplazar` en segundo plano; cierra la
   anterior y su consola). El usuario la mira cuando quiere con `visor.bat` (un clic). NO

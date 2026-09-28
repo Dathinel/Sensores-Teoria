@@ -2290,16 +2290,11 @@ function construirEnlaceAsistente() {
   const et = etiqueta('☁ API de DeepSeek (internet)', { alto: 0.014, alcance: 1.8, borde: '#539bf5' });
   et.position.copy(centro).add(new THREE.Vector3(0, 0.085, 0));
   grupo.add(et);
-  // Sin internet la nube se apaga (gris) y lo dice: responde el modelo local de la laptop.
-  const etSinRed = etiqueta('📴 Sin internet · responde el modelo local', { alto: 0.014, alcance: 1.8, borde: '#e5534b', color: '#ffb4ae' });
-  etSinRed.position.copy(et.position);
-  etSinRed.visible = false;
-  grupo.add(etSinRed);
   const etW = etiqueta('Wi-Fi del portátil (el carro usa ESP-NOW)', { alto: 0.009, alcance: 1.0, color: '#8b949e' });
   etW.position.copy(a.clone().lerp(b, 0.5)).add(new THREE.Vector3(0.1, 0, 0));
   grupo.add(etW);
   escena.add(grupo);
-  P.asistente = { grupo, paquete, a, b, matNube, et, etSinRed, linea, mensajes: -1, panel: L.pantalla, lienzo: L.lienzo,
+  P.asistente = { grupo, paquete, a, b, matNube, linea, mensajes: -1, panel: L.pantalla, lienzo: L.lienzo,
     textura: L.textura, pensando: null, fase: 0 };
   dibujarPanelAsistente(null);
 }
@@ -4262,15 +4257,36 @@ async function enviarOrden(orden) {
 // ---------------------------------------------------------------------------
 
 // null = todavia no se sabe. Se revisa cada 20 s y cuando el navegador avisa que cambio la red.
+// Antes (2026-09-28) el visor probaba UNA vez al arrancar, con la escena 3D todavia armandose (el
+// navegador ocupado varios segundos): el intento se pasaba del tiempo y decia "sin internet" con
+// internet. Ahora:
+// - En vivo decide la simulacion (`/api/internet`, el mismo chequeo en Python que usan el asistente
+//   y el dashboard): el visor y el Streamlit nunca se contradicen.
+// - En la demo (sin simulacion) prueba el navegador, con varios sitios y solo tras 2 fallos seguidos.
 let hayInternet = null;
+let fallosInternet = 0;
+
+async function alcanza(url) {
+  try {
+    // no-cors: no se lee la respuesta, solo se ve si el servidor se alcanza.
+    await fetch(url, { mode: 'no-cors', cache: 'no-store', signal: AbortSignal.timeout(8000) });
+    return true;
+  } catch (e) { return false; }
+}
 
 async function revisarInternet() {
-  let hay = navigator.onLine;
-  if (hay) {
+  let hay = null;
+  if (!MODO_DEMO) {
     try {
-      // no-cors: no se lee la respuesta, solo se ve si el servidor de DeepSeek se alcanza.
-      await fetch('https://api.deepseek.com/', { mode: 'no-cors', cache: 'no-store', signal: AbortSignal.timeout(5000) });
-    } catch (e) { hay = false; }
+      const r = await fetch(BASE + 'api/internet', { cache: 'no-store', signal: AbortSignal.timeout(8000) });
+      if (r.ok) hay = !!(await r.json()).internet;
+    } catch (e) { /* supervisor viejo o caido: prueba el navegador */ }
+  }
+  if (hay === null) {
+    const ok = navigator.onLine && (await alcanza('https://api.deepseek.com/') || await alcanza('https://www.google.com/generate_204'));
+    fallosInternet = ok ? 0 : fallosInternet + 1;
+    if (!ok && fallosInternet < 2) { setTimeout(revisarInternet, 4000); return; }   // una sola falla no basta
+    hay = ok;
   }
   if (hay !== hayInternet) { hayInternet = hay; pintarModo(); }
 }
@@ -4287,10 +4303,7 @@ function pintarModo() {
     partes.push('<div class="desconectado"><b>⚠ SIN CONEXIÓN CON LA SIMULACIÓN</b><span>Lo que se ve está congelado. '
       + 'Vuelva a abrir visor.bat.</span></div>');
   }
-  if (hayInternet === false) {
-    partes.push('<div class="offline"><b>📴 SIN INTERNET</b><span>La planta, el carro y el dashboard siguen funcionando '
-      + '(todo es local). El asistente responde con el modelo de la laptop.</span></div>');
-  }
+  // Sin internet lo dice el chip rojo de la barra (al lado de los ticks, como en el dashboard).
   const html = partes.join('');
   if (html !== pintarModo.ultimo) {
     pintarModo.ultimo = html;
@@ -4306,10 +4319,13 @@ function pintarModo() {
   caja.style.left = ((izq + window.innerWidth) / 2) + 'px';
   const barra = document.getElementById('barra');
   if (barra) caja.style.top = (barra.getBoundingClientRect().bottom + 10) + 'px';
+  const chipRed = document.getElementById('chipRed');
+  if (chipRed) {
+    chipRed.textContent = hayInternet === null ? '🌐 revisando…' : hayInternet ? '🌐 con internet' : '📴 SIN INTERNET';
+    chipRed.className = 'chip' + (hayInternet === false ? ' sinred' : '');
+  }
   if (P.asistente) {
     const sinRed = hayInternet === false;
-    P.asistente.et.visible = !sinRed;
-    P.asistente.etSinRed.visible = sinRed;
     P.asistente.matNube.color.set(sinRed ? 0x5b6270 : 0xdfe7f5);
     P.asistente.matNube.emissive.set(sinRed ? 0x000000 : 0x539bf5);
     P.asistente.linea.material.color.set(sinRed ? 0xe5534b : 0x539bf5);
@@ -4317,7 +4333,8 @@ function pintarModo() {
 }
 
 function vigilarInternet() {
-  revisarInternet();
+  // La primera revision espera a que la escena termine de armarse.
+  setTimeout(revisarInternet, 1500);
   setInterval(revisarInternet, 20000);
   window.addEventListener('online', revisarInternet);
   window.addEventListener('offline', revisarInternet);

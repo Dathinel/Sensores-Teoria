@@ -177,6 +177,22 @@ def test_servidor_entrega_visor_geometria_estado_y_pasos(tmp_path, geo):
         srv.shutdown()
 
 
+@pytest.mark.parametrize("hay", [True, False])
+def test_servidor_dice_si_hay_internet(tmp_path, geo, monkeypatch, hay):
+    """El visor en vivo no decide solo si hay internet: le pregunta al supervisor (el mismo
+    chequeo del asistente y el dashboard). Antes decia "sin internet" con internet."""
+    from app import asistente
+
+    monkeypatch.setattr(asistente, "hay_internet", lambda *a, **k: hay)
+    puerto = _puerto_libre()
+    srv = servidor.arrancar(servidor.EstadoCompartido(geo, tmp_path / "planta.db"), puerto)
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{puerto}/api/internet") as r:
+            assert json.loads(r.read()) == {"internet": hay}
+    finally:
+        srv.shutdown()
+
+
 def test_servidor_recibe_ordenes(tmp_path, geo):
     from app import db
 

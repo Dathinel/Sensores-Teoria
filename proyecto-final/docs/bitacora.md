@@ -979,3 +979,14 @@ fotos); clave de DeepSeek válida (la dada da 401).
 - Pruebas: `tests/test_voz.py` (5) y 2 del dashboard. Capturas con Chrome sin ventana y la red
   cortada por DevTools.
 
+## 2026-09-28 — Arreglo del falso "sin internet" del visor
+
+- Al abrir `visor.bat` el visor decía "sin internet" con internet (DeepSeek respondía en 0,6 s).
+  Causa: probaba UNA vez al arrancar, desde el navegador, mientras armaba la escena 3D; el intento
+  se pasaba de los 5 s y quedaba "sin internet" hasta la siguiente revisión, 20 s después. Ahora, en
+  vivo, pregunta al supervisor (`/api/internet`, el mismo chequeo que el Streamlit); en la demo,
+  varios sitios y 2 fallos seguidos.
+- Chip "🌐 con internet" / "📴 SIN INTERNET" al lado de los ticks (como en el dashboard); se quitó el
+  letrero de la nube que se encimaba y el recuadro central repetido. El paso del HTML al vivo se
+  volvió a probar desde el archivo: vivo en ~1 s, chip "con internet", sin avisos.
+

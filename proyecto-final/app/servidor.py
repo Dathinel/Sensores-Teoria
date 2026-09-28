@@ -14,6 +14,8 @@ Rutas:
                             (sim/geometria.py)
     GET  /api/pasos         el paso a paso (docs/paso-a-paso.yaml), releido en
                             cada consulta para que una revision se vea al tiro
+    GET  /api/internet      {"internet": true|false}: el mismo chequeo que usan el
+                            asistente y el dashboard (el visor no decide solo)
     GET  /api/asistente     la conversacion con el asistente (fase 7) y que
                             paso con sus ordenes, para mostrarla en el visor
                             (solo lectura: se le escribe desde el dashboard)
@@ -110,6 +112,10 @@ def _crear_manejador(compartido: EstadoCompartido):
                     pasos = yaml.safe_load(archivo)["pasos"]
                 return self._responder(200, json.dumps(pasos, ensure_ascii=False).encode("utf-8"), "application/json")
 
+            if ruta == "/api/internet":
+                from app.asistente import hay_internet
+
+                return self._responder(200, json.dumps({"internet": hay_internet()}).encode(), "application/json")
             if ruta == "/api/asistente":
                 return self._responder(200, _asistente_json(compartido.ruta_bd), "application/json")
 

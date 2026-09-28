@@ -779,8 +779,11 @@ internet **Whisper `small`** (faster-whisper, CPU int8, ~2,5 s por frase; `base`
 el mismo proceso). Modelo descargado una vez con `python -m app.asistente --preparar-voz`, fuera del
 repo. Avisos: el dashboard pregunta al servidor del supervisor si está vivo (la telemetría se
 detiene al terminar la corrida, así que su edad no sirve) y muestra "NO ES EN VIVO", "ESP32
-EMULADO" y "SIN INTERNET" en grande; el visor, "DEMO GRABADA", "SIN CONEXIÓN" y "SIN INTERNET"
-(completos 10 s, luego en una línea) y la nube gris.
+EMULADO" y "SIN INTERNET" en grande; el visor, "DEMO GRABADA" y "SIN CONEXIÓN" (completos 10 s,
+luego en una línea), un chip de internet al lado de los ticks y la nube gris. En vivo el visor NO
+decide solo si hay internet: pregunta a `/api/internet` del supervisor (el mismo `hay_internet()`);
+probar desde el navegador al arrancar (con la escena 3D armándose) daba "sin internet" falso. En
+la demo prueba el navegador: DeepSeek o Google, y solo tras 2 fallos seguidos.
 
 El chatbot nunca inventa cifras: si una métrica no está en el estado inyectado, debe decir
 que no tiene ese dato.

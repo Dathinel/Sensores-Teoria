@@ -38,8 +38,8 @@ otro PC, sin Python ni internet, muestra la demo grabada. Se rehace con `python 
   funciona sin internet (ver abajo).
 
 Si no hay internet, o si lo que se ve no es la simulación en vivo, se nota de lejos: el visor
-muestra arriba "▶ DEMO GRABADA", "⚠ SIN CONEXIÓN CON LA SIMULACIÓN" o "📴 SIN INTERNET" (la
-nube de DeepSeek se pone gris), y el dashboard muestra de dónde salen los datos (simulación,
+muestra arriba "▶ DEMO GRABADA" o "⚠ SIN CONEXIÓN CON LA SIMULACIÓN", y al lado de los ticks un
+chip "🌐 con internet" / "📴 SIN INTERNET" (sin internet, la nube de DeepSeek se pone gris), y el dashboard muestra de dónde salen los datos (simulación,
 ESP32 real o emulado), si hay internet y un aviso grande "NO ES EN VIVO" cuando la simulación
 no está corriendo. Sin internet sigue funcionando todo lo de la planta: el ESP32 fijo habla con el
 PC por USB, el carro con el ESP32 fijo por ESP-NOW (radio directa, sin router) y los datos van por
