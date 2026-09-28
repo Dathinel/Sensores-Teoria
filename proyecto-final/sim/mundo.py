@@ -734,4 +734,5 @@ class EscenaEstacion:
             self._paso_fisica()
 
     def cerrar(self) -> None:
-        p.disconnect(self.cliente)
+        if p.isConnected(self.cliente):      # idempotente: el supervisor puede cerrar dos veces
+            p.disconnect(self.cliente)

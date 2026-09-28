@@ -1133,3 +1133,20 @@ fotos); clave de DeepSeek válida (la dada da 401).
 - Queda (menor): vista Material y foco de los M18 entre vigas; etiquetas 3D bajo la barra de vistas
   cerca del borde; a 900 px con la barra lateral abierta el mapa del carro se aplasta; tablas de
   Montaje con desplazamiento horizontal; aviso del micrófono de Streamlit en la primera carga.
+
+## 2026-09-28 — Pendientes menores
+
+- `Supervisor.cerrar()`: suelta el mundo del carro, la conexión de PyBullet de la escena (quedaba
+  abierta y, como `sim/mundo.py` dibuja en la conexión 0, le cambiaba los sensores a otro), el
+  puente, el servidor y la base; idempotente. Prueba nueva (660).
+- Vista "Material" y foco de los M18: la causa era el límite de la órbita
+  (`maxPolarAngle = 0,495π` no dejaba bajar la cámara de la horizontal). `limitarPolar()` lo ajusta
+  a la altura de la mira sin atravesar el piso; dirección elegida por barrido de rayos (desde atrás,
+  50° por debajo: ~92 % de los dos sensores a la vista).
+- Etiquetas 3D bajo la barra de vistas o el aviso DEMO: se desvanecen (`interfaz.js` mide esas zonas
+  al acomodarse; `visor.js` las usa en `actualizarEtiquetas`).
+- Streamlit: columnas principales apiladas en pantallas angostas (media queries), mapa del carro a
+  todo el ancho con sus etiquetas enteras, tablas de Montaje en HTML que no necesitan desplazamiento.
+  El aviso `Recording error: Container not found` venía de `st.chat_input` (no del micrófono): con un
+  texto de ayuda largo el componente se reacomodaba al abrir y la librería de la onda perdía su
+  recuadro; ahora el texto cabe en una línea (0 errores en 7 cargas).

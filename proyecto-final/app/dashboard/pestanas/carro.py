@@ -96,10 +96,11 @@ def mapa() -> None:
         if f:
             fig.add_scatter(x=[f["x"]], y=[f["y"]], mode="markers+text", text=[texto], textposition=lado,
                             textfont=dict(color=color), marker=dict(color=color, size=11, symbol="square"),
-                            hoverinfo="skip")
+                            hoverinfo="skip", cliponaxis=False)
     sal = pista["salida"]
     fig.add_scatter(x=[sal["x"]], y=[sal["y"]], mode="markers+text", text=["muelle"], textposition="middle left",
-                    textfont=dict(color=AMBAR), marker=dict(color=AMBAR, size=12, symbol="diamond"), hoverinfo="skip")
+                    textfont=dict(color=AMBAR), marker=dict(color=AMBAR, size=12, symbol="diamond"), hoverinfo="skip",
+                    cliponaxis=False)
     if len(traza):
         fig.add_scatter(x=traza["x"], y=traza["y"], mode="lines", line=dict(color=AMBAR, width=2), hoverinfo="skip")
     for ev, color, simbolo in (("obstaculo", ROJO, "x"), ("evasion", MORADO, "triangle-up"),
@@ -124,10 +125,13 @@ def mapa() -> None:
                         marker=dict(color=AZUL, size=16, symbol="triangle-up", angle=90 - math.degrees(carro["rumbo"]),
                                     line=dict(color="#ffffff", width=1)),
                         hovertext=f"carro: {carro['fase']} · {carro['estado']}", hoverinfo="text")
-    # Un poco de aire alrededor: las etiquetas del muelle y de la marca de giro van a la izquierda.
+    # Aire a la izquierda para las etiquetas del muelle y de la marca de giro (van a la izquierda de su
+    # punto): 0,6 m de eje más `cliponaxis=False` en esas dos trazas, así el texto se dibuja entero
+    # aunque la columna sea angosta (a 900 px se cortaban en "uelle" y "e giro"; 2026-09-28).
     xs = lx + [sal["x"]]
-    fig.update_xaxes(range=[min(xs) - 0.35, max(xs) + 0.15])
+    fig.update_xaxes(range=[min(xs) - 0.6, max(xs) + 0.2])
     fig.update_yaxes(scaleanchor="x", scaleratio=1)
+    fig.update_layout(margin=dict(l=10, r=10, t=24, b=10))
     mostrar(fig)
     pintar(html_leyenda([
         ("━", AMBAR, "recorrido real del carro (simulación con física)"),

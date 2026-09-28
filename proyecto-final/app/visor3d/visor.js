@@ -91,7 +91,7 @@ camara.position.set(0.9, 0.9, 1.3);
 const controles = new OrbitControls(camara, renderer.domElement);
 controles.enableDamping = true;
 controles.dampingFactor = 0.08;
-controles.maxPolarAngle = Math.PI * 0.495;   // no se mete debajo del piso
+controles.maxPolarAngle = Math.PI * 0.495;   // no se mete debajo del piso (ver limitarPolar)
 controles.minDistance = 0.08;
 controles.maxDistance = 6;
 controles.target.set(0.6, 0.05, 0.4);
@@ -255,6 +255,27 @@ function etiqueta(texto, { alto = 0.012, color = '#e6e8eb', fondo = 'rgba(14,17,
 }
 
 const _p = new THREE.Vector3();
+const _q = new THREE.Vector3();
+// 1 si la etiqueta queda entera por debajo de las barras de arriba (barra fija, vistas y aviso
+// de modo, medidas por interfaz.js), 0 si queda debajo de ellas, y un fundido entre medio: las
+// etiquetas cerca del borde de arriba quedaban tapadas a medias por los botones (2026-09-28).
+// Tamaño en pantalla del sprite (sizeAttenuation false): escala x (1/tan(fov/2)) x media altura.
+function fueraDeLasBarras(e) {
+  const zonas = ui.zonasArriba();
+  if (!zonas.length) return 1;
+  _q.copy(_p).project(camara);
+  if (_q.z > 1) return 1;
+  const W = window.innerWidth, H = window.innerHeight;
+  const x = (_q.x + 1) / 2 * W, y = (1 - _q.y) / 2 * H;
+  const k = camara.projectionMatrix.elements[5] * H / 2;
+  const alto = e.scale.y * k, ancho = e.scale.x * k;
+  let f = 1;
+  for (const z of zonas) {
+    if (x + ancho / 2 < z.izq || x - ancho / 2 > z.der) continue;
+    f = Math.min(f, THREE.MathUtils.clamp((y + alto / 2 - z.abajo) / alto, 0, 1));
+  }
+  return f;
+}
 function actualizarEtiquetas() {
   for (const e of ETIQUETAS) {
     if (!e.parent) continue;
@@ -262,6 +283,7 @@ function actualizarEtiquetas() {
     const a = e.userData.etiqueta.alcance;
     let op = Math.max(0, Math.min(1, (a - _p.distanceTo(camara.position)) / (a * 0.3)));
     if (e.userData.sensorId && resaltados.has(e.userData.sensorId)) op = 1;
+    op *= fueraDeLasBarras(e);
     e.material.opacity = op * (e.userData.opacidadBase ?? 1);
     // `oculta`: apagada a proposito (p. ej. la de "sin internet" con internet). Sin esto, este bucle
     // la volvia a encender en cada cuadro y quedaba encimada sobre la otra (2026-09-27).
@@ -5029,6 +5051,25 @@ function agregarRastro(x, y) {
 
 let vuelo = null;
 
+// Direccion (desde el sensor hacia la camara) para ver los sensores de material bajo la cinta:
+// desde atras (-z de three = +y de la simulacion) y 50° por debajo de la horizontal. Es la que
+// dejo ver mas de los dos M18 en un barrido por raycast (elevacion x azimut x distancia): ~92 %
+// de sus puntos a la vista, contra ~60-75 % de la toma anterior (casi desde abajo, del lado
+// del operador), que tapaban la viga del portico y las de la mesa.
+const DIR_BAJO_CINTA = new THREE.Vector3(0, -Math.sin(THREE.MathUtils.degToRad(50)), -Math.cos(THREE.MathUtils.degToRad(50)));
+// Centro de los dos sensores de material (sus mallas reales; si no estan, bajo E1-E2).
+function centroMaterial() {
+  const caja = new THREE.Box3();
+  for (const id of ['capacitivo', 'inductivo']) for (const m of mallasDeSensor(id)) {
+    const mat = m.material;
+    if (m.isInstancedMesh || (mat && (mat.isMeshBasicMaterial || (mat.transparent && mat.opacity < 0.3)))) continue;
+    caja.expandByObject(m);
+  }
+  if (!caja.isEmpty()) return caja.getCenter(new THREE.Vector3());
+  const em = G.cinta_monedas.estaciones.map((e) => V(e.posicion));
+  return em[0].clone().lerp(em[1], 0.5).add(new THREE.Vector3(0, -0.05, 0));
+}
+
 function vista(nombre) {
   const em = G.cinta_monedas.estaciones.map((e) => V(e.posicion));
   const ev = G.cinta_vasos.estaciones.map((e) => V(e.posicion));
@@ -5050,10 +5091,14 @@ function vista(nombre) {
     tapa: [ev[2].clone().lerp(ev[3], 0.5).add(new THREE.Vector3(0, 0.09, 0)), new THREE.Vector3(0.05, 0.1, 0.32)],
     canaleta: [c.ini.clone().lerp(c.fin, 0.55), new THREE.Vector3(0.42, 0.2, 0.3)],
     pista: [centroP, new THREE.Vector3(0.0, 1.9, 1.2)],
-    // Los dos sensores de material se ven desde abajo de la cinta.
-    // Casi desde abajo (del lado del operador): mas de costado, la viga del portico tapaba la
-    // mitad de abajo de los sensores M18; del lado +y los tapa la caja de control (2026-09-28).
-    material: [em[0].clone().lerp(em[1], 0.5).add(new THREE.Vector3(0, -0.04, 0)), new THREE.Vector3(0.05, -0.18, 0.06)],
+    // Los dos sensores de material (M18) se ven desde abajo de la cinta, del lado de ATRAS (+y de
+    // la simulacion, -z aqui) y a ~50° bajo la horizontal: buscado por raycast (2026-09-28). Del
+    // lado del operador la viga del portico (y = -45 mm, z = 400 mm) tapa la mitad de abajo, y
+    // casi desde abajo se miraba entre las vigas de la mesa, con los sensores chicos. La mira es
+    // el centro de los dos sensores (no la cinta): quedan grandes y enteros, con rosca, tuerca y
+    // platina. A 0,22 m la caja de control queda detras de la camara, tambien con el panel
+    // abierto (x1,4).
+    material: [centroMaterial(), DIR_BAJO_CINTA.clone().multiplyScalar(0.22)],
     // Desde arriba: en diagonal desde el operador, la cinta de vasos remodelada (tubo de tapas,
     // prensa, portico) quedaba en medio y tapaba la caja (2026-09-28).
     caja: [Vxyz(P.caja.bx, P.caja.by, 0.02), new THREE.Vector3(0, 0.45, 0.02)],
@@ -5195,9 +5240,8 @@ function encuadrar(mallas, { desdeAbajo = false } = {}) {
   const dist = THREE.MathUtils.clamp(radio / Math.sin(fov / 2) * 1.25, 0.09, 2.6);
   let dir;
   if (desdeAbajo) {
-    // Debajo de la cinta: casi desde abajo, del lado del operador (mas de costado, la viga del
-    // portico, en y = -45 mm, tapaba la mitad de abajo de los sensores M18).
-    dir = new THREE.Vector3(0.25, -0.92, 0.3).normalize();
+    // Debajo de la cinta: la misma direccion que la vista Material (ver DIR_BAJO_CINTA).
+    dir = DIR_BAJO_CINTA.clone();
   } else {
     if (enCarro) {
       // En el carro: de costado (el izquierdo), algo desde arriba y un poco
@@ -5405,6 +5449,17 @@ function ajustarPlanos() {
   }
 }
 
+// Limite de la orbita: la camara no baja del piso (3 cm), pero SI puede mirar desde abajo algo que
+// esta en alto. Con el tope fijo de ~89° (horizontal) las tomas "desde abajo" de los sensores de
+// material quedaban aplastadas a la horizontal, entre las vigas de la mesa (2026-09-28). El angulo
+// maximo sale de la altura de la mira y la distancia: cos(polar) >= -(altura - 3 cm) / distancia.
+function limitarPolar() {
+  const d = camara.position.distanceTo(controles.target);
+  const h = controles.target.y - 0.03;
+  const libre = h > 0 && d > 1e-4 ? Math.acos(THREE.MathUtils.clamp(-h / d, -1, 1)) : 0;
+  controles.maxPolarAngle = THREE.MathUtils.clamp(libre, Math.PI * 0.495, Math.PI * 0.95);
+}
+
 const reloj = new THREE.Clock();
 function bucle() {
   const dt = Math.min(0.05, reloj.getDelta());
@@ -5414,6 +5469,7 @@ function bucle() {
   animarActuadores(dt);
   animarAsistente(dt);
   if (G) { actualizarSensores(t); resaltarComponente(t); }
+  limitarPolar();
   controles.update();
   ajustarPlanos();
   actualizarEtiquetas();

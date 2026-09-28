@@ -704,8 +704,24 @@ export function crearInterfaz(ctx) {
     ctx.alCambiarInternet(hayInternet);
   }
 
+  // Lo que tapan arriba la barra fija + la barra de vistas (todo el ancho) y el aviso de modo
+  // ("DEMO GRABADA" / "SIN CONEXIÓN"), en píxeles de pantalla: la escena desvanece las etiquetas
+  // 3D que caen debajo (se leían mal, encimadas con los botones). Se mide aquí (al acomodar y al
+  // cambiar el aviso), no en cada cuadro: la escena solo lee esta lista.
+  let zonasArriba = [];
+  function medirZonasArriba() {
+    const zonas = [{ izq: 0, der: window.innerWidth, abajo: $('#vistas').getBoundingClientRect().bottom }];
+    const modo = $('#modo');
+    if (modo.childElementCount) {
+      const r = modo.getBoundingClientRect();
+      if (r.width > 0) zonas.push({ izq: r.left, der: r.right, abajo: r.bottom });
+    }
+    zonasArriba = zonas;
+  }
+
   // Los avisos de la línea (arriba a la derecha) van debajo del aviso grande, sin taparlo.
   function colocarAvisos() {
+    medirZonasArriba();
     const modo = $('#modo');
     const arriba = $('#vistas').getBoundingClientRect().bottom + 10;
     $('#aviso').style.top = (modo.childElementCount ? modo.getBoundingClientRect().bottom + 8 : arriba) + 'px';
@@ -880,6 +896,7 @@ export function crearInterfaz(ctx) {
     // la escena pregunta
     anchoTapado,
     marcarVista,
+    zonasArriba: () => zonasArriba,
     // arranque
     pintarPanel, pintarModo, vigilarInternet, vigilarSimulacion, iniciarCables, aplicarURL,
     // simulación

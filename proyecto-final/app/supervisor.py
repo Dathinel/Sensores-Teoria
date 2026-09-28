@@ -480,11 +480,25 @@ class Supervisor:
         except sqlite3.OperationalError as error:
             print(f"Error de base de datos: {error}")
         finally:
-            if self.servidor_http is not None:
-                self.servidor_http.shutdown()
-            if self.puente is not None:
-                self.puente.cerrar()
-            self.conexion.close()
+            self.cerrar()
+
+    def cerrar(self) -> None:
+        """Suelta TODO lo que abrio: el mundo del carro, la conexion de PyBullet de la escena (antes
+        quedaba abierta: `sim/mundo.py` dibuja en la conexion 0 y un supervisor olvidado le
+        cambiaba los sensores al siguiente, se vio en las pruebas), el puente serial, el servidor
+        HTTP y la base de datos. Se puede llamar mas de una vez."""
+        if self.planta is not None:
+            self.planta.cerrar()
+        if self._escena is not None:
+            self._escena.cerrar()
+            self._escena = None
+        if self.servidor_http is not None:
+            self.servidor_http.shutdown()
+            self.servidor_http = None
+        if self.puente is not None:
+            self.puente.cerrar()
+            self.puente = None
+        self.conexion.close()
 
 
 def main() -> None:

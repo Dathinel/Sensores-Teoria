@@ -20,7 +20,7 @@ def supervisor(tmp_path):
     p["planta"]["conservar_almacen_entre_turnos"] = False
     s = Supervisor(tmp_path / "planta.db", parametros=p)
     yield s
-    s.conexion.close()
+    s.cerrar()
 
 
 def _hasta_terminar(s, max_vueltas=400):

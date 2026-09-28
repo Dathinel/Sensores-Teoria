@@ -20,7 +20,7 @@ def supervisor(tmp_path):
     parametros["planta"]["conservar_almacen_entre_turnos"] = False
     s = Supervisor(tmp_path / "planta.db", parametros=parametros)
     yield s
-    s.conexion.close()
+    s.cerrar()
 
 
 def _hasta_terminar(s, max_vueltas=300):
@@ -191,7 +191,7 @@ def test_ordenes_al_carro_van_por_la_radio(tmp_path):
     s.aplicar_orden({"cmd": "iniciar"})
     s.aplicar_orden({"cmd": "carro", "accion": "avanzar", "distancia_m": 0.2})
     assert s.ultima_orden["ok"] is False and "reemplazo" in s.ultima_orden["detalle"]
-    s.conexion.close()
+    s.cerrar()
 
     p = cargar_parametros()
     p["simulacion"]["carro"] = "fisico"
@@ -213,4 +213,18 @@ def test_ordenes_al_carro_van_por_la_radio(tmp_path):
         assert n >= 4
     finally:
         s.planta.cerrar()
-        s.conexion.close()
+        s.cerrar()
+
+
+def test_cerrar_suelta_la_conexion_de_pybullet(tmp_path):
+    """El supervisor dejaba abierta su conexion de PyBullet: `sim/mundo.py` dibuja en la conexion 0 y
+    un supervisor olvidado le cambiaba los sensores al siguiente (se vio al ordenar las pruebas)."""
+    import pybullet as p
+
+    s = Supervisor(tmp_path / "c.db")
+    s.aplicar_orden({"cmd": "iniciar", "escenario": "no_metalico"})
+    cliente = s._escena.cliente
+    assert p.isConnected(cliente)
+    s.cerrar()
+    assert not p.isConnected(cliente)
+    s.cerrar()          # dos veces no falla

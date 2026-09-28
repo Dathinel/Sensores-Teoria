@@ -149,6 +149,13 @@ a tener". Plan: `~/.claude/plans/complete-todo-lo-que-snappy-liskov.md`. Medido:
 - [x] E. Orden del proyecto: tests por capa (control/sim/visor/app/firmware), escenarios de un filtro en `sim/escenarios/pruebas_aisladas/`, `pytest.ini` + `tests/conftest.py`, `docs/README.md`, árbol en CLAUDE.md/README (659 pruebas pasan).
 - [x] F. Revisión final (capturas de todo, inventarios de funciones), commit, app escondida.
 
+**Pedido del 2026-09-28 (9):** "arregle los pendientes menores que quedaron".
+- [x] a. `Supervisor.cerrar()`: soltar su conexión de PyBullet (la planta y el carro).
+- [x] b. Vista "Material" y foco de los M18 (2 y 3): se ven chicos y entre vigas.
+- [x] c. Etiquetas 3D que quedan bajo la barra de vistas / botones cerca del borde de arriba.
+- [x] d. Streamlit a 900 px con la barra lateral abierta: el mapa del carro se aplasta; columnas angostas; tablas de Montaje con desplazamiento horizontal.
+- [x] e. Aviso `Recording error: Container not found` del micrófono en la primera carga del Asistente.
+
 ## 3. Estado actual (2026-09-27, fin de sesión)
 
 - Pruebas: `entorno/Scripts/python -m pytest -q` → todas deben pasar (659 el 2026-09-28, ~2 min).

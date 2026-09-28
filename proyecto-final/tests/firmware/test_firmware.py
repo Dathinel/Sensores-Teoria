@@ -277,4 +277,4 @@ def test_supervisor_en_modo_real_sin_placa(tmp_path):
         tel = db.ultima_telemetria(s.conexion)
         assert tel["backend"] == "real" and "hardware" in tel
     finally:
-        s.conexion.close()
+        s.cerrar()

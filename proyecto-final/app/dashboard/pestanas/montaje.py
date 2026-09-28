@@ -12,7 +12,8 @@ from control import monedas as tabla_monedas
 from control.tiempos import presupuesto, tiempo_real_estimado_s
 
 from .. import datos
-from ..estilo import AMBAR, AZUL, MORADO, ROJO, VERDE, aviso, figura, kpis, mostrar, nota, seccion, tabla
+from ..estilo import (AMBAR, AZUL, MORADO, ROJO, VERDE, aviso, figura, html_tabla, kpis, mostrar, nota, pintar,
+                      seccion, tabla)
 
 
 @st.fragment(run_every=datos.REFRESCO_S)
@@ -34,11 +35,14 @@ def pestana() -> None:
         ("Reacción de la cortina", f"{r['reaccion_cortina_ms']} ms", "de ver la mano a subir la prensa", ROJO),
     ])
 
-    seccion("Presupuesto de tiempos", "¿cabe cada acción en su hueco?")
-    tabla(pd.DataFrame([{
-        "Chequeo": c.nombre, "Necesita (ms)": round(c.necesita_ms), "Disponible (ms)": round(c.disponible_ms),
-        "Margen (ms)": round(c.margen_ms), "Estado": "OK" if c.ok else "NO CABE", "Por qué": c.explicacion,
-    } for c in r["chequeos"]]))
+    seccion("Presupuesto de tiempos", "¿cabe cada acción en su hueco? · tiempos en milisegundos")
+    # Tabla de texto (no st.dataframe): la columna "Por qué" es larga y así se parte en líneas dentro
+    # de la celda en vez de pedir desplazamiento horizontal (pantalla de ~900 px).
+    pintar(html_tabla([{
+        "Chequeo": c.nombre, "Necesita": round(c.necesita_ms), "Disponible": round(c.disponible_ms),
+        "Margen": round(c.margen_ms), "Estado": "OK" if c.ok else "NO CABE", "Por qué": c.explicacion,
+    } for c in r["chequeos"]], {"Necesita": "num", "Disponible": "num", "Margen": "num",
+                                 "Estado": lambda v: "corto ok" if v == "OK" else "corto no"}))
     justos = [c.nombre for c in r["chequeos"] if c.ok and c.margen_ms < 0.15 * c.disponible_ms]
     if justos:
         aviso("Margen justo (menos del 15 %): " + "; ".join(justos) + ". Medirlo primero en el montaje.")
@@ -83,5 +87,5 @@ def costos_proyecto() -> None:
     fig.update_layout(margin=dict(l=10, r=70, t=10, b=10))
     mostrar(fig)
     seccion("Dónde abaratar", "propuestas, con su riesgo")
-    tabla(pd.DataFrame([{"Propuesta": a["titulo"], "Ahorro": costos.pesos(a["ahorro"]), "Riesgo": a["riesgo"]}
-                        for a in costos.ahorros(info)]))
+    pintar(html_tabla([{"Propuesta": a["titulo"], "Ahorro": costos.pesos(a["ahorro"]), "Riesgo": a["riesgo"]}
+                       for a in costos.ahorros(info)], {"Ahorro": "num"}))

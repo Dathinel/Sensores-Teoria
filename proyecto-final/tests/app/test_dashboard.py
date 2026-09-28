@@ -82,7 +82,7 @@ def corrida_completa(tmp_path_factory):
         if s.estado_linea == TERMINADA:
             break
         s.vuelta()
-    s.conexion.close()
+    s.cerrar()
     return ruta
 
 
@@ -98,7 +98,7 @@ def linea_trabajando(tmp_path):
     s.aplicar_orden({"cmd": "iniciar"})
     for _ in range(40):
         s.vuelta()
-    s.conexion.close()
+    s.cerrar()
     return ruta
 
 
@@ -112,7 +112,7 @@ def _corrida_corta(tmp_path):
     ruta = tmp_path / "c.db"
     db.conectar(ruta).close()
     s = Supervisor(ruta)
-    s.conexion.close()
+    s.cerrar()
     return ruta
 
 
@@ -210,7 +210,7 @@ def test_una_prueba_de_un_filtro_se_anuncia_con_su_resultado(monkeypatch, tmp_pa
         if s.estado_linea == TERMINADA:
             break
         s.vuelta()
-    s.conexion.close()
+    s.cerrar()
     at = _correr(monkeypatch, tmp_path / "f.db", "pruebas")
     texto = _texto(at)
     assert "Prueba de un filtro: Material: no metálico" in texto and "otras causas" not in texto

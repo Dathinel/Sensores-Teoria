@@ -66,7 +66,8 @@ def pestana() -> None:
              + html_chip("reglas ✓", "verde", lleno=False))
     pintar(f'<div class="sec primera"><h3>Asistente del proyecto</h3>{chips}</div>')
     nota("Pregúntele en palabras normales por las cifras de la corrida o por cualquier parte del proyecto (sensores, "
-         "pines, decisiones), o pídale que mueva el carro o la línea. Responde con los datos reales de la base de "
+         "pines, decisiones), o pídale que mueva el carro o la línea (p. ej. «avanza 20 cm» o «¿cuánto dinero "
+         "hay?»). Responde con los datos reales de la base de "
          "datos y la documentación del proyecto; si no tiene un dato, lo dice.")
     if not hay_clave and not hay_local:
         aviso("Sin DeepSeek ni modelo local: entiende órdenes y preguntas básicas, y para lo demás muestra la parte de "
@@ -112,7 +113,15 @@ def pestana() -> None:
             st.session_state.pop("asistente_ultima", None)
 
     with izq:
-        frase = st.chat_input("Escríbale al asistente… (p. ej. «avanza 20 cm» o «¿cuánto dinero hay?»)")
+        # Texto de ayuda CORTO a propósito (2026-09-28). El aviso de consola "Recording error: Container
+        # not found" que salía al abrir esta pestaña NO venía de st.audio_input sino de este
+        # st.chat_input: al montarse carga por detrás la librería de la onda de audio (wavesurfer) y la
+        # engancha a un contenedor suyo; si en esos milisegundos el texto de ayuda no cabe en una
+        # línea, el componente pasa a su diseño "apilado" (botón de enviar debajo), vuelve a crear ese
+        # contenedor y la librería ya no encuentra el viejo. Con un texto que cabe en una línea incluso
+        # en la columna más angosta, no cambia de diseño al montarse y el aviso desaparece. Los ejemplos
+        # de frases están en la nota de arriba y en los botones de "Ejemplos".
+        frase = st.chat_input("Escríbale al asistente…")
         frase = frase or st.session_state.pop("frase_pendiente", None)
         if frase:
             _atender_frase(frase)

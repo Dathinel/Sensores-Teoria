@@ -241,6 +241,35 @@ CSS = f"""
 .st-key-panel_ordenes [data-testid="stColumn"] {{ flex:1 1 130px; min-width:130px; }}
 .st-key-panel_sabotajes [data-testid="stColumn"] {{ flex:1 1 170px; min-width:170px; }}
 [data-testid="stHorizontalBlock"]:not(:has([data-testid="stHorizontalBlock"])):has(.st-key-panel_filtro) > [data-testid="stColumn"] {{ flex:1 1 220px; min-width:220px; }}
+/* Columnas PRINCIPALES de cada pestaña (las de primer nivel, no las de adentro de un panel): en
+   pantallas angostas se apilan una debajo de la otra en vez de dejar la derecha de ~200 px (mapa
+   aplastado en "Carro y ruta", respuestas en una palabra por línea en "Pruebas" y "Línea en vivo").
+   Angosta = el área principal queda por debajo de ~900 px: ventana de hasta 1200 px con la barra
+   lateral abierta (le quita ~300), o de hasta 960 px con la barra cerrada. Streamlit por su cuenta
+   solo apila por debajo de 640 px de ventana. 2026-09-28. */
+@media (max-width:1200px) {{
+  .stApp:has([data-testid="stSidebar"][aria-expanded="true"]) .block-container
+    [data-testid="stHorizontalBlock"]:not([data-testid="stColumn"] [data-testid="stHorizontalBlock"]) {{ flex-wrap:wrap; }}
+  .stApp:has([data-testid="stSidebar"][aria-expanded="true"]) .block-container
+    [data-testid="stHorizontalBlock"]:not([data-testid="stColumn"] [data-testid="stHorizontalBlock"]) > [data-testid="stColumn"] {{
+    flex:1 1 100% !important; width:100% !important; min-width:100% !important; }}
+}}
+@media (max-width:960px) {{
+  .block-container [data-testid="stHorizontalBlock"]:not([data-testid="stColumn"] [data-testid="stHorizontalBlock"]) {{ flex-wrap:wrap; }}
+  .block-container [data-testid="stHorizontalBlock"]:not([data-testid="stColumn"] [data-testid="stHorizontalBlock"]) > [data-testid="stColumn"] {{
+    flex:1 1 100% !important; width:100% !important; min-width:100% !important; }}
+}}
+/* Tablas de texto (html_tabla): el texto largo pasa a otra línea dentro de la celda, así la tabla
+   cabe en su columna sin barra de desplazamiento horizontal (st.dataframe no ajusta el texto). */
+.tabla-texto {{ width:100%; border-collapse:collapse; font-size:0.8rem; line-height:1.4; margin:var(--e1) 0 var(--e3);
+  border:1px solid var(--borde); border-radius:var(--r-chico); overflow:hidden; }}
+.tabla-texto th {{ text-align:left; font-weight:600; color:var(--tenue); font-size:0.7rem; text-transform:uppercase;
+  letter-spacing:.05em; background:var(--panel); padding:6px 9px; border-bottom:1px solid var(--borde); }}
+.tabla-texto td {{ padding:6px 9px; border-top:1px solid #21262d; vertical-align:top; color:var(--texto);
+  overflow-wrap:anywhere; }}
+.tabla-texto td.num {{ font-family:{MONO}; white-space:nowrap; text-align:right; }}
+.tabla-texto td.corto {{ white-space:nowrap; }}
+.tabla-texto td.no {{ color:var(--rojo); font-weight:600; }} .tabla-texto td.ok {{ color:var(--verde); }}
 [class*="st-key-paro"] button {{ border-color:rgba(229,83,75,.7); color:#ff8a80; }}
 [class*="st-key-paro"] button:hover:not(:disabled) {{ background:var(--rojo); color:#fff; border-color:var(--rojo); }}
 [data-testid="stExpander"] details {{ border-color:var(--borde); border-radius:var(--r); }}
@@ -399,3 +428,23 @@ def mostrar(fig: go.Figure, key: str | None = None) -> None:
 def tabla(df, **kw) -> None:
     """Tabla con el mismo aspecto en todas partes (sin índice, ancho completo)."""
     st.dataframe(df, hide_index=True, width="stretch", **kw)
+
+
+def html_tabla(filas: list[dict], clases: dict[str, str] | None = None) -> str:
+    """Tabla de TEXTO en HTML: a diferencia de `tabla` (st.dataframe, que corta cada celda en una
+    línea y pide desplazamiento horizontal), aquí el texto largo pasa a otra línea dentro de la celda.
+    `clases`: columna -> "num" (cifra, a la derecha), "corto" (no se parte) o una función
+    valor -> clase ("ok"/"no" para colorear un estado)."""
+    if not filas:
+        return ""
+    clases = clases or {}
+    columnas = list(filas[0])
+    cab = "".join(f"<th>{esc(c)}</th>" for c in columnas)
+
+    def celda(col, valor):
+        clase = clases.get(col, "")
+        clase = clase(valor) if callable(clase) else clase
+        return f'<td class="{clase}">{esc(valor)}</td>' if clase else f"<td>{esc(valor)}</td>"
+
+    cuerpo = "".join("<tr>" + "".join(celda(c, f[c]) for c in columnas) + "</tr>" for f in filas)
+    return f'<table class="tabla-texto"><thead><tr>{cab}</tr></thead><tbody>{cuerpo}</tbody></table>'
