@@ -10,8 +10,8 @@ con su README, su código y su propio `entorno/`.
 ## Qué es cada cosa nueva
 
 - **I2C** (punto 1): un bus de dos cables (`SDA` datos, `SCL` reloj) donde varios dispositivos
-  comparten los mismos cables y el ESP32 le habla a cada uno por su dirección. El teclado y la LCD
-  viven en el mismo bus, en `0x20` y `0x27`.
+  comparten los mismos cables y el ESP32 le habla a cada uno por su dirección. Acá lo usa la LCD,
+  en `0x27`; el teclado matricial va directo a 8 GPIO y se lee barriendo filas y columnas.
 - **PyBullet y URDF** (punto 1): PyBullet es un simulador de física; un URDF es un archivo XML que
   describe un robot como eslabones (*links*) unidos por articulaciones (*joints*). El brazo del
   profesor tiene dos articulaciones útiles para dibujar: el giro de la base y el codo.
@@ -27,7 +27,7 @@ con su README, su código y su propio `entorno/`.
 ```mermaid
 flowchart LR
     subgraph P1["Punto 1: del dígito al trazo"]
-        T["Teclado 4x4<br/>(I2C)"] --> E1["ESP32"] --> L["LCD<br/>(I2C)"]
+        T["Teclado 4x4<br/>(GPIO directos)"] --> E1["ESP32"] --> L["LCD<br/>(I2C)"]
         E1 -- "serial: DIGIT:n" --> B["PyBullet: brazo de 2 GDL<br/>dibuja el dígito"]
     end
     subgraph P2["Punto 2: de la imagen al dígito"]
@@ -61,7 +61,7 @@ Los pasos detallados están en el README de cada punto. En resumen:
 - Punto 2: `python reconocer_digito.py` reconoce con la cámara igual; solo no manda nada.
 
 **Con ESP32 conectado:**
-- Punto 1: un ESP32 con teclado y LCD por I2C, `esp32_teclado_lcd.py` como `main.py`.
+- Punto 1: un ESP32 con el teclado en 8 GPIO y la LCD por I2C, `esp32_teclado_lcd.py` como `main.py`.
 - Punto 2: el ESP-A por USB (MicroPython), el ESP-B con el sketch de Arduino y la OLED, unidos
   por UART2 y/o SPI.
 

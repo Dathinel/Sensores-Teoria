@@ -1,16 +1,19 @@
-# Lee un teclado matricial 4x4 conectado por un expansor I2C PCF8574,
-# muestra el digito presionado en una pantalla LCD 16x2 (tambien por I2C,
-# con su propio backpack PCF8574) y le manda el digito al PC por UART
-# para que brazo_dibuja.py lo dibuje con el brazo robotico.
+# Lee un teclado matricial 4x4 conectado directo a 8 GPIOs del ESP32,
+# muestra el digito presionado en una pantalla LCD 16x2 (por I2C, con su
+# backpack PCF8574) y le manda el digito al PC por UART para que
+# brazo_dibuja.py lo dibuje con el brazo robotico.
 #
 # Este archivo debe guardarse como main.py en el ESP32. El puerto USB
 # queda libre para pyserial en el PC sin necesidad de tener Thonny
 # conectado.
 #
-# Conexion I2C (SDA=GPIO21, SCL=GPIO22, ambos modulos en el mismo bus):
-#   - Expansor del teclado: direccion 0x20 (todos los pines de
-#     direccion del PCF8574 a GND)
-#   - Backpack de la LCD:   direccion 0x27 (direccion de fabrica mas
+# Conexion del teclado (8 cables: 4 filas R1..R4 y 4 columnas C1..C4):
+#   - Filas    R1..R4 -> GPIO14, GPIO27, GPIO26, GPIO25 (salidas)
+#   - Columnas C1..C4 -> GPIO33, GPIO32, GPIO18, GPIO19 (entradas con
+#     pull-up interno del ESP32)
+#
+# Conexion de la LCD por I2C (SDA=GPIO21, SCL=GPIO22):
+#   - Backpack de la LCD: direccion 0x27 (direccion de fabrica mas
 #     comun en los backpacks LCD1602 con PCF8574)
 
 from machine import I2C, Pin
@@ -18,7 +21,6 @@ import time
 
 I2C_SDA = 21
 I2C_SCL = 22
-DIR_TECLADO = 0x20
 DIR_LCD = 0x27
 
 # 100 kHz es la velocidad "estandar" de I2C: la que soporta cualquier
@@ -26,15 +28,15 @@ DIR_LCD = 0x27
 i2c = I2C(0, sda=Pin(I2C_SDA), scl=Pin(I2C_SCL), freq=100000)
 
 # Diagnostico al arrancar: i2c.scan() devuelve las direcciones de todos
-# los dispositivos que contestan en el bus. Si falta 0x20 o 0x27, el
-# problema es de cableado o de direccion (no del codigo), y se ve de
-# una vez en la consola de Thonny. brazo_dibuja.py ignora esta linea
-# porque no empieza con "DIGIT:".
+# los dispositivos que contestan en el bus. En este montaje el unico
+# dispositivo I2C es la LCD (el teclado va por GPIO, no por I2C): si
+# falta 0x27, el problema es de cableado o de direccion (no del codigo),
+# y se ve de una vez en la consola de Thonny. brazo_dibuja.py ignora
+# esta linea porque no empieza con "DIGIT:".
 encontrados = i2c.scan()
 print("I2C encontrados:", [hex(d) for d in encontrados])
-for nombre, direccion in (("teclado", DIR_TECLADO), ("LCD", DIR_LCD)):
-    if direccion not in encontrados:
-        print("OJO: no responde el {} en {}".format(nombre, hex(direccion)))
+if DIR_LCD not in encontrados:
+    print("OJO: no responde la LCD en {}".format(hex(DIR_LCD)))
 
 
 # ------------------------------------------------------------------
@@ -99,9 +101,12 @@ def lcd_texto(fila, texto):
 
 
 # ------------------------------------------------------------------
-# Teclado matricial 4x4 por I2C (expansor PCF8574: P4-P7 = filas,
-# salidas; P0-P3 = columnas, entradas con pull-up del propio PCF8574)
+# Teclado matricial 4x4 directo a GPIO (filas = salidas, columnas =
+# entradas con pull-up interno)
 # ------------------------------------------------------------------
+ROW_PINS = [14, 27, 26, 25]   # R1..R4
+COL_PINS = [33, 32, 18, 19]   # C1..C4
+
 MAPA_TECLAS = [
     ["1", "2", "3", "A"],
     ["4", "5", "6", "B"],
@@ -109,26 +114,47 @@ MAPA_TECLAS = [
     ["*", "0", "#", "D"],
 ]
 
+# Filas como salidas, arrancando en alto (value=1): en reposo ninguna
+# fila "tira" hacia abajo, asi que ninguna columna puede leer 0 aunque
+# haya una tecla apretada.
+filas = [Pin(p, Pin.OUT, value=1) for p in ROW_PINS]
+
+# Columnas como entradas con PULL_UP interno: una tecla es solo un
+# contacto que une una fila con una columna, no pone ningun voltaje por
+# si misma. Sin pull-up, una columna sin tecla apretada quedaria
+# "flotando" (ni 0 ni 1 definido, lee ruido al azar). La resistencia de
+# pull-up interna del ESP32 la mantiene en 1 por defecto, y solo baja a
+# 0 cuando una tecla la une con una fila que esta en bajo. Por eso la
+# logica es "activa en bajo": 0 = apretada.
+columnas = [Pin(p, Pin.IN, Pin.PULL_UP) for p in COL_PINS]
+
 
 # Barrido de la matriz: las 16 teclas son cruces entre 4 filas y 4
-# columnas. Se pone UNA fila en bajo a la vez; si una tecla de esa fila
-# esta apretada, conecta la fila con su columna y esa columna tambien se
-# lee en bajo (las demas quedan en alto por el pull-up). Fila en bajo +
-# columna en bajo = la tecla exacta. Escribir un 1 en un pin del
-# PCF8574 lo deja "flotando en alto", que es lo que permite usarlo como
-# entrada: por eso las columnas se escriben siempre en 1 (0x0F).
+# columnas, pero solo hay 8 cables. Si se bajaran todas las filas a la
+# vez, al leer una columna en 0 se sabria la columna pero no cual de
+# las 4 filas la bajo. Por eso se baja UNA fila a la vez: si en ese
+# momento una columna lee 0, la tecla es justo el cruce de esa fila con
+# esa columna (fila en bajo + columna en bajo = la tecla exacta).
+#
+# El sleep_us(10) despues de bajar la fila: el pin tarda un poco en
+# pasar de 1 a 0 de verdad en la columna (capacidad de los cables y del
+# teclado contra el pull-up interno, que es una resistencia alta de
+# decenas de kOhm y carga/descarga despacio). Si se lee enseguida, la
+# columna todavia puede verse en 1 y la tecla se pierde; unos pocos
+# microsegundos alcanzan y no frenan el barrido.
+#
+# Antes de pasar a la siguiente fila (y antes de devolver la tecla) se
+# vuelve a subir la fila: asi nunca quedan dos filas en bajo al mismo
+# tiempo, y el siguiente barrido arranca con todo en reposo.
 def leer_tecla():
     for fila in range(4):
-        # esa fila en bajo, las demas en alto, columnas en alto (entrada)
-        filas = 0x0F & ~(1 << fila)
-        byte_salida = (filas << 4) | 0x0F
-        i2c.writeto(DIR_TECLADO, bytes([byte_salida]))
-        byte_entrada = i2c.readfrom(DIR_TECLADO, 1)[0]
-        columnas = byte_entrada & 0x0F
-        if columnas != 0x0F:
-            for col in range(4):
-                if not (columnas & (1 << col)):
-                    return MAPA_TECLAS[fila][col]
+        filas[fila].value(0)
+        time.sleep_us(10)
+        for col in range(4):
+            if columnas[col].value() == 0:
+                filas[fila].value(1)
+                return MAPA_TECLAS[fila][col]
+        filas[fila].value(1)
     return None
 
 
