@@ -34,7 +34,7 @@ Preferidos (baratos y conocidos): TCRT5000/FC-51, VL53L0X, HC-SR04, webcam, SG90
 Por qué existe: dos veces se cerró una sesión a la fuerza a mitad de trabajo y se perdió el
 último mensaje del usuario. Regla: al empezar, copiar aquí el pedido textual y la lista de
 puntos; al terminar cada punto, marcarlo. Si se pierde un mensaje, está completo en el
-transcript de Claude Code: `~/.claude/projects/C--Users-danie-OneDrive-Escritorio-Micors-teoria/<sesion>.jsonl`
+transcript de Claude Code: `~/.claude/projects/D--cosas-uni-Micros/<sesion>.jsonl`
 (líneas con `"type":"user"`; el más reciente por fecha de modificación).
 
 **Reglas permanentes del usuario (2026-09-27):** responder SIEMPRE en español; dejar SIEMPRE la
