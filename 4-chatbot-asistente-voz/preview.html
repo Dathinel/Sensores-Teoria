@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Asistente de voz: LEDs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1013; --panel: #15191d; --panel-border: #262b31;
+    --text: #e7e9ec; --text-muted: #8b929b;
+    --azul: #4f8fce; --rojo: #d9534f; --modo: #9b7fd1; --verde-ok: #4caf7d; --amarillo: #e8b930;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: "Space Grotesk", system-ui, sans-serif; }
+  body { padding: 1.1rem 1rem; min-height: 100vh; }
+  .envoltura { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 1.25rem; font-weight: 600; margin: 0; }
+  .sub { margin: .2rem 0 1rem; color: var(--text-muted); font-size: .82rem; }
+  .rejilla { display: grid; grid-template-columns: 1.1fr 1fr; gap: 1rem; }
+  @media (max-width: 800px) { .rejilla { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 10px; padding: 1rem; }
+  .panel h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); margin: 0 0 .7rem; font-weight: 500; }
+  .modos { display: flex; gap: .5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+  button { font-family: inherit; font-size: .88rem; background: #1e2328; color: var(--text); border: 1px solid var(--panel-border); border-radius: 7px; padding: .5rem .8rem; cursor: pointer; }
+  button:hover { border-color: #3a4048; }
+  button.activo { border-color: var(--modo); color: #fff; background: #241f33; }
+  button:disabled { opacity: .45; cursor: default; }
+  .fila { display: flex; gap: .5rem; flex-wrap: wrap; }
+  input[type=text] { flex: 1; min-width: 0; font-family: inherit; font-size: .95rem; background: #0f1215; color: var(--text); border: 1px solid var(--panel-border); border-radius: 7px; padding: .55rem .7rem; }
+  .leds { display: flex; justify-content: center; gap: 3rem; padding: 1.4rem 0 .6rem; }
+  .led { text-align: center; font-size: .82rem; color: var(--text-muted); }
+  .bombillo { width: 74px; height: 74px; border-radius: 50%; margin: 0 auto .5rem; background: #22272d; border: 2px solid #2d333a; transition: background .08s, box-shadow .08s; }
+  .led.rojo.on .bombillo { background: var(--rojo); box-shadow: 0 0 34px 6px rgba(217,83,79,.55); border-color: #ff8a86; }
+  .led.azul.on .bombillo { background: var(--azul); box-shadow: 0 0 34px 6px rgba(79,143,206,.55); border-color: #9cc6f2; }
+  .mono { font-family: "IBM Plex Mono", monospace; font-size: .8rem; }
+  .dato { display: flex; justify-content: space-between; gap: 1rem; padding: .35rem 0; border-bottom: 1px dashed var(--panel-border); }
+  .dato span:first-child { color: var(--text-muted); }
+  .monitor { height: 190px; overflow-y: auto; background: #0a0c0e; border: 1px solid var(--panel-border); border-radius: 7px; padding: .5rem .6rem; white-space: pre-wrap; word-break: break-all; }
+  .monitor .tx { color: var(--amarillo); } .monitor .rx { color: var(--verde-ok); } .monitor .info { color: var(--text-muted); }
+  .rapidos { margin-top: .8rem; }
+  .nota { color: var(--text-muted); font-size: .78rem; margin-top: .6rem; line-height: 1.4; }
+  .estado-con { font-size: .82rem; color: var(--text-muted); align-self: center; }
+  .estado-con.ok { color: var(--verde-ok); }
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Asistente de voz para dos LEDs</h1>
+  <p class="sub">Frase → intención (JSON) → orden de dos caracteres o SHOW → ESP32. Mismo protocolo que comando_voz.py y esp32_voz.py.</p>
+
+  <div class="modos">
+    <button id="bModoPrueba" class="activo">Modo prueba (sin ESP32)</button>
+    <button id="bModoConectado">Conectado (Web Serial)</button>
+    <button id="bConectar" disabled>Elegir puerto del ESP32</button>
+    <span id="estadoCon" class="estado-con">Sin conexión: todo se simula aquí.</span>
+  </div>
+
+  <div class="rejilla">
+    <div class="panel">
+      <h2>Comando</h2>
+      <div class="fila">
+        <input id="frase" type="text" placeholder="Ej: enciende el rojo, apaga los dos, haz un show de luces" autocomplete="off">
+        <button id="bEnviar">Interpretar</button>
+        <button id="bHablar">Hablar</button>
+      </div>
+      <div class="fila rapidos">
+        <button data-linea="10">10</button><button data-linea="01">01</button>
+        <button data-linea="11">11</button><button data-linea="00">00</button>
+        <button data-linea="SHOW">SHOW</button>
+      </div>
+      <p class="nota">El intérprete de esta página es el mismo "plan B" por palabras clave de comando_voz.py (sin DeepSeek, para no poner la clave de la API en una página web). Frases muy libres las entiende mejor el script de Python con el modelo.</p>
+      <div class="dato mono"><span>Texto</span><span id="vTexto">—</span></div>
+      <div class="dato mono"><span>JSON de intención</span><span id="vJson">—</span></div>
+      <div class="dato mono"><span>Orden enviada</span><span id="vOrden">—</span></div>
+      <div class="dato mono"><span>Última línea cruda del ESP32</span><span id="vCruda">—</span></div>
+    </div>
+
+    <div class="panel">
+      <h2>LEDs (GPIO25 rojo · GPIO26 azul)</h2>
+      <div class="leds">
+        <div class="led rojo" id="ledRojo"><div class="bombillo"></div>Rojo</div>
+        <div class="led azul" id="ledAzul"><div class="bombillo"></div>Azul</div>
+      </div>
+      <h2>Monitor serial</h2>
+      <div class="monitor mono" id="monitor"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------------- Estado (igual que el diccionario `estado` de comando_voz.py) ----------------
+const estado = { led_rojo: false, led_azul: false };
+let modo = "prueba";          // "prueba" = el ESP32 se simula aquí; "conectado" = Web Serial
+let puerto = null, escritor = null;
+let enShow = false;
+
+const $ = (id) => document.getElementById(id);
+
+function log(texto, clase) {
+  const m = $("monitor");
+  const linea = document.createElement("div");
+  linea.className = clase; linea.textContent = texto;
+  m.appendChild(linea); m.scrollTop = m.scrollHeight;
+}
+
+function pintarLeds(rojo, azul) {
+  $("ledRojo").classList.toggle("on", !!rojo);
+  $("ledAzul").classList.toggle("on", !!azul);
+}
+
+// ---------------- Intérprete por palabras clave (copia de interpretar_por_reglas) ----------------
+function interpretarPorReglas(texto) {
+  const t = texto.toLowerCase();
+  const datos = {};
+  if (["show", "espectaculo", "espectáculo", "parpade", "fiesta"].some(p => t.includes(p))) {
+    datos.show = true; return datos;
+  }
+  const apagar = ["apaga", "desactiva", "quita"].some(p => t.includes(p));
+  const encender = ["enciend", "prend", "activa", "pon", "dale"].some(p => t.includes(p));
+  if (!(apagar || encender)) return datos;
+  const valor = !apagar;
+  const ambos = ["los dos", "ambos", "todos", "todas"].some(p => t.includes(p));
+  if (ambos || t.includes("roj")) datos.led_rojo = valor;
+  if (ambos || t.includes("azul")) datos.led_azul = valor;
+  return datos;
+}
+
+// ---------------- Arma la orden (igual que aplicar_comando) ----------------
+function aplicarComando(datos) {
+  if (datos.show) return "SHOW";
+  if ("led_rojo" in datos) estado.led_rojo = datos.led_rojo;
+  if ("led_azul" in datos) estado.led_azul = datos.led_azul;
+  return (estado.led_rojo ? "1" : "0") + (estado.led_azul ? "1" : "0");
+}
+
+// ---------------- ESP32 simulado (misma lógica que esp32_voz.py) ----------------
+const sim = { rojo: 0, azul: 0 };
+const dormir = (ms) => new Promise(r => setTimeout(r, ms));
+
+async function esp32Simulado(linea) {
+  if (linea === "SHOW") {
+    recibido("OK SHOW");
+    if (enShow) return;
+    enShow = true;
+    const previo = { ...sim };                 // guarda el estado para restaurarlo
+    for (let i = 0; i < 6; i++) {              // VUELTAS_SHOW = 6, PASO_SHOW_S = 0.2
+      pintarLeds(1, 0); await dormir(200);
+      pintarLeds(0, 1); await dormir(200);
+    }
+    Object.assign(sim, previo); pintarLeds(sim.rojo, sim.azul);
+    enShow = false;
+  } else if (/^[01][01]$/.test(linea)) {
+    sim.rojo = +linea[0]; sim.azul = +linea[1];
+    if (!enShow) pintarLeds(sim.rojo, sim.azul);
+    recibido("OK " + linea);
+  } else if (linea) {
+    recibido("IGNORADO " + linea);
+  }
+}
+
+function recibido(linea) {
+  $("vCruda").textContent = linea;
+  log("← " + linea, "rx");
+  // En modo conectado los LEDs de la página reflejan lo que el ESP32 confirma.
+  if (modo === "conectado") {
+    const m = linea.match(/^OK ([01])([01])$/);
+    if (m) pintarLeds(+m[1], +m[2]);
+  }
+}
+
+async function enviar(linea) {
+  $("vOrden").textContent = linea;
+  log("→ " + linea, "tx");
+  if (modo === "prueba") { esp32Simulado(linea); return; }
+  if (!escritor) { log("(no hay puerto abierto: elige el puerto del ESP32)", "info"); return; }
+  await escritor.write(new TextEncoder().encode(linea + "\n"));   // "\n": el ESP32 usa readline()
+}
+
+function procesarFrase(texto) {
+  texto = texto.trim(); if (!texto) return;
+  $("vTexto").textContent = texto;
+  const datos = interpretarPorReglas(texto);
+  $("vJson").textContent = JSON.stringify(datos);
+  if (Object.keys(datos).length === 0) { log("(la frase no tenía relación con los LEDs)", "info"); return; }
+  enviar(aplicarComando(datos));
+}
+
+$("bEnviar").onclick = () => procesarFrase($("frase").value);
+$("frase").addEventListener("keydown", e => { if (e.key === "Enter") procesarFrase($("frase").value); });
+document.querySelectorAll("[data-linea]").forEach(b => b.onclick = () => {
+  const l = b.dataset.linea;
+  if (l !== "SHOW") { estado.led_rojo = l[0] === "1"; estado.led_azul = l[1] === "1"; }
+  enviar(l);
+});
+
+// ---------------- Voz con la Web Speech API del navegador (Chrome/Edge) ----------------
+const Reconocimiento = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!Reconocimiento) { $("bHablar").disabled = true; $("bHablar").title = "Este navegador no trae reconocimiento de voz"; }
+$("bHablar").onclick = () => {
+  const r = new Reconocimiento();
+  r.lang = "es-CO";                       // mismo idioma que recognize_google en Python
+  r.onresult = (e) => { const t = e.results[0][0].transcript; $("frase").value = t; procesarFrase(t); };
+  r.onerror = (e) => log("(voz: " + e.error + ")", "info");
+  r.onend = () => { $("bHablar").textContent = "Hablar"; };
+  $("bHablar").textContent = "Escuchando...";
+  r.start();
+};
+
+// ---------------- Modos y Web Serial (un solo puerto, 115200) ----------------
+function ponerModo(nuevo) {
+  modo = nuevo;
+  $("bModoPrueba").classList.toggle("activo", modo === "prueba");
+  $("bModoConectado").classList.toggle("activo", modo === "conectado");
+  $("bConectar").disabled = modo !== "conectado" || !("serial" in navigator);
+  if (modo === "prueba") { $("estadoCon").textContent = "Sin conexión: todo se simula aquí."; $("estadoCon").className = "estado-con"; pintarLeds(sim.rojo, sim.azul); }
+  else if (!("serial" in navigator)) $("estadoCon").textContent = "Este navegador no tiene Web Serial (usar Chrome o Edge).";
+  else if (!puerto) $("estadoCon").textContent = "Elige el puerto del ESP32 (cerrar Thonny antes).";
+}
+$("bModoPrueba").onclick = () => ponerModo("prueba");
+$("bModoConectado").onclick = () => ponerModo("conectado");
+
+$("bConectar").onclick = async () => {
+  try {
+    puerto = await navigator.serial.requestPort();
+    await puerto.open({ baudRate: 115200 });
+    escritor = puerto.writable.getWriter();
+    $("estadoCon").textContent = "Conectado al ESP32."; $("estadoCon").className = "estado-con ok";
+    log("(puerto abierto a 115200)", "info");
+    leerPuerto();
+  } catch (e) { log("(no se pudo abrir el puerto: " + e.message + ")", "info"); }
+};
+
+async function leerPuerto() {
+  // Se junta lo recibido en un buffer y se corta por "\n": un trozo puede
+  // traer media línea o varias líneas juntas, y todas se procesan (se drena todo).
+  const lector = puerto.readable.getReader();
+  const deco = new TextDecoder(); let buffer = "";
+  try {
+    while (true) {
+      const { value, done } = await lector.read();
+      if (done) break;
+      buffer += deco.decode(value, { stream: true });
+      let i;
+      while ((i = buffer.indexOf("\n")) >= 0) {
+        const linea = buffer.slice(0, i).replace("\r", "").trim();
+        buffer = buffer.slice(i + 1);
+        if (linea) recibido(linea);
+      }
+    }
+  } catch (e) { log("(se perdió la conexión: " + e.message + ")", "info"); }
+  finally { lector.releaseLock(); }
+}
+
+log("Listo. Escribe una frase, habla o usa los botones de orden directa.", "info");
+</script>
+</body>
+</html>

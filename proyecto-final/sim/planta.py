@@ -987,6 +987,14 @@ class PlantaSimulada:
                 return id_vaso, self._vasos[id_vaso][0]
         return None
 
+    def colocar_pieza(self, especificacion: EspecificacionElemento) -> bool:
+        """El operador pone ESA pieza en la proxima carga (usuario, 2026-09-27: "colocar pieza X").
+        Va antes de lo que falta del escenario; si la corrida ya habia terminado, sigue solo para
+        procesarla (la cinta y el carro retoman donde estaban)."""
+        self._pendientes.appendleft(especificacion)
+        self.terminado = False
+        return True
+
     def sabotaje_retirar_vaso(self) -> int | None:
         objetivo = self._vaso_para_sabotear()
         if objetivo is None:

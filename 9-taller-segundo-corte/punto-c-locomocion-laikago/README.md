@@ -14,13 +14,16 @@ Los puntos b) y c) del enunciado piden los dos "una consola de mandos con la ESP
 
 ## Cómo camina de verdad: un CPG (generador de patrón central)
 
-La solución que sí quedó con física real de punta a punta es un **CPG** (*central pattern generator*): en vez de una grabación, `objetivos_trote()` calcula el ángulo de cada articulación con una función seno, con las 4 patas en dos parejas diagonales en fase opuesta (FR+RL vs FL+RR) — el trote clásico de un cuadrúpedo, la misma idea que usan los ejemplos oficiales de PyBullet para el robot minitaur. La cadera se mueve adelante/atrás con el seno, y la rodilla se dobla (levanta el pie) solo durante la mitad de avance del ciclo, no durante el apoyo. Los tres parámetros (amplitud de cadera, amplitud de rodilla y frecuencia) salieron de probar **decenas de combinaciones**: las primeras, más agresivas, hacían caer al robot antes de completar un solo paso; los valores que quedaron (`AMPLITUD_CADERA=0.2`, `AMPLITUD_RODILLA=0.3`, `FRECUENCIA_TROTE=1.2`) caminan de corrido sin caerse, con el contacto pata-piso siendo lo único que mueve al robot.
+La solución que sí quedó con física real de punta a punta es un **CPG** (*central pattern generator*): en vez de una grabación, `objetivos_trote()` calcula el ángulo de cada articulación con una función seno, con las 4 patas en dos parejas diagonales en fase opuesta (FR+RL vs FL+RR) — el trote clásico de un cuadrúpedo, la misma idea que usan los ejemplos oficiales de PyBullet para el robot minitaur. La cadera se mueve adelante/atrás con el seno, y la rodilla se dobla (levanta el pie) solo durante la mitad de avance del ciclo, no durante el apoyo. Los parámetros (amplitud de cadera, amplitud de rodilla, frecuencia y fuerza de los motores) salieron de probar muchas combinaciones en modo sin ventana (`DIRECT`) con una **prueba de estrés**: 9 tandas de caminar entre 1,5 y 5 s y parar, girar a los dos lados, caminar otros 6 s, todo repetido con 4 juegos de duraciones distintas, más 30 s de trote seguido. Los valores de la primera versión (`fuerza 35`, cadera `0.2`, rodilla `0.3`, `1.2 Hz`) se caían 3 veces en esa prueba, y también caminando derecho a los ~8 s; con zancadas más largas (cadera `0.25`) el robot iba más rápido pero se caía de 4 a 9 veces. Los que quedaron — `AMPLITUD_CADERA=0.2`, `AMPLITUD_RODILLA=0.4`, `FRECUENCIA_TROTE=1.5`, `FUERZA_MOTOR=60` — no se cayeron ni una vez en ninguna variante y caminan 30 s derecho sin desviarse. Lo que más ayudó fue levantar más el pie (rodilla `0.4`): con `0.3`, la pata que iba por el aire a veces rozaba el piso y frenaba de golpe esa esquina del robot. El precio es que camina despacio (unos 6 cm/s), pero con el contacto pata-piso siendo lo único que lo mueve.
 
-Un detalle importante: recién cargado, el robot necesita "asentarse" en el piso (`reset_robot()` sostiene la pose de pie 250 pasos de física antes de devolver el control) — arrancar a trotar de un salto, sin ese asentado, lo hacía caer casi de inmediato porque las patas todavía no habían hecho contacto real.
+Dos detalles importantes:
+
+- **Asentarse antes de trotar**: recién cargado, el robot necesita "asentarse" en el piso (`reset_robot()` sostiene la pose de pie 250 pasos de física antes de devolver el control) — arrancar a trotar de un salto, sin ese asentado, lo hacía caer casi de inmediato porque las patas todavía no habían hecho contacto real.
+- **Arrancar y frenar con rampa**: la amplitud del trote sube de 0 a 1 en 0,6 s al pulsar `8` y baja de 1 a 0 al soltarla (`avanzar_trote()`), como un animal que acelera y frena en unos pasos. En la primera versión, soltar la tecla pasaba en un solo paso de física de media zancada a la pose de pie (y al volver a pulsarla, de vuelta al inicio del seno): un tirón de ~0,2 rad en los 8 motores a la vez que, con 2 o 3 ciclos de soltar/pulsar, terminaba con el robot en el piso.
 
 ## Por qué girar es lo único que sigue siendo una simplificación
 
-Girar caminando de verdad (con zancadas más cortas de un lado que del otro, como un tanque) se probó, y el robot se caía con bastante frecuencia — ni el ejemplo del profesor resuelve el equilibrio de un cuadrúpedo girando, que es un problema de control bastante más difícil que caminar derecho (control con retroalimentación, no solo un patrón fijo). La solución que sí salió confiable fue **detener el trote, reorientar el torso a mano (`girar_pasos`) y asentarlo unos 80 pasos de física antes de devolver el control** — por eso, con este teclado, girar y caminar no se pueden combinar: primero se para, se gira, y recién ahí se puede volver a caminar (en la nueva dirección). Aun así, encadenar **muchos** giros grandes seguidos sin caminar de por medio puede llegar a hacer caer al robot (es física real: pasa lo mismo que le pasaría a un robot de verdad mal calibrado). Si eso pasa, `5` lo reinicia. Este es el único lugar del punto c) donde se usa una simplificación en vez de física de punta a punta — caminar derecho, en cambio, es 100% física real.
+Girar caminando de verdad (con zancadas más cortas de un lado que del otro, como un tanque) se probó, y el robot se caía con bastante frecuencia — ni el ejemplo del profesor resuelve el equilibrio de un cuadrúpedo girando, que es un problema de control bastante más difícil que caminar derecho (control con retroalimentación, no solo un patrón fijo). La solución que sí salió confiable fue **frenar el trote (con la misma rampa), reorientar el torso a mano (`girar_pasos`) y asentarlo unos 80 pasos de física antes de devolver el control** — por eso, con este teclado, girar y caminar no se pueden combinar: primero se para, se gira, y recién ahí se puede volver a caminar (en la nueva dirección). Sosteniendo `4`/`6` gira unos 17° por segundo; cada click de los botones de la ventana, unos 9°. El giro se aplica sobre la orientación real del torso en ese momento (no se "corrige" el rumbo a uno guardado). Si el robot llegara a caerse, no se lo deja girar (reorientar un cuerpo tumbado lo mete en el piso y la física lo expulsa volando): `5` lo reinicia. Este es el único lugar del punto c) donde se usa una simplificación en vez de física de punta a punta — caminar derecho, en cambio, es 100% física real.
 
 ## La idea general
 
@@ -28,8 +31,8 @@ Un solo teclado matricial 4x4 controla todo (ver `../esp32_teclado.py`, el mismo
 
 | Tecla | Efecto |
 |---|---|
-| `8` (mantener presionada) | Caminar hacia adelante (trote real generado con senos, física real) |
-| `4` / `6` | Girar un poco a la izquierda/derecha (detiene el trote primero) |
+| `8` (mantener presionada) | Caminar hacia adelante (trote real generado con senos, física real); al soltarla frena con rampa |
+| `4` / `6` (mantener) | Girar a la izquierda/derecha (frena el trote primero) |
 | `5` | Reset: vuelve a la pose y posición inicial, parado |
 | `0`, `1`, `3`, `7`, `9`, `A`, `B`, `C`, `D`, `*`, `#` | Sin uso en esta configuración |
 
@@ -69,7 +72,8 @@ Solo el teclado matricial va al ESP32 — no hace falta ningún otro sensor:
 **Con ESP32 conectado:**
 1. Guardar `../esp32_teclado.py` como `main.py` en el ESP32 y armar las conexiones de arriba.
 2. Ajustar `PUERTO_SERIAL` en `laikago_pybullet.py` según el puerto COM del paso 2 de conexiones.
-3. `python laikago_pybullet.py`. Mantener presionada la tecla `8` hace caminar al robot con física real; para girar, soltar `8` y sostener `4`/`6`.
+3. `python laikago_pybullet.py`. Mantener presionada la tecla `8` hace caminar al robot con física real; para girar, soltar `8` y sostener `4`/`6`. Los botones de la ventana siguen funcionando con el ESP32 conectado (el script reacciona al momento en que se pulsa o se suelta `8`, no a cada repetición).
+4. Arriba del robot, la ventana muestra la **última línea cruda** que llegó del ESP32 (`ESP32: TECLA:-`, `ESP32: TECLA:8`...). Si nunca cambia, el ESP32 no está mandando nada (revisar puerto/`main.py`); si cambia pero no dice `TECLA:x`, el problema es de formato, no de cable.
 
 ## Pendiente
 

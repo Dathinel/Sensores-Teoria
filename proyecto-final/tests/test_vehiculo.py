@@ -349,3 +349,70 @@ def test_tras_detenido_atascado_volver_muelle_lo_saca():
         assert abs(x - carro.salida[0]) < 0.01 and abs(y - carro.salida[1]) < 0.01
     finally:
         carro.cerrar()
+
+
+# ---------------------------------------------------------------------
+# Reversa al muelle con tiempo limite (2026-09-27): se vio al carro 35 s
+# trabado en la boca del muelle avanzando de a milimetros. Falso minimo: los
+# encoders cuentan lo que se pide a los motores, salvo en la boca trabada
+# (un pulso suelto cada 2,5 s) y contra el tope (nada).
+# ---------------------------------------------------------------------
+
+
+def _reversa_trabada(trabas: int):
+    """Corre SOLO la entrada de reversa. `trabas`: cuantos intentos de
+    reversa quedan trabados en la boca (a 12 cm de haber empezado)."""
+    from control.vehiculo import ControlCarro, LecturaCarro
+
+    cfg = cargar_parametros()["vehiculo"]
+    c = ControlCarro(cfg, largo_linea_m=5.0)
+    c.estado = "maniobra"
+    c._acciones = [{"tipo": "reversa_tope", "hecho": 0.0, "quieto": 0.0},
+                   {"tipo": "estado", "estado": "esperando_carga", "evento": "en_muelle"}]
+    dt, t = 1 / cfg["control_hz"], 0.0
+    pulsos, acumulado, atras, intentos, ultimo_pulso = 0, 0.0, 0.0, 0, 0.0
+    previo = None
+    while t < 60 and c.estado == "maniobra":
+        a = c._acciones[0] if c._acciones else {}
+        if a.get("tipo") == "reversa_tope" and a is not previo:
+            intentos += 1
+            previo = a
+        trabado = a.get("tipo") == "reversa_tope" and intentos <= trabas and atras >= 0.12
+        v = (c._cmd[0] + c._cmd[1]) / 2
+        if trabado:
+            if t - ultimo_pulso >= 2.5:      # avanza de a milimetros
+                pulsos, ultimo_pulso = pulsos + 1, t
+                atras += c.m_por_pulso
+        elif not (v < 0 and atras >= 0.44):  # contra el tope no cuenta nada
+            acumulado += abs(v) * dt
+            while acumulado >= c.m_por_pulso:
+                acumulado -= c.m_por_pulso
+                pulsos += 1
+                atras += -c.m_por_pulso if v > 0 else c.m_por_pulso
+        c.paso(LecturaCarro((0, 0, 1, 0, 0), None, pulsos, pulsos), dt)
+        t += dt
+    return c, t, [e["ev"] for e in c.eventos], intentos
+
+
+def test_reversa_trabada_reintenta_una_vez_y_entra():
+    c, t, eventos, intentos = _reversa_trabada(1)
+    assert intentos == 2 and eventos.count("reversa_reintento") == 1
+    assert c.estado == "esperando_carga" and "en_muelle" in eventos
+    assert "error" not in eventos
+
+
+def test_reversa_trabada_dos_veces_se_detiene_con_error():
+    c, t, eventos, intentos = _reversa_trabada(2)
+    assert intentos == 2 and eventos.count("reversa_reintento") == 1
+    assert c.estado == "detenido"
+    assert [e["motivo"] for e in c.eventos if e["ev"] == "error"] == ["no_llego_al_tope"]
+    # Termina mucho antes que los 35 s del incidente por intento (sin
+    # quedarse avanzando de a milimetros): dos esperas + la salida.
+    assert t < 2 * c.reversa_max_s
+    assert not c.pwm_bajo
+
+
+def test_reversa_normal_no_se_corta():
+    c, t, eventos, intentos = _reversa_trabada(0)
+    assert intentos == 1 and "reversa_reintento" not in eventos
+    assert c.estado == "esperando_carga" and t < c.reversa_max_s

@@ -42,6 +42,12 @@ flowchart TD
 
 El que de verdad esté cableado (UART2, SPI, o los dos a la vez para probar) es el que entrega el dígito — el ESP-B no necesita saber de antemano cuál es, y si un cable falla el otro sigue funcionando.
 
+## Cómo se entrenó la red
+
+`entrenar_modelo.py` entrena la CNN una sola vez y la guarda en `modelo_mnist_cnn.h5` (unos 2,7 MB). Los píxeles se dividen entre 255 para que queden entre 0 y 1 (la red aprende mucho mejor con números chicos), y cada imagen se pasa a forma `(28, 28, 1)` porque una capa convolucional espera alto, ancho y canales. Las capas, en orden: dos bloques Conv2D + MaxPooling (32 y 64 filtros de 3×3: detectan trazos y luego combinaciones de trazos, y el pooling reduce la imagen a la mitad cada vez), una capa densa de 128 neuronas que junta todo, un Dropout del 50 % (apaga neuronas al azar al entrenar para que la red no memorice) y una salida de 10 neuronas con softmax, que da la probabilidad de cada dígito.
+
+Como los dígitos de la cámara no se parecen del todo a los de MNIST, el entrenamiento usa *data augmentation*: cada imagen se rota hasta 10°, se corre hasta un 10 %, se agranda o achica hasta un 10 % y, al azar, se engrosa o adelgaza su trazo (un marcador grueso es mucho más ancho que los trazos de MNIST). Son 10 pasadas (*epochs*) por las 60 000 imágenes de entrenamiento; las otras 10 000 solo se usan para medir la precisión.
+
 ## Por qué a veces "fallaba" por pequeños errores
 
 La primera versión suavizaba con una ventana chica (5 frames) y se quedaba con el dígito más repetido, sin importar por cuánto había ganado — un dígito con apenas 2 votos de 5 (40%) se mandaba igual que uno con 5 de 5. Eso hacía que un mal ángulo, una sombra, o la mano temblando un poco mandaran un dígito equivocado con la misma confianza que uno bien leído.
@@ -80,21 +86,27 @@ Dos ESP32 por separado, cada uno con su propio cable de alimentación/datos, má
    - `GPIO19` (MISO) del ESP-A → `GPIO12` (MISO) del ESP-B
    - `GPIO23` (MOSI) del ESP-A → `GPIO13` (MOSI) del ESP-B
    - `GPIO5` (SS/CS) del ESP-A → `GPIO15` (SS) del ESP-B
-   - Cuidado con `GPIO12`: es un pin de *strapping* del ESP-B — ver la nota en "Dos caminos: UART2 y SPI" más arriba.
+   - Cuidado con `GPIO12`: es un pin de *strapping* del ESP-B — ver la nota en "Dos caminos a la vez: UART2 y SPI" más arriba.
 3. **OLED I2C → ESP-B únicamente** (el ESP-A no necesita pantalla):
    - `VCC` → `3V3`, `GND` → `GND`, `SDA` → `GPIO21`, `SCL` → `GPIO22`, dirección `0x3C` (la más común en módulos SSD1306 128x64 — si no aparece nada, revisar con un escáner I2C si la dirección real es `0x3D`).
 4. **ESP-A → PC**: un cable USB (el único que hace falta para que todo funcione: es por donde `reconocer_digito.py` le manda cada dígito). Revisar el puerto COM que le asigna Windows y ponerlo en `PUERTO_SERIAL` dentro de `reconocer_digito.py`. El ESP-B **no necesita** su propio cable al PC — recibe todo lo que necesita por los cables de los pasos 1-2; conectarlo también por USB es opcional, solo para revisar sus `print` de depuración con el Monitor Serie del Arduino IDE.
 
 ## Cómo probarlo
 
-`reconocer_digito.py` es el único script que hay que correr para el día a día — junta cámara, reconocimiento y el envío/recepción con el ESP-A en una sola ventana (si falta el modelo entrenado, el propio script lo avisa con el comando exacto a correr, en vez de fallar a medias).
+`reconocer_digito.py` es el único script que hay que correr para el día a día: junta cámara, reconocimiento y el envío/recepción con el ESP-A en una sola ventana.
 
-1. Activar el entorno: `entorno\Scripts\activate` (ya trae `tensorflow`, `opencv-python`, `numpy` y `pyserial`).
-2. **ESP-A**: guardar `esp-a-maestro/esp_a_maestro.py` como `main.py` en el ESP-A con Thonny, igual que el resto de los ESP32 de este repositorio.
-3. **ESP-B**: abrir `esp-b-esclavo/esp_b_esclavo.ino` con el Arduino IDE (con el paquete de placas ESP32 y las librerías `ESP32SPISlave`, `Adafruit SSD1306` y `Adafruit GFX Library` instaladas — ver el sketch para el detalle) y subirlo al ESP-B. Es el único ESP32 de todo el repositorio que no se programa con Thonny/MicroPython, porque escuchar SPI en modo esclavo lo exige. Armar las conexiones de arriba.
-4. Ajustar `PUERTO_SERIAL` en `reconocer_digito.py` con el puerto del ESP-A.
-5. `python reconocer_digito.py`. La primera vez avisa que falta `modelo_mnist_cnn.h5` y pide correr `python entrenar_modelo.py` (una sola vez, tarda varios minutos); después de eso ya arranca directo.
-6. Mostrar un dígito escrito a mano dentro del recuadro verde de la cámara. Abajo de la misma ventana aparecen dos líneas en vivo: la confirmación `"ESP-A confirmó el reenvío de: n"` cada vez que el ESP-A recibe y reenvía un dígito, y el último dato crudo recibido (para diagnosticar si algo no llega) — así no hace falta ninguna herramienta aparte para saber si de verdad llegó. Sin ESP-A conectado, el reconocimiento en pantalla funciona igual; simplemente no llega a ninguna OLED.
+**Antes de la primera vez (una sola vez):** activar el entorno (`entorno\Scripts\activate`, ya trae `tensorflow`, `opencv-python`, `numpy` y `pyserial`) y, si no existe `modelo_mnist_cnn.h5`, correr `python entrenar_modelo.py` (tarda varios minutos). Si falta el modelo, `reconocer_digito.py` lo avisa con ese mismo comando en vez de fallar a medias.
+
+**Sin ESP32 conectado:**
+1. `python reconocer_digito.py`. Avisa que no encontró el ESP-A y sigue igual.
+2. Mostrar un dígito escrito a mano (trazo grueso, papel blanco) dentro del recuadro de la cámara. Arriba a la izquierda aparece "Leyendo..." mientras la ventana de 15 frames se llena y, cuando se confirma, el dígito grande con dos barras: la proporción de la ventana y la confianza promedio. La ventana "Digito procesado" muestra la imagen de 28×28 que de verdad ve la red. Abajo, "ESP-A: no conectado".
+
+**Con ESP32 conectado:**
+1. **ESP-A**: guardar `esp-a-maestro/esp_a_maestro.py` como `main.py` con Thonny, igual que el resto de los ESP32 de este repositorio.
+2. **ESP-B**: abrir `esp-b-esclavo/esp_b_esclavo.ino` con el Arduino IDE (paquete de placas ESP32 y librerías `ESP32SPISlave`, `Adafruit SSD1306` y `Adafruit GFX Library`; ver el sketch) y subirlo. Es el único ESP32 del repositorio que no se programa con Thonny/MicroPython, porque escuchar SPI en modo esclavo lo exige.
+3. Armar las conexiones de arriba y poner en `PUERTO_SERIAL` (dentro de `reconocer_digito.py`) el COM del ESP-A. Cerrar Thonny antes: un puerto COM no se puede abrir desde dos programas a la vez.
+4. `python reconocer_digito.py` y mostrar un dígito. Cada dígito confirmado se manda una sola vez (no en cada frame) y aparece en la OLED. Abajo de la ventana: `"ESP-A confirmo el reenvio de: n"` cuando el ESP-A contesta `REENVIADO:n`, y el último dato crudo recibido. Si se desconecta el cable a mitad de la demo, el script no se cierra: sigue reconociendo sin mandar.
+5. Si el ESP-A no contesta: cerrar el script y correr `python probar_esp_a.py`, que le manda `DIGIT:5` sin cámara ni CNN y muestra todo lo que responde. Para ver el lado del ESP-B, conectarlo por USB y abrir el Monitor Serie del Arduino IDE a 115200: cada dígito imprime `OLED:n (UART2)` u `OLED:n (SPI)`.
 
 ## Pendiente
 

@@ -1,5 +1,13 @@
 # Peces dibujados en el osciloscopio con el ESP32
 
+Parcial del primer corte: dibujar una figura propia en un osciloscopio usando el ESP32, a partir de la idea de las figuras de Lissajous vista en clase.
+
+## Qué es un DAC
+
+Un pin digital normal del ESP32 solo sabe estar en 0 voltios o en 3.3 voltios, apagado o encendido. Un DAC, conversor digital a analógico, es un circuito que recibe un número y lo convierte en un voltaje intermedio proporcional a ese número. Los del ESP32 clásico son de 8 bits, así que aceptan números del 0 al 255: `dac.write(0)` saca unos 0 voltios, `dac.write(255)` unos 3.3 voltios, y `dac.write(128)` más o menos la mitad, 1.65 voltios. Son 256 escalones posibles, lo que en la pantalla del osciloscopio se traduce en una cuadrícula de 256 × 256 posiciones posibles para el punto.
+
+Es lo contrario de un ADC, el conversor analógico a digital que usa un sensor como un potenciómetro para convertir un voltaje en un número. Aquí el camino va al revés: el programa decide un número y el DAC lo convierte en voltaje.
+
 ## La idea general
 
 Un osciloscopio normalmente dibuja voltaje contra tiempo, una señal que sube y baja mientras la pantalla se va llenando de izquierda a derecha. Este proyecto se aprovecha de un modo distinto que traen la mayoría de osciloscopios, el modo XY, donde en vez de graficar cada canal contra el tiempo, uno de los canales se convierte en la posición horizontal del punto en pantalla y el otro canal en la posición vertical. Si a esos dos canales se les manda una secuencia de voltajes bien calculada en vez de una señal cualquiera, el punto que se mueve por la pantalla deja de verse como una onda y empieza a trazar una figura, en este caso un pez.
@@ -15,7 +23,7 @@ flowchart LR
     Osciloscopio --> Figura[Figura del pez en pantalla]
 ```
 
-## De las figuras de Lissajous a una figura libre
+## Qué son las figuras de Lissajous, y de ahí a una figura libre
 
 El modo XY de un osciloscopio es precisamente el que hace posible las figuras de Lissajous, descritas por primera vez por el físico francés Jules Antoine Lissajous en 1857, y que resultan de mandar una onda senoidal pura a cada canal. Cuando las dos frecuencias son iguales el resultado es una línea diagonal o una elipse, según la diferencia de fase entre ambas, y cuando las frecuencias son distintas, sobre todo si guardan una proporción sencilla entre sí como 2:3 o 3:4, aparecen patrones entrelazados cada vez más complejos. Antes de que existieran los osciloscopios digitales, comparar la figura resultante en pantalla contra patrones ya conocidos era un método real para medir con precisión la relación entre dos frecuencias sin más instrumental que un osciloscopio.
 
@@ -42,7 +50,7 @@ Cada una de esas piezas, cuerpo, cola, ojo, pupila, boca y aleta, se genera por 
 - **`convertir_x`, `convertir_y` y `convertir_punto`**: aplican en orden el desplazamiento global de la figura, el recorte de `limitar`, la inversión de eje opcional, y por último reescalan ese valor de 0-1 al rango recortado de `DAC_MIN` a `DAC_MAX`. Es el único lugar del script donde una coordenada deja el mundo normalizado 0-1 para convertirse en el número real que entiende el DAC.
 - **`crear_elipse`, `crear_linea` y `crear_bezier`**: los tres generadores geométricos. Cada uno recorre `puntos + 1` pasos de un parámetro `t` entre 0 y 1 (o entre dos ángulos, en el caso de la elipse) y devuelve la lista de coordenadas resultante, ya convertida al rango del DAC en `pez3_esp32.py`, o todavía en el modelo base sin convertir en `pez5_esp32.py`, donde esa conversión se pospone hasta `transformar`.
 - **`transformar(trayectoria, centro_x, centro_y, escala)`**, solo en `pez5_esp32.py`: toma una trayectoria del modelo base sin posición fija, la escala y la traslada hacia un centro dado, y ahí sí llama a `convertir_punto` para dejarla lista para el DAC. Es la función que le permite a `crear_pez` reutilizar exactamente las mismas seis piezas base para los tres peces, cambiando solo el centro y la escala en cada llamada en vez de recalcular las coordenadas de cada pieza.
-- **`dibujar(trayectoria, velocidad)`**: recorre una lista de puntos ya convertidos, escribiendo cada coordenada en `dac_x` y `dac_y` y esperando `velocidad` microsegundos entre punto y punto con `utime.sleep_us`. El primer punto se escribe sin esperar antes, porque esa espera representa el tiempo que tarda el trazo en llegar al siguiente punto, no en aparecer el primero.
+- **`dibujar(trayectoria, velocidad)`**: recorre una lista de puntos ya convertidos, escribiendo cada coordenada en `dac_x` y `dac_y` y esperando `velocidad` microsegundos entre punto y punto con `utime.sleep_us`. Si `ENVIAR_SERIAL` está en `True`, además imprime cada punto como una línea `x y` (dos enteros de 0 a 255) por el USB, lo que permite reconstruir la figura en la computadora sin osciloscopio; imprimir es mucho más lento que escribir en el DAC, así que para la demostración real se deja en `False`. El primer punto se escribe sin esperar antes, porque esa espera representa el tiempo que tarda el trazo en llegar al siguiente punto, no en aparecer el primero.
 - **`dibujar_pez()` en `pez3_esp32.py` y `dibujar_un_pez(pez)` en `pez5_esp32.py`**: dibujan las seis piezas de un pez en el mismo orden fijo, cuerpo, cola, ojo, pupila, boca y aleta, llamando a `dibujar` una vez por pieza. La pupila se dibuja con una velocidad distinta a la del resto (180 en `pez3_esp32.py`, 40 en `pez5_esp32.py`) porque al ser la pieza más pequeña necesita pocos puntos para verse sólida, y dejarla a la misma velocidad que el resto la haría ver más débil que las demás piezas dentro del mismo ciclo.
 - **El bucle `while True` final**: en `pez3_esp32.py` llama una y otra vez a `dibujar_pez()`; en `pez5_esp32.py` llama a `dibujar_tres_peces()`, que a su vez dibuja `pez1`, `pez2` y `pez3` uno detrás de otro en cada vuelta. Ninguno de los dos scripts corta ese ciclo por su cuenta, así que la figura se mantiene en pantalla mientras el ESP32 tenga energía.
 
@@ -65,9 +73,17 @@ La versión de tres peces, pez5_esp32.py, en cambio, define un único pez base c
 
 Los DAC del ESP32 trabajan con 8 bits, así que solo aceptan valores enteros entre 0 y 255. En vez de usar ese rango completo, el script lo recorta entre DAC_MIN en 10 y DAC_MAX en 245, dejando un margen a cada extremo. Ese margen evita que la figura quede pegada justo al borde de la pantalla del osciloscopio, donde suele haber algo de recorte o distorsión, y deja el pez centrado con un poco de aire alrededor.
 
+Si una coordenada se sale del rango 0 a 1, `limitar` la deja pegada al borde en vez de mandarle al DAC un valor inválido. En `pez5_esp32.py` esto pasa de verdad con el pez grande de arriba a la izquierda: con su centro en 0.18, su escala de 0.72 y el desplazamiento global de -0.03, el extremo izquierdo del cuerpo queda un poco por debajo de 0, así que unos pocos puntos de ese borde se recortan y esa parte del óvalo se ve ligeramente aplanada. Mover ese pez un par de centésimas a la derecha lo corregiría.
+
 Todas las coordenadas del pez se manejan primero en un rango normalizado de 0 a 1, y solo al final, justo antes de mandarlas al DAC, se convierten a ese rango recortado de 10 a 245. Esa normalización previa es la que permite que las variables de desplazamiento y la función transformar trabajen con números simples y predecibles, sin tener que pensar en el rango final del DAC hasta el último paso.
 
-## Cómo correrlo
+## Cómo probarlo
+
+**Sin ESP32 conectado**
+
+Los dos scripts son MicroPython y usan `machine.DAC`, que solo existe dentro del ESP32, así que no corren en la computadora tal cual. Lo que sí se puede hacer sin osciloscopio es revisar la geometría: con `ENVIAR_SERIAL = True` (y `ESCRIBIR_DAC` en `False` si no hay nada conectado a los pines) el ESP32 solo imprime por la consola de Thonny cada punto como `x y`, y la figura sale exactamente de las mismas funciones `crear_elipse`, `crear_linea`, `crear_bezier` y `transformar`, así que cualquier cambio de posición, escala o desplazamiento se puede comprobar antes de llevarlo al osciloscopio. Lo que hay que mirar es que ningún punto quede recortado contra el borde (valores 10 o 245 repetidos) y que las piezas no se salgan del pez.
+
+**Con ESP32 conectado**
 
 Con el ESP32 conectado por USB, se abre el archivo correspondiente, pez3_esp32.py para un solo pez o pez5_esp32.py para los tres, y se guarda en el dispositivo desde Thonny con el nombre main.py, para que arranque solo apenas el ESP32 tenga energía, sin depender de que Thonny siga conectado.
 
@@ -101,3 +117,7 @@ Ajustando en vivo los controles verticales del osciloscopio mientras la figura s
 Y la versión completa del script pez5_esp32.py, con los tres peces dibujados al mismo tiempo en distintas posiciones y tamaños.
 
 ![Tres peces dibujados al mismo tiempo en el osciloscopio](demo-tres-peces.gif)
+
+## Pendiente
+
+Las fotos y gifs del montaje con el osciloscopio ya están arriba. Se hicieron pruebas adicionales de la geometría (rango de los valores enviados al DAC y puntos recortados) sin el hardware conectado.

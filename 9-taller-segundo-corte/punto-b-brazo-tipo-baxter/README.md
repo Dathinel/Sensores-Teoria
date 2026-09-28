@@ -26,10 +26,12 @@ Un solo teclado matricial 4x4 controla todo (ver `../esp32_teclado.py`, el mismo
 | `C` | Cerrar pinza (agarra el cubo si está cerca) |
 | `D` | Demo automática: coge el cubo y lo mueve al destino |
 | `B` | Demo: recorre los 3 ejes (X, Y y Z) para mostrar el rango de movimiento completo |
-| `0` | Reset (reubica el cubo, cancela cualquier demo) |
+| `0` | Reset del cubo (lo suelta y lo vuelve a poner en la bandeja de origen) |
 | `1`, `3`, `*`, `#` | Sin uso en esta configuración |
 
 El movimiento manual (jog) lee el puerto serial sin bloquear la simulación (`ser.in_waiting` en vez de esperar a que llegue una línea nueva), así que el brazo se mueve fluido incluso mientras espera datos del ESP32 — antes, esperar la línea siguiente frenaba toda la ventana de PyBullet a los mismos ~20 cuadros por segundo del teclado.
+
+El ESP32 repite la tecla sostenida cada ~50 ms, así que el script separa dos tipos de teclas: las de **jog** (`8 2 4 6 9 7`) suman un paso (1,5 cm) con cada repetición — sostener = moverse de corrido, a unos 30 cm/s —, y todas las demás son de **un solo golpe**: solo cuentan en el momento en que se pulsan. Sin esa distinción, un toque normal de `D` (unas 4 líneas `TECLA:D`) corría la demo de 10 s cuatro veces seguidas. Además, el jog no deja salir el objetivo de una **caja de trabajo** (X de 0,30 a 0,68 m, Y de −0,40 a 0,40 m, Z de 0,07 a 0,60 m): medido llegando a cada esquina, el efector queda a 2-4 cm del objetivo; más afuera el brazo ya no alcanza con la pinza hacia abajo y se quedaba estirado a tope.
 
 ```mermaid
 flowchart TD
@@ -72,6 +74,7 @@ Solo el teclado matricial va al ESP32 — no hace falta ningún otro sensor:
 1. Guardar `../esp32_teclado.py` como `main.py` en el ESP32 y armar las conexiones de arriba.
 2. Ajustar `PUERTO_SERIAL` en `brazo_pybullet.py` según el puerto COM del paso 2 de conexiones.
 3. `python brazo_pybullet.py`. El teclado mueve el efector en tiempo real; `C` cerca del cubo lo agarra, `D` corre la demo de coger y mover, `B` corre la demo que recorre los 3 ejes.
+4. En la ventana aparece la **última línea cruda** recibida del ESP32 (`ESP32: TECLA:-`, `ESP32: TECLA:8`...): si nunca cambia, el ESP32 no está mandando nada; si cambia pero no dice `TECLA:x`, el problema es de formato, no de cable.
 
 ## Pendiente
 

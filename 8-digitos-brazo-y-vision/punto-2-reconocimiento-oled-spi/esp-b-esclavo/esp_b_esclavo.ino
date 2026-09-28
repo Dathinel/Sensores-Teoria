@@ -4,7 +4,7 @@
 // bloquear en el mismo loop(): el que de verdad este cableado es el
 // que entrega datos, el otro simplemente no recibe nada nunca (no hace
 // falta saber de antemano cual cable se conecto). Ver la seccion "Dos
-// caminos: UART2 y SPI" del README para el detalle completo.
+// caminos a la vez: UART2 y SPI" del README para el detalle completo.
 //
 // Por que este archivo es un sketch de Arduino (C++) y no MicroPython
 // como el resto de los ESP32 del repositorio: escuchar SPI en modo
@@ -120,11 +120,17 @@ void loop() {
     char c = (char) uartDeMaestro.read();
     if (c == '\n') {
       bufferLinea.trim();
-      if (bufferLinea.startsWith("DIGIT:")) {
-        mostrarDigito((uint8_t) bufferLinea.substring(6).toInt(), "UART2");
+      // Se exige EXACTAMENTE "DIGIT:" + un caracter '0'..'9': toInt()
+      // devuelve 0 ante cualquier basura (ruido del cable, una linea
+      // cortada), y sin este chequeo la OLED mostraria un "0" falso.
+      if (bufferLinea.length() == 7 && bufferLinea.startsWith("DIGIT:")
+          && isDigit(bufferLinea.charAt(6))) {
+        mostrarDigito((uint8_t) (bufferLinea.charAt(6) - '0'), "UART2");
       }
       bufferLinea = "";
-    } else {
+    } else if (bufferLinea.length() < 32) {
+      // tope de 32 caracteres: si por ruido nunca llega un fin de
+      // linea, el String no crece sin limite hasta quedarse sin memoria
       bufferLinea += c;
     }
   }
@@ -138,7 +144,15 @@ void loop() {
     slave.trigger();
   }
   if (slave.hasTransactionsCompletedAndAllResultsReady(QUEUE_SIZE)) {
-    slave.numBytesReceived();
-    mostrarDigito(rx_buf[0], "SPI");
+    // numBytesReceived() ademas de devolver cuantos bytes llegaron
+    // marca el resultado como "atendido" (sin esta llamada, la
+    // siguiente vuelta no volveria a encolar una transaccion nueva).
+    size_t recibidos = slave.numBytesReceived();
+    // Solo 0..9 es un digito valido: con el cable SPI suelto o mal
+    // puesto, un pulso de ruido en SCK/SS puede completar una
+    // transaccion con un byte cualquiera (0xFF es tipico con MOSI al aire).
+    if (recibidos == 1 && rx_buf[0] <= 9) {
+      mostrarDigito(rx_buf[0], "SPI");
+    }
   }
 }

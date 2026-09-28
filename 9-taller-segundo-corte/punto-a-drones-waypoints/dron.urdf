@@ -1,10 +1,16 @@
 <?xml version="1.0"?>
 <!--
-  Dron simplificado: un solo link (sin articulaciones) porque en
-  drones_pybullet.py se mueve de forma cinematica -- resetBasePositionAndOrientation
-  cada cuadro -- en vez de simularse con fisica de vuelo real. Cuerpo
-  central + 4 brazos en cruz + 4 helices, solo geometria visual (no hace
-  falta <collision> porque el dron nunca choca con nada en esta actividad).
+  Cuadricoptero en X de un solo link, pensado para volar con FISICA REAL en drones_pybullet.py:
+  el script le aplica en cada paso la fuerza de cada uno de los 4 motores en la punta de su brazo
+  (y el torque de giro de las helices), y la gravedad de PyBullet hace el resto -- la misma idea
+  de gym-pybullet-drones, sin sus dependencias.
+
+  Medidas: brazos de 0,24 m en cada eje (motores en (+-0,24; +-0,24)), 0,35 kg. Con eso cada
+  motor sostiene 0,35 x 9,81 / 4 = 0,86 N en vuelo estacionario.
+  Inercia: cuerpo central + 4 masas en las puntas; aproximada, pero del orden correcto (un cuerpo
+  mas "pesado" de girar que lo real solo haria el control mas lento, no inestable).
+  <collision>: una caja chata del tamano de los brazos, para que se apoye en el piso al aterrizar
+  y los drones del enjambre no se atraviesen.
 -->
 <robot name="dron">
   <link name="cuerpo">
@@ -13,19 +19,27 @@
       <geometry><box size="0.10 0.10 0.04"/></geometry>
       <material name="cuerpo_color"><color rgba="0.85 0.15 0.15 1"/></material>
     </visual>
-    <!-- 4 brazos en cruz -->
-    <visual><origin xyz="0.14 0.14 0" rpy="0 0 0.7854"/><geometry><box size="0.26 0.02 0.015"/></geometry><material name="brazo"><color rgba="0.2 0.2 0.2 1"/></material></visual>
-    <visual><origin xyz="-0.14 0.14 0" rpy="0 0 -0.7854"/><geometry><box size="0.26 0.02 0.015"/></geometry><material name="brazo"/></visual>
-    <visual><origin xyz="0.14 -0.14 0" rpy="0 0 -0.7854"/><geometry><box size="0.26 0.02 0.015"/></geometry><material name="brazo"/></visual>
-    <visual><origin xyz="-0.14 -0.14 0" rpy="0 0 0.7854"/><geometry><box size="0.26 0.02 0.015"/></geometry><material name="brazo"/></visual>
-    <!-- 4 helices (discos delgados en la punta de cada brazo) -->
-    <visual><origin xyz="0.24 0.24 0.015"/><geometry><cylinder radius="0.05" length="0.005"/></geometry><material name="helice"><color rgba="0.1 0.1 0.1 0.6"/></material></visual>
-    <visual><origin xyz="-0.24 0.24 0.015"/><geometry><cylinder radius="0.05" length="0.005"/></geometry><material name="helice"/></visual>
-    <visual><origin xyz="0.24 -0.24 0.015"/><geometry><cylinder radius="0.05" length="0.005"/></geometry><material name="helice"/></visual>
-    <visual><origin xyz="-0.24 -0.24 0.015"/><geometry><cylinder radius="0.05" length="0.005"/></geometry><material name="helice"/></visual>
+    <!-- 4 brazos en cruz (en X) -->
+    <visual><origin xyz="0.12 0.12 0" rpy="0 0 0.7854"/><geometry><box size="0.34 0.02 0.015"/></geometry><material name="brazo"><color rgba="0.2 0.2 0.2 1"/></material></visual>
+    <visual><origin xyz="-0.12 0.12 0" rpy="0 0 -0.7854"/><geometry><box size="0.34 0.02 0.015"/></geometry><material name="brazo"/></visual>
+    <visual><origin xyz="0.12 -0.12 0" rpy="0 0 -0.7854"/><geometry><box size="0.34 0.02 0.015"/></geometry><material name="brazo"/></visual>
+    <visual><origin xyz="-0.12 -0.12 0" rpy="0 0 0.7854"/><geometry><box size="0.34 0.02 0.015"/></geometry><material name="brazo"/></visual>
+    <!-- 4 motores con su helice, en la punta de cada brazo (donde se aplica cada empuje) -->
+    <visual><origin xyz="0.24 0.24 0.012"/><geometry><cylinder radius="0.015" length="0.02"/></geometry><material name="motor"><color rgba="0.55 0.55 0.6 1"/></material></visual>
+    <visual><origin xyz="-0.24 0.24 0.012"/><geometry><cylinder radius="0.015" length="0.02"/></geometry><material name="motor"/></visual>
+    <visual><origin xyz="-0.24 -0.24 0.012"/><geometry><cylinder radius="0.015" length="0.02"/></geometry><material name="motor"/></visual>
+    <visual><origin xyz="0.24 -0.24 0.012"/><geometry><cylinder radius="0.015" length="0.02"/></geometry><material name="motor"/></visual>
+    <visual><origin xyz="0.24 0.24 0.025"/><geometry><cylinder radius="0.07" length="0.004"/></geometry><material name="helice"><color rgba="0.1 0.1 0.1 0.55"/></material></visual>
+    <visual><origin xyz="-0.24 0.24 0.025"/><geometry><cylinder radius="0.07" length="0.004"/></geometry><material name="helice"/></visual>
+    <visual><origin xyz="-0.24 -0.24 0.025"/><geometry><cylinder radius="0.07" length="0.004"/></geometry><material name="helice"/></visual>
+    <visual><origin xyz="0.24 -0.24 0.025"/><geometry><cylinder radius="0.07" length="0.004"/></geometry><material name="helice"/></visual>
+    <collision>
+      <origin xyz="0 0 0"/>
+      <geometry><box size="0.56 0.56 0.04"/></geometry>
+    </collision>
     <inertial>
-      <mass value="0.1"/>
-      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+      <mass value="0.35"/>
+      <inertia ixx="0.0045" ixy="0" ixz="0" iyy="0.0045" iyz="0" izz="0.0085"/>
     </inertial>
   </link>
 </robot>

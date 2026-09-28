@@ -21,9 +21,10 @@ import yaml
 from control import monedas
 
 DIRECTORIO_ESCENARIOS = Path(__file__).parent / "escenarios"
-# Usuario (2026-09-26): en la interfaz queda UNA sola prueba
-# (prueba_completa.yaml, con un caso de cada filtro). Los escenarios de un
-# solo filtro y el mixto de 20 son de las pruebas automaticas (tests/escenarios).
+# Usuario (2026-09-26): la corrida normal de la interfaz es UNA (prueba_completa.yaml, con un
+# caso de cada filtro). Los escenarios de un solo filtro de tests/escenarios (los de las pruebas
+# automaticas) se pueden correr ademas desde la interfaz como "prueba de un filtro"
+# (usuario, 2026-09-27: ver PRUEBAS_DE_UN_FILTRO al final).
 DIRECTORIO_PRUEBAS_AISLADAS = Path(__file__).parent.parent / "tests" / "escenarios"
 ESCENARIO_UNICO = "prueba_completa"
 
@@ -110,3 +111,72 @@ def cargar_escenario(nombre_archivo: str) -> Escenario:
 
 def listar_escenarios() -> list[str]:
     return sorted(p.stem for p in DIRECTORIO_ESCENARIOS.glob("*.yaml"))
+
+
+# ---------------------------------------------------------------------------
+# Pruebas de UN filtro y "colocar pieza X" (usuario, 2026-09-27)
+# ---------------------------------------------------------------------------
+# El enunciado dice que los filtros "se van a probar uno por uno" en la sustentacion. La interfaz
+# sigue teniendo UNA corrida normal (prueba_completa), y ademas puede correr cada escenario de un
+# solo filtro de tests/escenarios (los mismos que usan las pruebas automaticas, asi que lo que se
+# muestra es lo que esta probado) o poner una pieza concreta en la proxima carga.
+
+PRUEBAS_DE_UN_FILTRO = [
+    {"escenario": "no_metalico", "nombre": "Material: no metálico", "estacion": "E2",
+     "sensores": ["capacitivo", "inductivo"], "causa": "no_metalico",
+     "espera": "Botones de plástico: el capacitivo los ve y el inductivo no. Salen a la bandeja de "
+               "rechazo sin gastar la cámara."},
+    {"escenario": "fuera_de_rango", "nombre": "Visión: diámetro fuera de rango", "estacion": "E3",
+     "sensores": ["camara"], "causa": "fuera_de_rango",
+     "espera": "Discos metálicos redondos de 10 y 32 mm: pasan el material, la cámara mide el diámetro "
+               "y queda fuera de 16,5-27,5 mm."},
+    {"escenario": "no_circular", "nombre": "Visión: no circular", "estacion": "E3",
+     "sensores": ["camara"], "causa": "no_circular",
+     "espera": "Bloques metálicos: pasan el material; la circularidad queda por debajo de 0,90."},
+    {"escenario": "perforado", "nombre": "Visión: perforado", "estacion": "E3",
+     "sensores": ["camara"], "causa": "perforado",
+     "espera": "Botones metálicos con agujero: la cámara encuentra un contorno interno."},
+    {"escenario": "no_reconocida", "nombre": "Visión: no reconocida", "estacion": "E3",
+     "sensores": ["camara"], "causa": "no_reconocida",
+     "espera": "Discos del tamaño de una moneda pero sin cara colombiana: el clasificador dice 'otro'."},
+    {"escenario": "incoherente", "nombre": "Visión: incoherente", "estacion": "E3",
+     "sensores": ["camara"], "causa": "incoherente",
+     "espera": "Cara de moneda colombiana con un diámetro que no le corresponde (más de 1,2 mm de "
+               "diferencia): la regla que cruza dos medidas la rechaza."},
+]
+
+# Piezas que se pueden poner a mano en la proxima carga. Mismos campos que un elemento de los YAML.
+PIEZAS = {
+    **{f"{d}_{f}": {"nombre": f"Moneda de ${d:,} ({f})".replace(",", "."),
+                    "datos": {"tipo": "moneda", "clase_real": f"{d}_{f}", "destino_esperado": "vaso"}}
+       for d in (50, 100, 200, 500, 1000) for f in ("nueva", "antigua") if not (d == 1000 and f == "antigua")},
+    "euro": {"nombre": "Moneda de 1 euro (extranjera)",
+             "datos": {"tipo": "boton_metalico", "metal": True, "diametro_mm": 23.25, "circularidad": 0.98,
+                       "contornos_internos": 0, "destino_esperado": "rechazo"}},
+    "boton_plastico": {"nombre": "Botón de plástico", "datos": {"tipo": "boton_plastico", "destino_esperado": "rechazo"}},
+    "boton_metalico": {"nombre": "Botón metálico con ojales", "datos": {"tipo": "boton_metalico", "destino_esperado": "rechazo"}},
+    "bloque": {"nombre": "Bloque de color (metálico)",
+               "datos": {"tipo": "bloque", "metal": True, "destino_esperado": "rechazo"}},
+    "disco_chico": {"nombre": "Disco metálico de 10 mm",
+                    "datos": {"tipo": "boton_metalico", "metal": True, "diametro_mm": 10.0, "circularidad": 0.99,
+                              "contornos_internos": 0, "destino_esperado": "rechazo"}},
+    "incoherente": {"nombre": "Cara de $500 con otro diámetro",
+                    "datos": {"tipo": "moneda", "clase_real": "500_nueva", "diametro_mm": 20.0, "masa_g": 7.1,
+                              "destino_esperado": "rechazo"}},
+}
+
+
+def escenarios_validos() -> set[str]:
+    """Nombres (nunca rutas) que se pueden pedir por orden: los de la interfaz y los de las pruebas."""
+    return {p.stem for d in (DIRECTORIO_ESCENARIOS, DIRECTORIO_PRUEBAS_AISLADAS) for p in d.glob("*.yaml")}
+
+
+def prueba_de_un_filtro(escenario: str) -> dict | None:
+    return next((p for p in PRUEBAS_DE_UN_FILTRO if p["escenario"] == escenario), None)
+
+
+def especificacion_pieza(pieza: str) -> EspecificacionElemento:
+    """La pieza del catalogo lista para la planta (ValueError si no existe)."""
+    if pieza not in PIEZAS:
+        raise ValueError(f"pieza desconocida: {pieza!r}")
+    return _construir_elemento(dict(PIEZAS[pieza]["datos"]))

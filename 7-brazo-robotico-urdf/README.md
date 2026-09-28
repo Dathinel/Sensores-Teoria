@@ -10,6 +10,12 @@ Un URDF (*Unified Robot Description Format*) es un archivo XML que describe un r
 
 PyBullet es un motor de físicas de código abierto (gravedad, colisiones, fricción) con enlaces a Python, pensado justamente para cargar URDFs y simularlos: cuando este script le pide `setJointMotorControl2(..., targetPosition=x)` a una articulación, PyBullet calcula las fuerzas necesarias para que el joint llegue a esa posición de forma físicamente plausible, no solo la "teletransporta" ahí. Por eso sirve para probar el comportamiento del brazo (¿la pinza choca con algo al cerrarse? ¿el codo se pasa de su límite?) sin necesidad de tener el robot físico armado.
 
+Ojo con lo que hace cada articulación en este URDF en particular: `joint_1` gira todo el brazo alrededor del eje vertical (como una torreta), `joint_2` dobla el codo hacia adelante/atrás, y `joint_gripper` es prismático: **sube** la pinza a lo largo del segundo tramo (0 a 15 cm). Los dos dedos (`joint_dedo_izq`/`joint_dedo_der`, 0 a 5 cm cada uno) no tienen tecla propia: el script los abre en proporción a `joint_gripper` (un tercio de su valor), así que "pinza +" extiende y abre a la vez, y "pinza −" recoge y cierra.
+
+## Qué es I2C y el PCF8574
+
+El teclado matricial 4x4 tiene 8 cables (4 filas + 4 columnas), y conectarlos directo al ESP32 gastaría 8 pines. **I2C** es un bus de solo 2 cables (`SDA` = datos, `SCL` = reloj) por el que el ESP32 puede hablar con varios chips a la vez, cada uno con su propia dirección. El **PCF8574** es un "expansor de pines": un chip que cuelga de ese bus (dirección `0x20`) y ofrece 8 pines digitales que el ESP32 escribe o lee mandándole un byte. Para leer el teclado, el ESP32 le pide al PCF8574 que ponga en 0 una fila a la vez y lee las 4 columnas: si alguna volvió en 0, hay una tecla presionada justo en ese cruce fila/columna (eso es "barrer" el teclado, ver `leer_tecla()` en `esp32_brazo.py`).
+
 ## La idea general
 
 El control es solo con teclado — **sin ningún sensor analógico** — tipo mando de jog (como los "teach pendant" con los que se maneja un brazo industrial a mano): mantener presionada una tecla mueve una articulación mientras se sostiene, y se suelta cuando llega a la posición deseada. Igual que las flechas de un teclado numérico:
@@ -23,7 +29,7 @@ El control es solo con teclado — **sin ningún sensor analógico** — tipo ma
 
 (Antes esto se probó con 3 potenciómetros fijos, uno por articulación, y después con un teclado + 1 potenciómetro compartido; se terminó quitando el potenciómetro por completo porque no hacía falta — el teclado ya alcanza para todo el control, y reutiliza el mismo módulo I2C que ya se usa en el tema 8, sin ningún componente analógico de por medio.)
 
-El ESP32 manda por serial las 3 articulaciones siempre (`"J1:..,J2:..,G:.."`, el protocolo no cambió), así que `brazo_pybullet.py` no necesita saber nada del teclado — solo lee la línea. En el PC, si no hay ESP32 conectado, la ventana de PyBullet trae los mismos 7 botones de jog para poder probar sin hardware (son botones fijos, no un slider: un slider dinámico se probó primero y tenía un bug — PyBullet no borraba bien los sliders viejos al recrearlos, se iban acumulando en el panel — así que se descartó ese diseño).
+El ESP32 manda por serial las 3 articulaciones siempre (`"J1:..,J2:..,G:.."`, 10 veces por segundo), así que `brazo_pybullet.py` no necesita saber nada del teclado — solo lee la línea. Lo lee sin bloquear: en cada vuelta de la simulación revisa si hay bytes esperando en el puerto (`in_waiting`), los drena todos y se queda con la última línea válida; si no llegó nada, el brazo mantiene la última posición (leer con un `readline()` que espera frenaría toda la simulación al ritmo del ESP32). La última línea cruda recibida se muestra en la propia ventana (`Serial: ...`) para diagnosticar: si nunca cambia, el ESP32 no está mandando; si llega algo que no es `J1:..` (por ejemplo el aviso `# ERROR: el teclado I2C (0x20) no responde`), el problema está del lado del teclado. En el PC, la ventana de PyBullet trae además los mismos 7 botones de jog (funcionan siempre; sin ESP32 son la única entrada) para poder probar sin hardware (son botones fijos, no un slider: un slider dinámico se probó primero y tenía un bug — PyBullet no borraba bien los sliders viejos al recrearlos, se iban acumulando en el panel — así que se descartó ese diseño).
 
 ```mermaid
 flowchart TD
@@ -35,11 +41,13 @@ flowchart TD
     Envia -->|"puerto serial USB<br/>115200 baudios"| Recibe
 
     subgraph PC["En el PC — brazo_pybullet.py"]
-        Recibe["pyserial<br/>lee linea por linea"] --> Valido{"¿Linea valida?"}
-        Valido -->|"si"| UsaESP["Usa J1, J2, G<br/>del ESP32"]
-        Valido -->|"no / sin ESP32"| UsaBotones["7 botones de jog fijos<br/>de la ventana de PyBullet"]
-        UsaESP --> Mueve["setJointMotorControl2<br/>por cada articulacion"]
-        UsaBotones --> Mueve
+        Recibe["pyserial, sin bloquear<br/>drena in_waiting"] --> Valido{"¿Llego una linea<br/>J1/J2/G valida?"}
+        Valido -->|"si"| UsaESP["Objetivo = J1, J2, G<br/>del ESP32"]
+        Valido -->|"no / sin ESP32"| Mantiene["Se mantiene<br/>el ultimo objetivo"]
+        UsaBotones["7 botones de jog fijos<br/>de la ventana de PyBullet"] --> Objetivo
+        UsaESP --> Objetivo["Posicion objetivo<br/>j1, j2, g"]
+        Mantiene --> Objetivo
+        Objetivo --> Mueve["setJointMotorControl2<br/>por cada articulacion"]
     end
 
     Mueve --> Sim["Simulacion PyBullet<br/>brazo.urdf"]
@@ -57,12 +65,12 @@ sequenceDiagram
         ESP->>ESP: suma/resta un paso a la articulacion correspondiente
         ESP-->>PC: "J1:..,J2:..,G:.." (las 3, siempre)
         alt linea recibida y valida
-            PC->>Sim: mueve joint_1, joint_2, joint_gripper, dedos
-        else no hay ESP32 o la linea no es valida
-            PC->>PC: boton de jog presionado en la ventana
-            PC->>Sim: mueve joint_1, joint_2, joint_gripper, dedos
+            PC->>PC: objetivo = J1, J2, G recibidos
+        else no hay ESP32 o no llego linea todavia
+            PC->>PC: mantiene el objetivo (o aplica un boton de jog)
         end
-        Sim->>Sim: stepSimulation()
+        PC->>Sim: mueve joint_1, joint_2, joint_gripper, dedos
+        Sim->>Sim: stepSimulation() (~24 pasos por cada linea del ESP32)
     end
 ```
 
@@ -89,7 +97,7 @@ No hace falta ninguna otra fuente de alimentación: el ESP32 alimenta el teclado
 **Con ESP32 conectado:**
 1. Guardar `esp32_brazo.py` como `main.py` en el ESP32 (con Thonny, por ejemplo) y armar las conexiones de arriba.
 2. Ajustar `PUERTO_SERIAL` en `brazo_pybullet.py` según el puerto COM que aparezca en el Administrador de dispositivos al conectar el ESP32 por USB.
-3. `python brazo_pybullet.py`. Mantener presionada una tecla del teclado (8/2/6/4/9/7) para mover la articulación correspondiente, o `5` para volver a home — el brazo simulado sigue el movimiento en tiempo real.
+3. `python brazo_pybullet.py`. Mantener presionada una tecla del teclado (8/2/6/4/9/7) para mover la articulación correspondiente, o `5` para volver a home — el brazo simulado sigue el movimiento en tiempo real. Arriba de la ventana, la línea `Serial: J1:..,J2:..,G:..` debe ir cambiando mientras se sostiene la tecla; si se queda en `(sin datos todavia)`, revisar que Thonny no tenga el puerto abierto y que el COM sea el correcto.
 
 ## Pendiente
 

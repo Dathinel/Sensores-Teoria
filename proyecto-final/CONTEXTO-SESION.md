@@ -97,9 +97,24 @@ filtro; el carro salió del muelle y a los 11 s `atascado` → `detenido_atascad
   "Blender with claude".
 - [x] h. Pruebas, docs, commit, relanzar.
 
+**Pedido del 2026-09-27 (6):** "haga el punto 2, y en la parte de los sensores del visor 3d, un botón
+o algo que se pueda visualizar la prueba única del sensor, y el punto 6 arréglelo también, el de
+colocar pieza x me gusta, y guardar todo lo necesario para la ejecución bien del proyecto, y hacer los
+scripts también, el resto colóquelos también en lo que falta o pendiente por hacer junto a los demás,
+y con esta ayuda de agentes revise las demás prácticas ... crear más agentes de revisar prácticas
+anteriores y mejorarlas ... una revisada a cada parámetro de cada práctica nunca viene mal".
+Decisión del usuario: prácticas → "Mejorar a fondo". Plan: `~/.claude/plans/complete-todo-lo-que-snappy-liskov.md`.
+- [x] a. Prueba de un filtro (dashboard: selector; visor: botón "ver la prueba de este sensor").
+- [x] b. "Colocar pieza X" (orden `colocar`, botones en visor y dashboard).
+- [x] c. `reversa_tope` con tiempo límite + reintento (agente).
+- [x] d. Scripts: `requirements-lock.txt`, `python -m app.chequeo`, `instalar.bat`, `vision/capturar_dataset.py`, `vision/entrenar.py`.
+- [x] e. Pendientes de la revisión en README y CONTEXTO.
+- [x] f. Agente `revisor-practica` + revisión y mejora a fondo de los temas 1-9 (≤4 agentes a la vez).
+- [x] g. Pruebas, capturas, docs, commit, relanzar.
+
 ## 3. Estado actual (2026-09-27, fin de sesión)
 
-- Pruebas: `entorno/Scripts/python -m pytest -q` → todas deben pasar (590, ~5 min).
+- Pruebas: `entorno/Scripts/python -m pytest -q` → todas deben pasar (607, ~6 min).
 - Forma de trabajar (usuario, 2026-09-26): dejar SIEMPRE una corrida escondida con el código
   actual (`python -m app.lanzar --auto prueba_completa --reemplazar` en segundo plano; cierra la
   anterior y su consola). El usuario la mira cuando quiere con `visor.bat` (un clic). NO

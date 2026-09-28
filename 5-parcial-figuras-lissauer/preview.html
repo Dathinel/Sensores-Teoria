@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Osciloscopio XY: peces</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1013; --panel: #15191d; --panel-border: #262b31;
+    --text: #e7e9ec; --text-muted: #8b929b;
+    --modo: #9b7fd1; --verde-ok: #4caf7d; --amarillo: #e8b930; --rojo: #d9534f;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: "Space Grotesk", system-ui, sans-serif; }
+  body { padding: 1.1rem 1rem; min-height: 100vh; }
+  .envoltura { max-width: 1150px; margin: 0 auto; }
+  h1 { font-size: 1.25rem; font-weight: 600; margin: 0; }
+  .sub { margin: .2rem 0 1rem; color: var(--text-muted); font-size: .82rem; }
+  .rejilla { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 1rem; }
+  @media (max-width: 820px) { .rejilla { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 10px; padding: 1rem; }
+  .panel h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); margin: 0 0 .7rem; font-weight: 500; }
+  .modos { display: flex; gap: .5rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+  button, select { font-family: inherit; font-size: .88rem; background: #1e2328; color: var(--text); border: 1px solid var(--panel-border); border-radius: 7px; padding: .45rem .75rem; cursor: pointer; }
+  button.activo { border-color: var(--modo); background: #241f33; }
+  button:disabled { opacity: .45; cursor: default; }
+  .pantalla { position: relative; width: 100%; aspect-ratio: 1 / 1; background: #06130c; border-radius: 8px; border: 1px solid #1d3326; overflow: hidden; }
+  canvas { width: 100%; height: 100%; display: block; }
+  .control { margin: .55rem 0; }
+  .control label { display: flex; justify-content: space-between; font-size: .82rem; color: var(--text-muted); margin-bottom: .2rem; }
+  .control label b { font-family: "IBM Plex Mono", monospace; font-weight: 500; color: var(--text); }
+  input[type=range] { width: 100%; accent-color: var(--modo); }
+  .check { display: flex; gap: 1rem; font-size: .85rem; margin: .5rem 0; flex-wrap: wrap; }
+  .mono { font-family: "IBM Plex Mono", monospace; font-size: .8rem; }
+  .dato { display: flex; justify-content: space-between; gap: 1rem; padding: .3rem 0; border-bottom: 1px dashed var(--panel-border); }
+  .dato span:first-child { color: var(--text-muted); }
+  .aviso { color: var(--amarillo); }
+  .ok { color: var(--verde-ok); }
+  .nota { color: var(--text-muted); font-size: .78rem; line-height: 1.45; margin-top: .7rem; }
+  .oculto { display: none; }
+  .monitor { height: 110px; overflow-y: auto; background: #0a0c0e; border: 1px solid var(--panel-border); border-radius: 7px; padding: .4rem .6rem; white-space: pre; margin-top: .5rem; }
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Osciloscopio en modo XY</h1>
+  <p class="sub">GPIO25 → canal X · GPIO26 → canal Y · DAC de 8 bits (0-255), rango usado 10-245. Misma geometría que pez3_esp32.py y pez5_esp32.py.</p>
+
+  <div class="modos">
+    <button id="bPrueba" class="activo">Modo prueba (sin ESP32)</button>
+    <button id="bConectado">Conectado (Web Serial)</button>
+    <button id="bPuerto" disabled>Elegir puerto del ESP32</button>
+    <span id="estadoCon" class="mono" style="color:var(--text-muted)"></span>
+  </div>
+
+  <div class="rejilla">
+    <div class="panel">
+      <div class="pantalla"><canvas id="lienzo" width="720" height="720"></canvas></div>
+    </div>
+
+    <div class="panel">
+      <div id="panelPrueba">
+        <h2>Qué dibuja el ESP32</h2>
+        <select id="figura">
+          <option value="pez3">pez3_esp32.py: un pez</option>
+          <option value="pez5">pez5_esp32.py: tres peces</option>
+          <option value="lissajous">Lissajous: dos senos puros</option>
+        </select>
+
+        <div id="ctlPez">
+          <div class="control"><label>DESPLAZAMIENTO_X <b id="vdx"></b></label><input id="dx" type="range" min="-0.3" max="0.3" step="0.01"></div>
+          <div class="control"><label>DESPLAZAMIENTO_Y <b id="vdy"></b></label><input id="dy" type="range" min="-0.3" max="0.3" step="0.01"></div>
+          <div class="check"><label><input id="ix" type="checkbox"> INVERT_X</label><label><input id="iy" type="checkbox"> INVERT_Y</label></div>
+        </div>
+        <div id="ctlLis" class="oculto">
+          <div class="control"><label>Frecuencia X <b id="vfx"></b></label><input id="fx" type="range" min="1" max="7" step="1" value="3"></div>
+          <div class="control"><label>Frecuencia Y <b id="vfy"></b></label><input id="fy" type="range" min="1" max="7" step="1" value="2"></div>
+          <div class="control"><label>Desfase (grados) <b id="vfase"></b></label><input id="fase" type="range" min="0" max="180" step="5" value="90"></div>
+        </div>
+
+        <div class="control"><label>Velocidad del haz (puntos por cuadro) <b id="vvel"></b></label><input id="vel" type="range" min="10" max="2000" step="10" value="400"></div>
+        <div class="control"><label>Persistencia del fósforo <b id="vper"></b></label><input id="per" type="range" min="0.02" max="0.6" step="0.02" value="0.18"></div>
+
+        <div class="dato mono"><span>Puntos por ciclo</span><span id="nPuntos">—</span></div>
+        <div class="dato mono"><span>Puntos recortados al borde (10 o 245)</span><span id="nRecortes">—</span></div>
+        <div class="dato mono"><span>Punto actual (x, y)</span><span id="actual">—</span></div>
+        <p class="nota">Con la velocidad baja se ve el punto recorriendo el cuerpo, la cola, el ojo, la pupila, la boca y la aleta en ese orden; al subirla aparece la figura "sólida" por persistencia de la visión. Si "recortados" no es 0, parte de la figura se sale del área y queda aplastada contra el borde: conviene mover el desplazamiento antes de subirlo al ESP32.</p>
+      </div>
+
+      <div id="panelConectado" class="oculto">
+        <h2>Puntos que llegan del ESP32</h2>
+        <p class="nota" style="margin-top:0">En el script que esté como main.py, poner <span class="mono">ENVIAR_SERIAL = True</span> (y cerrar Thonny). El ESP32 imprime cada punto como <span class="mono">x y</span> y esta pantalla los pinta igual que el osciloscopio. Imprimir es mucho más lento que el DAC, así que la figura se arma despacio.</p>
+        <div class="dato mono"><span>Puntos recibidos</span><span id="nRx">0</span></div>
+        <div class="dato mono"><span>Líneas que no son "x y"</span><span id="nMal">0</span></div>
+        <div class="dato mono"><span>Última línea cruda</span><span id="cruda">—</span></div>
+        <button id="bLimpiar" style="margin-top:.6rem">Limpiar pantalla</button>
+        <div class="monitor mono" id="monitor"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== Misma configuración que los scripts =====================
+const DAC_MIN = 10, DAC_MAX = 245;
+const cfg = { pez3: { dx: -0.08, dy: 0 }, pez5: { dx: -0.03, dy: 0 } };  // valores de cada archivo
+let DESP_X = -0.08, DESP_Y = 0, INV_X = false, INV_Y = false;
+let recortes = 0;
+
+const limitar = v => { if (v < 0 || v > 1) recortes++; return v < 0 ? 0 : v > 1 ? 1 : v; };
+function convX(x) { x = limitar(x + DESP_X); if (INV_X) x = 1 - x; return Math.trunc(DAC_MIN + x * (DAC_MAX - DAC_MIN)); }
+function convY(y) { y = limitar(y + DESP_Y); if (INV_Y) y = 1 - y; return Math.trunc(DAC_MIN + y * (DAC_MAX - DAC_MIN)); }
+
+// Generadores: devuelven puntos sin convertir; se convierten al final (igual resultado que los .py).
+function elipse(cx, cy, rx, ry, n, a0 = 0, a1 = 360) {
+  const r = [], i0 = a0 * Math.PI / 180, i1 = a1 * Math.PI / 180;
+  for (let i = 0; i <= n; i++) { const t = i0 + (i1 - i0) * i / n; r.push([cx + rx * Math.cos(t), cy + ry * Math.sin(t)]); }
+  return r;
+}
+function linea(x1, y1, x2, y2, n) { const r = []; for (let i = 0; i <= n; i++) { const t = i / n; r.push([x1 + (x2 - x1) * t, y1 + (y2 - y1) * t]); } return r; }
+function bezier(x0, y0, x1, y1, x2, y2, n) {
+  const r = []; for (let i = 0; i <= n; i++) { const t = i / n, u = 1 - t;
+    r.push([u*u*x0 + 2*u*t*x1 + t*t*x2, u*u*y0 + 2*u*t*y1 + t*t*y2]); } return r;
+}
+const convertir = tray => tray.map(([x, y]) => [convX(x), convY(y)]);
+
+// Cada pieza lleva su "espera" relativa: la pupila se dibuja más lento (más brillo), como en los .py.
+function piezasPez3() {
+  const CX = 0.42, CY = 0.52, RX = 0.29, RY = 0.25, P1X = CX + RX, P1Y = CY;
+  return [
+    [elipse(CX, CY, RX, RY, 110), 1],
+    [[...linea(P1X, P1Y, 0.93, 0.78, 25), ...linea(0.93, 0.78, 0.93, 0.26, 35), ...linea(0.93, 0.26, P1X, P1Y, 25)], 1],
+    [elipse(0.33, 0.64, 0.040, 0.045, 30), 1],
+    [elipse(0.33, 0.65, 0.012, 0.014, 14), 6],
+    [elipse(0.31, 0.44, 0.070, 0.045, 30, 200, 340), 1],
+    [[...bezier(0.575, 0.515, 0.520, 0.515, 0.485, 0.475, 18), ...bezier(0.485, 0.475, 0.520, 0.430, 0.580, 0.440, 18)], 1],
+  ].map(([t, e]) => [convertir(t), e]);
+}
+function piezasPez5() {
+  const base = [
+    [elipse(0, 0, 0.24, 0.18, 110), 1],
+    [[...linea(0.24, 0, 0.44, 0.19, 25), ...linea(0.44, 0.19, 0.44, -0.19, 35), ...linea(0.44, -0.19, 0.24, 0, 25)], 1],
+    [elipse(-0.08, 0.070, 0.035, 0.040, 30), 1],
+    [elipse(-0.08, 0.078, 0.011, 0.013, 14), 3],
+    [elipse(-0.10, -0.050, 0.060, 0.035, 30, 200, 340), 1],
+    [[...bezier(0.10, 0.015, 0.055, 0.020, 0.020, -0.015, 18), ...bezier(0.020, -0.015, 0.055, -0.055, 0.105, -0.040, 18)], 1],
+  ];
+  const transformar = (tray, cx, cy, s) => convertir(tray.map(([x, y]) => [x * s + cx, y * s + cy]));
+  const peces = [[0.18, 0.73, 0.72], [0.74, 0.72, 0.56], [0.72, 0.24, 0.62]];
+  return peces.flatMap(([cx, cy, s]) => base.map(([t, e]) => [transformar(t, cx, cy, s), e]));
+}
+function piezasLissajous() {
+  const fx = +$("fx").value, fy = +$("fy").value, f = +$("fase").value * Math.PI / 180, n = 1200, r = [];
+  for (let i = 0; i <= n; i++) { const t = 2 * Math.PI * i / n;
+    r.push([Math.trunc(127.5 + 117.5 * Math.sin(fx * t + f)), Math.trunc(127.5 + 117.5 * Math.sin(fy * t))]); }
+  return [[r, 1]];
+}
+
+// ===================== Pantalla con "fósforo" =====================
+const $ = id => document.getElementById(id);
+const lienzo = $("lienzo"), ctx = lienzo.getContext("2d");
+const W = lienzo.width;
+const aPantalla = ([x, y]) => [x / 255 * W, W - y / 255 * W];   // y crece hacia arriba, como en el osciloscopio
+
+function reticula() {
+  ctx.strokeStyle = "rgba(90,160,120,0.18)"; ctx.lineWidth = 1;
+  for (let i = 1; i < 10; i++) { const p = i * W / 10;
+    ctx.beginPath(); ctx.moveTo(p, 0); ctx.lineTo(p, W); ctx.moveTo(0, p); ctx.lineTo(W, p); ctx.stroke(); }
+  // Marco del rango usado (10-245): lo que queda fuera nunca se dibuja.
+  const a = DAC_MIN / 255 * W, b = DAC_MAX / 255 * W;
+  ctx.strokeStyle = "rgba(232,185,48,0.25)"; ctx.setLineDash([6, 6]); ctx.strokeRect(a, W - b, b - a, b - a); ctx.setLineDash([]);
+}
+function desvanecer() {
+  ctx.fillStyle = `rgba(6,19,12,${$("per").value})`; ctx.fillRect(0, 0, W, W); reticula();
+}
+function trazo(p, q, brillo) {
+  const [x1, y1] = aPantalla(p), [x2, y2] = aPantalla(q);
+  ctx.strokeStyle = `rgba(120,255,170,${Math.min(1, 0.55 * brillo)})`; ctx.lineWidth = 2.2;
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+}
+
+// ===================== Modo prueba: el ESP32 simulado recorre la lista una y otra vez =====================
+let modo = "prueba", secuencia = [], indice = 0, anterior = null;
+function reconstruir() {
+  recortes = 0;
+  const f = $("figura").value;
+  const piezas = f === "pez3" ? piezasPez3() : f === "pez5" ? piezasPez5() : piezasLissajous();
+  // Aplana a [punto, brillo, esPrimeroDePieza]; el salto entre piezas se dibuja tenue.
+  secuencia = [];
+  piezas.forEach(([t, e]) => t.forEach((p, i) => secuencia.push([p, e, i === 0])));
+  indice = 0; anterior = null;
+  $("nPuntos").textContent = secuencia.length;
+  $("nRecortes").textContent = recortes;
+  $("nRecortes").className = recortes ? "aviso" : "ok";
+}
+function cuadroPrueba() {
+  desvanecer();
+  const n = +$("vel").value;
+  for (let k = 0; k < n && secuencia.length; k++) {
+    const [p, brillo, primero] = secuencia[indice];
+    if (anterior) trazo(anterior, p, primero ? 0.15 : brillo);
+    anterior = p; indice = (indice + 1) % secuencia.length;
+  }
+  if (anterior) $("actual").textContent = anterior.join(", ");
+}
+
+// ===================== Modo conectado: pinta los "x y" que imprime el ESP32 =====================
+let puerto = null, recibidos = [], nRx = 0, nMal = 0, lineasMonitor = [];
+function cuadroConectado() {
+  desvanecer();
+  // Se vuelven a pintar los últimos puntos recibidos (una "persistencia" larga,
+  // porque por serial llegan muy lento comparado con el DAC).
+  for (let i = 1; i < recibidos.length; i++) trazo(recibidos[i - 1], recibidos[i], 1);
+}
+function procesarLinea(l) {
+  $("cruda").textContent = l || "(vacía)";
+  lineasMonitor.push(l); if (lineasMonitor.length > 40) lineasMonitor.shift();
+  $("monitor").textContent = lineasMonitor.join("\n"); $("monitor").scrollTop = 1e9;
+  const m = l.match(/^(\d{1,3})\s+(\d{1,3})$/);
+  if (!m || +m[1] > 255 || +m[2] > 255) { nMal++; $("nMal").textContent = nMal; return; }
+  recibidos.push([+m[1], +m[2]]); if (recibidos.length > 1500) recibidos.shift();
+  nRx++; $("nRx").textContent = nRx;
+}
+async function leer() {
+  const lector = puerto.readable.getReader(), deco = new TextDecoder(); let buf = "";
+  try {
+    while (true) {
+      const { value, done } = await lector.read(); if (done) break;
+      buf += deco.decode(value, { stream: true });
+      let i; while ((i = buf.indexOf("\n")) >= 0) { procesarLinea(buf.slice(0, i).trim()); buf = buf.slice(i + 1); }
+    }
+  } catch (e) { $("estadoCon").textContent = "Se perdió la conexión: " + e.message; }
+  finally { lector.releaseLock(); }
+}
+$("bPuerto").onclick = async () => {
+  try {
+    puerto = await navigator.serial.requestPort();
+    await puerto.open({ baudRate: 115200 });
+    $("estadoCon").textContent = "Conectado"; $("estadoCon").style.color = "var(--verde-ok)";
+    leer();
+  } catch (e) { $("estadoCon").textContent = "No se pudo abrir: " + e.message; }
+};
+$("bLimpiar").onclick = () => { recibidos = []; ctx.fillStyle = "#06130c"; ctx.fillRect(0, 0, W, W); };
+
+function ponerModo(m) {
+  modo = m;
+  $("bPrueba").classList.toggle("activo", m === "prueba"); $("bConectado").classList.toggle("activo", m === "conectado");
+  $("panelPrueba").classList.toggle("oculto", m !== "prueba"); $("panelConectado").classList.toggle("oculto", m !== "conectado");
+  $("bPuerto").disabled = m !== "conectado" || !("serial" in navigator);
+  if (m === "conectado" && !("serial" in navigator)) $("estadoCon").textContent = "Este navegador no tiene Web Serial (usar Chrome o Edge).";
+  else if (m === "prueba") $("estadoCon").textContent = "";
+}
+$("bPrueba").onclick = () => ponerModo("prueba");
+$("bConectado").onclick = () => ponerModo("conectado");
+
+// ===================== Controles =====================
+function leerControles() {
+  DESP_X = +$("dx").value; DESP_Y = +$("dy").value; INV_X = $("ix").checked; INV_Y = $("iy").checked;
+  $("vdx").textContent = DESP_X.toFixed(2); $("vdy").textContent = DESP_Y.toFixed(2);
+  $("vfx").textContent = $("fx").value; $("vfy").textContent = $("fy").value; $("vfase").textContent = $("fase").value;
+  $("vvel").textContent = $("vel").value; $("vper").textContent = $("per").value;
+  reconstruir();
+}
+$("figura").onchange = () => {
+  const f = $("figura").value;
+  $("ctlPez").classList.toggle("oculto", f === "lissajous"); $("ctlLis").classList.toggle("oculto", f !== "lissajous");
+  if (cfg[f]) { $("dx").value = cfg[f].dx; $("dy").value = cfg[f].dy; }
+  leerControles();
+};
+document.querySelectorAll("input").forEach(el => el.addEventListener("input", leerControles));
+
+$("dx").value = cfg.pez3.dx; $("dy").value = cfg.pez3.dy;
+leerControles();
+ctx.fillStyle = "#06130c"; ctx.fillRect(0, 0, W, W);
+(function bucle() { (modo === "prueba" ? cuadroPrueba : cuadroConectado)(); requestAnimationFrame(bucle); })();
+</script>
+</body>
+</html>

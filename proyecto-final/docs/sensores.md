@@ -77,7 +77,7 @@ Numerados igual que en el visor 3D (pestaña Sensores). Qué lo activa, qué rec
 
 ## 4. Cámara cenital
 
-**Subsistema:** cinta de monedas · **Dónde:** E5 · Visión · **Modelo propuesto:** Webcam USB 1080p + anillo de luz difusa
+**Subsistema:** cinta de monedas · **Dónde:** E3 · Visión · **Modelo propuesto:** Webcam USB 1080p + anillo de luz difusa
 
 - **Qué lo activa:** Imagen de la moneda sobre la cinta negra (fondo de contraste). En la misma imagen se ven los separadores de la casilla: con eso se mide si la cinta quedó en su lugar (reemplaza al sensor de ranura, grupo 2026-09-25).
 - **Recibe:** Imagen de la casilla quieta bajo la cámara.

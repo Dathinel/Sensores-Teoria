@@ -1,5 +1,7 @@
 # Lenguajes: por qué Thonny
 
+Basado en [Instalación de Thonny — NODEMCU V3 ESP8266](https://github.com/dialejobv/U_Militar/blob/main/1%29%20Instalaci%C3%B3n%20Thonny/NODEMCU%20V3%20ESP8266.md) (U_Militar, carpeta `1) Instalación Thonny`).
+
 ## Qué es Thonny
 
 Thonny es un entorno de desarrollo pensado originalmente para enseñar Python a gente que nunca había programado antes. Lo creó Aivar Annamaa en la Universidad de Tartu, en Estonia, y salió como versión estable en 2015, después de que su creador pasara varios años dando clases de Python a principiantes y viendo de primera mano en qué se atascaban. Por eso Thonny trae cosas como un depurador visual que muestra paso a paso cómo cambian las variables mientras el programa corre, algo pensado para quien recién está entendiendo cómo funciona el flujo de un programa.
@@ -32,6 +34,20 @@ En el camino de Thonny, lo primero que tiene que pasar es que el ESP32 tenga ins
 
 Por eso no tiene sentido preguntarse por qué usar Arduino y no Thonny como si fueran dos programas que compiten por lo mismo, porque en el fondo apuntan a dos formas distintas de trabajar con el mismo chip. El ESP32 solo puede tener un firmware corriendo a la vez, así que instalar MicroPython para usar Thonny reemplaza por completo el firmware que el Arduino IDE necesita para funcionar, y viceversa. La elección real está entre programar con un lenguaje compilado que se convierte en instrucciones nativas, o programar con un lenguaje interpretado que corre dentro de un intérprete ya instalado en el chip.
 
+## Instalar MicroPython en el ESP32
+
+La guía del profesor graba el firmware en un ESP8266; en el ESP32 los pasos son los mismos con dos diferencias: se elige el firmware del ESP32 y la dirección donde empieza es `0x1000` en vez de `0`. Hay dos caminos:
+
+- **Desde Thonny** (el más corto): Herramientas → Opciones → Intérprete → "MicroPython (ESP32)" → "Instalar o actualizar MicroPython (esptool)". Se elige el puerto, la familia `ESP32` y la variante `Espressif • ESP32 / WROOM`, y Thonny descarga y graba el firmware solo.
+- **Con `esptool` por consola** (lo que hace la guía original), después de `pip install esptool` y de bajar el `.bin` de [micropython.org/download/ESP32_GENERIC](https://micropython.org/download/ESP32_GENERIC/):
+
+```
+esptool --chip esp32 --port COM7 erase_flash
+esptool --chip esp32 --port COM7 --baud 460800 write_flash -z 0x1000 ESP32_GENERIC-<version>.bin
+```
+
+`erase_flash` borra todo (incluido un sketch de Arduino o un MicroPython viejo) y `write_flash` graba el intérprete. Si `esptool` no logra conectarse, se mantiene presionado el botón BOOT de la placa mientras empieza a escribir. Al terminar, en Thonny se elige el intérprete "MicroPython (ESP32)" con ese puerto y debe aparecer el `>>>` del REPL.
+
 ## Por qué MicroPython y no Python normal
 
 Python normal, el que corre en una computadora, necesita un sistema operativo completo detrás, con varios megabytes de memoria disponibles y un procesador bastante más potente que el de un microcontrolador. El ESP32 tiene apenas algunos cientos de kilobytes de RAM, así que instalar el Python de una computadora tal cual no es una opción.
@@ -53,17 +69,28 @@ Acá la comparación sí es directa, porque ambos corren en el mismo tipo de har
 
 En resumen, C++ le exige más al chip pero saca más rendimiento de él, mientras que MicroPython le pide al chip que cargue con el peso de un intérprete pero a cambio permite escribir, probar y corregir código muchísimo más rápido, algo especialmente útil al momento de aprender cómo funciona un sensor o un periférico nuevo sin perder tiempo compilando cada intento.
 
-Para ver esta diferencia de velocidad en la práctica basta un montaje simple: tres LEDs (rojo, amarillo y verde) conectados al ESP32, cada uno a un pin distinto.
+Para ver esta diferencia de velocidad en la práctica basta un montaje simple: tres LEDs conectados al ESP32, el rojo en GPIO5, el amarillo en GPIO17 y el verde en GPIO16, cada uno con su resistencia de 220 Ω hacia GND (en Wokwi se pueden omitir, en la protoboard no).
 
 ![Circuito con tres LEDs conectados al ESP32](./circuito-comparacion-leds.png)
 
-Corriendo la misma secuencia de encendido y apagado sobre este circuito, primero escrita en MicroPython y luego en C/C++ vía Arduino, se nota la demora extra que mete el intérprete de MicroPython frente al binario nativo que produce C/C++: el mismo proceso, el mismo hardware, pero un tiempo de respuesta distinto según el lenguaje.
+Una secuencia de semáforo con pausas de medio segundo se ve igual en los dos lenguajes: el intérprete tarda microsegundos por instrucción, mil veces menos que la pausa, así que a simple vista no hay diferencia. La diferencia aparece cuando se mide. Por eso [`semaforo_velocidad.py`](semaforo_velocidad.py) (MicroPython) y [`semaforo_velocidad/semaforo_velocidad.ino`](semaforo_velocidad/semaforo_velocidad.ino) (Arduino) hacen lo mismo en dos partes: primero la secuencia visible del semáforo y después cambian el LED rojo 20 000 veces lo más rápido posible, midiendo el tiempo con el reloj de microsegundos del chip (`time.ticks_us()` en un caso, `micros()` en el otro), e imprimen cuántos microsegundos cuesta cada cambio. El mismo proceso, el mismo hardware y el mismo pin: lo único que cambia es el lenguaje.
+
+```mermaid
+flowchart LR
+    A["Mismo circuito<br/>rojo GPIO5 · amarillo GPIO17 · verde GPIO16"] --> B["Secuencia de semáforo<br/>(pausas de 500-1500 ms)"]
+    B --> C["No se ve diferencia"]
+    A --> D["20 000 cambios del LED rojo<br/>medidos en µs"]
+    D --> E["MicroPython: µs por cambio<br/>(Shell de Thonny)"]
+    D --> F["C/C++: µs por cambio<br/>(Monitor Serie)"]
+```
+
+La versión de MicroPython mide además una variante que guarda el método del pin en una variable local antes del bucle: parte del costo del intérprete no es mover el pin sino buscar el nombre `ROJO.value` en cada vuelta, y esa variante lo deja a la vista.
 
 ## El mismo circuito en Wokwi: C/C++ contra MicroPython
 
 Para ver la diferencia de sintaxis lado a lado, sin depender de tener el hardware físico a mano, [Wokwi](https://wokwi.com) permite simular un ESP32 completo en el navegador, cableado incluido. El montaje de referencia es un display de siete segmentos, con sus siete resistencias de por medio, conectado a siete pines GPIO del ESP32 (17, 16, 32, 33, 25, 14 y 12), uno por cada segmento del display.
 
-Escribiendo exactamente la misma lógica, encender los segmentos necesarios para dibujar el número ocho, en los dos lenguajes que ya se compararon arriba, la diferencia de sintaxis salta a la vista:
+Escribiendo exactamente la misma lógica, encender los segmentos necesarios para dibujar el número dos (segmentos a, b, g, e y d encendidos; c y f apagados), en los dos lenguajes que ya se compararon arriba, la diferencia de sintaxis salta a la vista. El código de las dos capturas está en [`siete_segmentos.py`](siete_segmentos.py) y [`siete_segmentos/siete_segmentos.ino`](siete_segmentos/siete_segmentos.ino), comentado, para pegarlo en Wokwi o grabarlo en la placa:
 
 ![Simulación en Wokwi del mismo circuito programado en C/C++ vía Arduino](wokwi-arduino-c.png)
 
@@ -81,6 +108,7 @@ La guía enlazada desde el [README principal del repositorio](../README.md) es u
 - Se agregó toda la parte conceptual que la guía original no cubre: qué es Thonny, de dónde viene, por qué existe MicroPython como reimplementación de Python y no el Python normal de una computadora.
 - Se agregó la comparación directa contra programar en C/C++ vía Arduino, con el diagrama de los dos caminos posibles y la tabla de ventajas y desventajas de cada uno, algo que la guía original no menciona porque solo se ocupa de dejar el firmware instalado.
 - Se armó el montaje físico de los tres LEDs y se documentó como ejemplo práctico de la diferencia de velocidad entre ambos lenguajes, algo que tampoco existe en el material original.
+- Se escribió la medición de velocidad (`semaforo_velocidad.py` y su versión `.ino`), para que la comparación sea con números y no a ojo.
 - Se agregó una simulación en Wokwi de un display de siete segmentos, con el mismo circuito programado una vez en C/C++ vía Arduino y otra vez en MicroPython, para mostrar la diferencia de sintaxis lado a lado sin depender del hardware físico.
 
 En resumen, la guía original resuelve un problema puntual, dejar MicroPython grabado en una placa distinta; este README parte de ahí para explicar el porqué detrás de esa elección y para generalizarla al ESP32.
@@ -89,4 +117,23 @@ En resumen, la guía original resuelve un problema puntual, dejar MicroPython gr
 
 - **El chip necesita un driver USB-a-serial para que Windows lo reconozca como puerto COM.** La mayoría de placas ESP32 usan un chip CP2102 o CH340 para el puerto USB, y si Windows no tiene el driver correspondiente instalado, el ESP32 no aparece en el Administrador de dispositivos ni en la lista de puertos de Thonny, aunque el cable y la placa estén perfectamente bien.
 - **El soporte de MicroPython en Thonny requiere la versión 3.0 o más nueva del programa.** Versiones más viejas de Thonny, pensadas solo para Python de escritorio, no muestran la opción de intérprete de MicroPython en el menú Ejecutar, así que hay que actualizar Thonny antes de intentar conectarse a la placa.
-- **El firmware y la velocidad de baudios tienen que coincidir en los dos lados.** Si el firmware de MicroPython grabado en el chip no corresponde al modelo exacto de ESP32 (por ejemplo un firmware genérico de ESP32 en una variante S2 o S3), Thonny puede conectarse al puerto pero fallar al intentar hablarle al intérprete, o mostrar errores extraños apenas se corre cualquier código.
+- **El firmware tiene que corresponder al modelo exacto de chip.** Si el firmware de MicroPython grabado en el chip no corresponde al modelo exacto de ESP32 (por ejemplo un firmware genérico de ESP32 en una variante S2 o S3), Thonny puede conectarse al puerto pero fallar al intentar hablarle al intérprete, o mostrar errores extraños apenas se corre cualquier código. La velocidad del puerto, en cambio, no hay que configurarla: MicroPython usa 115200 baudios por USB y Thonny ya la usa sola.
+- **Grabar un sketch desde el Arduino IDE borra MicroPython**, y al revés: después de probar `semaforo_velocidad.ino` hay que reinstalar el firmware (sección de instalación) para volver a Thonny.
+- **Thonny tiene el puerto tomado mientras está conectado**: si el Arduino IDE o cualquier otro programa no puede abrir el COM, primero hay que desconectar Thonny (botón Stop o cerrar el programa).
+
+## Cómo probarlo
+
+**Sin ESP32 conectado**
+
+En [Wokwi](https://wokwi.com) se crea un proyecto "ESP32" (para C/C++) o "MicroPython on ESP32", se arma el circuito (tres LEDs en GPIO5, 17 y 16, o el display de siete segmentos en 17, 16, 32, 33, 25, 14 y 12) y se pega el código de este tema. El siete segmentos debe mostrar un "2". La medición de velocidad también corre en Wokwi, pero sus números no valen para comparar: el simulador no reproduce los tiempos reales del chip.
+
+**Con ESP32 conectado**
+
+1. Con MicroPython instalado, abrir `semaforo_velocidad.py` en Thonny y correrlo con F5: el semáforo hace tres ciclos y la Shell imprime los microsegundos por cambio.
+2. Grabar `semaforo_velocidad/semaforo_velocidad.ino` desde el Arduino IDE (placa "ESP32 Dev Module"), abrir el Monitor Serie a 115200 baudios y presionar EN para ver su medición.
+3. Comparar los dos números. Al terminar, reinstalar MicroPython para seguir con los demás temas.
+
+## Pendiente
+
+- Anotar aquí los microsegundos por cambio medidos en la placa real con cada lenguaje (los dos scripts los imprimen; no se inventaron valores).
+- Foto o video del montaje físico de los tres LEDs en la protoboard.

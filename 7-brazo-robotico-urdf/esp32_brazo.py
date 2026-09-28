@@ -55,6 +55,12 @@ MAPA_TECLAS = [
 
 
 def leer_tecla():
+    # Barrido de filas: se pone en 0 (activa) UNA fila a la vez y el
+    # resto en 1. Si alguna columna se lee en 0, es porque hay una tecla
+    # presionada que une esa columna con la fila activa. Los 4 bits bajos
+    # se escriben en 1 para que el PCF8574 los deje como entradas con
+    # pull-up (asi es como este chip "lee": un pin en 1 que algo externo
+    # puede bajar a 0).
     for fila in range(4):
         filas = 0x0F & ~(1 << fila)
         byte_salida = (filas << 4) | 0x0F
@@ -77,9 +83,25 @@ def limitar(valor, limite):
 # Programa principal
 # ------------------------------------------------------------------
 j1, j2, g = 0.0, 0.0, 0.0
+teclado_ok = True
 
 while True:
-    tecla = leer_tecla()
+    try:
+        tecla = leer_tecla()
+        if not teclado_ok:
+            print("# teclado I2C de nuevo respondiendo")
+            teclado_ok = True
+    except OSError:
+        # El PCF8574 no contesto (cable suelto, direccion distinta de 0x20,
+        # sin alimentacion). En vez de que main.py se caiga con un error,
+        # se avisa UNA vez y se sigue mandando la ultima posicion: el PC
+        # ve este aviso como "ultima linea cruda" y sabe que el problema
+        # es el teclado, no el cable USB. Empieza con "#" para que no se
+        # confunda con una linea de datos.
+        tecla = None
+        if teclado_ok:
+            print("# ERROR: el teclado I2C (0x20) no responde, revisar SDA=21/SCL=22")
+            teclado_ok = False
 
     if tecla == "8":
         j1 = limitar(j1 + PASO_J1, LIM_J1)
@@ -96,5 +118,11 @@ while True:
     elif tecla == "5":
         j1, j2, g = 0.0, 0.0, 0.0
 
+    # Se mandan SIEMPRE las 3 articulaciones (no solo la que cambio): asi
+    # cada linea es autosuficiente y si el PC se pierde una, la siguiente
+    # ya trae la posicion completa. 3 decimales = milimetros/milirradianes,
+    # mas que suficiente para un paso de 0.005.
     print("J1:{:.3f},J2:{:.3f},G:{:.3f}".format(j1, j2, g))
+    # 100 ms por vuelta = 10 pasos por segundo mientras se sostiene una
+    # tecla: con PASO_J1 = 0.05 rad son ~29 grados/s, rapido pero controlable.
     time.sleep(0.1)

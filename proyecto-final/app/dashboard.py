@@ -514,6 +514,17 @@ def cabecera() -> None:
             '<div class="aviso ambar">No hay datos todavía. Abra <b>visor.bat</b> (arranca todo) o, en una '
             "terminal, <code>python -m app.lanzar</code>.</div>", unsafe_allow_html=True)
         return
+    from sim.carga_escenarios import prueba_de_un_filtro
+
+    prueba = prueba_de_un_filtro(tel.get("escenario") or "")
+    if prueba:
+        piezas = consulta("SELECT causa FROM elementos WHERE veredicto != 'vacia'")
+        bien = int((piezas["causa"] == prueba["causa"]).sum()) if len(piezas) else 0
+        st.markdown(
+            f'<div class="aviso ambar"><b>🧪 Prueba de un filtro: {prueba["nombre"]}</b> ({prueba["estacion"]}). '
+            f'{prueba["espera"]} Van {len(piezas)} piezas decididas; {bien} rechazadas por '
+            f'<code>{prueba["causa"]}</code>' + ("." if bien == len(piezas) else " (<b>ojo: otras causas</b>).")
+            + "</div>", unsafe_allow_html=True)
     if not viva:
         hora = datetime.fromisoformat(tel["ts"])
         st.markdown(
@@ -563,6 +574,27 @@ def barra_control() -> None:
                      help="Detiene todo donde está. Para salir: empezar una corrida nueva."):
             enviar({"cmd": "paro"}, "Paro de emergencia")
         respuesta_orden()
+
+        # Usuario, 2026-09-27: los filtros se prueban UNO POR UNO en la sustentacion. Cada prueba es
+        # un escenario de un solo filtro (los mismos de las pruebas automaticas).
+        from sim.carga_escenarios import PIEZAS, PRUEBAS_DE_UN_FILTRO
+
+        st.markdown("### Probar un filtro")
+        prueba = st.selectbox("Filtro", PRUEBAS_DE_UN_FILTRO, format_func=lambda p: f"{p['estacion']} · {p['nombre']}",
+                              key="prueba_filtro", label_visibility="collapsed")
+        st.caption(prueba["espera"])
+        if st.button("🧪 Probar solo este filtro", width="stretch",
+                     help="Empieza una corrida nueva con piezas que SOLO este filtro debe rechazar."):
+            enviar({"cmd": "iniciar", "escenario": prueba["escenario"]}, f"Prueba de un filtro: {prueba['nombre']}")
+
+        st.markdown("### Colocar una pieza")
+        pieza = st.selectbox("Pieza", list(PIEZAS), format_func=lambda k: PIEZAS[k]["nombre"], key="pieza",
+                             label_visibility="collapsed")
+        if st.button("⬇ Ponerla en la próxima carga", width="stretch",
+                     disabled=tel.get("linea") not in ("corriendo", "terminada"),
+                     help="Como si el operador la pusiera a mano en la casilla de carga: entra antes que lo que "
+                          "falta de la corrida (si la corrida terminó, sigue solo para procesarla)."):
+            enviar({"cmd": "colocar", "pieza": pieza}, f"{PIEZAS[pieza]['nombre']}: a la carga")
 
         st.markdown("### Cómo trabaja")
         velocidad = st.select_slider(

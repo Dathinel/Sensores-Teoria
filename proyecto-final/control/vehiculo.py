@@ -339,6 +339,13 @@ class ControlCarro:
         self.libre_mm = v["distancia_libre_mm"]
         self.margen = v["margen_evasion_mm"] / 1000
         self.margen_pasar = v.get("margen_pasar_muro_mm", v["margen_evasion_mm"]) / 1000
+        # Reversa al muelle con tiempo limite (se vio 35 s trabado en la boca,
+        # avanzando de a milimetros): ver la accion "reversa_tope".
+        self.reversa_max_s = v.get("reversa_tope_max_s", 15.0)
+        self.reversa_sin_avance_s = v.get("reversa_tope_sin_avance_s", 3.0)
+        self.reversa_avance_min = v.get("reversa_tope_avance_min_mm", 20) / 1000
+        self.reversa_salida = v.get("reversa_tope_salida_mm", 150) / 1000
+        self.reversa_fuerte_extra = v.get("reversa_tope_pwm_normal_mm", 50) / 1000
         self.ang_regreso = math.radians(v.get("angulo_regreso_grados", 45))
         self.largo_linea = largo_linea_m
         self.muro_medio_ancho = v.get("_muro_largo_mm", 100) / 2000
@@ -1048,25 +1055,64 @@ class ControlCarro:
                 self._objetivo = [v - w * self.via / 2, v + w * self.via / 2]
 
         elif t == "reversa_tope":
-            self.pwm_bajo = True
             # De reversa al muelle: las guias en V lo centran y los topes lo
             # paran. Llego cuando las ruedas dejan de dar pulsos contra el tope.
             # Derecho con los encoders solo hasta la boca del muelle; adentro
             # manda la guia: si el control peleara por mantener el rumbo, el
             # carro se trabaria torcido contra ella (se vio en la simulacion).
-            corr = 2.0 * (di - dd) if abs((di + dd) / 2) < 0.25 else 0.0
+            # `previo`: lo que ya retrocedio en el intento anterior (menos la
+            # salida hacia adelante), para medir siempre desde la misma marca.
+            atras = abs((di + dd) / 2) + a.get("previo", 0.0)
+            # PWM bajo: contra el tope el motor se ahoga antes de que la llanta
+            # patine. En el reintento va con el PWM normal hasta pasar el punto
+            # donde se trabo (con el bajo no alcanza a correr el rodillo por la
+            # guia en V) y vuelve al bajo antes de llegar al tope.
+            self.pwm_bajo = atras >= a.get("fuerte_hasta", 0.0)
+            corr = 2.0 * (di - dd) if atras < 0.25 else 0.0
             v = -0.04
             self._objetivo = [v - corr, v + corr]
             a["quieto"] = 0.0 if self._movio else a["quieto"] + dt
             # Solo cuenta como llegada si ya hizo casi toda la reversa (desde la
             # marca de giro son ~44 cm): trabado antes = no llego.
-            hecho = abs((di + dd) / 2) > 0.25 and a["quieto"] > 0.6
+            hecho = atras > 0.25 and a["quieto"] > 0.6
+            # Tiempo limite: en total (`reversa_tope_max_s`) y sin avanzar
+            # (menos de `reversa_tope_avance_min_mm` en `reversa_tope_sin_avance_s`,
+            # sin estar ya a fondo). Un pulso suelto cada tanto (trabado contra
+            # la guia, avanzando de a milimetros) no cuenta como avanzar.
+            a["t"] = a.get("t", 0.0) + dt
+            if atras - a.get("marca", 0.0) >= self.reversa_avance_min:
+                a["marca"], a["t_marca"] = atras, 0.0
+            else:
+                a["t_marca"] = a.get("t_marca", 0.0) + dt
+            trabado = not hecho and (a["t"] > self.reversa_max_s
+                                     or (atras <= 0.25 and a["t_marca"] > self.reversa_sin_avance_s))
             if hecho:
                 self._objetivo = [0.0, 0.0]
                 self._cmd = [0.0, 0.0]
                 self.pwm_bajo = False
-            elif abs((di + dd) / 2) > 0.6:
+            elif abs(atras) > 0.6:
+                self.pwm_bajo = False
                 self._acciones = [{"tipo": "error", "motivo": "no_llego_al_tope"}]
+                return
+            elif trabado:
+                self.pwm_bajo = False
+                if a.get("reintento"):
+                    # Segundo intento tambien trabado: se detiene y avisa.
+                    self._acciones = [self._parar(), {"tipo": "error", "motivo": "no_llego_al_tope"}]
+                    return
+                # Primer intento: sale derecho hacia adelante y vuelve a entrar
+                # de reversa UNA vez; lo que seguia (quedar esperando la carga)
+                # se conserva. Se endereza sobre la linea (como tras la media
+                # vuelta): trabado, la guia lo dejo torcido, y salir con los
+                # pulsos repetiria el mismo angulo y la misma trabada.
+                self._evento("reversa_reintento", retrocedido_m=round(atras, 3), tiempo_s=round(a["t"], 1))
+                salida = self.reversa_salida
+                self._acciones[0:1] = [self._parar(), {"tipo": "alinear", "centrado": 0},
+                                       {"tipo": "seguir_corto", "distancia": salida, "v": self.v_maniobra / 3},
+                                       self._parar(),
+                                       {"tipo": "reversa_tope", "hecho": 0.0, "quieto": 0.0, "reintento": True,
+                                        "previo": max(0.0, atras - salida),
+                                        "fuerte_hasta": atras + self.reversa_fuerte_extra}]
                 return
 
         elif t == "reversa":

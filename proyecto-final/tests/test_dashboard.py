@@ -112,3 +112,24 @@ def test_con_internet_no_hay_aviso_de_internet(monkeypatch, tmp_path):
     monkeypatch.setattr(asistente, "hay_internet", lambda *a, **k: True)
     texto = " ".join(m.value for m in _correr(monkeypatch, ruta).markdown)
     assert "con internet" in texto and "📴 SIN INTERNET" not in texto
+
+
+def test_una_prueba_de_un_filtro_se_anuncia_con_su_resultado(monkeypatch, tmp_path):
+    from app import asistente
+    from app.configuracion import cargar_parametros
+
+    p = cargar_parametros()
+    p["simulacion"]["carro"] = "reemplazo"
+    p["simulacion"]["errores_sensores"] = False
+    s = Supervisor(tmp_path / "f.db", parametros=p)
+    s.aplicar_orden({"cmd": "iniciar", "escenario": "no_metalico"})
+    for _ in range(300):
+        if s.estado_linea == TERMINADA:
+            break
+        s.vuelta()
+    s.conexion.close()
+    monkeypatch.setattr(asistente, "hay_internet", lambda *a, **k: True)
+    at = _correr(monkeypatch, tmp_path / "f.db")
+    texto = " ".join(m.value for m in at.markdown)
+    assert "Prueba de un filtro: Material: no metálico" in texto and "otras causas" not in texto
+    assert [b.label for b in at.button if "Probar solo este filtro" in b.label]

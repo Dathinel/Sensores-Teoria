@@ -10,19 +10,19 @@ Taller de tres puntos asignado por el profesor (el enunciado de cada punto está
 
 | Tecla | a) Drones | b) Brazo KUKA | c) Laikago |
 |---|---|---|---|
-| 8 / 2 | +Y / −Y | efector +Y / −Y | 8 sostenida: trotar |
-| 4 / 6 | −X / +X | efector −X / +X | girar un paso (detiene el trote antes) |
+| 8 / 2 | +Y / −Y | efector +Y / −Y | 8 sostenida: trotar (al soltar frena con rampa) |
+| 4 / 6 | −X / +X | efector −X / +X | 4 / 6 sostenidas: girar a la izquierda / derecha (frena el trote antes) |
 | 9 / 7 | subir / bajar (no pasa del suelo) | efector +Z / −Z | — |
 | 5 | congelar donde está | volver a la pose inicial | reiniciar el robot |
 | A / B / C | ir al waypoint A, B o C | A: abrir pinza · B: demo recorrer los 3 ejes · C: cerrar y agarrar | — |
 | D | volver al origen | demo: coger el cubo y llevarlo | — |
 | \* / # | despegar / aterrizar | — | — |
-| 0 | — | soltar y reponer el cubo | — |
+| 0 | misión automática A → B → C | soltar y reponer el cubo | — |
 
 Waypoints del punto a): A = (0,0; 0,9; 1,2) m, B = (1,4; −0,6; 1,6) m, C = (−1,3; 0,4; 0,9) m.
 
 ### [Punto a) Drones: mover entre 3 puntos A, B y C](./punto-a-drones-waypoints)
-Un dron (con otros dos siguiéndolo en formación) se mueve entre tres waypoints con movimiento fluido, controlado por teclado: jog manual para posicionarlo a mano o saltos directos a los puntos A/B/C.
+Cinco drones en formación en V vuelan con física real (gravedad + la fuerza de los 4 motores de cada uno, con un control en cascada como el de gym-pybullet-drones) entre tres waypoints, controlados por teclado: jog manual, saltos directos a los puntos A/B/C o la misión automática A → B → C.
 
 ### [Punto b) Brazo robótico tipo Baxter: mover, posicionar y coger un objeto](./punto-b-brazo-tipo-baxter)
 Un brazo robótico (control por cinemática inversa, la misma técnica de `baxter_ik_demo.py`) se mueve con el teclado en X/Y/Z y puede coger un cubo de una bandeja y llevarlo a otro punto, ya sea a mano (abrir/cerrar pinza) o con dos demos de un solo botón (coger y mover el cubo, o recorrer los 3 ejes).
@@ -61,19 +61,19 @@ flowchart TD
 
     subgraph PC["PC — un script u otro segun el punto a probar"]
         Recibe["pyserial<br/>lee linea por linea, sin bloquear"] --> Config{"Que script<br/>esta corriendo?"}
-        Config -->|"drones_pybullet.py"| Drones["Config. A: jog XYZ<br/>+ saltos a puntos A/B/C"]
+        Config -->|"drones_pybullet.py"| Drones["Config. A: jog XYZ + saltos a A/B/C<br/>+ mision A→B→C"]
         Config -->|"brazo_pybullet.py"| Brazo["Config. B: jog XYZ del efector<br/>+ abrir/cerrar pinza + 2 demos"]
-        Config -->|"laikago_pybullet.py"| Patas["Config. C: caminar (sostener)<br/>+ girar izquierda/derecha"]
+        Config -->|"laikago_pybullet.py"| Patas["Config. C: caminar (sostener, con rampa)<br/>+ girar izquierda/derecha"]
     end
 
-    Drones --> SimDrones["PyBullet: dron lider + 2 seguidores"]
+    Drones --> SimDrones["PyBullet: 5 drones en V<br/>(fisica real: gravedad + 4 motores c/u)"]
     Brazo --> SimBrazo["PyBullet: brazo KUKA + pinza + cubo"]
     Patas --> SimPatas["PyBullet: laikago + trote CPG<br/>(fisica real, sin gait grabado)"]
 ```
 
 ## Cómo probarlo
 
-Cada punto tiene su propio script (ver su README para el detalle completo), pero comparten el mismo entorno virtual y el mismo firmware de ESP32:
+Cada punto tiene su propio script (ver su README para el detalle completo), pero comparten el mismo entorno virtual y el mismo firmware de ESP32. Si no encuentran el ESP32, los tres siguen funcionando con los botones de la ventana.
 
 **Sin ESP32 conectado:**
 1. Activar el entorno: `entorno\Scripts\activate` (ya trae `pybullet`, `pyserial` y `numpy`).
@@ -81,8 +81,8 @@ Cada punto tiene su propio script (ver su README para el detalle completo), pero
 
 **Con ESP32 conectado:**
 1. Guardar `esp32_teclado.py` como `main.py` en el ESP32 (con Thonny, por ejemplo) — un solo teclado matricial 4x4 por I2C, dirección `0x20`, igual que en los temas 7 y 8 (`SDA`→`GPIO21`, `SCL`→`GPIO22`).
-2. Ajustar `PUERTO_SERIAL` dentro del script que se vaya a correr, según el puerto COM que aparezca en el Administrador de dispositivos.
-3. Correr el script del punto que se quiera probar. El mismo teclado, sin reprogramar nada, sirve para las tres simulaciones — solo cambia qué script de Python está escuchando.
+2. Indicar el puerto COM que aparezca en el Administrador de dispositivos: en los drones con `python punto-a-drones-waypoints\drones_pybullet.py --puerto COM5`; en el brazo y el Laikago, cambiando `PUERTO_SERIAL` al principio del script.
+3. Correr el script del punto que se quiera probar. El mismo teclado, sin reprogramar nada, sirve para las tres simulaciones — solo cambia qué script de Python está escuchando. Cada ventana muestra la última línea cruda que llegó del ESP32: si nunca cambia, el ESP32 no está mandando nada; si cambia pero no dice `TECLA:x`, es un problema de formato y no de cable.
 
 ## Pendiente
 

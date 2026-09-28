@@ -76,6 +76,18 @@ Qué se ve:
 
 ![Dashboard, pestaña Carro y ruta: mapa, odometría y órdenes al carro](docs/capturas/dashboard-carro-y-ruta.png)
 
+**Los filtros, uno por uno.** El enunciado dice que en la sustentación cada filtro se prueba por
+separado. Además de la corrida normal, el dashboard (barra lateral, "Probar un filtro") y el visor
+(panel En vivo) corren **la prueba de un solo filtro**: material, diámetro fuera de rango, no
+circular, perforado, no reconocida o incoherente, cada una con piezas que SOLO ese filtro debe
+rechazar (son los mismos escenarios de las pruebas automáticas, así que lo que se muestra es lo que
+está probado). Arriba sale qué se espera y cuántas piezas ya rechazó por esa causa. En el visor,
+pestaña **Sensores**, cada sensor tiene su botón **"Ver la prueba de este sensor"**: manda la prueba
+que hace trabajar solo a ese sensor (un filtro, un sabotaje, una orden al carro) y la cámara se queda
+mirándolo. Y con **"Colocar una pieza"** se pone a mano en la próxima carga la que uno quiera: una
+moneda de cada denominación y familia, una de 1 euro, un botón de plástico o metálico, un bloque, un
+disco de 10 mm o una cara de $500 con otro diámetro.
+
 **Nunca se confunde una demo con lo real.** El visor muestra arriba "DEMO GRABADA" o "SIN CONEXIÓN
 CON LA SIMULACIÓN" cuando no está en vivo, y al lado de los ticks un chip "con internet" / "SIN
 INTERNET" (sin red, la nube de DeepSeek se pone gris). El dashboard dice de dónde salen los datos
@@ -650,6 +662,38 @@ sin aprobarla) están en [`docs/costos.md`](docs/costos.md), generado desde `con
   modelo local y las reglas sí están probados.
 - Las fotos y el video del montaje físico se agregan cuando exista.
 
+**Falta, en documentación y software** (de la revisión final del 2026-09-27):
+
+- **Entregable 1:** un documento de arquitectura con los requerimientos funcionales y no funcionales
+  y un diagrama de bloques por módulo (hoy está repartido en este README, `CLAUDE.md` y
+  `docs/revision-final.md`).
+- **Entregable 2:** planos acotados (vistas del modelo 3D con medidas) y un esquema eléctrico
+  dibujado; hoy el conexionado está pin a pin en [`docs/conexiones.md`](docs/conexiones.md) y en el
+  visor, pero no como esquema.
+- **Pestaña de Inspección** del dashboard con la última foto y el contorno detectado: llega con el
+  procesamiento de imagen.
+- Con el backend real, la línea automática espera la visión real (hoy en real hay monitoreo, prueba
+  de actuadores y órdenes al carro).
+
+**Para el día de la sustentación:** correr `python -m app.chequeo` antes de empezar; presentar en el
+mismo portátil (las versiones exactas están en `requirements-lock.txt`); hacerle una pregunta de
+calentamiento al modelo local; empezar una corrida nueva. Y llevar preparado el argumento de lo
+inalámbrico: el PC habla con el ESP32 fijo por USB y lo inalámbrico es ESP-NOW entre las dos placas
+(ver [`CLAUDE.md`](CLAUDE.md), sección 15), que no depende del router del salón.
+
+## Instalar en otro PC
+
+Doble clic en **`instalar.bat`** (una vez, con internet): crea el entorno `entorno` con las versiones
+exactas con las que se probó (`requirements-lock.txt`, Python 3.14), arma el firmware una vez (baja
+el driver del VL53L0X), prepara el modelo local si está Ollama, descarga Whisper para la voz sin
+internet y corre el chequeo. Después, `visor.bat`.
+
+`python -m app.chequeo` revisa sin cambiar nada todo lo que puede fallar (versiones, puertos, Ollama,
+Whisper, voz de Windows, internet, clave de DeepSeek, ESP32 conectados, driver del firmware, base de
+datos, visor portable) y dice cómo arreglar cada cosa. Para la visión real están listos
+[`vision/capturar_dataset.py` y `vision/entrenar.py`](vision/README.md) (fotos del montaje y
+entrenamiento con matriz de confusión y curva de confianza).
+
 ## Documentación
 
 - [`docs/paso-a-paso.md`](docs/paso-a-paso.md): los 17 puntos del funcionamiento, con qué sensor usa
@@ -678,6 +722,8 @@ fuentes: no se editan a mano.
 
 ```
 visor.bat              abre el visor y el dashboard (y arranca la simulación si hace falta)
+instalar.bat           deja todo listo en un PC nuevo (entorno, firmware, Ollama, Whisper, chequeo)
+requirements-lock.txt  versiones exactas con las que se probó
 visor-portable.html    el visor en un solo archivo, con la demo (generado: python -m app.portable)
 config/                parametros.yaml (todo número del diseño), monedas.yaml, precios.yaml
 control/               lógica pura, sin PyBullet ni pyserial: línea, embalaje, reglas,

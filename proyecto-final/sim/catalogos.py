@@ -51,7 +51,7 @@ CATALOGO_SENSORES = [
     },
     {
         "numero": 4, "id": "camara", "nombre": "Cámara cenital", "subsistema": "cinta de monedas",
-        "estacion": "E5 · Visión", "modelo": "Webcam USB 1080p + anillo de luz difusa",
+        "estacion": "E3 · Visión", "modelo": "Webcam USB 1080p + anillo de luz difusa",
         "fenomeno": "Imagen de la moneda sobre la cinta negra (fondo de contraste). En la misma imagen "
                     "se ven los separadores de la casilla: con eso se mide si la cinta quedó en su lugar "
                     "(reemplaza al sensor de ranura, grupo 2026-09-25).",

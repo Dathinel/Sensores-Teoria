@@ -58,8 +58,10 @@ sequenceDiagram
         PC->>PC: actualiza el estado guardado
         PC->>ESP: "10" / "01" / "11" / "00"
         ESP->>LEDs: enciende o apaga<br/>segun cada caracter
+        ESP-->>PC: "OK 10" (confirmación)
     else el JSON trae show
         PC->>ESP: "SHOW"
+        ESP-->>PC: "OK SHOW"
         ESP->>ESP: guarda el estado actual de los LEDs
         ESP->>LEDs: alterna rojo y azul 6 veces
         ESP->>LEDs: restaura el estado guardado
@@ -141,15 +143,22 @@ Si ninguna de las tres aparece, la respuesta es un JSON vacío, `aplicar_comando
 
 - **`escuchar_comando()`**: abre el micrófono con `sr.Microphone()`, ajusta el umbral de ruido ambiente con `adjust_for_ambient_noise` y graba con `listen()` hasta que detecta que la persona dejó de hablar. Manda ese audio a `recognize_google(audio, language="es-CO")`, que lo transcribe usando el servicio gratuito de Google. Si no logra entender nada devuelve `None`, y si el servicio no responde por falta de conexión, también.
 - **`interpretar_comando(texto)`**: arma la petición a la API de DeepSeek con dos mensajes, el `PROMPT_SISTEMA` fijo que define las reglas del JSON y el texto transcrito como mensaje del usuario, usando `response_format={"type": "json_object"}` para forzar una respuesta en JSON válido. Devuelve ese JSON ya convertido a diccionario de Python con `json.loads`.
+- **`interpretar_por_reglas(texto)`**: plan B por palabras clave (show/espectáculo, enciende/prende/activa, apaga/desactiva, rojo, azul, los dos). Solo se usa si no hay clave de DeepSeek en el `.env` o si la consulta a la API falla (sin internet, clave revocada), para que el resto de la cadena se pueda seguir probando; es mucho más rígido que el modelo y el script avisa en pantalla cuando lo está usando.
+- **`validar(datos)`**: deja pasar del JSON solo las tres claves de la lista blanca y solo si su valor es un booleano de verdad. Un modelo de lenguaje puede equivocarse de formato, y nada que no sea exactamente lo esperado debe llegar a mover un pin.
 - **`aplicar_comando(datos)`**: revisa primero si vino `show`; si sí, manda `"SHOW"` y termina ahí. Si no, actualiza el diccionario `estado` solo con las claves que sí llegaron, arma la línea de dos caracteres a partir de ese estado completo y la manda por el puerto serial.
-- **El bucle en `if __name__ == "__main__"`**: queda esperando que se presione Enter para grabar, permite escribir `salir` para terminar, y encadena las tres funciones anteriores una detrás de otra en cada vuelta.
+- **`enviar(linea)` y `leer_respuestas_esp32()`**: la primera escribe la orden con su `
+` final (el ESP32 lee con `readline()`) o, si no hay ESP32, solo la muestra en pantalla. La segunda lee todo lo que el ESP32 haya contestado, pero solo si `in_waiting` indica que ya hay bytes esperando, así nunca se queda bloqueada, y muestra cada línea cruda como `ESP32 dice: OK 10`.
+- **El bucle en `if __name__ == "__main__"`**: con Enter vacío graba por el micrófono; si en cambio se escribe una frase, se usa tal cual como si fuera la transcripción (sirve sin micrófono o en un salón ruidoso); `salir` termina. En cada vuelta encadena interpretar, validar y aplicar.
+
+Al arrancar, el script intenta abrir el puerto serial dentro de un `try/except serial.SerialException`: si el ESP32 no está conectado (o Thonny tiene el puerto abierto), no se detiene, sigue funcionando y muestra `[sin ESP32] se habría enviado: 10` en vez de mandarlo. Lo mismo con el micrófono: si falta `pyaudio` o no hay micrófono, se pasa a escribir los comandos.
 
 ### `esp32_voz.py`, guardado como `main.py` en el ESP32
 
 - **Configuración de pines** (`Pin(25, Pin.OUT)`, `Pin(26, Pin.OUT)`): declara los dos GPIO como salidas y los apaga de entrada, para no arrancar con un estado indefinido.
 - **`select.poll()` sobre `sys.stdin`**: igual que revisar un buzón sin quedarse pegado esperando, `sondeo.poll(100)` pregunta cada 100 milisegundos si llegó algo nuevo por el puerto serial, sin bloquear el resto del programa mientras no hay nada.
 - **`hacer_show()`**: lee el valor actual de cada pin con `.value()` y lo guarda, alterna rojo y azul seis veces con una pausa de 0.2 segundos entre cada cambio usando `time.sleep(0.2)`, y al final vuelve a poner cada pin en el valor que tenía guardado, para no perder el estado previo.
-- **El bucle principal**: por cada línea que llega revisa primero si es exactamente `"SHOW"`, y si no, si tiene el formato de dos caracteres `"0"`/`"1"` esperado; cualquier otra cosa se ignora en silencio, sin intentar interpretar mensajes corruptos o incompletos.
+- **El bucle principal**: por cada línea que llega revisa primero si es exactamente `"SHOW"`, y si no, si tiene el formato de dos caracteres `"0"`/`"1"` esperado; cualquier otra cosa se ignora, sin intentar interpretar mensajes corruptos o incompletos.
+- **Las respuestas**: después de cada orden el ESP32 contesta por el mismo cable `OK 10`, `OK SHOW` (antes de empezar la secuencia, para que la PC no espere los 2.4 segundos) o `IGNORADO <línea>`. Esa última línea cruda es el diagnóstico más útil cuando "no pasa nada": si nunca aparece, el ESP32 no está corriendo `main.py` o el puerto es otro; si aparece `IGNORADO`, el cable está bien y el problema es de formato.
 
 ## Qué se modificó frente al material original
 
@@ -191,7 +200,13 @@ pip install pipwin
 pipwin install pyaudio
 ```
 
-## Cómo correrlo
+## Cómo probarlo
+
+**Sin ESP32 conectado**
+
+Con el entorno activado, `python comando_voz.py` arranca igual aunque no haya nada en el puerto: avisa que no pudo abrir el puerto serial y desde ahí muestra en pantalla la orden que habría mandado. Se puede escribir la frase directamente (`enciende el rojo`, `prende los dos`, `haz un show de luces`, `apaga el azul`) en vez de hablar, y si todavía no hay clave de DeepSeek en el `.env`, el script lo dice y usa el intérprete por palabras clave. Así se prueba toda la cadena frase → JSON → orden sin el hardware, y con la clave puesta, también la parte del modelo de lenguaje.
+
+**Con ESP32 conectado**
 
 Con el ESP32 conectado por USB, se abre el archivo esp32_voz.py de esta carpeta en Thonny y se guarda directamente en el dispositivo con el nombre main.py, para que se ejecute automáticamente cada vez que el ESP32 se reinicie o se conecte a la energía. Guardado ese archivo, hay que cerrar la conexión de Thonny con el dispositivo, porque el puerto serial solo puede estar abierto por un programa a la vez, y el siguiente paso necesita ese mismo puerto libre para la computadora.
 
@@ -201,7 +216,7 @@ Del lado de la computadora, con el entorno virtual activado y el archivo .env ya
 python comando_voz.py
 ```
 
-El script queda esperando a que se presione Enter para empezar a escuchar por el micrófono. Al decir el comando en voz alta, en cuanto se detecta que la persona dejó de hablar la grabación se corta sola y arranca el proceso completo, primero la transcripción, después la consulta a la API de DeepSeek, y finalmente el envío de la orden resultante al ESP32. Todo ese recorrido toma normalmente uno o dos segundos, la mayor parte del tiempo consumida por la respuesta de la API, así que el encendido del LED no es instantáneo pero sí bastante rápido para tratarse de una cadena que pasa por dos servicios en internet antes de llegar al chip.
+El script queda esperando a que se presione Enter para empezar a escuchar por el micrófono. Al decir el comando en voz alta, en cuanto se detecta que la persona dejó de hablar la grabación se corta sola y arranca el proceso completo, primero la transcripción, después la consulta a la API de DeepSeek, y finalmente el envío de la orden resultante al ESP32, que contesta con una línea `OK 10`, `OK SHOW` o `IGNORADO ...` que el script muestra como `ESP32 dice: ...`. Todo ese recorrido toma normalmente uno o dos segundos, la mayor parte del tiempo consumida por la respuesta de la API, así que el encendido del LED no es instantáneo pero sí bastante rápido para tratarse de una cadena que pasa por dos servicios en internet antes de llegar al chip.
 
 ## Problemas encontrados
 
@@ -237,3 +252,6 @@ La misma lógica (frase → DeepSeek → JSON de intención → validar → actu
 [proyecto final](../proyecto-final/app/asistente.py): ahí el JSON trae una respuesta con los datos de
 la planta y órdenes para el carro, y pasa por una lista blanca antes de ejecutar nada.
 
+## Pendiente
+
+Nada del montaje físico: los gifs de la demostración ya están arriba. Se hicieron pruebas adicionales del flujo completo (frase, intención, orden y respuesta del ESP32) sin el hardware conectado.

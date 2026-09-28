@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Detección a LEDs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1013; --panel: #15191d; --panel-border: #262b31;
+    --text: #e7e9ec; --text-muted: #8b929b;
+    --amarillo: #e8b930; --azul: #4f8fce; --rojo: #d9534f; --verde-ok: #4caf7d;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: "Space Grotesk", system-ui, sans-serif; }
+  body { padding: 1.1rem 1rem; min-height: 100vh; }
+  .encabezado { max-width: 1200px; margin: 0 auto 0.9rem; display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  h1 { font-size: 1.25rem; font-weight: 600; margin: 0; }
+  .encabezado p { margin: 0.15rem 0 0; color: var(--text-muted); font-size: 0.8rem; }
+  .mono, button, select { font-family: "IBM Plex Mono", monospace; }
+  button, select { background: transparent; color: var(--text); border: 1px solid var(--panel-border); padding: 0.45rem 0.8rem; border-radius: 4px; font-size: 0.76rem; cursor: pointer; }
+  select { background: var(--panel); }
+  button:hover { border-color: var(--verde-ok); color: var(--verde-ok); }
+  button.activo { border-color: var(--amarillo); color: var(--amarillo); }
+  .rejilla { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1.3fr 1fr; gap: 0.9rem; align-items: start; }
+  @media (max-width: 860px) { .rejilla { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 6px; padding: 0.9rem; min-width: 0; }
+  .panel h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin: 0 0 0.7rem; font-weight: 600; }
+  .fila { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.6rem; }
+  .video { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #000; border-radius: 4px; overflow: hidden; }
+  .video video, .video canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  .video .vacio { position: absolute; inset: 0; display: grid; place-items: center; color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 1rem; }
+  .leds { display: flex; gap: 1.6rem; justify-content: center; padding: 0.8rem 0 1rem; }
+  .led { text-align: center; font-size: 0.75rem; color: var(--text-muted); }
+  .bombillo { width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 0.4rem; border: 2px solid var(--panel-border); background: #1e2328; transition: background 0.1s, box-shadow 0.1s; }
+  .led.l1.on .bombillo { background: var(--rojo); box-shadow: 0 0 22px var(--rojo); }
+  .led.l2.on .bombillo { background: var(--verde-ok); box-shadow: 0 0 22px var(--verde-ok); }
+  .dato { font-size: 0.78rem; color: var(--text-muted); margin: 0.25rem 0; }
+  .dato b { color: var(--text); font-weight: 500; }
+  .monitor { background: #0a0c0e; border: 1px solid var(--panel-border); border-radius: 4px; height: 190px; overflow-y: auto; padding: 0.5rem; font-size: 0.72rem; line-height: 1.45; white-space: pre-wrap; word-break: break-all; }
+  .tx { color: var(--azul); } .rx { color: var(--verde-ok); } .sis { color: var(--text-muted); }
+  .barra { height: 6px; background: #1e2328; border-radius: 3px; overflow: hidden; margin-top: 0.3rem; }
+  .barra div { height: 100%; background: var(--amarillo); width: 0; }
+</style>
+</head>
+<body>
+<header class="encabezado">
+  <div>
+    <h1>Detección de objetos → LEDs del ESP32</h1>
+    <p>Mismo protocolo que <span class="mono">deteccion_pc.py</span>: una línea "10"/"01"/"11"/"00" por cambio y cada 500 ms; el ESP32 apaga todo tras 2000 ms sin mensajes.</p>
+  </div>
+  <div class="fila" style="margin:0">
+    <select id="selPar">
+      <option value="silla">silla (GPIO25) · celular (GPIO26)</option>
+      <option value="carro">carro (GPIO25) · moto (GPIO26)</option>
+    </select>
+    <button id="btnConectar">Conectar ESP32 (Web Serial)</button>
+  </div>
+</header>
+
+<main class="rejilla">
+  <section class="panel">
+    <h2>Detección</h2>
+    <div class="fila">
+      <button id="btnObj1">objeto 1 en cuadro</button>
+      <button id="btnObj2">objeto 2 en cuadro</button>
+      <button id="btnCamara">Usar cámara (COCO-SSD)</button>
+    </div>
+    <div class="video">
+      <video id="video" playsinline muted></video>
+      <canvas id="lienzo"></canvas>
+      <div class="vacio" id="vacio">Sin cámara: usa los dos botones de arriba para simular lo que vería YOLO.<br>Con la cámara, un detector COCO (las mismas 80 clases que YOLOv8) corre en el navegador.</div>
+    </div>
+    <p class="dato">Mensaje actual: <b id="txtEstado" class="mono">00</b> · detectado: <b id="txtDetectado">nada</b></p>
+  </section>
+
+  <section class="panel">
+    <h2>ESP32 <span id="txtModo">(simulado)</span></h2>
+    <div class="leds">
+      <div class="led l1" id="led1"><div class="bombillo"></div><span id="nomLed1">LED silla · GPIO25</span></div>
+      <div class="led l2" id="led2"><div class="bombillo"></div><span id="nomLed2">LED celular · GPIO26</span></div>
+    </div>
+    <p class="dato">Tiempo desde el último mensaje (límite 2000 ms):</p>
+    <div class="barra"><div id="barra"></div></div>
+    <div class="fila" style="margin-top:0.7rem">
+      <button id="btnCortar">Simular cable desconectado</button>
+    </div>
+    <h2 style="margin-top:0.6rem">Monitor serial</h2>
+    <div class="monitor mono" id="monitor"></div>
+  </section>
+</main>
+
+<script>
+// ----- Configuración: los mismos números que deteccion_pc.py / esp32_leds.py -----
+const REENVIO_MS = 500;          // el PC repite el estado aunque no cambie
+const TIEMPO_LIMITE_MS = 2000;   // apagado de seguridad del ESP32
+const CONFIANZA_MINIMA = 0.4;
+const PARES = { silla: ["chair", "cell phone"], carro: ["car", "motorcycle"] };
+const NOMBRES = { chair: "silla", "cell phone": "celular", car: "carro", motorcycle: "moto" };
+
+let objetivos = PARES.silla;
+let manual = [false, false];          // botones de modo prueba
+let deCamara = null;                  // [bool, bool] cuando la cámara está activa
+let estadoAnterior = null, ultimoEnvio = 0, cortado = false;
+// ESP32 simulado
+let simLeds = "00", simUltimo = performance.now(), simAvisado = true;
+// Web Serial
+let puerto = null, escritor = null;
+let ultimoRx = performance.now();
+
+const $ = (id) => document.getElementById(id);
+function log(texto, clase) {
+  const m = $("monitor"), l = document.createElement("div");
+  l.className = clase; l.textContent = texto; m.appendChild(l);
+  while (m.childNodes.length > 200) m.removeChild(m.firstChild);
+  m.scrollTop = m.scrollHeight;
+}
+
+function pintarLeds(estado) {
+  $("led1").classList.toggle("on", estado[0] === "1");
+  $("led2").classList.toggle("on", estado[1] === "1");
+}
+
+function actualizarNombres() {
+  const n1 = NOMBRES[objetivos[0]], n2 = NOMBRES[objetivos[1]];
+  $("btnObj1").textContent = n1 + " en cuadro";
+  $("btnObj2").textContent = n2 + " en cuadro";
+  $("nomLed1").textContent = "LED " + n1 + " · GPIO25";
+  $("nomLed2").textContent = "LED " + n2 + " · GPIO26";
+}
+
+// ----- Lado ESP32 simulado: la misma lógica que esp32_leds.py -----
+function simRecibir(linea) {
+  if (linea.length === 2 && "01".includes(linea[0]) && "01".includes(linea[1])) {
+    simLeds = linea; simUltimo = performance.now(); simAvisado = false;
+    log("← LEDS " + linea, "rx");
+  }
+}
+
+// ----- Envío: igual que el bucle de deteccion_pc.py -----
+async function enviar(linea) {
+  if (cortado) return;                       // "cable desconectado": no sale nada
+  log("→ " + linea, "tx");
+  if (escritor) {
+    try { await escritor.write(new TextEncoder().encode(linea + "\n")); }
+    catch (e) { log("error al escribir: " + e.message, "sis"); }
+  } else {
+    simRecibir(linea);
+  }
+}
+
+function tick() {
+  const presentes = deCamara || manual;
+  const estado = (presentes[0] ? "1" : "0") + (presentes[1] ? "1" : "0");
+  $("txtEstado").textContent = estado;
+  const nombres = objetivos.filter((_, i) => presentes[i]).map((o) => NOMBRES[o]);
+  $("txtDetectado").textContent = nombres.length ? nombres.join(" y ") : "nada";
+
+  const ahora = performance.now();
+  if (estado !== estadoAnterior || ahora - ultimoEnvio >= REENVIO_MS) {
+    enviar(estado); estadoAnterior = estado; ultimoEnvio = ahora;
+  }
+
+  if (!escritor) {
+    // Apagado de seguridad simulado.
+    const dt = ahora - simUltimo;
+    if (dt > TIEMPO_LIMITE_MS) {
+      simLeds = "00";
+      if (!simAvisado) { log("← APAGADO_SEGURIDAD", "rx"); simAvisado = true; }
+    }
+    pintarLeds(simLeds);
+    $("barra").style.width = Math.min(100, dt / TIEMPO_LIMITE_MS * 100) + "%";
+  } else {
+    // Conectado: los LEDs de la página muestran lo que el ESP32 CONFIRMA.
+    $("barra").style.width = Math.min(100, (ahora - ultimoRx) / TIEMPO_LIMITE_MS * 100) + "%";
+  }
+  requestAnimationFrame(tick);
+}
+
+// ----- Botones de modo prueba -----
+$("btnObj1").onclick = () => { manual[0] = !manual[0]; $("btnObj1").classList.toggle("activo", manual[0]); };
+$("btnObj2").onclick = () => { manual[1] = !manual[1]; $("btnObj2").classList.toggle("activo", manual[1]); };
+$("btnCortar").onclick = () => {
+  cortado = !cortado;
+  $("btnCortar").classList.toggle("activo", cortado);
+  $("btnCortar").textContent = cortado ? "Reconectar cable" : "Simular cable desconectado";
+  log(cortado ? "(el PC deja de mandar: a los 2 s debe actuar el apagado de seguridad)" : "(el PC vuelve a mandar)", "sis");
+};
+$("selPar").onchange = (e) => { objetivos = PARES[e.target.value]; actualizarNombres(); };
+
+// ----- Cámara + COCO-SSD (mismas clases COCO que usa YOLOv8) -----
+let modelo = null, camaraActiva = false;
+function cargarScript(src) {
+  return new Promise((ok, mal) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = mal; document.head.appendChild(s); });
+}
+$("btnCamara").onclick = async () => {
+  if (camaraActiva) return;
+  $("vacio").textContent = "Cargando el detector (unos segundos la primera vez)...";
+  try {
+    if (!window.cocoSsd) {
+      await cargarScript("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js");
+      await cargarScript("https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js");
+    }
+    modelo = await cocoSsd.load({ base: "lite_mobilenet_v2" });
+    const flujo = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+    const v = $("video"); v.srcObject = flujo; await v.play();
+    $("vacio").style.display = "none"; camaraActiva = true;
+    $("btnCamara").classList.add("activo");
+    detectarBucle();
+  } catch (e) {
+    $("vacio").textContent = "No se pudo usar la cámara o cargar el detector (" + e.message + "). Siguen funcionando los botones.";
+  }
+};
+async function detectarBucle() {
+  const v = $("video"), c = $("lienzo"), ctx = c.getContext("2d");
+  c.width = v.videoWidth; c.height = v.videoHeight;
+  const preds = await modelo.detect(v);
+  ctx.clearRect(0, 0, c.width, c.height);
+  const vistos = new Set();
+  ctx.font = "14px IBM Plex Mono, monospace"; ctx.lineWidth = 2;
+  for (const p of preds) {
+    if (p.score < CONFIANZA_MINIMA) continue;
+    const esObjetivo = objetivos.includes(p.class);
+    if (esObjetivo) vistos.add(p.class);
+    const [x, y, w, h] = p.bbox;
+    ctx.strokeStyle = esObjetivo ? "#e8b930" : "#4f8fce";
+    ctx.strokeRect(x, y, w, h);
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.fillText(p.class + " " + p.score.toFixed(2), x + 4, Math.max(14, y - 4));
+  }
+  deCamara = objetivos.map((o) => vistos.has(o));
+  requestAnimationFrame(detectarBucle);
+}
+
+// ----- Modo conectado: Web Serial, un solo puerto, 115200 baudios -----
+$("btnConectar").onclick = async () => {
+  if (!("serial" in navigator)) { log("Este navegador no tiene Web Serial (usar Chrome o Edge).", "sis"); return; }
+  try {
+    puerto = await navigator.serial.requestPort();
+    await puerto.open({ baudRate: 115200 });
+    log("Puerto abierto. Esperando 2 s a que el ESP32 reinicie...", "sis");
+    await new Promise((r) => setTimeout(r, 2000));
+    escritor = puerto.writable.getWriter();
+    $("txtModo").textContent = "(conectado)";
+    $("btnConectar").textContent = "ESP32 conectado";
+    estadoAnterior = null;           // fuerza un envío inmediato
+    leerBucle();
+  } catch (e) { log("No se pudo abrir el puerto: " + e.message, "sis"); }
+};
+async function leerBucle() {
+  const lector = puerto.readable.pipeThrough(new TextDecoderStream()).getReader();
+  let resto = "";
+  while (true) {
+    const { value, done } = await lector.read();
+    if (done) break;
+    resto += value;
+    const lineas = resto.split("\n"); resto = lineas.pop();
+    for (let l of lineas) {
+      l = l.trim(); if (!l) continue;
+      ultimoRx = performance.now();
+      log("← " + l, "rx");           // línea cruda: la mejor pista si "no llega nada"
+      const m = l.match(/^LEDS ([01]{2})$/);
+      if (m) pintarLeds(m[1]);
+      if (l === "APAGADO_SEGURIDAD") pintarLeds("00");
+    }
+  }
+}
+
+actualizarNombres();
+log("Modo prueba: el ESP32 de la derecha es simulado con la misma lógica que esp32_leds.py.", "sis");
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>

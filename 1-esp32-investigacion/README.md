@@ -1,5 +1,7 @@
 # Investigación del ESP32
 
+Actividad 1 del curso: investigación sobre el microcontrolador que se usa en todos los laboratorios. No sale de una carpeta de U_Militar; el material de instalación que la sigue es el del [tema 2](../2-lenguajes-thonny).
+
 ## Ficha técnica (DevKit V1 con ESP32-WROOM-32, la placa de los labs)
 
 | Dato | Valor |
@@ -27,7 +29,7 @@ timeline
     1971 : Intel 4004, primer microprocesador comercial (4 bits)
     1974 : TMS 1000 (Texas Instruments), primer microcontrolador (CPU + RAM + ROM en un chip)
     1976-1980 : Intel 8048 y 8051 (el 8051 se sigue fabricando)
-    1993 : EEPROM y el primer microcontrolador con flash (Atmel)
+    1993 : PIC16C84 (Microchip, con EEPROM) y AT89C51 (Atmel, 8051 con flash) se reprograman sin luz UV
     2008 : Nace Espressif en Shanghái
     2014 : ESP8266, popularizado por el módulo ESP-01 de Ai-Thinker
     2016 : ESP32, doble núcleo + Wi-Fi + Bluetooth
@@ -39,8 +41,9 @@ externos de memoria y de entrada/salida. Un microcontrolador mete CPU, memoria y
 pieza de silicio: con él solo ya se arma un sistema completo.
 
 **Cómo cambió la forma de programarlos.** La ROM/PROM se grababa una vez. La EPROM se podía borrar,
-pero con luz ultravioleta por una ventana de cuarzo. La EEPROM y la flash (1993) se borran
-eléctricamente, y eso volvió rápido probar programas. El ESP32 usa flash.
+pero con luz ultravioleta por una ventana de cuarzo. La EEPROM y la flash se borran eléctricamente;
+cuando en 1993 llegaron a microcontroladores baratos (PIC16C84, AT89C51), probar un programa pasó de
+tomar media hora a unos segundos. El ESP32 usa flash.
 
 **El ESP8266 y el salto al ESP32.** El ESP8266 no se hizo famoso por el marketing de Espressif:
 Ai-Thinker sacó el ESP-01, un módulo con Wi-Fi rarísimamente barato que se manejaba con comandos AT
@@ -153,3 +156,17 @@ dure, se reutilice o se deseche bien es parte de usar esta tecnología con crite
 Domótica (es el corazón de ESPHome y Tasmota, y de productos como Shelly o Athom), sensores
 remotos industriales que reportan por Wi-Fi, wearables por su bajo consumo, y control de motores y
 lazos cerrados en laboratorios de mecatrónica, como los de este repositorio.
+
+## Cómo probarlo
+
+**Sin ESP32 conectado**
+
+Casi todo este tema es lectura. Para ver los pines y periféricos en acción sin hardware, [Wokwi](https://wokwi.com) simula un ESP32 DevKit completo; el [tema 2](../2-lenguajes-thonny) trae ejemplos listos para pegar ahí.
+
+**Con ESP32 conectado**
+
+[`ficha_placa.py`](ficha_placa.py) comprueba la ficha técnica de arriba en la placa real: con MicroPython instalado (ver tema 2) se abre en Thonny y se corre con F5. Imprime el firmware, la frecuencia de la CPU (y la sube a 240 MHz), el tamaño de la flash, cuánta RAM queda libre para Python (bastante menos que los 520 KB, porque el sistema, el Wi-Fi y el intérprete se quedan con una parte), la temperatura interna, una lectura del ADC en GPIO34, el DAC en GPIO25 y el táctil en GPIO4. Uniendo GPIO25 con GPIO34 con un cable, el ADC debe leer cerca de 2000 cuando el DAC saca la mitad de su rango: es la prueba más directa de que 8 bits de DAC y 12 bits de ADC no son la misma escala.
+
+## Pendiente
+
+- Captura de la Shell de Thonny con la salida de `ficha_placa.py` en la placa del laboratorio.

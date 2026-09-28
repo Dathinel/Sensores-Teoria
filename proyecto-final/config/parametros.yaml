@@ -312,6 +312,19 @@ vehiculo:
   # Si una orden lo deja `atascado` (una rueda cuenta mucho mas que la otra), frena y se aparta
   # esto por donde vino, para no quedar apretado contra lo que lo trabo (usuario, 2026-09-27).
   apartarse_atascado_mm: 50
+  # Reversa al muelle con tiempo limite (2026-09-27: se vio 35 s trabado en la boca avanzando de a
+  # milimetros). PROVISIONALES: una reversa normal tarda ~11 s. Si pasa `reversa_tope_max_s`, o
+  # avanza menos de `reversa_tope_avance_min_mm` en `reversa_tope_sin_avance_s` sin estar a fondo,
+  # sale derecho `reversa_tope_salida_mm` hacia adelante y reintenta UNA vez; si vuelve a fallar se
+  # detiene con el error `no_llego_al_tope`.
+  reversa_tope_max_s: 15
+  reversa_tope_sin_avance_s: 3
+  reversa_tope_avance_min_mm: 20
+  reversa_tope_salida_mm: 150
+  # En el reintento va con el PWM normal hasta pasar esto mas alla de donde se trabo (con el bajo
+  # no alcanza a correr el rodillo por la guia en V; en la simulacion, seeds 2 y 3, se trababa otra
+  # vez en el mismo punto) y vuelve al bajo antes del tope, donde el motor se tiene que ahogar.
+  reversa_tope_pwm_normal_mm: 50
 
 # Donde PUEDE andar el carro por orden (usuario, 2026-09-27: el asistente lo mando "a donde esta
 # el filtro de monedas" y se trabo contra el muelle). El laser (7,4 cm del piso) y el ultrasonico

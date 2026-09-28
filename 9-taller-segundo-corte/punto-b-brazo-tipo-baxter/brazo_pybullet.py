@@ -29,7 +29,7 @@
 #   A = Abrir pinza                   C = Cerrar pinza
 #   D = Demo: coger el cubo y moverlo solo al destino
 #   B = Demo: recorrer los 3 ejes (solo para mostrar el rango de movimiento)
-#   0 = reset (reubica el cubo, cancela cualquier demo)
+#   0 = reset del cubo (lo suelta y lo vuelve a poner en la bandeja)
 #   (1, 3, *, # no se usan en esta configuracion)
 #
 # Si no hay ESP32 conectado, la ventana de PyBullet trae los mismos
@@ -142,7 +142,19 @@ posicion_objetivo = list(HOME_EFECTOR)
 angulo_pinza = ANGULO_PINZA_ABIERTA
 demo_en_curso = False
 
-PASO_JOG = 0.015
+PASO_JOG = 0.015   # metros por linea "TECLA:x" (20 lineas/s sostenida -> 0.3 m/s) o por click
+
+# Caja de trabajo del efector para el jog manual. Sin limite, sostener
+# una tecla unos segundos llevaba el objetivo fuera del alcance del
+# brazo: la IK devuelve igual "la mejor aproximacion", el brazo queda
+# estirado a tope y, al volver, el objetivo tarda lo mismo en regresar
+# de ese punto inalcanzable (se siente como que la tecla "no responde").
+# Los limites cubren las dos alturas de agarre (0.081 y 0.105), la altura
+# de viaje (0.35), la bandeja, la plataforma y el recorrido de la demo B.
+# Medido en modo DIRECT llegando a cada esquina de la caja por jog: el
+# efector queda a 2-4 cm del objetivo en las 8. Con x=0.75 (la pinza
+# mirando hacia abajo) ya quedaba a 8-12 cm: fuera de alcance real.
+LIMITES_JOG = ((0.30, 0.68), (-0.40, 0.40), (0.07, 0.60))   # (x, y, z) min/max en metros
 
 
 def mover_brazo(pos_xyz):
@@ -293,24 +305,42 @@ def ejecutar_demo_recorrido():
 # Botones de la ventana (fijos, sin ESP32), mismo patron que en los
 # temas 7 y 8: jog + abrir/cerrar/home/demo/reset.
 # ------------------------------------------------------------------
-botones = {
-    "adelante": p.addUserDebugParameter("Adelante (Y+)", 1, 0, 0),
-    "atras": p.addUserDebugParameter("Atras (Y-)", 1, 0, 0),
-    "izquierda": p.addUserDebugParameter("Izquierda (X-)", 1, 0, 0),
-    "derecha": p.addUserDebugParameter("Derecha (X+)", 1, 0, 0),
-    "subir": p.addUserDebugParameter("Subir (Z+)", 1, 0, 0),
-    "bajar": p.addUserDebugParameter("Bajar (Z-)", 1, 0, 0),
-    "home": p.addUserDebugParameter("Home", 1, 0, 0),
-    "abrir": p.addUserDebugParameter("Abrir pinza", 1, 0, 0),
-    "cerrar": p.addUserDebugParameter("Cerrar pinza", 1, 0, 0),
-    "demo": p.addUserDebugParameter("Demo: coger y mover", 1, 0, 0),
-    "recorrido": p.addUserDebugParameter("Demo: recorrer los 3 ejes", 1, 0, 0),
-    "reset": p.addUserDebugParameter("Reset cubo", 1, 0, 0),
+# Cada boton equivale EXACTAMENTE a una tecla del teclado fisico: asi
+# hay una sola funcion (ejecutar_tecla) que decide que hace cada cosa, y
+# la ventana y el ESP32 no se pueden "desincronizar" con el tiempo.
+BOTON_A_TECLA = {
+    "Adelante (Y+) [8]": "8",
+    "Atras (Y-) [2]": "2",
+    "Izquierda (X-) [4]": "4",
+    "Derecha (X+) [6]": "6",
+    "Subir (Z+) [9]": "9",
+    "Bajar (Z-) [7]": "7",
+    "Home [5]": "5",
+    "Abrir pinza [A]": "A",
+    "Cerrar pinza [C]": "C",
+    "Demo: coger y mover [D]": "D",
+    "Demo: recorrer los 3 ejes [B]": "B",
+    "Reset cubo [0]": "0",
 }
-contadores_anteriores = {nombre: 0 for nombre in botones}
+botones = {etiqueta: p.addUserDebugParameter(etiqueta, 1, 0, 0) for etiqueta in BOTON_A_TECLA}
+contadores_anteriores = {etiqueta: 0 for etiqueta in botones}
+
+# Teclas de JOG: se repiten mientras se sostienen (cada "TECLA:8" que
+# llega suma un paso). Todas las demas son de UN SOLO GOLPE: se ejecutan
+# solo en el flanco (cuando la tecla recibida cambia). El ESP32 manda la
+# tecla sostenida cada ~50 ms, asi que sin esto un toque normal de la D
+# (~0.2 s = 4 lineas "TECLA:D") corria la demo de 10 s CUATRO veces
+# seguidas: la demo bloquea el bucle, las otras 3 lineas quedaban
+# esperando en el buffer y cada una la disparaba de nuevo al terminar.
+TECLAS_JOG = {"8", "2", "4", "6", "9", "7"}
+tecla_anterior = "-"
 
 
-def procesar_tecla(tecla):
+def limitar(valor, minimo, maximo):
+    return max(minimo, min(maximo, valor))
+
+
+def ejecutar_tecla(tecla):
     global posicion_objetivo, angulo_pinza
     if tecla == "8":
         posicion_objetivo[1] += PASO_JOG
@@ -339,7 +369,31 @@ def procesar_tecla(tecla):
     elif tecla == "0":
         soltar()
         reset_cubo()
+    # el jog nunca deja el objetivo fuera de la caja de trabajo
+    posicion_objetivo = [limitar(posicion_objetivo[eje], *LIMITES_JOG[eje]) for eje in range(3)]
 
+
+def procesar_tecla(tecla):
+    """Tecla recibida del ESP32: el jog se aplica en cada repeticion, el
+    resto solo en el flanco (ver TECLAS_JOG)."""
+    global tecla_anterior
+    anterior, tecla_anterior = tecla_anterior, tecla
+    if tecla in TECLAS_JOG or tecla != anterior:
+        ejecutar_tecla(tecla)
+    if tecla in ("D", "B") and ser is not None:
+        # lo que llego MIENTRAS corria la demo (bloqueante, ~10 s) son
+        # lineas viejas: se descartan en vez de ejecutarlas todas juntas
+        # al terminar (el brazo "saltaria" con 200 pasos de jog de golpe)
+        ser.reset_input_buffer()
+
+
+# Ultima linea CRUDA recibida del ESP32, escrita en la propia ventana:
+# si nunca cambia, el ESP32 no esta mandando nada; si cambia pero no es
+# "TECLA:x", el problema es de formato/parseo, no de cable.
+ultima_linea_cruda = None
+POS_TEXTO_SERIAL = [0.2, 0.55, 0.55]
+id_texto_serial = p.addUserDebugText("ESP32: " + ("esperando datos..." if ser else "no conectado (usa los botones)"),
+                                     POS_TEXTO_SERIAL, textColorRGB=[1, 1, 0.4], textSize=1.2)
 
 print("Ventana de PyBullet abierta. Cierra la ventana o Ctrl+C en la terminal para salir.")
 
@@ -351,43 +405,27 @@ while True:
         # simulacion -- a ~20 cuadros/seg en vez de 240. Por eso se lee
         # solo si YA hay datos esperando (in_waiting): la simulacion nunca
         # se frena esperando al ESP32, y el movimiento manual se ve fluido.
-        if ser is not None and ser.in_waiting:
-            linea = ser.readline().decode(errors="ignore").strip()
-            if linea.startswith("TECLA:"):
-                procesar_tecla(linea.split(":", 1)[1])
+        # Y se drena TODO el buffer (while, no if) para no quedar atrasado.
+        try:
+            while ser is not None and ser.in_waiting:
+                linea = ser.readline().decode(errors="ignore").strip()
+                if linea != ultima_linea_cruda:
+                    ultima_linea_cruda = linea
+                    p.addUserDebugText("ESP32: " + linea, POS_TEXTO_SERIAL, textColorRGB=[1, 1, 0.4],
+                                       textSize=1.2, replaceItemUniqueId=id_texto_serial)
+                if linea.startswith("TECLA:"):
+                    procesar_tecla(linea.split(":", 1)[1])
+        except serial.SerialException:
+            print("Se perdio la conexion con el ESP32: sigue con los botones de la ventana.")
+            ser = None
 
-        # botones de la ventana (sin ESP32): un salto fijo por click
-        for nombre, boton in botones.items():
+        # botones de la ventana (sin ESP32): un click = una pulsacion de
+        # la tecla equivalente (un paso fijo de jog, o una accion)
+        for etiqueta, boton in botones.items():
             contador = p.readUserDebugParameter(boton)
-            if contador != contadores_anteriores[nombre]:
-                contadores_anteriores[nombre] = contador
-                if nombre == "adelante":
-                    posicion_objetivo[1] += PASO_JOG
-                elif nombre == "atras":
-                    posicion_objetivo[1] -= PASO_JOG
-                elif nombre == "izquierda":
-                    posicion_objetivo[0] -= PASO_JOG
-                elif nombre == "derecha":
-                    posicion_objetivo[0] += PASO_JOG
-                elif nombre == "subir":
-                    posicion_objetivo[2] += PASO_JOG
-                elif nombre == "bajar":
-                    posicion_objetivo[2] -= PASO_JOG
-                elif nombre == "home":
-                    posicion_objetivo = list(HOME_EFECTOR)
-                elif nombre == "abrir":
-                    angulo_pinza = ANGULO_PINZA_ABIERTA
-                    soltar()
-                elif nombre == "cerrar":
-                    angulo_pinza = ANGULO_PINZA_CERRADA
-                    intentar_agarrar()
-                elif nombre == "demo":
-                    ejecutar_demo()
-                elif nombre == "recorrido":
-                    ejecutar_demo_recorrido()
-                elif nombre == "reset":
-                    soltar()
-                    reset_cubo()
+            if contador != contadores_anteriores[etiqueta]:
+                contadores_anteriores[etiqueta] = contador
+                ejecutar_tecla(BOTON_A_TECLA[etiqueta])
 
         mover_brazo(posicion_objetivo)
         mover_pinza(angulo_pinza)

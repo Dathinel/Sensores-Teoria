@@ -3900,6 +3900,18 @@ function pintarVivo() {
         </div>
       </div>
       <div class="grupo-botones controles">
+        <h4>Probar un filtro (uno por uno)</h4>
+        <div class="fila1">
+          <select id="selFiltro" title="Cada prueba trae solo piezas que ese filtro debe rechazar"></select>
+          <button id="botonFiltro" data-pide="libre">🧪 Probar solo este filtro</button>
+        </div>
+        <h4 style="margin-top:8px">Colocar una pieza</h4>
+        <div class="fila1">
+          <select id="selPieza"></select>
+          <button id="botonPieza" data-pide="colocar" title="Entra en la próxima carga, antes que lo que falta de la corrida">⬇ Ponerla en la próxima carga</button>
+        </div>
+      </div>
+      <div class="grupo-botones controles">
         <h4>Sabotajes a los vasos</h4>
         <div class="fila2">
           <button data-sab="retirar_vaso" data-pide="vaso_vl">Retirar un vaso</button>
@@ -3939,6 +3951,14 @@ function pintarVivo() {
       if (orden.cmd === 'iniciar') orden.escenario = 'prueba_completa';
       enviarOrden(orden);
     }));
+    contenido.querySelector('#botonFiltro').addEventListener('click', () => {
+      const v = contenido.querySelector('#selFiltro').value;
+      if (v) enviarOrden({ cmd: 'iniciar', escenario: v });
+    });
+    contenido.querySelector('#botonPieza').addEventListener('click', () => {
+      const v = contenido.querySelector('#selPieza').value;
+      if (v) enviarOrden({ cmd: 'colocar', pieza: v });
+    });
     contenido.querySelectorAll('[data-sab]').forEach((b) => b.addEventListener('click', () => {
       let tipo = b.dataset.sab;
       if (tipo === 'intruso') tipo = estado && estado.intruso ? 'intruso_off' : 'intruso_on';
@@ -3962,6 +3982,8 @@ const MOTIVO = {
   sin_mano: 'Ya hay una mano en la línea',
   guardado: 'Los tubos están vacíos',
   carro: 'Sin carro simulado (carro de reemplazo)',
+  colocar: 'La corrida tiene que estar andando o terminada',
+  libre: 'Esta simulación no trae las pruebas de un filtro (reiniciarla)',
 };
 let ultimaRespuesta = 0;
 function actualizarBotones(e) {
@@ -3975,7 +3997,18 @@ function actualizarBotones(e) {
     sin_mano: corre && !mano,
     guardado: (e.almacen_valor || 0) > 0,
     carro: !!(e.carro && e.carro.radio) && (corre || e.linea === 'pausada'),
+    colocar: (corre || e.linea === 'terminada') && !!(e.piezas && e.piezas.length),
+    libre: !!(e.pruebas_filtro && e.pruebas_filtro.length),
   };
+  // Las listas vienen del supervisor (sim/carga_escenarios.py): se llenan una vez.
+  const selF = contenido.querySelector('#selFiltro');
+  if (selF && !selF.options.length && e.pruebas_filtro) {
+    selF.innerHTML = e.pruebas_filtro.map((pr) => `<option value="${esc(pr.escenario)}">${esc(pr.estacion)} · ${esc(pr.nombre)}</option>`).join('');
+  }
+  const selP = contenido.querySelector('#selPieza');
+  if (selP && !selP.options.length && e.piezas) {
+    selP.innerHTML = e.piezas.map((pz) => `<option value="${esc(pz.id)}">${esc(pz.nombre)}</option>`).join('');
+  }
   contenido.querySelectorAll('[data-pide]').forEach((b) => {
     const ok = MODO_DEMO ? false : puede[b.dataset.pide];
     b.disabled = !ok;
@@ -4076,6 +4109,52 @@ function seleccionarPaso(n) {
   pintarPasos();
 }
 
+// Prueba UNICA de cada sensor (usuario, 2026-09-27): en la sustentacion los filtros se prueban uno
+// por uno. Cada boton manda la orden que hace trabajar SOLO a ese sensor (una prueba de un filtro,
+// una pieza puesta a mano, un sabotaje o una orden al carro) y la camara se queda mirandolo.
+const PRUEBA_SENSOR = {
+  presencia: [['Poner una moneda en la carga', { cmd: 'colocar', pieza: '500_nueva' }],
+    ['Mano en la carga (la ve y no es moneda)', { cmd: 'sabotaje', tipo: 'mano_carga' }]],
+  capacitivo: [['Prueba del filtro de material (botones de plástico)', { cmd: 'iniciar', escenario: 'no_metalico' }]],
+  inductivo: [['Prueba del filtro de material (botones de plástico)', { cmd: 'iniciar', escenario: 'no_metalico' }]],
+  camara: [['Diámetro fuera de rango', { cmd: 'iniciar', escenario: 'fuera_de_rango' }],
+    ['No circular (bloques)', { cmd: 'iniciar', escenario: 'no_circular' }],
+    ['Perforado (botones con agujero)', { cmd: 'iniciar', escenario: 'perforado' }],
+    ['No reconocida (sin cara colombiana)', { cmd: 'iniciar', escenario: 'no_reconocida' }],
+    ['Incoherente (cara y diámetro no cuadran)', { cmd: 'iniciar', escenario: 'incoherente' }]],
+  sensor_interior: [['El próximo vaso trae algo adentro', { cmd: 'sabotaje', tipo: 'vaso_con_algo' }]],
+  hall_carrusel: [['Moneda al almacén (el carrusel busca su tubo)', { cmd: 'colocar', pieza: '200_nueva' }]],
+  camara_vasos: [['Retirar un vaso', { cmd: 'sabotaje', tipo: 'retirar_vaso' }],
+    ['Cambiar un vaso por una figura', { cmd: 'sabotaje', tipo: 'cambiar_vaso' }],
+    ['Cambiar un vaso por otro igual (otro marcador)', { cmd: 'sabotaje', tipo: 'vaso_igual' }]],
+  cortina: [['Meter o quitar la mano en tapa y prensa', { cmd: 'sabotaje', tipo: 'intruso' }]],
+  linea_ir: [['Retomar la línea', { cmd: 'carro', accion: 'seguir_linea' }]],
+  ultrasonico: [['Ir a la meta esquivando los muros', { cmd: 'carro', accion: 'ir_meta' }]],
+  laser_frontal: [['Ir a la meta esquivando los muros', { cmd: 'carro', accion: 'ir_meta' }]],
+  encoders: [['Avanzar 30 cm (cuenta los pulsos)', { cmd: 'carro', accion: 'avanzar', distancia_m: 0.3 }]],
+  cuna: [['Volver al muelle (la cuna confirma la carga)', { cmd: 'carro', accion: 'volver_muelle' }]],
+};
+let pruebaEnviada = null;   // { sensor, n }: para mostrar la respuesta del supervisor a esa prueba
+
+function botonesPruebaSensor(id) {
+  const pruebas = PRUEBA_SENSOR[id] || [];
+  if (!pruebas.length) return '';
+  const r = estado && estado.ultima_orden;
+  const resp = pruebaEnviada && pruebaEnviada.sensor === id && r && r.n > pruebaEnviada.n
+    ? `<div class="respuesta-orden visible ${r.ok ? 'ok' : 'no'}">${r.ok ? '✔' : '✖'} ${esc(r.detalle)}</div>` : '';
+  return `<div class="grupo-botones controles"><h4>Ver la prueba de este sensor</h4><div class="fila1">`
+    + pruebas.map((pr, i) => `<button data-prueba="${i}" ${MODO_DEMO ? 'disabled title="Demo grabada"' : ''}>▶ ${esc(pr[0])}</button>`).join('')
+    + `</div>${resp}${MODO_DEMO ? '<div class="tenue" style="font-size:.78rem;margin-top:6px">Demo grabada: para probarlo, abrir visor.bat.</div>' : ''}</div>`;
+}
+
+function probarSensor(id, i) {
+  const orden = { ...PRUEBA_SENSOR[id][i][1] };
+  if (orden.tipo === 'intruso') orden.tipo = estado && estado.intruso ? 'intruso_off' : 'intruso_on';
+  pruebaEnviada = { sensor: id, n: (estado && estado.ultima_orden && estado.ultima_orden.n) || 0 };
+  enviarOrden(orden);
+  enfocarSensor(id);
+}
+
 function pintarSensores() {
   const sel = seleccion.tipo === 'sensor' ? seleccion.valor : null;
   const grupos = {};
@@ -4101,12 +4180,13 @@ function pintarSensores() {
           <dt>Tiempo de respuesta</dt><dd>${esc(s.tiempo_respuesta)}</dd>
           <dt>Error típico</dt><dd>${esc(s.error_tipico)}</dd>
           <dt>Cómo mitigarlo</dt><dd>${esc(s.mitigacion)}</dd>
-          <dt>Conexión</dt><dd>${esc(s.conexion)}</dd></dl>`;
+          <dt>Conexión</dt><dd>${esc(s.conexion)}</dd></dl>` + botonesPruebaSensor(s.id);
       }
     }
   }
   contenido.innerHTML = html;
   contenido.querySelectorAll('[data-sensor]').forEach((d) => d.addEventListener('click', () => seleccionarSensor(d.dataset.sensor, true)));
+  contenido.querySelectorAll('[data-prueba]').forEach((b) => b.addEventListener('click', () => probarSensor(sel, Number(b.dataset.prueba))));
 }
 
 function pintarComponentes() {

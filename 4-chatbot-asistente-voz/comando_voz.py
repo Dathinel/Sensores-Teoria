@@ -1,30 +1,96 @@
 # Escucha un comando de voz, lo transcribe a texto, le pregunta a la API
 # de DeepSeek que intencion tiene ese comando sobre los LEDs, y le manda
 # la orden resultante al ESP32 por el puerto serial.
+#
+# Flujo de una vuelta del bucle principal:
+#   voz (o texto escrito) -> texto -> DeepSeek -> JSON de intencion
+#   -> validar el JSON -> actualizar el estado -> "10"/"01"/"11"/"00"/"SHOW" -> ESP32
+#
+# El script esta pensado para poder probarse aunque falte alguna pieza:
+#   - Sin ESP32 conectado: no truena, solo muestra en pantalla lo que habria mandado.
+#   - Sin microfono (o sin pyaudio instalado): se escribe el comando con el teclado.
+#   - Sin clave de DeepSeek o sin internet: usa un interprete sencillo por palabras
+#     clave, avisando en pantalla que no es el modelo de lenguaje.
 
 import os
 import json
-import serial
-import speech_recognition as sr
+import time
 
-from openai import OpenAI
+import serial
+
 from dotenv import load_dotenv
 
+# load_dotenv() lee el archivo .env de esta carpeta y copia sus lineas
+# (DEEPSEEK_API_KEY=...) a las variables de entorno del proceso. Asi la clave
+# nunca queda escrita dentro del codigo que se sube a GitHub.
 load_dotenv()
 
+# El numero del puerto cambia en cada computadora: revisarlo en el
+# Administrador de dispositivos (Puertos COM y LPT) con el ESP32 conectado.
 PUERTO_SERIAL = "COM7"
+# Tiene que ser la misma velocidad que usa MicroPython en el USB del ESP32 (115200).
 BAUDIOS = 115200
 
-cliente = OpenAI(
-    api_key=os.environ["DEEPSEEK_API_KEY"],
-    base_url="https://api.deepseek.com",
-)
 
-ser = serial.Serial(PUERTO_SERIAL, BAUDIOS, timeout=1)
+# ------------------------------------------------------------------
+# Conexion con el ESP32 (opcional)
+# ------------------------------------------------------------------
+# Si el puerto no existe o lo tiene abierto otro programa (Thonny, por
+# ejemplo), serial.Serial lanza SerialException. En vez de terminar el
+# script ahi, se sigue sin ESP32: cada orden se imprime en pantalla para
+# poder verificar toda la cadena voz -> DeepSeek -> orden sin el hardware.
+try:
+    # timeout=1 solo afecta a lecturas bloqueantes; aqui solo se lee lo que ya
+    # este en el buffer (ver leer_respuestas_esp32), asi que nunca se espera.
+    ser = serial.Serial(PUERTO_SERIAL, BAUDIOS, timeout=1)
+    print("ESP32 conectado en", PUERTO_SERIAL)
+except serial.SerialException as error:
+    ser = None
+    print("No se pudo abrir", PUERTO_SERIAL, "->", error)
+    print("Se sigue SIN ESP32: las ordenes solo se muestran en pantalla.")
 
-reconocedor = sr.Recognizer()
-microfono = sr.Microphone()
+# Ultima linea cruda que mando el ESP32. Es la mejor pista cuando "no pasa
+# nada": si nunca cambia, el ESP32 no esta recibiendo/contestando; si cambia
+# pero dice IGNORADO, el problema es de formato, no de cable.
+ultima_linea_esp32 = None
 
+
+# ------------------------------------------------------------------
+# Cliente de DeepSeek (opcional)
+# ------------------------------------------------------------------
+# DeepSeek expone una API con el mismo formato que la de OpenAI, por eso se
+# usa la libreria oficial `openai` cambiando solo base_url y la clave.
+# Se usa os.environ.get (y no os.environ[...]) para que, si falta el .env,
+# el script no truene con KeyError sino que pase al interprete por reglas.
+CLAVE_DEEPSEEK = os.environ.get("DEEPSEEK_API_KEY")
+cliente = None
+if CLAVE_DEEPSEEK and CLAVE_DEEPSEEK != "tu_api_key_aqui":
+    from openai import OpenAI
+
+    cliente = OpenAI(api_key=CLAVE_DEEPSEEK, base_url="https://api.deepseek.com")
+else:
+    print("No hay DEEPSEEK_API_KEY en el .env: se usara el interprete por palabras clave.")
+
+
+# ------------------------------------------------------------------
+# Microfono (opcional)
+# ------------------------------------------------------------------
+# sr.Microphone() necesita pyaudio. Si no esta instalado o no hay microfono,
+# se sigue funcionando escribiendo el comando con el teclado.
+try:
+    import speech_recognition as sr
+
+    reconocedor = sr.Recognizer()
+    microfono = sr.Microphone()
+except (ImportError, AttributeError, OSError) as error:
+    sr = None
+    microfono = None
+    print("Sin microfono disponible (" + str(error) + "): escribe los comandos con el teclado.")
+
+
+# El prompt de sistema es la "regla del juego" para el modelo: le dice que
+# SOLO responda un JSON con tres claves posibles. Asi el programa nunca tiene
+# que entender una frase libre como "listo, ya prendi el rojo".
 PROMPT_SISTEMA = """
 Eres un interprete de comandos de voz para controlar dos LEDs conectados
 a un ESP32, uno rojo y uno azul. Vas a recibir una frase en espanol dicha
@@ -40,16 +106,28 @@ comando no tiene relacion con encender, apagar LEDs o hacer un show,
 responde con un objeto JSON vacio.
 """
 
+# Estado recordado de cada LED. El modelo solo devuelve lo que la frase
+# menciona ("enciende el rojo" no dice nada del azul), asi que el script
+# guarda el estado completo y solo cambia la parte mencionada.
 estado = {"led_rojo": False, "led_azul": False}
+
+# Lista blanca: las unicas claves que el script acepta del JSON. Cualquier
+# otra cosa que invente el modelo se descarta antes de tocar el hardware.
+CLAVES_VALIDAS = ("led_rojo", "led_azul", "show")
 
 
 def escuchar_comando():
+    """Graba una frase del microfono y la devuelve transcrita, o None."""
     with microfono as fuente:
+        # Mide ~1 s de ruido de fondo para fijar el umbral de energia a partir
+        # del cual se considera que alguien empezo a hablar.
         reconocedor.adjust_for_ambient_noise(fuente)
         print("Habla ahora...")
+        # listen() corta sola cuando detecta silencio despues de la frase.
         audio = reconocedor.listen(fuente)
 
     try:
+        # Servicio gratuito de Google (necesita internet); es-CO = espanol de Colombia.
         texto = reconocedor.recognize_google(audio, language="es-CO")
         print("Se entendio:", texto)
         return texto
@@ -61,51 +139,139 @@ def escuchar_comando():
         return None
 
 
+def interpretar_por_reglas(texto):
+    """Plan B sin DeepSeek: busca palabras clave. Mucho mas rigido que el
+    modelo (no entiende frases raras), pero permite probar sin clave/internet."""
+    t = texto.lower()
+    datos = {}
+    if any(p in t for p in ("show", "espectaculo", "espectáculo", "parpade", "fiesta")):
+        datos["show"] = True
+        return datos
+
+    # Encender tiene prioridad solo si no aparece un verbo de apagar.
+    apagar = any(p in t for p in ("apaga", "desactiva", "quita"))
+    encender = any(p in t for p in ("enciend", "prend", "activa", "pon", "dale"))
+    if not (apagar or encender):
+        return datos
+    valor = not apagar
+
+    ambos = any(p in t for p in ("los dos", "ambos", "todos", "todas"))
+    if ambos or "roj" in t:
+        datos["led_rojo"] = valor
+    if ambos or "azul" in t:
+        datos["led_azul"] = valor
+    return datos
+
+
 def interpretar_comando(texto):
-    respuesta = cliente.chat.completions.create(
-        model="deepseek-chat",
-        messages=[
-            {"role": "system", "content": PROMPT_SISTEMA},
-            {"role": "user", "content": texto},
-        ],
-        response_format={"type": "json_object"},
-    )
-    contenido = respuesta.choices[0].message.content
-    return json.loads(contenido)
+    """Devuelve el JSON de intencion como diccionario de Python."""
+    if cliente is None:
+        print("(interprete por palabras clave, sin DeepSeek)")
+        return interpretar_por_reglas(texto)
+
+    try:
+        respuesta = cliente.chat.completions.create(
+            model="deepseek-chat",
+            messages=[
+                {"role": "system", "content": PROMPT_SISTEMA},
+                {"role": "user", "content": texto},
+            ],
+            # Obliga a la API a devolver JSON valido en vez de texto libre.
+            response_format={"type": "json_object"},
+        )
+        contenido = respuesta.choices[0].message.content
+        print("DeepSeek respondio:", contenido)
+        return json.loads(contenido)
+    except Exception as error:  # sin internet, clave revocada, JSON roto...
+        print("Fallo la consulta a DeepSeek (" + str(error) + "), se usan palabras clave.")
+        return interpretar_por_reglas(texto)
+
+
+def validar(datos):
+    """Deja solo las claves de la lista blanca y con valor booleano de verdad.
+    Un modelo de lenguaje puede equivocarse de formato ("si", "on", 1...), y
+    nada de eso debe llegar a mover un pin sin revisarse antes."""
+    if not isinstance(datos, dict):
+        return {}
+    return {c: datos[c] for c in CLAVES_VALIDAS if isinstance(datos.get(c), bool)}
+
+
+def enviar(linea):
+    """Manda una linea al ESP32, o solo la muestra si no hay ESP32."""
+    if ser is None:
+        print("[sin ESP32] se habria enviado:", linea)
+        return
+    # El "\n" es obligatorio: el ESP32 lee con readline(), que espera el fin de linea.
+    ser.write((linea + "\n").encode())
+
+
+def leer_respuestas_esp32():
+    """Drena TODO lo que el ESP32 haya mandado (no una sola linea), sin
+    bloquear: solo lee si in_waiting dice que ya hay bytes en el buffer."""
+    global ultima_linea_esp32
+    if ser is None:
+        return
+    while ser.in_waiting > 0:
+        linea = ser.readline().decode(errors="replace").strip()
+        if linea:
+            ultima_linea_esp32 = linea
+            print("  ESP32 dice:", linea)
 
 
 def aplicar_comando(datos):
+    # El show tiene prioridad y no cambia el estado guardado: el ESP32
+    # restaura solo los LEDs como estaban al terminar la secuencia.
     if datos.get("show"):
-        ser.write(b"SHOW\n")
+        enviar("SHOW")
         print("Enviando show de luces")
         return
 
     if "led_rojo" in datos:
-        estado["led_rojo"] = bool(datos["led_rojo"])
+        estado["led_rojo"] = datos["led_rojo"]
     if "led_azul" in datos:
-        estado["led_azul"] = bool(datos["led_azul"])
+        estado["led_azul"] = datos["led_azul"]
 
+    # Protocolo de dos caracteres: primero el rojo, despues el azul ("10" = rojo on, azul off).
     linea = ("1" if estado["led_rojo"] else "0") + ("1" if estado["led_azul"] else "0")
-    ser.write((linea + "\n").encode())
+    enviar(linea)
     print("Estado enviado al ESP32:", linea)
 
 
 if __name__ == "__main__":
-    print("Presiona Enter para hablar, o escribe salir para terminar.")
+    if microfono is not None:
+        print("Enter = hablar | escribir una frase = usarla como comando | salir = terminar")
+    else:
+        print("Escribe el comando (por ejemplo: enciende el rojo) | salir = terminar")
+
     while True:
-        entrada = input()
-        if entrada.strip().lower() == "salir":
+        leer_respuestas_esp32()
+        entrada = input("> ").strip()
+        if entrada.lower() == "salir":
             break
 
-        texto = escuchar_comando()
+        # Entrada manual: si se escribio algo, se usa tal cual como si fuera la
+        # transcripcion de la voz (sirve sin microfono o en un salon ruidoso).
+        if entrada:
+            texto = entrada
+        elif microfono is not None:
+            texto = escuchar_comando()
+        else:
+            continue
         if texto is None:
             continue
 
-        datos = interpretar_comando(texto)
+        datos = validar(interpretar_comando(texto))
         if not datos:
             print("El comando no tenia relacion con los LEDs, no se hizo nada.")
             continue
 
         aplicar_comando(datos)
+        # Pausa corta para dar tiempo a que el ESP32 conteste "OK ..."; aqui no
+        # hay ninguna simulacion corriendo, asi que esperar 0.3 s no traba nada.
+        time.sleep(0.3)
+        leer_respuestas_esp32()
+        if ser is not None and ultima_linea_esp32 is None:
+            print("  (el ESP32 todavia no ha contestado nada: revisar que main.py este corriendo)")
 
-    ser.close()
+    if ser is not None:
+        ser.close()

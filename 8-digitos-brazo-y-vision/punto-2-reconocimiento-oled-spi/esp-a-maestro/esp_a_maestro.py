@@ -4,7 +4,7 @@
 # mismo tiempo y usa el que le llegue de verdad segun como este
 # cableado -- asi no hace falta saber de antemano cual de los dos cables
 # se conecto, y si uno falla (por ejemplo un cable SPI mal puesto) el
-# otro sigue funcionando. Ver la seccion "Dos caminos: UART2 y SPI" del
+# otro sigue funcionando. Ver la seccion "Dos caminos a la vez: UART2 y SPI" del
 # README para el detalle completo.
 #
 # Nota sobre "SPI esclavo": el esquema de la actividad pide comunicar
@@ -73,13 +73,30 @@ while True:
     if linea:
         digito = linea.strip()
         if digito.startswith("DIGIT:"):
-            valor = int(digito.split(":", 1)[1])
+            # Validar ANTES de reenviar: un int() sobre basura (por
+            # ejemplo "DIGIT:" cortado, o ruido al abrir el puerto)
+            # lanzaria ValueError y MATARIA main.py -- la placa quedaria
+            # en el REPL sin reenviar nada mas hasta un reset. Mejor
+            # ignorar esa linea y seguir escuchando.
+            try:
+                valor = int(digito.split(":", 1)[1])
+            except ValueError:
+                print("IGNORADO:" + digito)
+                continue
+            if not 0 <= valor <= 9:
+                print("IGNORADO:" + digito)
+                continue
 
             # Camino 1: UART2 (protocolo de texto, igual que antes).
             uart_a_esclavo.write((digito + "\n").encode())
 
             # Camino 2: SPI real, un solo byte con el CS bajado a mano
-            # alrededor de la transferencia.
+            # alrededor de la transferencia. Por SPI va el VALOR (0-9)
+            # como un byte crudo, no el texto "DIGIT:n": el esclavo recibe
+            # exactamente 1 byte por transaccion (su buffer es de 1), asi
+            # que no hace falta ningun formato ni separador de lineas.
+            # CS en bajo = "esclavo, te hablo a ti"; al subirlo, el
+            # ESP-B da la transaccion por terminada.
             cs_esclavo.value(0)
             spi_a_esclavo.write(bytes([valor]))
             cs_esclavo.value(1)
@@ -90,4 +107,4 @@ while True:
             # eso esta el print("OLED:n") de esp_b_esclavo.ino, que se
             # revisa aparte, conectando el ESP-B directo a su propio
             # Monitor Serie de Arduino).
-            print("REENVIADO:" + digito.split(":", 1)[1])
+            print("REENVIADO:" + str(valor))

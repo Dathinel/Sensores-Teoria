@@ -286,7 +286,15 @@ def clasificar_frame(roi):
         return None, 0.0, None
 
     entrada = digito_procesado.reshape(1, 28, 28, 1)
-    prediccion = modelo.predict(entrada, verbose=0)
+    # modelo(entrada) en vez de modelo.predict(entrada): predict() esta
+    # pensado para LOTES grandes y en cada llamada arma toda una
+    # maquinaria de lotes/callbacks que, para UNA sola imagen por frame,
+    # tarda mas que la propia red (se nota en los FPS de la camara).
+    # Llamar al modelo directo hace exactamente el mismo calculo, sin ese
+    # costo fijo. training=False deja el Dropout apagado (solo se usa al
+    # entrenar), igual que hace predict(). float32 es el tipo con el que
+    # se entreno la red.
+    prediccion = modelo(entrada.astype(np.float32), training=False).numpy()
     clase = int(np.argmax(prediccion))
     confianza = float(np.max(prediccion)) * 100
 
@@ -335,17 +343,24 @@ def leer_confirmaciones_esp_a():
     siguiente. Actualiza ultima_linea_cruda con lo ultimo que llego
     (aunque no sea una confirmacion valida) para poder diagnosticar
     en pantalla si el ESP-A esta mandando ALGO o nada en absoluto."""
-    global ultima_confirmacion, ultima_linea_cruda
+    global ser, ultima_confirmacion, ultima_linea_cruda
     if ser is None:
         return
-    while ser.in_waiting > 0:
-        linea = ser.readline().decode(errors="ignore").strip()
-        if not linea:
-            continue
-        ultima_linea_cruda = linea
-        print(f"[SERIAL] recibido: {linea!r}")  # log en consola, no solo en pantalla
-        if linea.startswith("REENVIADO:"):
-            ultima_confirmacion = linea.split(":", 1)[1]
+    try:
+        while ser.in_waiting > 0:
+            linea = ser.readline().decode(errors="ignore").strip()
+            if not linea:
+                continue
+            ultima_linea_cruda = linea
+            print(f"[SERIAL] recibido: {linea!r}")  # log en consola, no solo en pantalla
+            if linea.startswith("REENVIADO:"):
+                ultima_confirmacion = linea.split(":", 1)[1]
+    except serial.SerialException:
+        # se desconecto el cable del ESP-A con el script corriendo: en
+        # vez de cerrar la ventana con un error, se sigue reconociendo
+        # sin mandar nada (lo mismo que si nunca hubiera estado conectado)
+        print("[SERIAL] se perdio la conexion con el ESP-A; se sigue sin enviar.")
+        ser = None
 
 
 # ------------------------------------------------------------------
@@ -466,10 +481,16 @@ while True:
     # segundo), solo cuando de verdad cambia.
     if confirmado is not None:
         if ser is not None and confirmado != digito_enviado:
-            ser.write(f"DIGIT:{confirmado}\n".encode())
+            try:
+                ser.write(f"DIGIT:{confirmado}\n".encode())
+                ultima_confirmacion = None  # todavia no ha llegado confirmacion de ESTE envio
+                print(f"[SERIAL] mandado: DIGIT:{confirmado}")  # log en consola, no solo en pantalla
+            except serial.SerialException:
+                # mismo caso que en leer_confirmaciones_esp_a(): cable
+                # desconectado a mitad de la demo -> seguir sin ESP-A
+                print("[SERIAL] se perdio la conexion con el ESP-A; se sigue sin enviar.")
+                ser = None
             digito_enviado = confirmado
-            ultima_confirmacion = None  # todavia no ha llegado confirmacion de ESTE envio
-            print(f"[SERIAL] mandado: DIGIT:{confirmado}")  # log en consola, no solo en pantalla
     else:
         # nada confirmado todavia (ventana insegura, o "nada" gano
         # porque se quito el papel): el proximo digito que se confirme

@@ -270,6 +270,15 @@
 
   .nota-manual { margin: 0.55rem 0 0; font-size: 0.7rem; color: var(--text-muted); line-height: 1.35; }
 
+  /* Espejo de los LEDs: lo que el firmware deberia estar mostrando */
+  .fila-leds { display: flex; justify-content: space-around; padding: 0.3rem 0 0.2rem; }
+  .led-espejo { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; color: var(--text-muted); }
+  .led-espejo .bombillo { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--panel-border); background: #1c2126; position: relative; overflow: hidden; }
+  .led-espejo .luz { position: absolute; inset: 0; border-radius: 50%; opacity: 0; transition: opacity 0.08s linear; }
+  .led-amarillo .luz { background: var(--amarillo); box-shadow: 0 0 14px var(--amarillo); }
+  .led-azul .luz { background: var(--azul); box-shadow: 0 0 14px var(--azul); }
+  .led-rojo .luz { background: var(--rojo); box-shadow: 0 0 14px var(--rojo); }
+
   /* Elementos que se ocultan al agrandar la cámara, para dejarle espacio */
   body.modo-enfocado .colapsable { display: none; }
 </style>
@@ -350,6 +359,10 @@
         <span class="etiqueta">Baud rate</span>
         <span class="valor" id="baudRateSpan">-</span>
       </div>
+      <div class="fila-dato">
+        <span class="etiqueta">Última línea recibida</span>
+        <span class="valor" id="ultimaLineaSpan">-</span>
+      </div>
     </div>
 
     <div class="panel">
@@ -363,6 +376,16 @@
         <button class="btn-manual btn-detener" id="btnManualDetener">Detener todo</button>
       </div>
       <p class="nota-manual colapsable">Siguen el modo de la izquierda: en persistente un clic alterna, en automático hay que mantenerlos presionados. Detener todo es siempre de un solo clic.</p>
+    </div>
+
+    <div class="panel">
+      <h2>LEDs (espejo del firmware)</h2>
+      <div class="fila-leds">
+        <div class="led-espejo led-amarillo"><div class="bombillo"><div class="luz" id="luzAmarillo"></div></div><span id="dutyAmarillo">0%</span></div>
+        <div class="led-espejo led-azul"><div class="bombillo"><div class="luz" id="luzAzul"></div></div><span id="dutyAzul">0%</span></div>
+        <div class="led-espejo led-rojo"><div class="bombillo"><div class="luz" id="luzRojo"></div></div><span id="dutyRojo">0%</span></div>
+      </div>
+      <p class="nota-manual colapsable">Replica en la página la misma lógica de esp32_gestos.py con cada comando enviado, así se ve qué deberían mostrar los LEDs aunque no haya ESP32 conectado.</p>
     </div>
 
     <div class="panel">
@@ -592,6 +615,7 @@ function dibujar3D(resultado) {
 // Solo funciona en navegadores basados en Chromium (Chrome, Edge).
 let puertoSerial;
 let escritorSerial;
+const ultimaLineaSpan = document.getElementById("ultimaLineaSpan");
 
 function formatoHex(valor) {
   if (valor === undefined || valor === null) return "no disponible";
@@ -599,8 +623,16 @@ function formatoHex(valor) {
 }
 
 btnConectar.addEventListener("click", async () => {
+  // Firefox y Safari no traen Web Serial: se avisa en vez de tirar un error críptico
+  if (!("serial" in navigator)) {
+    estadoDiv.textContent = "Este navegador no tiene Web Serial: abre la página en Chrome o Edge";
+    estadoPuertoSpan.textContent = "no disponible";
+    return;
+  }
+  if (puertoSerial) return;  // ya conectado: un segundo requestPort dejaría el primero abierto
   try {
     puertoSerial = await navigator.serial.requestPort();
+    // 115200 = mismos baudios de la consola USB de MicroPython en el ESP32
     await puertoSerial.open({ baudRate: 115200 });
     escritorSerial = puertoSerial.writable.getWriter();
     estadoDiv.textContent = "ESP32 conectado por USB";
@@ -609,16 +641,119 @@ btnConectar.addEventListener("click", async () => {
     const info = puertoSerial.getInfo ? puertoSerial.getInfo() : {};
     vidPidSpan.textContent = formatoHex(info.usbVendorId) + " / " + formatoHex(info.usbProductId);
     baudRateSpan.textContent = "115200";
+    leerRespuestas();
   } catch (error) {
+    puertoSerial = null;
     estadoDiv.textContent = "No se pudo conectar: " + error.message;
     estadoPuertoSpan.textContent = "error";
   }
 });
 
+// Lee lo que contesta el ESP32 ("OK FIST", "? ALGO") y muestra la última línea
+// CRUDA. Es la herramienta de diagnóstico más útil: si nunca aparece nada, el
+// ESP32 no está corriendo main.py (o Thonny tiene el puerto); si aparece "?",
+// el problema es el texto que se le manda, no el cable.
+async function leerRespuestas() {
+  const lector = puertoSerial.readable.getReader();
+  const decodificador = new TextDecoder();
+  let pendiente = "";  // pedazo de línea que llegó sin su "\n" todavía
+  try {
+    while (true) {
+      const { value, done } = await lector.read();
+      if (done) break;
+      pendiente += decodificador.decode(value, { stream: true });
+      const lineas = pendiente.split("\n");
+      pendiente = lineas.pop();
+      for (const linea of lineas) {
+        if (linea.trim()) ultimaLineaSpan.textContent = linea.trim();
+      }
+    }
+  } catch (error) {
+    marcarDesconectado("conexión perdida: " + error.message);
+  } finally {
+    lector.releaseLock();
+  }
+}
+
+function marcarDesconectado(motivo) {
+  escritorSerial = null;
+  puertoSerial = null;
+  estadoPuertoSpan.textContent = "sin conectar";
+  estadoDiv.textContent = "ESP32 desconectado (" + motivo + "). Vuelve a presionar Conectar";
+}
+
 async function escribirEnSerial(texto) {
+  // El espejo de los LEDs se actualiza SIEMPRE, haya o no ESP32: así la
+  // página sirve para probar la lógica completa sin hardware.
+  simularFirmware(texto);
   if (!escritorSerial) return;
   const codificador = new TextEncoder();
-  await escritorSerial.write(codificador.encode(texto + "\n"));
+  try {
+    await escritorSerial.write(codificador.encode(texto + "\n"));
+  } catch (error) {
+    // típico: se desenchufó el cable. Sin este catch quedaría una promesa
+    // rechazada sin manejar en cada comando siguiente.
+    marcarDesconectado(error.message);
+  }
+}
+
+// ---- Espejo del firmware: misma lógica que manejar_comando() de esp32_gestos.py ----
+const DUTY = { amarillo: 0, azul: 0, rojo: 0 };           // 0..1, como duty()/1023
+const INTENSIDAD = { amarillo: 0.30, azul: 0.70, rojo: 1.0 };
+const LED_DE = { FIST: "amarillo", VICTORY: "azul", OPEN2: "rojo" };
+const luces = {
+  amarillo: [document.getElementById("luzAmarillo"), document.getElementById("dutyAmarillo")],
+  azul: [document.getElementById("luzAzul"), document.getElementById("dutyAzul")],
+  rojo: [document.getElementById("luzRojo"), document.getElementById("dutyRojo")]
+};
+let timerModoSim = null;
+let pasoSim = 0;
+
+function pintarLeds() {
+  for (const color in luces) {
+    luces[color][0].style.opacity = DUTY[color];
+    luces[color][1].textContent = Math.round(DUTY[color] * 100) + "%";
+  }
+}
+function apagarSim() { DUTY.amarillo = DUTY.azul = DUTY.rojo = 0; }
+function pararModoSim() {
+  if (timerModoSim === null) return;
+  clearInterval(timerModoSim);
+  timerModoSim = null;
+  apagarSim();
+}
+function simularFirmware(comando) {
+  // "FIST" -> alternar, "FIST_ON" -> prender, "FIST_OFF" -> apagar (igual con VICTORY y OPEN2)
+  const partes = comando.match(/^(FIST|VICTORY|OPEN2)(?:_(ON|OFF))?$/);
+  if (partes) {
+    const color = LED_DE[partes[1]];
+    const sufijo = partes[2];
+    if (sufijo !== "OFF") pararModoSim();
+    if (sufijo === "ON") DUTY[color] = INTENSIDAD[color];
+    else if (sufijo === "OFF") DUTY[color] = 0;
+    else DUTY[color] = DUTY[color] > 0 ? 0 : INTENSIDAD[color];  // alternar
+  } else if (comando === "THUMB_DOWN" || comando === "THUMB_UP") {
+    pararModoSim();
+    const modo = comando === "THUMB_DOWN" ? 1 : 2;
+    pasoSim = 0;
+    const paso = () => {
+      if (modo === 1) {
+        apagarSim();
+        DUTY[["amarillo", "azul", "rojo"][pasoSim % 3]] = 1;
+      } else {
+        const v = pasoSim % 2 === 0 ? 1 : 0;
+        DUTY.amarillo = DUTY.azul = DUTY.rojo = v;
+      }
+      pasoSim++;
+      pintarLeds();
+    };
+    timerModoSim = setInterval(paso, 200);  // PERIODO_MODO_MS del firmware
+    paso();  // el Timer real da su primer paso a los 200 ms; aquí se adelanta para que se vea al instante
+  } else if (comando === "NONE") {
+    pararModoSim();
+    apagarSim();
+  }
+  pintarLeds();
 }
 
 let gestureRecognizer;
@@ -632,6 +767,10 @@ let ventana = [];
 let ventanaScores = [];
 let ultimoComandoContinuo = "NONE";
 let ultimoDisparoThumb = { THUMB_DOWN: 0, THUMB_UP: 0 };
+// Un pulgar solo vuelve a disparar después de que el gesto confirmado cambió
+// (soltarlo y repetirlo); el cooldown es una segunda protección por si la
+// confirmación parpadea entre el pulgar y otra cosa.
+let thumbArmado = { THUMB_DOWN: true, THUMB_UP: true };
 
 let modoPersistente = true;
 document.querySelectorAll('input[name="modoApagado"]').forEach((radio) => {
@@ -753,23 +892,49 @@ function registrarEnLog(comando) {
 function enviarComando(comando) {
   const esDisparoUnico = comando === "THUMB_DOWN" || comando === "THUMB_UP";
 
+  // Cualquier gesto confirmado distinto de un pulgar "rearma" ese pulgar
+  for (const t in thumbArmado) if (t !== comando) thumbArmado[t] = true;
+
   if (esDisparoUnico) {
     const ahora = Date.now();
-    if (ahora - ultimoDisparoThumb[comando] < COOLDOWN_MS) return;
+    if (!thumbArmado[comando] || ahora - ultimoDisparoThumb[comando] < COOLDOWN_MS) return;
+    thumbArmado[comando] = false;
     ultimoDisparoThumb[comando] = ahora;
     escribirEnSerial(comando);
     registrarEnLog(comando);
     return;
   }
 
-  if (comando !== ultimoComandoContinuo) {
-    ultimoComandoContinuo = comando;
-    const debeEnviarse = comando !== "NONE" || !modoPersistente;
-    if (debeEnviarse) {
+  if (comando === ultimoComandoContinuo) return;
+  const anterior = ultimoComandoContinuo;
+  ultimoComandoContinuo = comando;
+
+  if (modoPersistente) {
+    // Persistente: el gesto ALTERNA su LED (FIST prende/apaga el amarillo).
+    // Bajar la mano (NONE) no manda nada, así el LED queda como estaba y
+    // repetir el mismo gesto después lo apaga.
+    if (comando !== "NONE") {
       escribirEnSerial(comando);
       registrarEnLog(comando);
     }
+    return;
   }
+
+  // Automático: el LED está prendido SOLO mientras se sostiene el gesto.
+  // Se usan FIST_ON / FIST_OFF (no FIST) para que el resultado no dependa
+  // de cómo quedó el LED antes: con el alternar, un LED que ya estaba
+  // prendido se apagaría justo al hacer su gesto.
+  if (comando === "NONE") {
+    escribirEnSerial("NONE");
+    registrarEnLog("NONE");
+    return;
+  }
+  if (anterior !== "NONE") {
+    escribirEnSerial(anterior + "_OFF");   // pasar de un gesto a otro sin bajar la mano
+    registrarEnLog(anterior + "_OFF");
+  }
+  escribirEnSerial(comando + "_ON");
+  registrarEnLog(comando + "_ON");
 }
 
 function formatearLateralidad(resultado) {
@@ -924,9 +1089,25 @@ btnManualDetener.addEventListener("click", () => {
   ultimoComandoContinuo = "NONE";
 });
 
+pintarLeds();
+
+// Si falla el modelo (sin internet) o la cámara (permiso denegado, sin
+// webcam), la página NO se queda muerta: los botones manuales, el espejo
+// de LEDs y Web Serial siguen funcionando para probar sin cámara.
 (async () => {
-  await iniciarModelo();
-  await iniciarCamara();
+  try {
+    await iniciarModelo();
+  } catch (error) {
+    estadoMediaPipeSpan.textContent = "error";
+    estadoDiv.textContent = "No se pudo cargar MediaPipe (¿sin internet?): " + error.message + " — los botones manuales siguen funcionando";
+    return;
+  }
+  try {
+    await iniciarCamara();
+  } catch (error) {
+    estadoDiv.textContent = "Sin cámara (" + error.message + ") — los botones manuales siguen funcionando";
+    return;
+  }
   estadoDiv.textContent = "Modelo y cámara listos";
   tiempoInicio = Date.now();
   procesarFrame();

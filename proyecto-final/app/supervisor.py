@@ -36,7 +36,9 @@ from control.embalaje import EmbalajeVasos
 from control.hal.backend_sim import EstacionBackendSim
 from control.linea import LineaMonedas
 from sim.sensores_sim import CamaraOraculo
-from sim.carga_escenarios import ESCENARIO_UNICO, cargar_escenario, listar_escenarios
+from sim.carga_escenarios import (ESCENARIO_UNICO, PIEZAS, PRUEBAS_DE_UN_FILTRO, cargar_escenario,
+                                  escenarios_validos, especificacion_pieza, listar_escenarios,
+                                  prueba_de_un_filtro)
 from sim.geometria import geometria_completa
 from sim.mundo import EscenaEstacion
 from sim.planta import PlantaSimulada, opciones_desde_config
@@ -174,14 +176,19 @@ class Supervisor:
             return
         corriendo = self.estado_linea == CORRIENDO and self.planta is not None
 
-        if cmd == "iniciar":
+        if cmd == "iniciar" and (orden.get("escenario") or ESCENARIO_UNICO) not in escenarios_validos():
+            # Llega tambien por HTTP (visor): solo los escenarios de la interfaz, nunca una ruta.
+            self._responder(orden, False, f"Escenario desconocido: {orden.get('escenario')}")
+        elif cmd == "iniciar":
             self.iniciar(
                 orden.get("escenario") or ESCENARIO_UNICO,
                 confianza_minima=orden.get("confianza_minima"),
                 probabilidad_error=orden.get("probabilidad_error"),
                 conservar_almacen=orden.get("conservar_almacen"),
             )
-            self._responder(orden, True, "Corrida nueva: prueba completa")
+            prueba = prueba_de_un_filtro(self.escenario_nombre or "")
+            self._responder(orden, True, f"Prueba de un filtro: {prueba['nombre']}" if prueba
+                            else "Corrida nueva: prueba completa")
         elif cmd == "pausar":
             if corriendo:
                 self.estado_linea = PAUSADA
@@ -236,6 +243,20 @@ class Supervisor:
                 if ok and self.estado_linea == TERMINADA:
                     self.estado_linea = CORRIENDO
                 self._responder(orden, ok, detalle)
+        elif cmd == "colocar":
+            # "Colocar pieza X": esa pieza entra en la proxima carga.
+            pieza = orden.get("pieza")
+            if self.planta is None:
+                self._responder(orden, False, "No hay corrida: empiece una primero")
+            elif self.estado_linea in (PAUSADA, PARO):
+                self._responder(orden, False, "La línea está en pausa o en paro")
+            elif pieza not in PIEZAS:
+                self._responder(orden, False, f"Pieza desconocida: {pieza}")
+            else:
+                self.planta.colocar_pieza(especificacion_pieza(pieza))
+                if self.estado_linea == TERMINADA:
+                    self.estado_linea = CORRIENDO
+                self._responder(orden, True, f"{PIEZAS[pieza]['nombre']}: va en la próxima carga")
         elif cmd == "sabotaje":
             if not corriendo:
                 self._responder(orden, False, "La línea no está corriendo")
@@ -375,6 +396,8 @@ class Supervisor:
             backend=self.backend,
             escenario=self.escenario_nombre,
             escenarios_disponibles=listar_escenarios(),
+            pruebas_filtro=PRUEBAS_DE_UN_FILTRO,
+            piezas=[{"id": k, "nombre": v["nombre"]} for k, v in PIEZAS.items()],
             velocidad=self.velocidad,
             confianza_minima=self.confianza_minima,
             probabilidad_error=self.probabilidad_error,

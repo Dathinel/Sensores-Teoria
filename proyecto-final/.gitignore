@@ -21,3 +21,9 @@ vision/modelos/*.onnx
 
 # firmware armado para subir (firmware/preparar.py): se genera, no se versiona
 firmware/salida/
+
+# vision (fase 5): las fotos del dataset pesan y el entorno de TensorFlow (Python 3.12) es local;
+# los resultados (matriz de confusion, curva, metricas) SI se versionan
+vision/dataset/
+vision/entorno/
+vision/modelos/

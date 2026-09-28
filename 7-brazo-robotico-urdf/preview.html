@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
+    color-scheme: dark; /* barras de scroll y controles nativos oscuros */
     --bg: #0d1013;
     --panel: #15191d;
     --panel-border: #262b31;
@@ -50,13 +51,24 @@
   }
   .teclado button.sel { border-color: var(--accent); color: var(--accent); }
   .teclado button.deshabilitada { color: #3a3f45; cursor: default; }
+  .teclado button.presionada { background: rgba(79, 143, 206, 0.18); border-color: var(--accent); }
+  h2 { font-size: 0.8rem; font-weight: 600; margin: 0 0 0.6rem; color: var(--text-muted); }
+  .monitor {
+    list-style: none; margin: 0.8rem 0 0; padding: 0.4rem 0.6rem; max-height: 180px; overflow-y: auto;
+    background: #0a0d10; border: 1px solid var(--panel-border); border-radius: 6px;
+    font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; color: var(--text-muted);
+  }
+  .monitor li { padding: 0.12rem 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .monitor li:first-child { color: var(--text); }
+  .monitor li.aviso { color: var(--rojo); }
+  .nota { font-size: 0.7rem; color: var(--text-muted); line-height: 1.4; margin: 0.6rem 0 0; }
   #seleccionTexto { font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; color: var(--accent); margin-top: 0.6rem; }
 </style>
 </head>
 <body>
 
 <h1>Previsualización — brazo robótico</h1>
-<p class="sub">Esquema 2D simplificado de esp32_brazo.py + brazo_pybullet.py (no reemplaza la simulación real en PyBullet). Solo teclado, sin potenciómetro: mantener presionada una tecla mueve la articulación (jog), igual que el ESP32 real.</p>
+<p class="sub">Vista 3D simplificada (cinemática directa de brazo.urdf, sin física) de esp32_brazo.py + brazo_pybullet.py. No reemplaza la simulación en PyBullet. Solo teclado: mantener presionada una tecla mueve la articulación (jog), igual que el ESP32 real.</p>
 
 <div class="rejilla">
   <div class="panel">
@@ -66,6 +78,9 @@
     </div>
     <button id="btnConectar" style="display:none">Conectar por USB (Web Serial)</button>
     <div id="estado" style="display:none"></div>
+    <h2 style="margin-top:1rem">Monitor serial (líneas crudas)</h2>
+    <ul class="monitor" id="monitor"><li>(en modo prueba se muestran las líneas que mandaría el ESP32)</li></ul>
+    <p class="nota">En modo prueba la página se comporta como el ESP32: 10 líneas por segundo con las 3 articulaciones. También funcionan las teclas numéricas del PC (8/2/6/4/9/7/5).</p>
   </div>
 
   <div class="panel" id="panelControles">
@@ -74,21 +89,8 @@
   </div>
 
   <div class="panel">
-    <svg viewBox="0 0 300 260">
-      <line x1="60" y1="240" x2="240" y2="240" stroke="#262b31" stroke-width="2"/>
-      <circle cx="150" cy="220" r="18" fill="#3a3f45"/>
-      <g id="grupoBrazo" transform="rotate(0 150 220)">
-        <line id="brazo1" x1="150" y1="220" x2="150" y2="120" stroke="#4f8fce" stroke-width="10" stroke-linecap="round"/>
-        <g id="grupoCodo" transform="translate(150 120)">
-          <line id="brazo2" x1="0" y1="0" x2="0" y2="-90" stroke="#e8b930" stroke-width="8" stroke-linecap="round"/>
-          <g id="grupoPinza" transform="translate(0 -90)">
-            <rect id="pinzaBase" x="-10" y="-6" width="20" height="12" fill="#d9534f" rx="2"/>
-            <line id="dedoIzq" x1="-8" y1="0" x2="-8" y2="0" stroke="#e7e9ec" stroke-width="4"/>
-            <line id="dedoDer" x1="8" y1="0" x2="8" y2="0" stroke="#e7e9ec" stroke-width="4"/>
-          </g>
-        </g>
-      </g>
-    </svg>
+    <!-- Se dibuja por JS: proyeccion de los puntos 3D del brazo con la misma camara de brazo_pybullet.py (yaw 40, pitch -30) -->
+    <svg id="vista" viewBox="0 0 300 260"></svg>
     <div class="lectura">
       <span>J1: <span id="lecturaJ1">0.000</span> rad</span>
       <span>J2: <span id="lecturaJ2">0.000</span> rad</span>
@@ -98,22 +100,66 @@
 </div>
 
 <script>
-const grupoBrazo = document.getElementById("grupoBrazo");
-const grupoCodo = document.getElementById("grupoCodo");
-const dedoIzq = document.getElementById("dedoIzq");
-const dedoDer = document.getElementById("dedoDer");
+const vista = document.getElementById("vista");
 const lecturaJ1 = document.getElementById("lecturaJ1");
 const lecturaJ2 = document.getElementById("lecturaJ2");
 const lecturaG = document.getElementById("lecturaG");
 
+// ---- Cinematica directa con las medidas de brazo.urdf (metros) ----
+// joint_1: gira sobre Z (vertical) a 0.15 m de la base (torreta).
+// joint_2: gira sobre Y a 0.35 m, al final de brazo1 (codo).
+// joint_gripper: prismatico sobre Z de brazo2, a 0.30 m, de 0 a 0.15 m (sube la pinza).
+// dedos: prismaticos sobre X de la pinza, se abren g/3 (igual que brazo_pybullet.py).
+function rotZ(v, a) { const c = Math.cos(a), s = Math.sin(a); return [c*v[0] - s*v[1], s*v[0] + c*v[1], v[2]]; }
+function rotY(v, a) { const c = Math.cos(a), s = Math.sin(a); return [c*v[0] + s*v[2], v[1], -s*v[0] + c*v[2]]; }
+function sumar(a, b) { return [a[0]+b[0], a[1]+b[1], a[2]+b[2]]; }
+
+function puntosBrazo(j1, j2, g) {
+  const baseZ = 0.15;                      // brazo_pybullet.py carga el URDF en z = 0.15
+  const hombro = [0, 0, baseZ + 0.15];     // origen de joint_1 (encima del cilindro de la base)
+  const codo = sumar(hombro, rotZ([0, 0, 0.35], j1));
+  // un vector expresado en el marco de brazo2: primero Ry(j2), luego Rz(j1)
+  const enBrazo2 = (v) => rotZ(rotY(v, j2), j1);
+  const muneca = sumar(codo, enBrazo2([0, 0, 0.30 + g]));
+  const apertura = 0.055 + g / 3;          // 0.055 = posicion de cada dedo con la pinza cerrada
+  const dedo = (lado) => [
+    sumar(muneca, enBrazo2([lado * apertura, 0, 0.02])),
+    sumar(muneca, enBrazo2([lado * apertura, 0, 0.14])),
+  ];
+  // el cilindro de la base va de z = 0.15 a 0.30 (igual que en PyBullet, que lo carga elevado)
+  return { base: [0, 0, baseZ], tapa: hombro, hombro, codo, muneca, izq: dedo(-1), der: dedo(1) };
+}
+
+// Proyeccion ortografica con la camara de brazo_pybullet.py (yaw 40, pitch -30)
+const YAW = 40 * Math.PI / 180, PITCH = -30 * Math.PI / 180, ESCALA = 190;
+function proyectar([x, y, z]) {
+  // girar el mundo -yaw alrededor de Z y luego inclinar segun el pitch
+  const c = Math.cos(-YAW), s = Math.sin(-YAW);
+  const xr = c*x - s*y, yr = s*x + c*y;
+  const alto = z * Math.cos(PITCH) + yr * Math.sin(-PITCH);
+  return [150 + xr * ESCALA, 236 - alto * ESCALA];
+}
+
+function linea(a, b, color, grosor) {
+  const [x1, y1] = proyectar(a), [x2, y2] = proyectar(b);
+  return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${color}" stroke-width="${grosor}" stroke-linecap="round"/>`;
+}
+
 function aplicar(j1, j2, g) {
-  const gradosJ1 = j1 * 180 / Math.PI;
-  const gradosJ2 = j2 * 180 / Math.PI;
-  grupoBrazo.setAttribute("transform", `rotate(${gradosJ1.toFixed(2)} 150 220)`);
-  grupoCodo.setAttribute("transform", `translate(150 120) rotate(${gradosJ2.toFixed(2)})`);
-  const mitad = Math.max(0, g / 3) * 100; // igual que en brazo_pybullet.py: g/3
-  dedoIzq.setAttribute("x2", -8 - mitad);
-  dedoDer.setAttribute("x2", 8 + mitad);
+  const P = puntosBrazo(j1, j2, g);
+  let svg = "";
+  // piso: cuadricula de 0.8 x 0.8 m para dar referencia de profundidad
+  for (let k = -0.4; k <= 0.401; k += 0.2) {
+    svg += linea([k, -0.4, 0], [k, 0.4, 0], "#1c2126", 1) + linea([-0.4, k, 0], [0.4, k, 0], "#1c2126", 1);
+  }
+  // eje X del mundo (rojo tenue): hacia ahi se dobla el codo con joint_1 = 0
+  svg += linea([0, 0, 0], [0.3, 0, 0], "rgba(217,83,79,0.5)", 1.5);
+  svg += linea(P.base, P.tapa, "#3a3f45", 34);                 // base (cilindro gris)
+  svg += linea(P.hombro, P.codo, "#4f8fce", 11);               // brazo1 (celeste)
+  svg += linea(P.codo, P.muneca, "#e8b930", 9);                // brazo2 (naranja)
+  svg += linea(P.izq[0], P.der[0], "#d9534f", 6);              // base de la pinza (roja)
+  svg += linea(P.izq[0], P.izq[1], "#e7e9ec", 4) + linea(P.der[0], P.der[1], "#e7e9ec", 4);
+  vista.innerHTML = svg;
   lecturaJ1.textContent = j1.toFixed(3);
   lecturaJ2.textContent = j2.toFixed(3);
   lecturaG.textContent = g.toFixed(3);
@@ -130,9 +176,18 @@ const JOG = {
 };
 const TECLAS = [["1","2","3","A"],["4","5","6","B"],["7","8","9","C"],["*","0","#","D"]];
 const valoresArticulaciones = { j1: 0, j2: 0, g: 0 };
+const monitor = document.getElementById("monitor");
+let modoConectado = false;
+
+function agregarAlMonitor(texto) {
+  const item = document.createElement("li");
+  item.textContent = texto;
+  if (texto.startsWith("#")) item.className = "aviso";  // avisos del ESP32 (p.ej. teclado I2C sin respuesta)
+  monitor.insertBefore(item, monitor.firstChild);
+  while (monitor.children.length > 60) monitor.removeChild(monitor.lastChild);
+}
 
 const teclado = document.getElementById("teclado");
-let intervaloJog = null;
 
 function limitar(valor, [min, max]) { return Math.max(min, Math.min(max, valor)); }
 
@@ -148,19 +203,27 @@ function aplicarJog(tecla) {
   aplicar(valoresArticulaciones.j1, valoresArticulaciones.j2, valoresArticulaciones.g);
 }
 
+// En modo prueba la pagina hace de ESP32: cada 100 ms (el mismo time.sleep(0.1)
+// de esp32_brazo.py) aplica la tecla sostenida y "manda" la linea al monitor.
+let teclaSostenida = null;
+setInterval(() => {
+  if (modoConectado) return;
+  if (teclaSostenida !== null) aplicarJog(teclaSostenida);
+  const v = valoresArticulaciones;
+  agregarAlMonitor(`J1:${v.j1.toFixed(3)},J2:${v.j2.toFixed(3)},G:${v.g.toFixed(3)}`);
+}, 100);
+const botonesPorTecla = {};
+
 TECLAS.forEach((fila) => {
   fila.forEach((tecla) => {
     const boton = document.createElement("button");
     boton.textContent = tecla;
     if (tecla in JOG || tecla === "5") {
       // mantener presionado = jog continuo, igual que sostener la tecla fisica
-      const empezar = (ev) => { ev.preventDefault(); aplicarJog(tecla); intervaloJog = setInterval(() => aplicarJog(tecla), 100); };
-      const parar = () => { clearInterval(intervaloJog); intervaloJog = null; };
-      boton.addEventListener("mousedown", empezar);
-      boton.addEventListener("touchstart", empezar);
-      boton.addEventListener("mouseup", parar);
-      boton.addEventListener("mouseleave", parar);
-      boton.addEventListener("touchend", parar);
+      // (pointer events cubren mouse y pantalla tactil con el mismo codigo)
+      botonesPorTecla[tecla] = boton;
+      boton.addEventListener("pointerdown", (ev) => { ev.preventDefault(); presionar(tecla); });
+      ["pointerup", "pointerleave", "pointercancel"].forEach((tipo) => boton.addEventListener(tipo, () => soltar(tecla)));
     } else {
       boton.className = "deshabilitada";
       boton.disabled = true;
@@ -168,6 +231,21 @@ TECLAS.forEach((fila) => {
     teclado.appendChild(boton);
   });
 });
+
+function presionar(tecla) {
+  if (modoConectado || teclaSostenida === tecla) return;
+  if (teclaSostenida !== null) soltar(teclaSostenida);  // el ESP32 solo reconoce una tecla a la vez
+  teclaSostenida = tecla;
+  botonesPorTecla[tecla].classList.add("presionada");
+}
+function soltar(tecla) {
+  if (teclaSostenida !== tecla) return;
+  teclaSostenida = null;
+  botonesPorTecla[tecla].classList.remove("presionada");
+}
+// teclas del PC (fila de numeros o teclado numerico)
+document.addEventListener("keydown", (ev) => { if (ev.key in botonesPorTecla && !ev.repeat) presionar(ev.key); });
+document.addEventListener("keyup", (ev) => { if (ev.key in botonesPorTecla) soltar(ev.key); });
 
 aplicar(0, 0, 0);
 
@@ -179,6 +257,7 @@ const btnConectar = document.getElementById("btnConectar");
 const estado = document.getElementById("estado");
 
 btnModoPrueba.addEventListener("click", () => {
+  modoConectado = false;
   btnModoPrueba.classList.add("activo");
   btnModoConectado.classList.remove("activo");
   panelControles.style.opacity = "1";
@@ -188,6 +267,8 @@ btnModoPrueba.addEventListener("click", () => {
 });
 
 btnModoConectado.addEventListener("click", () => {
+  modoConectado = true;
+  if (teclaSostenida !== null) soltar(teclaSostenida);
   btnModoConectado.classList.add("activo");
   btnModoPrueba.classList.remove("activo");
   panelControles.style.opacity = "0.4";
@@ -231,8 +312,10 @@ async function leerPuerto() {
       while ((indice = bufferTexto.indexOf("\n")) >= 0) {
         const linea = bufferTexto.slice(0, indice).trim();
         bufferTexto = bufferTexto.slice(indice + 1);
+        if (!linea) continue;
+        if (modoConectado) agregarAlMonitor(linea);  // cruda, antes de interpretarla
         const coincidencia = patronLinea.exec(linea);
-        if (coincidencia) {
+        if (coincidencia && modoConectado) {
           aplicar(parseFloat(coincidencia[1]), parseFloat(coincidencia[2]), parseFloat(coincidencia[3]));
           estado.textContent = "recibiendo datos del ESP32";
         }

@@ -1,5 +1,7 @@
 # Detección de objetos
 
+Basado en [Explicación de la arquitectura YOLO](https://github.com/dialejobv/U_Militar/blob/main/2%29%20Yolo/Explicaci%C3%B3n_Arq_YOLO.md) (U_Militar, carpeta `2) Yolo`).
+
 ## Qué es YOLO
 
 YOLO, cuyas siglas vienen de You Only Look Once, es una familia de modelos de red neuronal pensada para detectar objetos dentro de una imagen o un video en tiempo real. La idea que lo hizo diferente cuando apareció en 2015, de la mano de Joseph Redmon y Ali Farhadi, fue tratar la detección como un solo problema de regresión, es decir el modelo mira la imagen completa una única vez y en esa misma pasada calcula al mismo tiempo dónde están los objetos y qué son, en lugar de primero buscar posibles regiones con objetos y después clasificarlas por separado, que era como funcionaban los detectores anteriores basados en dos etapas, como R-CNN. Esa diferencia es la que le da a YOLO su velocidad, siendo capaz de procesar decenas de fotogramas por segundo incluso en hardware modesto.
@@ -19,10 +21,11 @@ Desde esa primera versión la familia fue evolucionando mucho. Las versiones int
 |---|---|---|
 | Modelo | YOLOv8 nano (`yolov8n.pt`, el más liviano: corre sin GPU) | `deteccion_pc.py` |
 | Cámara | 640×480 | `deteccion_pc.py` |
-| Serial | 115200 baudios, un mensaje solo cuando cambia algo | `deteccion_pc.py` |
+| Confianza mínima | 0,4 (por debajo se ignora la caja) | `deteccion_pc.py` (`CONFIANZA_MINIMA`) |
+| Serial | 115200 baudios; un mensaje en cuanto cambia algo y, además, cada 500 ms | `deteccion_pc.py` (`REENVIO_S`) |
 | Apagado de seguridad | 2000 ms sin mensajes → los dos LEDs se apagan | `esp32_leds.py` (`TIEMPO_LIMITE_MS`) |
 
-## Cómo está armado este proyecto
+## La idea general
 
 La idea central es cerrar el círculo entre visión artificial y electrónica física. La computadora corre el modelo de YOLO leyendo la cámara en vivo, y cuando reconoce alguno de los objetos que nos interesan, en este caso una silla o un celular, le avisa al ESP32 a través de un cable USB, y el ESP32 enciende el LED correspondiente. Cuando el objeto deja de estar en cuadro, el LED se apaga.
 
@@ -34,9 +37,9 @@ flowchart TD
     ESP32 -->|"GPIO26"| LED2["LED celular"]
 ```
 
-El cable USB que normalmente se usa para programar el ESP32 desde Thonny es el mismo que se aprovecha aquí, porque por dentro no es más que un puerto serial. La computadora le manda al ESP32 un texto corto cada vez que cambia lo que está viendo, y el ESP32 se queda escuchando ese puerto todo el tiempo, sin necesidad de estar conectado a internet ni de usar WiFi para nada de esto.
+El cable USB que normalmente se usa para programar el ESP32 desde Thonny es el mismo que se aprovecha aquí, porque por dentro no es más que un puerto serial. La computadora le manda al ESP32 un texto corto con lo que está viendo, y el ESP32 se queda escuchando ese puerto todo el tiempo, sin necesidad de estar conectado a internet ni de usar WiFi para nada de esto.
 
-El protocolo de comunicación se mantuvo lo más simple posible a propósito. Cada vez que el estado de lo que ve la cámara cambia, la computadora envía dos caracteres seguidos de un salto de línea, el primero indica si la silla está presente con un uno o un cero, y el segundo hace lo mismo con el celular. Por ejemplo diez significa que se ve la silla pero no el celular, y cero uno sería lo contrario. El ESP32 lee esa línea y prende o apaga cada LED según corresponda. Además, si la computadora deja de mandar mensajes por más de dos segundos, por ejemplo porque el script se cerró o el cable se desconectó, el ESP32 apaga los dos LEDs por su cuenta, para que no se queden encendidos de forma indefinida por accidente.
+El protocolo de comunicación se mantuvo lo más simple posible a propósito. La computadora envía dos caracteres seguidos de un salto de línea, el primero indica si la silla está presente con un uno o un cero, y el segundo hace lo mismo con el celular. Por ejemplo diez significa que se ve la silla pero no el celular, y cero uno sería lo contrario. El ESP32 lee esa línea, prende o apaga cada LED según corresponda y contesta `LEDS 10` (o el mensaje que haya aplicado) para que la computadora sepa que llegó. La línea se manda en cuanto cambia el estado, para que el LED reaccione al instante, y además se repite cada medio segundo aunque no cambie nada. Esa repetición es la que hace compatible el envío con el apagado de seguridad: sin ella, una silla quieta frente a la cámara no generaría mensajes nuevos y su LED se apagaría a los dos segundos aunque la silla siguiera ahí. Además, si la computadora deja de mandar mensajes por más de dos segundos, por ejemplo porque el script se cerró o el cable se desconectó, el ESP32 apaga los dos LEDs por su cuenta, para que no se queden encendidos de forma indefinida por accidente.
 
 Vista de forma dinámica, así se comportan la cámara, el script y el ESP32 a lo largo del tiempo, incluyendo el caso en el que el cable se desconecta y actúa el apagado de seguridad:
 
@@ -50,16 +53,18 @@ sequenceDiagram
     loop cada fotograma
         Cam->>PC: fotograma
         PC->>PC: YOLO detecta objetos<br/>del fotograma
-        alt el estado cambió desde el último envío
+        alt el estado cambió o pasaron 500 ms desde el último envío
             PC->>ESP: "10\n" / "01\n" / "11\n" / "00\n"
-            ESP->>LEDs: enciende o apaga<br/>segun cada caracter
+            ESP->>LEDs: enciende o apaga<br/>según cada carácter
             ESP->>ESP: reinicia el contador<br/>de 2 segundos
+            ESP-->>PC: "LEDS 10"
         end
     end
 
     Note over PC,ESP: si el cable se desconecta<br/>o el script se cierra...
     ESP->>ESP: pasan 2s sin mensajes nuevos
     ESP->>LEDs: apaga los dos LEDs<br/>por seguridad
+    ESP-->>PC: "APAGADO_SEGURIDAD" (si el cable sigue ahí)
 ```
 
 ## El armado físico
@@ -90,14 +95,15 @@ flowchart TD
 
 ### `deteccion_pc.py`, en la computadora
 
-Este script no está dividido en funciones porque es corto y todo pasa dentro de un mismo bucle, pero se puede leer por bloques:
+Este script no está dividido en funciones porque es corto y todo pasa dentro de un mismo bucle, pero se puede leer por bloques (cada bloque trae comentarios en el propio código explicando el porqué):
 
-- **Configuración inicial** (`PUERTO_SERIAL`, `BAUDIOS`, `OBJETIVOS`): son las tres cosas que alguien tendría que tocar para adaptar el proyecto a otro puerto, otra velocidad o a otros objetos. `OBJETIVOS` es una lista con los nombres exactos que usa el dataset COCO, `"chair"` y `"cell phone"`, y el orden de esa lista es el mismo orden en el que después se arman los dos caracteres que se le mandan al ESP32.
+- **Configuración inicial** (`PUERTO_SERIAL`, `BAUDIOS`, `OBJETIVOS`, `CONFIANZA_MINIMA`, `REENVIO_S`): son las cosas que alguien tendría que tocar para adaptar el proyecto a otro puerto, otra velocidad o a otros objetos. `OBJETIVOS` es una lista con los nombres exactos que usa el dataset COCO, `"chair"` y `"cell phone"`, y el orden de esa lista es el mismo orden en el que después se arman los dos caracteres que se le mandan al ESP32. Con `--carro-moto` la lista pasa a ser `"car"` y `"motorcycle"` (ver más abajo). `CONFIANZA_MINIMA` (0,4) descarta las cajas de las que YOLO no está seguro, que son las que harían parpadear un LED por una sombra o un reflejo.
 - **Carga del modelo** (`model = YOLO('yolov8n.pt')`): carga la versión "nano" de YOLOv8, la más liviana de la familia. Se eligió esta y no una versión más grande porque el proyecto corre en tiempo real sobre una laptop común, sin GPU dedicada, y la ganancia de precisión de una versión más pesada no compensa la pérdida de velocidad para detectar solo dos clases de objetos.
-- **Apertura del puerto serial** (`serial.Serial(...)` y `time.sleep(2)`): abre la conexión con el ESP32 y espera dos segundos antes de mandar nada, porque abrir el puerto serial reinicia al ESP32 y el chip necesita ese tiempo para terminar de arrancar y dejar main.py corriendo y escuchando.
-- **Captura de video** (`cv2.VideoCapture(0)` y los `cap.set(...)`): abre la cámara por defecto de la computadora y fija la resolución a 640x480, un tamaño que YOLO procesa rápido sin perder demasiado detalle para objetos del tamaño de una silla o un celular.
-- **El bucle principal**: por cada fotograma corre el modelo (`model(frame, verbose=False)`), recorre las cajas detectadas y se queda solo con las que coinciden con `OBJETIVOS`, arma el estado como una cadena de "1" y "0" con esa misma lógica de posición, y solo escribe al puerto serial (`ser.write(...)`) cuando ese estado es distinto al del fotograma anterior.
-- **Por qué solo se envía en los cambios de estado**: YOLO corre muchas veces por segundo, y mandar un mensaje serial en cada fotograma saturaría el puerto sin necesidad, porque al ESP32 solo le importa enterarse cuando algo prende o apaga, no que la silla "sigue ahí" fotograma tras fotograma. Guardar `estado_anterior` y comparar es lo que evita ese tráfico de más.
+- **Apertura del puerto serial** (`serial.Serial(...)` y `time.sleep(2)`): abre la conexión con el ESP32 y espera dos segundos antes de mandar nada, porque abrir el puerto serial reinicia al ESP32 y el chip necesita ese tiempo para terminar de arrancar y dejar main.py corriendo y escuchando. Va dentro de un `try/except serial.SerialException`: si el ESP32 no está conectado, o Thonny tiene el puerto tomado, el script no se cae y sigue solo con la cámara, escribiendo en la ventana el mensaje que habría mandado.
+- **Captura de video** (`cv2.VideoCapture(0)` y los `cap.set(...)`): abre la cámara por defecto de la computadora y fija la resolución a 640x480, la misma del ejemplo del profesor. YOLO reescala internamente cada imagen a 640 píxeles de lado, así que pedirle más resolución a la cámara solo gasta tiempo capturando y dibujando sin mejorar la detección (la primera versión pedía por error 1902x1080).
+- **El bucle principal**: por cada fotograma corre el modelo (`model(frame, verbose=False)`), recorre las cajas detectadas y se queda solo con las que coinciden con `OBJETIVOS`, arma el estado como una cadena de "1" y "0" con esa misma lógica de posición, y escribe al puerto serial (`ser.write(...)`) cuando ese estado cambia o cuando pasaron `REENVIO_S` segundos desde el último envío. Después vacía todo lo que el ESP32 haya contestado, leyendo solo si `ser.in_waiting` es mayor que cero (un `readline()` a secas esperaría datos y congelaría la cámara), y muestra en la ventana la última línea cruda recibida.
+- **Por qué no se envía en cada fotograma, pero tampoco solo en los cambios**: YOLO corre muchas veces por segundo y mandar un mensaje en cada fotograma sería tráfico de más. Pero mandar solo en los cambios choca con el apagado de seguridad del ESP32 (2 s sin mensajes apagan todo): una silla quieta dejaría de generar mensajes y su LED se apagaría. La versión inicial tenía justo ese problema; la solución es el término medio: mandar en cuanto cambia (respuesta inmediata) y repetir cada 500 ms, cuatro veces dentro de la ventana de 2 s, que sigue siendo muy poco tráfico.
+- **Al salir con `q`**: manda `00` para apagar los LEDs de una vez en vez de esperar los 2 s del apagado de seguridad, y libera cámara, ventana y puerto.
 
 ### `esp32_leds.py`, guardado como `main.py` en el ESP32
 
@@ -107,6 +113,7 @@ Tampoco usa funciones propias, corre de arriba a abajo como firmware:
 - **`select.poll()` sobre `sys.stdin`**: en MicroPython, el mismo puerto serial que usa Thonny para la consola también se puede leer como `sys.stdin`. Se usa `select.poll()` en vez de simplemente llamar a `sys.stdin.readline()` a secas porque esa segunda opción bloquearía el programa esperando datos, y mientras espera no podría revisar el reloj para el apagado de seguridad. Con `poll(100)` el ESP32 pregunta cada 100 milisegundos si hay algo para leer, y si no hay nada sigue de largo.
 - **Validación de la línea** (`len(linea) == 2 and linea[0] in "01" and linea[1] in "01"`): antes de tocar los pines se comprueba que lo que llegó tenga exactamente el formato esperado, dos caracteres que sean "0" o "1". Cualquier mensaje corrupto o incompleto, por ejemplo si el cable se pone ruidoso a mitad de una línea, simplemente se ignora en vez de hacer que el programa truene.
 - **`time.ticks_ms()` y `time.ticks_diff(...)`**: MicroPython recomienda estas dos funciones en vez de restar directamente dos `time.time()`, porque el contador interno de milisegundos del chip eventualmente da la vuelta y vuelve a cero, y `ticks_diff` calcula la diferencia correctamente incluso cuando eso pasa, cosa que una resta común no haría.
+- **Respuesta al PC**: después de aplicar un mensaje válido imprime `LEDS xy`, y cuando actúa el apagado de seguridad imprime `APAGADO_SEGURIDAD` una sola vez. Como en MicroPython `print` sale por el mismo cable USB, el PC puede leerlo y mostrarlo: es la forma de distinguir "el ESP32 no recibe nada" de "recibe pero algo falla después".
 - **El apagado de seguridad**: cada vez que llega un mensaje válido se guarda el momento en `ultimo_mensaje`. Si pasan más de `TIEMPO_LIMITE_MS` (2000 milisegundos) sin que llegue ninguno, el ESP32 asume que la computadora dejó de hablarle, ya sea porque el script se cerró, se desconectó el cable o la cámara se cayó, y apaga los dos LEDs por su cuenta para que no se queden encendidos "pegados" indefinidamente.
 
 ## Qué se modificó frente al código original de YOLO
@@ -115,7 +122,8 @@ El script base con el que arrancó este proyecto es el que aparece en la explica
 
 - Se agregó el `import serial` y la apertura del puerto (`PUERTO_SERIAL`, `BAUDIOS`) para hablar con el ESP32, algo que el código original no hacía porque solo mostraba resultados en pantalla.
 - Se agregó la lista `OBJETIVOS` para filtrar, de todas las clases que YOLO puede reconocer, solo las dos que le importan a este proyecto, en vez de reaccionar a cualquier objeto detectado.
-- Se agregó el seguimiento de `estado_anterior` y el envío condicional por serial, para no saturar el puerto mandando el mismo estado en cada fotograma.
+- Se agregó el seguimiento de `estado_anterior` y el envío por serial en cada cambio más una repetición cada 500 ms, para no saturar el puerto y a la vez no disparar el apagado de seguridad.
+- Se agregó el modo sin ESP32 (el script sigue con la cámara si no hay puerto) y la lectura de las respuestas del ESP32.
 - Se escribió desde cero el firmware `esp32_leds.py`, que no existe en el material original, encargado de recibir esos mensajes, mover los pines físicos y aplicar el apagado de seguridad si la comunicación se corta.
 - Se diseñó el circuito físico (elección de pines, resistencias y su valor) que tampoco forma parte del material original, centrado únicamente en la parte de visión artificial.
 
@@ -127,9 +135,13 @@ Además de la [explicación de la arquitectura de YOLO](../README.md) usada como
 
 ![Circuito de referencia de la directiva: dos botones y LED rojo/verde sobre el ESP32](diagrama-circuito-carro-moto.png)
 
-El circuito de arriba es el esquema de referencia que acompaña esa directiva, pensado para simular en Wokwi la salida de cada detección con un LED rojo y uno verde, apoyado en dos pulsadores para probar cada estado manualmente sin depender de la cámara. Este proyecto no adoptó ese circuito ni cambió el código para detectar un carro y una moto de juguete en su lugar; `deteccion_pc.py` y `esp32_leds.py` se dejaron tal como están, detectando los objetos definidos en `OBJETIVOS`.
+El circuito de arriba es el esquema de referencia que acompaña esa directiva, pensado para simular en Wokwi la salida de cada detección con un LED rojo y uno verde, apoyado en dos pulsadores para probar cada estado manualmente sin depender de la cámara. Como el dataset COCO con el que viene entrenado YOLOv8 ya trae las clases `"car"` y `"motorcycle"`, la directiva no necesita entrenar nada: basta con cambiar `OBJETIVOS`. Por eso `deteccion_pc.py` acepta la opción `--carro-moto`, que detecta carro (primer carácter, GPIO25: ahí va el LED rojo) y moto (segundo carácter, GPIO26: el LED verde) con el mismo protocolo y el mismo `esp32_leds.py`, sin tocar el circuito:
 
-La razón es la cámara y la iluminación realmente disponibles para grabar este proyecto: un carro y una moto de juguete son objetos pequeños, y el modelo nano de YOLOv8 usado aquí (elegido, como se explica más arriba, para poder correr en tiempo real sin GPU dedicada) pierde confianza de detección con objetos así de chicos apenas la luz del cuarto baja un poco o la webcam pierde foco, algo que pasa seguido con una cámara integrada de laptop y luz ambiente no controlada. Los objetos que sí se dejaron configurados ocupan mucho más espacio en el cuadro y tienen bastante más contraste contra el fondo, así que el modelo los reconoce de forma confiable bajo las mismas condiciones de cámara e iluminación con las que de verdad se grabó la demostración de este proyecto, en vez de arriesgar detecciones inconsistentes por perseguir un objeto más fiel a la directiva pero más difícil de detectar con el equipo disponible.
+```
+python deteccion_pc.py --carro-moto
+```
+
+Los dos pulsadores del esquema de Wokwi no se agregaron: su función, probar cada estado sin cámara, la cumple el modo sin ESP32 del propio script. Aun así, la demostración grabada se hizo con silla y celular, y esa sigue siendo la opción por defecto. La razón es la cámara y la iluminación realmente disponibles para grabar este proyecto: un carro y una moto de juguete son objetos pequeños, y el modelo nano de YOLOv8 usado aquí (elegido, como se explica más arriba, para poder correr en tiempo real sin GPU dedicada) pierde confianza de detección con objetos así de chicos apenas la luz del cuarto baja un poco o la webcam pierde foco, algo que pasa seguido con una cámara integrada de laptop y luz ambiente no controlada. Los objetos que sí se dejaron configurados ocupan mucho más espacio en el cuadro y tienen bastante más contraste contra el fondo, así que el modelo los reconoce de forma confiable bajo las mismas condiciones de cámara e iluminación con las que de verdad se grabó la demostración de este proyecto, en vez de arriesgar detecciones inconsistentes por perseguir un objeto más fiel a la directiva pero más difícil de detectar con el equipo disponible.
 
 ## Instalación del entorno en la computadora
 
@@ -150,7 +162,13 @@ pip install ultralytics opencv-python pyserial
 
 Ultralytics trae el modelo de YOLO listo para usarse, opencv-python maneja la cámara y el video, y pyserial es la que permite que el script de Python hable con el ESP32 a través del puerto serial.
 
-## Cómo correrlo
+## Cómo probarlo
+
+**Sin ESP32 conectado**
+
+Con el entorno activado se corre `python deteccion_pc.py` (o con `--carro-moto`). Si no encuentra el puerto, avisa en la consola y sigue: la ventana muestra la cámara con las cajas de YOLO y, arriba, el estado de cada objetivo y el mensaje de dos caracteres que se le mandaría al ESP32 (`'10'`, `'01'`...). Así se puede comprobar toda la parte de visión, incluido qué tan bien reconoce el modelo cada objeto con la luz del cuarto, sin tener la protoboard armada.
+
+**Con ESP32 conectado**
 
 Primero hay que dejar el ESP32 listo. En Thonny, con el ESP32 conectado, se abre el archivo esp32_leds.py de este proyecto y se guarda directamente en el ESP32 con el nombre main.py, usando la opción de guardar en el dispositivo MicroPython en vez de guardar en la computadora. Al guardarlo como main.py el ESP32 lo va a ejecutar automáticamente cada vez que se reinicie o se conecte a la energía, sin depender de que Thonny esté abierto.
 
@@ -162,7 +180,7 @@ Después, en el script deteccion_pc.py hay que revisar el nombre del puerto seri
 python deteccion_pc.py
 ```
 
-Se va a abrir una ventana mostrando la cámara con los cuadros de detección dibujados encima, y en cuanto aparezca una silla o un celular frente a la cámara el LED correspondiente en la protoboard debería encenderse casi al instante.
+Se va a abrir una ventana mostrando la cámara con los cuadros de detección dibujados encima, y en cuanto aparezca una silla o un celular frente a la cámara el LED correspondiente en la protoboard debería encenderse casi al instante y quedarse encendido mientras el objeto siga en cuadro. En la ventana, la línea "ESP32 dice:" muestra la última respuesta cruda del ESP32 (`LEDS 10`, por ejemplo): si se queda en "(nada todavia)", el ESP32 no está recibiendo o no tiene `main.py` corriendo. Al cerrar el script, o al desconectar el cable, los LEDs se apagan solos en menos de dos segundos.
 
 ## Problemas de compatibilidad
 
@@ -181,11 +199,11 @@ Así se ve el montaje corriendo de principio a fin, desde la computadora reconoc
 
 ![Vista general del montaje con la detección corriendo en pantalla](demo-montaje-1.gif)
 
-Así se ve el montaje corriendo de principio a fin, desde la computadora reconociendo la telefono y los LEDs encendiéndose en la protoboard.
+Así se ve el montaje corriendo de principio a fin, desde la computadora reconociendo el teléfono y los LEDs encendiéndose en la protoboard.
 
 ![Vista general del montaje desde otro ángulo](demo-montaje-2.gif)
 
-La ventana de detección marcando los objetos que YOLO reconoce frente a la cámara, junto con la puntuación de confianza de cada uno, reconociendo la silla y el "telefono":
+La ventana de detección marcando los objetos que YOLO reconoce frente a la cámara, junto con la puntuación de confianza de cada uno, reconociendo la silla y el teléfono:
 
 ![Ventana de detección reconociendo persona, silla y mesa](demo-deteccion.gif)
 
@@ -196,3 +214,9 @@ La protoboard en reposo, reconociendo la silla con una sensibilidad muy alta:
 Y la protoboard con los LEDs encendidos en el momento en que la cámara reconoce alguno de los objetos configurados:
 
 ![Protoboard con los LEDs encendidos al detectar un objeto](demo-protoboard-encendida.gif)
+
+## Pendiente
+
+- Los gifs de arriba son de la versión que mandaba el estado solo al cambiar. Falta grabar un video corto con la versión actual (repetición cada 500 ms), donde se vea el LED quedarse encendido con la silla quieta más de dos segundos y apagarse solo al cerrar el script.
+- Falta un video con `--carro-moto` usando un carro y una moto de juguete, con el LED rojo en GPIO25 y el verde en GPIO26.
+- Se hicieron pruebas adicionales del protocolo sin hardware, simulando el ESP32.

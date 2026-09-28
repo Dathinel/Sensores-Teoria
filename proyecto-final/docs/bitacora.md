@@ -1018,3 +1018,30 @@ fotos); clave de DeepSeek válida (la dada da 401).
   FC-51, cámara a 15 cm, 6 servos, estados del paso a paso, CLAUDE.md §11/§16). Fechas de estos días
   corregidas a 2026-09-27.
 - Se usaron subagentes (máx. 4 a la vez); quedaron guardados para reusar en `Micors-teoria/.claude/agents/`.
+
+## 2026-09-27 — Pruebas de un filtro, "colocar pieza", reversa con límite y scripts de ejecución
+
+- **Filtros uno por uno** (el enunciado lo exige en la sustentación): `sim/carga_escenarios.py`
+  (`PRUEBAS_DE_UN_FILTRO`) expone los 6 escenarios de un solo filtro de `tests/escenarios` (los de las
+  pruebas automáticas). Dashboard: "Probar un filtro" en la barra lateral y un aviso arriba con lo
+  esperado y cuántas piezas ya se rechazaron por esa causa. Visor: selector en "En vivo" y, en la
+  pestaña Sensores, **"Ver la prueba de este sensor"** para cada uno de los 13 (un filtro, un sabotaje,
+  una pieza o una orden al carro) con la cámara mirándolo. El supervisor solo acepta escenarios por
+  nombre (nunca una ruta), porque ahora llegan también por HTTP.
+- **Colocar pieza X**: orden `colocar` (15 piezas: cada moneda, euro, botones, bloque, disco de 10 mm,
+  cara de $500 con otro diámetro); entra en la próxima carga y, si la corrida había terminado, sigue
+  solo para procesarla. Botones en el visor y el dashboard.
+- **Reversa al muelle con límite**: la semilla 2 se trababa 79 s contra la guía en V (entra ~3°
+  torcido y con PWM bajo no alcanza a correr el rodillo). Ahora, pasado `reversa_tope_max_s` o sin
+  avance en 3 s, se endereza, sale 15 cm y reintenta una vez con PWM normal hasta 5 cm más allá de
+  donde se trabó; si vuelve a fallar, `no_llego_al_tope`. Evento nuevo `reversa_reintento`. La causa de
+  fondo (la entrada algo torcida) sigue pendiente.
+- **Ejecución**: `requirements-lock.txt` (versiones exactas, Python 3.14.3), `instalar.bat` (entorno,
+  firmware, Ollama, Whisper, chequeo), `python -m app.chequeo` (revisión previa a la sustentación;
+  en este PC: 0 fallas, avisos por la clave de DeepSeek y ningún ESP32 conectado), OpenCV instalado.
+  El driver del VL53L0X no se incluye (su repositorio no declara licencia): se descarga una vez.
+- **Visión lista para cuando haya fotos**: `vision/capturar_dataset.py` y `vision/entrenar.py`
+  (MobileNetV2, matriz de confusión, curva de confianza, confianza mínima sugerida), en un entorno
+  aparte con Python 3.12 porque TensorFlow no tiene versión para 3.14.
+- La cámara decía "E5 · Visión" (de antes del filtro total): ahora E3.
+- Prácticas 1-9 del repo revisadas y mejoradas a fondo con subagentes (`revisor-practica`).

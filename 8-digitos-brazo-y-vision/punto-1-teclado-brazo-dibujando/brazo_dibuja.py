@@ -17,9 +17,18 @@ import serial
 PUERTO_SERIAL = "COM7"
 BAUDIOS = 115200
 
+# Patron "sin necesidad de estar conectado": se INTENTA abrir el puerto,
+# y si no hay ESP32 (o el COM es otro) no se truena el programa, se sigue
+# con ser = None y los botones de la ventana hacen de teclado.
 try:
+    # timeout=0.05: por si alguna vez se llama readline() con una linea a
+    # medio llegar, que no se quede colgado mas de 50 ms. En el bucle
+    # principal igual solo se lee cuando ya hay bytes esperando (ver
+    # leer_serial()), asi que este timeout casi nunca entra en juego.
     ser = serial.Serial(PUERTO_SERIAL, BAUDIOS, timeout=0.05)
-    time.sleep(2)  # da tiempo a que el ESP32 termine de reiniciar tras abrir el puerto
+    # Abrir el puerto mueve la linea DTR del adaptador USB-serial y eso
+    # REINICIA el ESP32; durante ~1-2 s esta arrancando y no manda nada.
+    time.sleep(2)
     print(f"ESP32 conectado en {PUERTO_SERIAL}: se dibuja cada digito que llegue del teclado.")
 except serial.SerialException:
     ser = None
@@ -73,6 +82,11 @@ PUNTOS_POR_TRAMO = 8  # subdivisiones entre cada dos puntos del trazo original
 
 
 def angulos_articulaciones(u, v):
+    """Pasa un punto (u, v) del cuadrado unitario a los dos angulos del
+    brazo. (u - 0.5) va de -0.5 a 0.5; por 2 * RANGO queda de -RANGO a
+    +RANGO alrededor del centro: u = 0 es el borde izquierdo del dibujo
+    (base girada -RANGO_J1), u = 1 el derecho; v = 0 abajo, v = 1 arriba
+    (codo mas o menos doblado)."""
     j1 = CENTRO_J1 + (u - 0.5) * 2 * RANGO_J1
     j2 = CENTRO_J2 + (v - 0.5) * 2 * RANGO_J2
     return j1, j2
@@ -133,6 +147,12 @@ def mover_a(u, v):
     j1, j2 = angulos_articulaciones(u, v)
     p.setJointMotorControl2(robot_id, indices["joint_1"], p.POSITION_CONTROL, targetPosition=j1)
     p.setJointMotorControl2(robot_id, indices["joint_2"], p.POSITION_CONTROL, targetPosition=j2)
+    # 6 pasos de fisica por punto: el motor de posicion de PyBullet no
+    # llega al angulo pedido en un solo paso, necesita unos cuantos. Con
+    # 8 puntos por tramo el objetivo cambia muy poco de un punto a otro,
+    # asi que 6 pasos (~25 ms simulados) alcanzan para que la punta lo
+    # siga de cerca sin que el dibujo se haga eterno. time.sleep(1/240)
+    # hace que eso se vea a velocidad real (PyBullet simula a 240 Hz).
     for _ in range(6):
         p.stepSimulation()
         time.sleep(1 / 240)
@@ -169,21 +189,80 @@ def dibujar_digito(digito):
     print("Listo.")
 
 
+# ------------------------------------------------------------------
+# Lectura serial SIN bloquear la simulacion
+# ------------------------------------------------------------------
+# Un ser.readline() "a secas" dentro del bucle principal se queda
+# esperando hasta el timeout cada vez que no hay nada nuevo, y como el
+# mismo bucle es el que llama stepSimulation(), toda la ventana quedaria
+# limitada a la velocidad a la que llegan datos del ESP32 (se ve trabada).
+# Por eso: solo se lee si in_waiting > 0 (ya hay bytes en el buffer), y
+# se lee TODO lo que haya (while, no if), para no quedarse atras si
+# llegaron varias lineas juntas mientras el brazo dibujaba.
+#
+# Ademas se muestra en la ventana la ULTIMA LINEA CRUDA recibida (sea o
+# no un "DIGIT:n" valido): si nunca cambia, el ESP32 no esta mandando
+# nada (cable, puerto, main.py no corre); si cambia pero no es lo
+# esperado, el problema es de formato, no de conexion.
+id_texto_crudo = p.addUserDebugText("Ultima linea del ESP32: (nada todavia)" if ser is not None
+                                    else "Sin ESP32: usa los botones 0-9",
+                                    [0.0, 0.0, 1.08], textColorRGB=[0.7, 0.7, 0.7], textSize=1.1)
+
+
+def leer_serial():
+    """Devuelve la lista de digitos ("0".."9") que llegaron del ESP32
+    desde la ultima llamada, sin bloquear nunca."""
+    global ser, id_texto_crudo
+    digitos = []
+    if ser is None:
+        return digitos
+    try:
+        while ser.in_waiting > 0:
+            linea = ser.readline().decode(errors="ignore").strip()
+            if not linea:
+                continue
+            print(f"[SERIAL] recibido: {linea!r}")
+            # replaceItemUniqueId reemplaza el texto anterior en vez de
+            # apilar uno encima del otro
+            id_texto_crudo = p.addUserDebugText(f"Ultima linea del ESP32: {linea}", [0.0, 0.0, 1.08],
+                                                textColorRGB=[0.7, 0.7, 0.7], textSize=1.1,
+                                                replaceItemUniqueId=id_texto_crudo)
+            if linea.startswith("DIGIT:"):
+                digitos.append(linea.split(":", 1)[1])
+    except serial.SerialException:
+        # se desconecto el cable con el programa corriendo: en vez de
+        # tronar, se sigue solo con los botones
+        print("Se perdio la conexion con el ESP32: sigue con los botones de la ventana.")
+        ser = None
+    return digitos
+
+
 print("Ventana de PyBullet abierta. Cierra la ventana o Ctrl+C en la terminal para salir.")
 
-while True:
-    # digito que llega del ESP32 (teclado fisico)
-    if ser is not None:
-        linea = ser.readline().decode(errors="ignore").strip()
-        if linea.startswith("DIGIT:"):
-            dibujar_digito(linea.split(":", 1)[1])
-
-    # digito elegido a mano con los botones, sin necesidad de ESP32
-    for digito, boton in botones_digitos.items():
-        contador = p.readUserDebugParameter(boton)
-        if contador != contadores_anteriores[digito]:
-            contadores_anteriores[digito] = contador
+try:
+    # p.isConnected() pasa a False cuando el usuario cierra la ventana de
+    # PyBullet: asi el script termina solo en vez de tirar un error de
+    # "Not connected to physics server" en la siguiente llamada.
+    while p.isConnected():
+        # digitos que llegan del ESP32 (teclado fisico)
+        for digito in leer_serial():
             dibujar_digito(digito)
 
-    p.stepSimulation()
-    time.sleep(1 / 240)
+        # digito elegido a mano con los botones, sin necesidad de ESP32.
+        # Un boton de PyBullet (addUserDebugParameter con min > max) no
+        # devuelve True/False: devuelve un CONTADOR que sube en 1 con cada
+        # click. Por eso se compara contra el valor anterior en vez de
+        # preguntar "esta apretado".
+        for digito, boton in botones_digitos.items():
+            contador = p.readUserDebugParameter(boton)
+            if contador != contadores_anteriores[digito]:
+                contadores_anteriores[digito] = contador
+                dibujar_digito(digito)
+
+        p.stepSimulation()
+        time.sleep(1 / 240)
+except (KeyboardInterrupt, p.error):
+    pass  # Ctrl+C o ventana cerrada a mitad de un dibujo: salir sin traza de error
+finally:
+    if ser is not None:
+        ser.close()

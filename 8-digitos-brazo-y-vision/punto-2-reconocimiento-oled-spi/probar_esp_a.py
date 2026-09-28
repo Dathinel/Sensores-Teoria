@@ -26,7 +26,16 @@ PUERTO_SERIAL = "COM7"
 BAUDIOS = 115200
 
 print(f"Abriendo {PUERTO_SERIAL}...")
-ser = serial.Serial(PUERTO_SERIAL, BAUDIOS, timeout=0.5)
+try:
+    ser = serial.Serial(PUERTO_SERIAL, BAUDIOS, timeout=0.5)
+except serial.SerialException as e:
+    # Aca no tiene sentido un "modo sin ESP32" (el script existe solo para
+    # probar el ESP-A), pero si un mensaje claro en vez de una traza larga:
+    # las dos causas tipicas son el COM equivocado o el puerto ya abierto
+    # por Thonny / reconocer_digito.py (un puerto COM no se comparte).
+    print(f"No se pudo abrir {PUERTO_SERIAL}: {e}")
+    print("Revisa PUERTO_SERIAL y cierra Thonny y reconocer_digito.py si estan abiertos.")
+    raise SystemExit(1)
 time.sleep(2)  # el ESP32 se reinicia al abrir el puerto; darle tiempo a que arranque
 
 print("Puerto abierto. Leyendo lo que el ESP32 mande solo al arrancar (2 segundos)...")
