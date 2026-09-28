@@ -143,7 +143,7 @@ class EstacionBackendSim:
             cfg = yaml.safe_load(ruta.read_text(encoding="utf-8"))
             cortina = cortina or cfg["cortina_seguridad"]
             vasos = vasos or cfg["vasos"]
-        # Auditoria 2026-09-28: estaban escritas a mano (0.5 y 1.05) aunque el comentario de
+        # Auditoria 2026-09-27: estaban escritas a mano (0.5 y 1.05) aunque el comentario de
         # abajo decia que venian de la configuracion.
         media_frac, borde_frac = vasos["barrera_media_altura_frac"], vasos["barrera_borde_altura_frac"]
         self.escena = escena

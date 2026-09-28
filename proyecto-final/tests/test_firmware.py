@@ -155,7 +155,8 @@ class HwCarro:
 
 def _carro():
     cfg, linea, pose = config_carro(P)
-    control = ControlCarro(cfg["vehiculo"], largo_linea_m=cfg["largo_linea_m"], linea=linea, pose_muelle=pose)
+    control = ControlCarro(cfg["vehiculo"], largo_linea_m=cfg["largo_linea_m"], linea=linea, pose_muelle=pose,
+                           zonas=cfg["zonas"])
     salida = []
     return CarroFirmware(HwCarro(), control, cfg, salida.append), salida
 

@@ -12,7 +12,7 @@
 #   pausa      -> la logica esta, pero probarla necesita el montaje real
 #
 # `zona` es a donde vuela la camara del visor 3D; `sensores` son numeros del
-# catalogo de sensores (sim/catalogo_sensores.py y docs/sensores/).
+# catalogo de sensores (sim/catalogos.py y docs/sensores.md).
 
 pasos:
   - numero: 1
@@ -46,7 +46,7 @@ pasos:
       vacía; en E2 ni el capacitivo ni el inductivo ven nada, así que sale como no_metalico a la
       bandeja de rechazo (simulado como sabotaje "mano en la carga" y en el escenario prueba_completa).
     replicacion: >
-      TCRT5000: falso negativo ~0,5 % por lectura (piezas muy oscuras o brillantes), falso positivo
+      FC-51: falso negativo ~0,5 % por lectura (piezas muy oscuras o brillantes), falso positivo
       ~0,1 % (luz ambiente). Mitigación: capuchón contra la luz, 3 lecturas con voto de mayoría
       durante la pausa (el error por decisión baja a ~0,01 %), y E2 respalda a E1: si el
       infrarrojo no vio un elemento pero el capacitivo o el inductivo sí, la casilla se registra
@@ -121,7 +121,7 @@ pasos:
       el error de cada sensor (720 monedas reconocibles): con 1 foto, 20 monedas buenas
       rechazadas y 1 en el vaso equivocado; con 2 fotos "deben coincidir", 39 rechazadas (casi
       el doble: bastaba que fallara una); con la regla aprobada, 7 rechazadas y 0 en el vaso
-      equivocado. Anillo de luz difusa, cámara fija a ~9 cm, cinta negra mate; calibrar la escala
+      equivocado. Anillo de luz difusa, cámara de autoenfoque a ~15 cm (a 9 cm casi ninguna webcam enfoca), cinta negra mate; calibrar la escala
       con una moneda patrón. Dataset: 80-150 fotos por clase del propio montaje (anverso,
       reverso y gastadas) para las 9 clases entrenadas + "otro".
     revision: aprobado

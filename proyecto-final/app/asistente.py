@@ -375,7 +375,9 @@ Reglas:
   dato; puedes dar el valor NOMINAL de la documentación, aclarando que no es una medición.
 - Una pregunta (¿...?) nunca da órdenes: "acciones" va vacío.
 - El carro no choca: antes de moverse mira el camino, y si ve algo adelante se detiene; si la persona pide
-  algo que lo haría chocar o salir de la pista, explícalo. Las cm se pasan a metros.
+  algo que lo haría chocar o salir de la pista, explícalo. Las cm se pasan a metros. El carro anda SOLO
+  por el piso: nunca puede atravesar ni entrar a la planta (cintas, filtro, almacén, canaleta) ni al
+  muelle por un costado; no prometas eso ni mandes ir_a a un punto de la planta.
 - En "respuesta": si es una orden, una o dos frases diciendo qué vas a hacer. Si es una pregunta,
   de 2 a 6 frases completas: la respuesta directa primero, con las cifras exactas de ESTADO_EN_VIVO
   (con sus unidades) o los datos de DOCUMENTACION, y después el porqué o el detalle útil. Nunca
@@ -492,6 +494,53 @@ PIDE_MOVIMIENTO = re.compile(r"\b(muev|avanz|abanz|avans|retroce|reversa|gir|vol
 
 # Medidas que ningun sensor del proyecto toma en vivo.
 SIN_SENSOR = re.compile(r"\b(temperatura|voltaje|tension|corriente|humedad)\b")
+
+# Pedir que el carro ATRAVIESE la planta (usuario, 2026-09-27: "que vaya a donde esta el filtro de
+# monedas, lo atraviese y que el propio sistema lo pase por el lado con sus sensores"). El modelo
+# local contesto "cruzara por el" y lo mando a (-0,5; 0), dentro de la planta: el carro se trabo
+# contra el muelle. El carro anda por el PISO; la planta, la canaleta y el muelle estan prohibidos
+# en su mapa. Se contesta con reglas, con cualquier proveedor, y no sale ninguna orden.
+ATRAVESAR = re.compile(r"\b(atravies|atraves|cruce|cruza|cruzar|traspas|pase por (encima|dentro|debajo|medio)|"
+                       r"por (encima|dentro|debajo|en medio) de)")
+ESTRUCTURA = re.compile(r"\b(planta|filtro|cinta|banda|almacen|revolver|canaleta|mesa|estacion|maquina|prensa|"
+                        r"camara|sensores|embalaje)")
+
+
+_zonas = {}
+
+
+def destino_imposible(x: float, y: float) -> str:
+    """"" si el carro puede ir a (x, y); si no, el motivo. Mismo mapa y misma holgura que usa el
+    carro (control/vehiculo.py: motivo_destino), armado de la geometria (sim/geometria.py)."""
+    from app.configuracion import cargar_parametros
+    from control.vehiculo import holguras_carro, motivo_destino
+    from sim.geometria import zonas_carro
+
+    if "z" not in _zonas:
+        p = cargar_parametros()
+        _zonas["z"] = zonas_carro(p)
+        _zonas["holgura"] = holguras_carro(p["vehiculo"])[1]
+    return motivo_destino(_zonas["z"], float(x), float(y), _zonas["holgura"])
+
+
+def pide_atravesar(frase: str) -> bool:
+    """Una ORDEN (no una pregunta) de que el carro atraviese la planta. Tiene que hablar del
+    carro, mandarlo a algun lado o empezar con el verbo: "la moneda pasa por encima de la cinta"
+    o "cruce la camara con la mano" no son pedidos al carro."""
+    t = normalizar(frase)
+    if es_pregunta(frase) or not (ATRAVESAR.search(t) and ESTRUCTURA.search(t)):
+        return False
+    return bool(re.search(r"\b(carro|vehiculo|vaya|ve a|ir a|lleve|llevalo|haga que|hazlo|muev)", t)
+                # Con la frase original (con tildes): "crucé ..." es pasado, no una orden.
+                or re.match(r"\s*(atraviesa|atraviese|cruza|cruce|pasa por|pase por)\b", frase.lower()))
+
+
+RESPUESTA_ATRAVESAR = (
+    "Eso no se puede: el carro anda por el piso de la pista y no puede atravesar la planta (las cintas, el "
+    "filtro de monedas, el almacén, la canaleta), ni subirse a ella. Además, en su mapa esas zonas están "
+    "prohibidas, así que rechaza cualquier destino dentro de ellas. Por los sensores del filtro pasan las "
+    "monedas sobre la cinta, no el carro. Lo que sí puede: ir a la meta, volver al muelle, avanzar, girar "
+    "o ir a un punto del piso libre alrededor de la pista.")
 
 
 def interpretar_orden_local(frase: str) -> list[dict]:
@@ -653,7 +702,10 @@ def atender(frase: str, conexion: sqlite3.Connection, *, usar: str = "auto", usa
     historial = conversacion(conexion, 2 * TURNOS_DE_MEMORIA)
     avisos = []
     crudo = None
-    if usar in ("auto", "deepseek"):
+    if pide_atravesar(frase):
+        crudo = {"respuesta": RESPUESTA_ATRAVESAR, "acciones": [], "documentos": []}
+        modo = "local"
+    if crudo is None and usar in ("auto", "deepseek"):
         if cliente is None and usar == "auto" and cliente_deepseek() is not None and not hay_internet():
             avisos.append("Sin internet: no se consulta DeepSeek.")
             cliente = False
@@ -721,6 +773,15 @@ def atender(frase: str, conexion: sqlite3.Connection, *, usar: str = "auto", usa
             crudo["acciones"] = [a for a in crudo["acciones"] if a not in quitadas]
     for a in corregir_giros(frase, crudo["acciones"] if isinstance(crudo["acciones"], list) else []):
         orden, motivo = validar_accion(a)
+        if orden and orden["cmd"] == "carro" and orden["accion"] == "ir_a":
+            # Un destino dentro de la planta, la canaleta o el muelle, o fuera del piso: ni se
+            # manda (el carro tambien lo rechazaria), y la respuesta dice por que en vez de
+            # prometer el movimiento.
+            imposible = destino_imposible(orden["x"], orden["y"])
+            if imposible:
+                descartadas.append(imposible)
+                crudo["respuesta"] = f"No lo muevo: {imposible}."
+                continue
         if orden and orden["cmd"] == "carro" and carro_ya:
             # Una orden nueva al carro reemplaza a la anterior: mandar varias en el mismo
             # mensaje solo dejaria la ultima. Se cumple la primera; las demas se piden despues.
@@ -737,7 +798,7 @@ def atender(frase: str, conexion: sqlite3.Connection, *, usar: str = "auto", usa
 
 
 # ---------------------------------------------------------------------
-# internet y voz (usuario, 2026-09-28: la voz tiene que funcionar SIN internet)
+# internet y voz (usuario, 2026-09-27: la voz tiene que funcionar SIN internet)
 # ---------------------------------------------------------------------
 #
 # Con internet se usa lo del tema 4: reconocimiento de Google en es-CO y respuesta con gTTS.

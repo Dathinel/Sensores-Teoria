@@ -82,14 +82,15 @@ def config_carro(p: dict) -> tuple[dict, list, tuple]:
     (~4 cm): la usa solo para llegar CERCA de ella; despues la siguen los
     infrarrojos. Asi ocupa ~1/2 de RAM."""
     sys.path.insert(0, str(RAIZ))
-    from sim.geometria import geometria_completa
+    from sim.geometria import geometria_completa, zonas_carro
     from sim.pista import generar_linea_central
 
     f = p["firmware"]
     vehiculo = dict(p["vehiculo"])
     vehiculo["_muro_largo_mm"] = p["pista"]["obstaculo_largo_mm"]
     vehiculo["_muro_grueso_mm"] = p["pista"].get("obstaculo_grueso_mm", 30)
-    s = geometria_completa(p)["pista"]["salida"]
+    geo = geometria_completa(p)
+    s = geo["pista"]["salida"]
     pose = (round(s["x"], 4), round(s["y"], 4), round(s["rumbo"], 4))
     linea = generar_linea_central(p["pista"]["tramos"], pose)
     puntos = [(round(q.x, 3), round(q.y, 3), round(q.rumbo, 3), round(q.s, 3)) for q in linea[::2]]
@@ -98,7 +99,10 @@ def config_carro(p: dict) -> tuple[dict, list, tuple]:
         puntos.append((round(q.x, 3), round(q.y, 3), round(q.rumbo, 3), round(q.s, 3)))
     cfg = {"protocolo": p["protocolo"], "vehiculo": vehiculo, "largo_linea_m": round(linea[-1].s, 4),
            "activo_bajo": f["activo_bajo"], "carro_v_max_m_s": f["carro_v_max_m_s"],
-           "carro_ganancia_ki": f["carro_ganancia_ki"]}
+           "carro_ganancia_ki": f["carro_ganancia_ki"],
+           # Piso libre y huellas prohibidas (planta, canaleta, muelle): el carro
+           # rechaza por su cuenta un destino imposible (usuario, 2026-09-27).
+           "zonas": zonas_carro(p, geo)}
     return cfg, puntos, pose
 
 

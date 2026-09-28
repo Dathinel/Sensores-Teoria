@@ -1,9 +1,10 @@
 """Arranca la linea simulada: el supervisor (simulacion + visor 3D) y el
 dashboard de Streamlit, cada uno en su proceso (seccion 8). Lo usa
-`visor.bat` (doble clic): si ya hay una corrida andando solo abre el visor;
-si no, la arranca y lo abre.
+`visor.bat` (doble clic): el .bat abre el visor portable y esto arranca la
+simulacion (si no estaba andando) y abre el dashboard de Streamlit apenas responde.
 
-    python -m app.lanzar --auto prueba_completa --abrir         # lo que hace visor.bat
+    python -m app.lanzar --auto prueba_completa --abrir-dashboard   # lo que hace visor.bat
+    python -m app.lanzar --auto prueba_completa --abrir         # abre el visor en vivo
     python -m app.lanzar --auto prueba_completa --reemplazar    # reinicia con el codigo actual
 
 Ctrl+C (o cerrar la ventana) cierra los dos procesos.
@@ -74,6 +75,8 @@ def main() -> None:
     analizador.add_argument("--reemplazar", action="store_true",
                             help="cerrar antes una instancia anterior de este proyecto que ocupe los puertos")
     analizador.add_argument("--abrir", action="store_true", help="abrir el visor 3D y el dashboard en el navegador")
+    analizador.add_argument("--abrir-dashboard", action="store_true",
+                            help="abrir el dashboard de Streamlit en el navegador cuando responda")
     analizador.add_argument("--ver", default="", help="parametros de la URL del visor, p. ej. 'sensor=cortina'")
     args = analizador.parse_args()
 
@@ -88,6 +91,8 @@ def main() -> None:
         print("La simulacion ya esta corriendo.")
         if args.abrir:
             webbrowser.open(f"http://localhost:{puerto_visor}/" + (f"?{args.ver}" if args.ver else ""))
+        if args.abrir_dashboard and _esperar(f"http://localhost:{args.puerto}/", segundos=5):
+            webbrowser.open(f"http://localhost:{args.puerto}/")
         return
 
     cmd_supervisor = [sys.executable, "-m", "app.supervisor"]
@@ -104,6 +109,8 @@ def main() -> None:
     print(f"Dashboard en {url_dashboard}  (Ctrl+C para cerrar todo)")
     if args.abrir and _esperar(f"http://localhost:{puerto_visor}/"):
         webbrowser.open(url_visor)
+    if args.abrir_dashboard and _esperar(url_dashboard + "/"):
+        webbrowser.open(url_dashboard)
     reinicios = {nombre: 0 for nombre in comandos}
     try:
         while True:

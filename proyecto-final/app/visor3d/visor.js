@@ -238,7 +238,9 @@ function actualizarEtiquetas() {
     let op = Math.max(0, Math.min(1, (a - _p.distanceTo(camara.position)) / (a * 0.3)));
     if (e.userData.sensorId && resaltados.has(e.userData.sensorId)) op = 1;
     e.material.opacity = op * (e.userData.opacidadBase ?? 1);
-    e.visible = op > 0.02;
+    // `oculta`: apagada a proposito (p. ej. la de "sin internet" con internet). Sin esto, este bucle
+    // la volvia a encender en cada cuadro y quedaba encimada sobre la otra (2026-09-27).
+    e.visible = !e.userData.oculta && op > 0.02;
   }
 }
 
@@ -1574,7 +1576,7 @@ function construirCarro() {
   // Vaso que lleva el carro (visible mientras va cargado).
   const vasoCarro = crearVaso('carro');
   vasoCarro.tapa.visible = true;
-  vasoCarro.et.visible = false;
+  vasoCarro.et.userData.oculta = true;   // el vaso del carro no lleva su rotulo (ver actualizarEtiquetas)
   vasoCarro.grupo.position.copy(Vxyz(-0.025, 0, zRiel - G.vaso.altura));
   vasoCarro.grupo.visible = false;
   carro.add(vasoCarro.grupo);
@@ -1793,7 +1795,8 @@ function construirModulo(dev, padre, pos, quat, { etiquetaSobre = 0.02, idCompon
     if (tip) PIN[`${dev}.${p.n}`] = { padre, tip, dir, eje, tipo: p.tipo, usados: 0 };
   }
   if (etiquetaSobre) {
-    const et = etiqueta(info.nombre, enCarro ? { alto: 0.0042, alcance: 0.3 } : { alto: 0.0058, alcance: 0.4 });
+    // En el carro alcance 0.55 (se ven hasta ~1 m): la vista del carro quedo a ~0,6 m.
+    const et = etiqueta(info.nombre, enCarro ? { alto: 0.0042, alcance: 0.55 } : { alto: 0.0058, alcance: 0.4 });
     et.position.copy(aPadre(0, 0, T + etiquetaSobre / MM));
     padre.add(et);
   }
@@ -2043,7 +2046,7 @@ function construirCajaControl() {
 
 // Portatil del grupo: ASUS TUF Gaming A15 (ficha oficial de ASUS: 359 x 256 x 24,7 mm,
 // 2,3 kg, pantalla de 15,6" 16:9 = 344 x 194 mm de area activa). Se modela a su medida real y
-// se dibuja AMPLIADO x1,5 (usuario, 2026-09-28: para leer en el visor lo que responde el
+// se dibuja AMPLIADO x1,5 (usuario, 2026-09-27: para leer en el visor lo que responde el
 // asistente); la etiqueta lo dice. Esta detras de la caja de control, en espacio libre (medido
 // con la auditoria de solapes), y sus USB del costado derecho quedan del lado del hub.
 const LAPTOP = { escala: 1.5, cx: 0.0, cy: 0.535, ancho: 0.359, fondo: 0.256, base: 0.0167, tapa: 0.007,
@@ -2290,11 +2293,16 @@ function construirEnlaceAsistente() {
   const et = etiqueta('☁ API de DeepSeek (internet)', { alto: 0.014, alcance: 1.8, borde: '#539bf5' });
   et.position.copy(centro).add(new THREE.Vector3(0, 0.085, 0));
   grupo.add(et);
+  // La misma etiqueta sin internet, en el mismo lugar: se muestra una u otra, nunca las dos.
+  const etSinRed = etiqueta('☁ API de DeepSeek · sin internet', { alto: 0.014, alcance: 1.8, borde: '#e5534b', color: '#ffb4ae' });
+  etSinRed.position.copy(et.position);
+  etSinRed.userData.oculta = true;
+  grupo.add(etSinRed);
   const etW = etiqueta('Wi-Fi del portátil (el carro usa ESP-NOW)', { alto: 0.009, alcance: 1.0, color: '#8b949e' });
   etW.position.copy(a.clone().lerp(b, 0.5)).add(new THREE.Vector3(0.1, 0, 0));
   grupo.add(etW);
   escena.add(grupo);
-  P.asistente = { grupo, paquete, a, b, matNube, linea, mensajes: -1, panel: L.pantalla, lienzo: L.lienzo,
+  P.asistente = { grupo, paquete, a, b, matNube, linea, et, etSinRed, mensajes: -1, panel: L.pantalla, lienzo: L.lienzo,
     textura: L.textura, pensando: null, fase: 0 };
   dibujarPanelAsistente(null);
 }
@@ -3070,7 +3078,7 @@ function construirSensores() {
         modulo = construirModulo('vl53_interior', escena, p.clone().add(new THREE.Vector3(0, 0.001, 0)), yaw(0), { sensorId: s.id, etiquetaSobre: 0.03 });
         colgar = p.clone().add(Vxyz(0, -0.003, 0.0026));
         // Abrazadera impresa: la varilla no se clava en la placa, la toma un bloque pegado
-        // con cinta doble faz (se veia como si la atravesara, auditoria 2026-09-28).
+        // con cinta doble faz (se veia como si la atravesara, auditoria 2026-09-27).
         obj.objetos.push(caja(0.009, 0.007, 0.003, 0x1b1e22, colgar.clone().add(new THREE.Vector3(0, 0.0015, 0))));
         colgar.add(new THREE.Vector3(0, 0.003, 0));
         obj.ancla = p.clone().add(new THREE.Vector3(0, 0.03, 0));
@@ -3758,7 +3766,8 @@ function vista(nombre) {
     asistente: [P.asistente ? P.asistente.panel.getWorldPosition(new THREE.Vector3()) : centroP,
       new THREE.Vector3(0, 0.72 * Math.sin(LAPTOP.apertura), 0.72 * Math.cos(LAPTOP.apertura))],
     carro: [P.carro ? P.carro.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.04, 0)) : centroP,
-      new THREE.Vector3(0.16, 0.14, 0.2)],
+      // ~0,6 m: el carro entero con su vaso y un poco de pista (a 0,3 m quedaba demasiado cerca).
+      new THREE.Vector3(0.33, 0.29, 0.42)],
   };
   document.querySelectorAll('[data-vista]').forEach((b) => b.classList.toggle('activo', b.dataset.vista === nombre));
   const [objetivo, desplazamiento] = vistas[nombre] || vistas.todo;
@@ -4190,7 +4199,9 @@ function encuadrar(mallas, { desdeAbajo = false } = {}) {
       const adelante = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
       dir = izquierda.multiplyScalar(0.85).addScaledVector(adelante, Math.sign(local.x || 1) * 0.35)
         .add(new THREE.Vector3(0, 0.42, 0)).normalize();
-      volarA(centro, centro.clone().addScaledVector(dir, Math.max(dist, 0.24)), { seguir: true });
+      // Mas lejos que en la planta (usuario, 2026-09-27): la pieza con el carro alrededor, para
+      // ver donde queda montada.
+      volarA(centro, centro.clone().addScaledVector(dir, Math.max(dist * 1.6, 0.42)), { seguir: true });
       return;
     }
     // Centro de la planta: se mira desde afuera, desde arriba.
@@ -4253,11 +4264,11 @@ async function enviarOrden(orden) {
 }
 
 // ---------------------------------------------------------------------------
-// avisos grandes: demo grabada, sin conexion, sin internet (usuario, 2026-09-28)
+// avisos grandes: demo grabada, sin conexion, sin internet (usuario, 2026-09-27)
 // ---------------------------------------------------------------------------
 
 // null = todavia no se sabe. Se revisa cada 20 s y cuando el navegador avisa que cambio la red.
-// Antes (2026-09-28) el visor probaba UNA vez al arrancar, con la escena 3D todavia armandose (el
+// Antes (2026-09-27) el visor probaba UNA vez al arrancar, con la escena 3D todavia armandose (el
 // navegador ocupado varios segundos): el intento se pasaba del tiempo y decia "sin internet" con
 // internet. Ahora:
 // - En vivo decide la simulacion (`/api/internet`, el mismo chequeo en Python que usan el asistente
@@ -4326,6 +4337,8 @@ function pintarModo() {
   }
   if (P.asistente) {
     const sinRed = hayInternet === false;
+    P.asistente.et.userData.oculta = sinRed;
+    P.asistente.etSinRed.userData.oculta = !sinRed;
     P.asistente.matNube.color.set(sinRed ? 0x5b6270 : 0xdfe7f5);
     P.asistente.matNube.emissive.set(sinRed ? 0x000000 : 0x539bf5);
     P.asistente.linea.material.color.set(sinRed ? 0xe5534b : 0x539bf5);

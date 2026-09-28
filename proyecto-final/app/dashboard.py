@@ -97,7 +97,7 @@ code, .mono { font-family:'IBM Plex Mono', monospace; }
 .aviso { border-radius:8px; padding:10px 14px; margin:8px 0; font-size:0.92rem; }
 .aviso.rojo { background:rgba(229,83,75,.14); border:1px solid var(--rojo); }
 .aviso.ambar { background:rgba(242,177,52,.12); border:1px solid var(--ambar); }
-/* Avisos GRANDES (usuario, 2026-09-28): que se note de lejos si no es en vivo o no hay internet. */
+/* Avisos GRANDES (usuario, 2026-09-27): que se note de lejos si no es en vivo o no hay internet. */
 .aviso-grande { border-radius:10px; padding:12px 18px; margin:10px 0 6px; font-size:0.95rem; line-height:1.4; }
 .aviso-grande b.titulo { display:block; font-size:1.15rem; letter-spacing:.04em; margin-bottom:2px; }
 .aviso-grande.demo { background:var(--ambar); color:#1b1300; }
@@ -591,7 +591,8 @@ def barra_control() -> None:
             st.checkbox("Empezar con lo que quedó guardado en los tubos",
                         value=bool(PARAMETROS["planta"].get("conservar_almacen_entre_turnos", False)), key="conservar",
                         help="Si el turno anterior no empacó lo guardado, el nuevo arranca con esas monedas.")
-            st.caption("Hoy todo corre en simulación; el hardware real (dos ESP32) llega en la fase 8.")
+            st.caption("Hoy corre en simulación. El hardware real (dos ESP32, fase 8) ya está hecho en software: "
+                       "`hardware.backend: real` en config/parametros.yaml; falta probarlo en las placas.")
         st.markdown('<div class="nota">Los botones dejan una orden que el programa de la línea toma en menos de '
                     "medio segundo; la respuesta aparece arriba, en verde o en rojo.</div>", unsafe_allow_html=True)
 

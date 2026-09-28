@@ -80,6 +80,10 @@ ANGULO_REVISAR_CAMINO = math.radians(15)
 # En el muelle las guias en V llegan ~21 cm delante del centro del carro: para
 # girar o ir a un punto primero sale derecho esto (la cola pasa las guias).
 SALIR_DEL_MUELLE_M = 0.35
+# Dentro del muelle (o de su boca) solo se sale DERECHO y de frente: si el
+# carro mira hacia afuera con un error de hasta esto, sale avanzando; si mira
+# hacia adentro, no hay como salir sin rozar las guias.
+ANGULO_SALIR_MUELLE = math.radians(30)
 DIFERENCIA_ATASCADO_M = 0.04
 # Estados del modo de ordenes (se agregan a los del recorrido automatico).
 MANUAL = "manual"                    # cumpliendo una orden
@@ -89,6 +93,186 @@ ESPERANDO_ORDEN = "esperando_orden"  # la cumplio (o lo bloqueo algo) y espera o
 def _angulo(a: float) -> float:
     """Angulo equivalente entre -pi y pi."""
     return (a + math.pi) % (2 * math.pi) - math.pi
+
+
+# ----------------------------------------------------------------------
+# Donde PUEDE andar el carro (usuario, 2026-09-27): el asistente lo mando a
+# (-0,5; 0), "a donde esta el filtro de monedas", y el carro se trabo contra
+# el muelle. Su revision del camino (laser a 7,4 cm del piso y ultrasonico a
+# 5,7 cm) no ve lo BAJO -- las guias del muelle miden 2 cm y los topes 4,5 --
+# y la planta entera (mesas, patas, canaleta, postes de camaras) no esta en
+# la pista. Por eso, antes de moverse por una orden, el carro compara el
+# destino y el camino recto con un mapa FIJO y medido (como el trazado de la
+# pista): un rectangulo de piso libre y las huellas prohibidas (planta,
+# canaleta, muelle, poste de la camara). Las arma sim/geometria.py
+# (`zonas_carro`) desde la misma geometria del visor y la simulacion.
+#
+# Formato (sin dataclasses: corre tambien en el ESP32 del carro):
+#   {"libre": [xmin, ymin, xmax, ymax],
+#    "muelle": {...},        rectangulo que encierra el muelle (estar adentro)
+#    "prohibidas": [{"clave", "nombre", "atravesar", "cx", "cy", "rumbo",
+#                    "ml", "ma"}, ...]}
+# Cada huella es un rectangulo girado `rumbo`, de medio largo `ml` (a lo
+# largo de su rumbo) y medio ancho `ma`. El muelle va como paredes sueltas
+# (guias, boca y topes): el carro estacionado esta ADENTRO y sale por el canal.
+# ----------------------------------------------------------------------
+
+# Muestreo del camino recto al revisarlo contra las huellas (1 cm).
+PASO_REVISION_M = 0.01
+# Partiendo YA cerca de una huella (dentro del muelle, entre sus guias), el
+# camino vale mientras no se le acerque mas que esto: saliendo derecho por el
+# canal la distancia a la boca en V cambia unos milimetros.
+TOLERANCIA_ACERCARSE_M = 0.01
+
+
+def holguras_carro(v: dict) -> tuple[float, float, float]:
+    """(lateral, destino, giro) en metros: lo que tiene que quedar entre el
+    CENTRO del carro y una huella prohibida.
+
+    - lateral: andando derecho, a cada lado lo barre su medio ancho (los
+      rodillos guia de atras son lo mas ancho) + `margen_evasion_mm`;
+    - destino: parado ahi (y con las correcciones cortas al llegar), el
+      punto del carro mas lejano del centro (esquinas, rodillos, llantas) +
+      el margen;
+    - giro: en un punto de paso de un rodeo gira sobre el eje de las ruedas:
+      el circulo que barre, visto desde el centro, + el margen.
+    Mismas medidas que ControlCarro y sim/vehiculo_sim.py (llantas 24 mm
+    afuera del chasis, rodillos 8 mm delante de la cola)."""
+    largo = v["largo_mm"] / 1000
+    ancho = v["ancho_mm"] / 1000
+    x_eje = -0.18 * largo
+    r_rueda = v["diametro_rueda_mm"] / 2000
+    y_rueda = ancho / 2 + 0.024
+    y_rodillo = (v.get("rodillo_guia_y_mm", 0) + v.get("rodillo_guia_radio_mm", 0)) / 1000
+    puntos = ((largo / 2, ancho / 2), (-largo / 2, ancho / 2), (x_eje + r_rueda, y_rueda),
+              (x_eje - r_rueda, y_rueda), (-largo / 2 + 0.008, y_rodillo))
+    medio_ancho = max(py for _, py in puntos)
+    r_centro = max(math.hypot(px, py) for px, py in puntos)
+    r_eje = max(math.hypot(px - x_eje, py) for px, py in puntos)
+    margen = v["margen_evasion_mm"] / 1000
+    return medio_ancho + margen, r_centro + margen, r_eje + abs(x_eje) + margen
+
+
+def distancia_a_zona(z: dict, x: float, y: float) -> float:
+    """Distancia del punto a la huella (negativa = adentro)."""
+    c, s = math.cos(z["rumbo"]), math.sin(z["rumbo"])
+    dx, dy = x - z["cx"], y - z["cy"]
+    ex = abs(dx * c + dy * s) - z["ml"]
+    ey = abs(-dx * s + dy * c) - z["ma"]
+    if ex <= 0 and ey <= 0:
+        return max(ex, ey)
+    return math.hypot(max(ex, 0.0), max(ey, 0.0))
+
+
+def en_zona_libre(zonas: dict, x: float, y: float) -> bool:
+    x0, y0, x1, y1 = zonas["libre"]
+    return x0 <= x <= x1 and y0 <= y <= y1
+
+
+def tramo_bloqueado(zonas: dict, x0: float, y0: float, x1: float, y1: float, holgura: float) -> dict | None:
+    """La primera huella que el tramo recto (x0, y0) -> (x1, y1) pasa a menos
+    de `holgura`, o None. Si el carro YA esta cerca de una huella (saliendo del
+    muelle, o parado junto a una estructura), cuenta solo si el tramo se le
+    ACERCA: alejarse de ella siempre se puede."""
+    largo = math.hypot(x1 - x0, y1 - y0)
+    n = max(1, int(largo / PASO_REVISION_M))
+    for z in zonas["prohibidas"]:
+        d0 = distancia_a_zona(z, x0, y0)
+        tolerancia = TOLERANCIA_ACERCARSE_M if d0 < holgura else 0.0
+        for i in range(1, n + 1):
+            t = i / n
+            d = distancia_a_zona(z, x0 + (x1 - x0) * t, y0 + (y1 - y0) * t)
+            if d < holgura and d < d0 - tolerancia:
+                return z
+    return None
+
+
+def _de(nombre: str) -> str:
+    """"de" + nombre, con la contraccion del espanol ("del muelle")."""
+    return "del " + nombre[3:] if nombre.startswith("el ") else "de " + nombre
+
+
+def motivo_destino(zonas: dict, x: float, y: float, holgura: float) -> str:
+    """"" si el carro puede quedar en (x, y); si no, el motivo en palabras
+    (la huella mas cercana: la que lo contiene, o la que no le deja lugar)."""
+    cerca, d_cerca = None, math.inf
+    for z in zonas["prohibidas"]:
+        d = distancia_a_zona(z, x, y)
+        if d < d_cerca:
+            cerca, d_cerca = z, d
+    if cerca is not None and d_cerca <= 0:
+        return (f"ese punto ({x:.2f}, {y:.2f}) está dentro {_de(cerca['nombre'])}: el carro no puede ir ahí "
+                f"ni {cerca['atravesar']}")
+    if cerca is not None and d_cerca < holgura:
+        texto = (f"ese punto ({x:.2f}, {y:.2f}) queda a {d_cerca * 100:.0f} cm {_de(cerca['nombre'])}: el carro "
+                 f"no cabe ahí (necesita {holgura * 100:.0f} cm desde su centro)")
+        if cerca.get("clave") == "muelle":
+            texto += "; para entrar al muelle pídale que vuelva al muelle (entra solo, de reversa)"
+        return texto
+    if not en_zona_libre(zonas, x, y):
+        x0, y0, x1, y1 = zonas["libre"]
+        return (f"ese punto ({x:.2f}, {y:.2f}) está fuera del piso por el que anda el carro "
+                f"(x de {x0:.2f} a {x1:.2f} m, y de {y0:.2f} a {y1:.2f} m, alrededor de la pista)")
+    return ""
+
+
+def ruta_libre(zonas: dict, x0: float, y0: float, x1: float, y1: float, holgura_lateral: float,
+               holgura_giro: float) -> list | None:
+    """Puntos de paso [(x, y), ..., (x1, y1)] para ir de (x0, y0) a (x1, y1)
+    sin pasar por ninguna huella: derecho si se puede y, si no, rodeando por
+    las esquinas de las huellas (agrandadas lo que barre el carro girando: en
+    cada punto de paso gira sobre su eje). Camino mas corto con Dijkstra sobre
+    esas esquinas (son pocas: 4 por huella). None si no hay camino."""
+    if tramo_bloqueado(zonas, x0, y0, x1, y1, holgura_lateral) is None:
+        return [(x1, y1)]
+    h = holgura_giro * 1.02
+    nodos = [(x0, y0), (x1, y1)]
+    # Esquinas de cada huella y del rectangulo que encierra el muelle (sus
+    # paredes sueltas estan tan juntas que las esquinas de cada una quedan
+    # pegadas a la de al lado: el rodeo util es el del muelle entero).
+    rodear = zonas["prohibidas"] + ([zonas["muelle"]] if "muelle" in zonas else [])
+    for z in rodear:
+        c, s = math.cos(z["rumbo"]), math.sin(z["rumbo"])
+        for sx, sy in ((1, 1), (1, -1), (-1, 1), (-1, -1)):
+            lx, ly = sx * (z["ml"] + h), sy * (z["ma"] + h)
+            px, py = z["cx"] + lx * c - ly * s, z["cy"] + lx * s + ly * c
+            if en_zona_libre(zonas, px, py) and all(distancia_a_zona(o, px, py) >= holgura_giro
+                                                    for o in zonas["prohibidas"]):
+                nodos.append((px, py))
+    n = len(nodos)
+    dist = [math.inf] * n
+    previo = [-1] * n
+    hecho = [False] * n
+    dist[0] = 0.0
+    for _ in range(n):
+        i = -1
+        for k in range(n):
+            if not hecho[k] and (i < 0 or dist[k] < dist[i]):
+                i = k
+        if i < 0 or dist[i] == math.inf:
+            break
+        if i == 1:
+            break
+        hecho[i] = True
+        for k in range(n):
+            if hecho[k] or k == i:
+                continue
+            (ax, ay), (bx, by) = nodos[i], nodos[k]
+            if tramo_bloqueado(zonas, ax, ay, bx, by, holgura_lateral) is not None:
+                continue
+            d = dist[i] + math.hypot(bx - ax, by - ay)
+            if d < dist[k]:
+                dist[k] = d
+                previo[k] = i
+    if dist[1] == math.inf:
+        return None
+    ruta = []
+    k = 1
+    while k != 0:
+        ruta.append(nodos[k])
+        k = previo[k]
+    ruta.reverse()
+    return ruta
 
 
 class LecturaCarro:
@@ -120,13 +304,15 @@ class LecturaCarro:
 class ControlCarro:
     def __init__(self, cfg: dict, *, largo_linea_m: float,
                  linea: list[tuple[float, float, float, float]] | None = None,
-                 pose_muelle: tuple[float, float, float] | None = None):
+                 pose_muelle: tuple[float, float, float] | None = None,
+                 zonas: dict | None = None):
         """`linea`: puntos (x, y, rumbo, s) de la linea de la pista, desde el
         muelle hasta la meta (el trazado de la pista es fijo y medido: el
         firmware del carro lo lleva igual). `pose_muelle`: donde queda el
         CENTRO del carro dentro del muelle. Sin estos dos, el carro sigue la
         linea como siempre pero no acepta ordenes que necesiten saber donde
-        esta."""
+        esta. `zonas`: piso libre y huellas prohibidas (ver `holguras_carro`
+        arriba); sin ellas no revisa destinos contra el mapa."""
         v = cfg
         self.radio = v["diametro_rueda_mm"] / 2000
         self.via = v["ancho_mm"] / 1000 + 0.026          # entre centros de las ruedas (ruedas afuera del chasis)
@@ -207,7 +393,15 @@ class ControlCarro:
         # afuera se informa la del centro del carro.
         self.linea = list(linea) if linea else []
         self.s_giro = v.get("marca_giro_mm", 170) / 1000
+        self.ancho_giro = v.get("franja_giro_ancho_mm", 20) / 1000
+        self.ancho_meta = v.get("franja_meta_ancho_mm", 50) / 1000
         self.pose_muelle = pose_muelle
+        self.zonas = zonas
+        self.holgura_lateral, self.holgura_destino, self.holgura_giro = holguras_carro(v)
+        # Atascado en una orden: antes de quedarse quieto se aparta un poco por
+        # donde vino (ese lado estaba libre), para no quedar apretado contra lo
+        # que lo trabo y poder girar despues (usuario, 2026-09-27).
+        self.apartarse_atascado = v.get("apartarse_atascado_mm", 50) / 1000
         self.pose_odo: list[float] | None = None
         if pose_muelle is not None:
             self.fijar_pose(*pose_muelle)
@@ -275,6 +469,18 @@ class ControlCarro:
             return False, (f"Para {accion} la distancia tiene que estar entre 0 y {maximo:g} m"
                            + (" (atrás no tiene sensor: solo reversas cortas)" if accion == "retroceder" else ""))
         if accion == "avanzar":
+            pos = self.posicion_estimada()
+            if self.zonas is not None and pos is not None:
+                # Lo bajo (guias y topes del muelle) y la planta no los ve el
+                # laser: se revisan contra el mapa antes de moverse.
+                fx, fy = pos[0] + distancia * math.cos(pos[2]), pos[1] + distancia * math.sin(pos[2])
+                z = tramo_bloqueado(self.zonas, pos[0], pos[1], fx, fy, self.holgura_lateral)
+                if z is not None:
+                    return False, (f"Avanzar {distancia * 100:.0f} cm lo lleva contra {z['nombre']}: el carro no "
+                                   f"puede {z['atravesar']} (sus sensores no ven lo bajo)")
+                if not en_zona_libre(self.zonas, fx, fy):
+                    return False, (f"Avanzar {distancia * 100:.0f} cm lo saca del piso por el que anda el carro "
+                                   "(alrededor de la pista)")
             paso = self._avanzar(distancia, self.v_maniobra)
             paso["vigilar"] = True
             pasos = self._revisar_camino(distancia) + [paso]
@@ -286,25 +492,82 @@ class ControlCarro:
         self._empezar([self._parar()] + pasos + [self._fin_orden()], {"accion": accion, "distancia_m": distancia})
         return True, texto
 
-    def _salir_del_muelle(self) -> list[dict]:
+    def _salir_del_muelle(self, enderezar: bool = False):
         """Dentro del muelle no puede girar (lo encierran las guias): primero
-        sale derecho, mirando el camino como en cualquier avance."""
-        if self.estado != "esperando_carga":
-            return []
-        paso = self._avanzar(SALIR_DEL_MUELLE_M, self.v_maniobra)
+        sale derecho, mirando el camino como en cualquier avance. Vale tambien
+        si quedo a medio entrar o trabado en la boca: sale lo que le falte.
+        Devuelve (pasos, (x, y) del centro al salir). Si esta dentro pero
+        torcido (mas de ANGULO_SALIR_MUELLE respecto al canal): con `enderezar`
+        primero gira sobre su eje hasta mirar hacia afuera (puede rozar las
+        guias forradas con PTFE: es la unica salida); sin el, (None, None)."""
+        pos = self.posicion_estimada()
+        if pos is None:
+            return [], None
+        pasos = []
+        rumbo = pos[2]
+        if self.estado == "esperando_carga":
+            falta = SALIR_DEL_MUELLE_M
+        else:
+            z = self.zonas.get("muelle") if self.zonas is not None else None
+            if z is None or self.pose_muelle is None or distancia_a_zona(z, pos[0], pos[1]) > 0:
+                return [], (pos[0], pos[1])
+            mx, my, mr = self.pose_muelle
+            if abs(_angulo(pos[2] - mr)) > ANGULO_SALIR_MUELLE:
+                if not enderezar:
+                    return None, None
+                pasos.append({"tipo": "orientar", "rumbo": mr})
+                rumbo = mr
+            falta = SALIR_DEL_MUELLE_M - ((pos[0] - mx) * math.cos(mr) + (pos[1] - my) * math.sin(mr))
+            if falta < 0.01:
+                return pasos, (pos[0], pos[1])
+        paso = self._avanzar(falta, self.v_maniobra)
         paso["vigilar"] = True
         # Solo mira al frente: girar +-15 grados para mirar a los lados rozaria
         # las guias (3 mm de holgura). El muelle es un canal recto.
-        return [self._medir("c0"), {"tipo": "camino", "distancia": SALIR_DEL_MUELLE_M, "solo_frente": True}, paso]
+        return (pasos + [self._medir("c0"), {"tipo": "camino", "distancia": falta, "solo_frente": True}, paso],
+                (pos[0] + falta * math.cos(rumbo), pos[1] + falta * math.sin(rumbo)))
+
+    MUELLE_AL_REVES = ("El carro está dentro del muelle y torcido: no puede salir de frente sin rozar las guías. "
+                       "Pídale primero que vuelva al muelle (se endereza, sale derecho y entra de reversa)")
 
     def _orden_girar(self, grados: float) -> tuple[bool, str]:
         if not 0 < abs(grados) <= 180:
             return False, "El giro tiene que estar entre -180 y 180 grados (positivo = izquierda)"
-        salir = self._salir_del_muelle()
+        salir, _ = self._salir_del_muelle()
+        if salir is None:
+            return False, self.MUELLE_AL_REVES
         self._empezar([self._parar()] + salir + [self._girar(math.radians(grados)), self._fin_orden()],
                       {"accion": "girar", "grados": grados})
         return True, ((f"Primero sale del muelle ({SALIR_DEL_MUELLE_M * 100:.0f} cm derecho); después " if salir else "")
                       + f"gira {abs(grados):.0f}° a la {'izquierda' if grados > 0 else 'derecha'} sobre su eje")
+
+    def revisar_ir_a(self, x: float, y: float, desde: tuple | None) -> str:
+        """"" si el carro puede ir derecho de `desde` (su centro despues de
+        salir del muelle, si estaba ahi) a (x, y); si no, el motivo. Un destino
+        dentro de la planta, del muelle o de otra estructura, fuera del piso
+        de la pista, o con el camino recto por encima de una huella, no se
+        intenta: el laser no ve lo bajo y la planta no esta en la pista."""
+        if self.zonas is None:
+            return ""
+        motivo = motivo_destino(self.zonas, x, y, self.holgura_destino)
+        if motivo and desde is not None and not en_zona_libre(self.zonas, x, y):
+            z = tramo_bloqueado(self.zonas, desde[0], desde[1], x, y, self.holgura_lateral)
+            if z is not None:
+                motivo += f"; además, el camino recto pasa por {z['nombre']} y el carro no puede {z['atravesar']}"
+        if motivo:
+            return motivo[0].upper() + motivo[1:]
+        if desde is None:
+            return ""
+        z = tramo_bloqueado(self.zonas, desde[0], desde[1], x, y, self.holgura_lateral)
+        if z is None:
+            return ""
+        texto = (f"El camino recto hasta ({x:.2f}, {y:.2f}) pasa por {z['nombre']}: el carro no puede "
+                 f"{z['atravesar']} (el láser y el ultrasónico no ven lo bajo, y la planta no está en la pista)")
+        ruta = ruta_libre(self.zonas, desde[0], desde[1], x, y, self.holgura_lateral, self.holgura_giro)
+        if ruta and len(ruta) > 1:
+            texto += (f". Rodeando sí se puede: pídale primero ir a ({ruta[0][0]:.2f}, {ruta[0][1]:.2f}) m "
+                      "y después al punto")
+        return texto
 
     def _orden_ir_a(self, x: float, y: float) -> tuple[bool, str]:
         pos = self.posicion_estimada()
@@ -314,23 +577,75 @@ class ControlCarro:
         if d > IR_A_MAX_M:
             return False, (f"El punto está a {d:.2f} m: más de {IR_A_MAX_M:g} m de una vez acumula mucho error "
                            "de odometría; pídalo por partes")
+        salir, desde = self._salir_del_muelle()
+        if salir is None:
+            return False, self.MUELLE_AL_REVES
+        motivo = self.revisar_ir_a(x, y, desde)
+        if motivo:
+            return False, motivo
         destino = self._a_eje(x, y)
-        salir = self._salir_del_muelle()
         self._empezar([self._parar()] + salir + [{"tipo": "ir_a", "x": destino[0], "y": destino[1], "intento": 1},
                        self._fin_orden("llego_al_punto")], {"accion": "ir_a", "x": x, "y": y})
         return True, (("Primero sale del muelle derecho; después " if salir else "")
                       + f"va a ({x:.2f}, {y:.2f}) m, a {d:.2f} m: gira hacia el punto y avanza vigilando adelante")
+
+    def _en_el_muelle(self) -> bool:
+        """Segun la odometria, el carro esta dentro del muelle o pegado a el
+        (a menos de su holgura lateral): a medio entrar, trabado en la boca o
+        atascado contra una guia."""
+        z = self.zonas.get("muelle") if self.zonas is not None else None
+        pos = self.posicion_estimada()
+        if z is None or pos is None or self.pose_muelle is None:
+            return False
+        return distancia_a_zona(z, pos[0], pos[1]) < self.holgura_lateral
+
+    def _reentrar_al_muelle(self) -> tuple[bool, str]:
+        """Volver al muelle estando en el muelle (usuario, 2026-09-27: el
+        carro se trabo contra la boca y quedo "atascado"). Tras rozar las guias
+        la odometria no sirve (en la simulacion quedo 9 cm y 20 grados
+        corrida), asi que NO se navega con ella: la linea de la pista pasa por
+        el centro del muelle. Se endereza hacia afuera, busca la linea con los
+        infrarrojos, se centra sobre ella, la sigue hacia afuera hasta pasar la
+        boca y entra de reversa como siempre (las guias en V lo centran)."""
+        mx, my, mr = self.pose_muelle
+        pos = self.posicion_estimada()
+        adentro = (pos[0] - mx) * math.cos(mr) + (pos[1] - my) * math.sin(mr)
+        # Afuera hasta dejar la cola fuera de la boca: la reversa hasta el tope
+        # tiene que ser de mas de 25 cm para contar como llegada.
+        afuera = max(0.15, SALIR_DEL_MUELLE_M - adentro)
+        acciones = [self._parar(), {"tipo": "orientar", "rumbo": mr},
+                    self._girar(0.5, busca_linea=True), self._girar(-1.0, busca_linea=True),
+                    {"tipo": "error", "motivo": "sin_linea"},
+                    {"tipo": "alinear", "centrado": 0},
+                    {"tipo": "seguir_corto", "distancia": afuera, "v": self.v_maniobra / 3},
+                    self._parar(),
+                    {"tipo": "reversa_tope", "hecho": 0.0, "quieto": 0.0},
+                    {"tipo": "estado", "estado": "esperando_carga", "evento": "en_muelle"}]
+        self._empezar(acciones, {"accion": "volver_muelle"})
+        return True, ("Está en el muelle o pegado a él: se endereza, busca la línea con los infrarrojos, sale "
+                      f"{afuera * 100:.0f} cm siguiéndola y vuelve a entrar de reversa")
 
     def _orden_linea(self, accion: str) -> tuple[bool, str]:
         if not self.linea or self.pose_odo is None:
             return False, "El carro no conoce el trazado de la pista: solo sigue la línea en su recorrido normal"
         if accion == "volver_muelle" and self.estado == "esperando_carga":
             return False, "El carro ya está en el muelle"
+        if accion == "volver_muelle" and self._en_el_muelle():
+            return self._reentrar_al_muelle()
+        # En el muelle en reposo la linea esta justo debajo (se retoma alli);
+        # a medio entrar (p. ej. trabado en la boca) primero sale derecho.
+        salir, _ = ([], None) if self.estado == "esperando_carga" else self._salir_del_muelle(enderezar=True)
         if accion == "seguir_linea":
             fase = self.fase
         else:
             fase = "ida" if accion == "ir_meta" else "vuelta"
-        x, y, _ = self.pose_odo
+        x, y, r = self.pose_odo
+        if salir:
+            if salir[0]["tipo"] == "orientar":
+                r = salir[0]["rumbo"]
+            if salir[-1]["tipo"] == "avanzar":
+                falta = salir[-1]["distancia"]
+                x, y = x + falta * math.cos(r), y + falta * math.sin(r)
         i = min(range(len(self.linea)), key=lambda k: (self.linea[k][0] - x) ** 2 + (self.linea[k][1] - y) ** 2)
         s = self._s_de(i)
         if fase == "vuelta" and s < self.s_giro + 0.2:
@@ -339,9 +654,18 @@ class ControlCarro:
             i = self._indice_en(self.s_giro + 0.25)
             s = self._s_de(i)
         lx, ly, lr = self.linea[i][:3]
-        acciones = [self._parar()]
+        acciones = [self._parar()] + salir
         if math.hypot(lx - x, ly - y) > LEJOS_DE_LA_LINEA_M:
-            acciones.append({"tipo": "ir_a", "x": lx, "y": ly, "intento": 1})
+            # Hasta la linea con la odometria, sin cruzar ninguna huella (muelle,
+            # planta): derecho si se puede y, si no, rodeandola por sus esquinas.
+            ruta = [(lx, ly)]
+            if self.zonas is not None:
+                ruta = ruta_libre(self.zonas, x, y, lx, ly, self.holgura_lateral, self.holgura_giro)
+                if ruta is None:
+                    return False, ("No hay un camino libre hasta la línea desde donde cree estar el carro "
+                                   f"({x:.2f}, {y:.2f}): muévalo con órdenes cortas (retroceder, girar) y pruebe otra vez")
+            for px, py in ruta:
+                acciones.append({"tipo": "ir_a", "x": px, "y": py, "intento": 1})
         acciones += [{"tipo": "orientar", "rumbo": lr if fase == "ida" else lr + math.pi},
                      self._girar(0.5, busca_linea=True), self._girar(-1.0, busca_linea=True),
                      {"tipo": "error", "motivo": "sin_linea"},
@@ -361,11 +685,25 @@ class ControlCarro:
         return [self._medir("c0"), self._girar(a), self._medir("c+"), self._girar(-2 * a), self._medir("c-"),
                 self._girar(a), {"tipo": "camino", "distancia": distancia}]
 
-    def _atascado(self, diferencia: float) -> None:
+    def _atascado(self, diferencia: float, *, en_reversa: bool = False, recorrido: float = 0.0) -> None:
         """En una recta, una rueda conto mucho mas que la otra: algo sujeta
-        el carro (una esquina contra un muro) y la otra rueda patina."""
+        el carro (una esquina contra un muro) y la otra rueda patina. Frena y
+        DESHACE el tramo por donde vino (ese camino estaba libre: ahi acababa
+        de girar), como mucho la reversa maxima y al menos
+        `apartarse_atascado_mm`: asi no queda apretado contra lo que lo trabo,
+        la odometria se corre poco (vuelve por sus propias huellas) y la orden
+        siguiente (volver al muelle, girar) puede girar sin rozarlo."""
         self._evento("atascado", diferencia_mm=round(diferencia * 1000))
-        self._acciones = [self._parar(), self._fin_orden("detenido_atascado")]
+        distancia = min(REVERSA_MAX_M, max(self.apartarse_atascado, abs(recorrido)))
+        if en_reversa:
+            apartarse = self._avanzar(distancia, self.v_maniobra)
+            apartarse["vigilar"] = True
+        else:
+            apartarse = {"tipo": "reversa", "distancia": distancia}
+        # Apartandose no se vuelve a revisar el atasco (la rueda que patinaba
+        # puede seguir contando distinto un momento).
+        apartarse["sin_atasco"] = True
+        self._acciones = [self._parar(), apartarse, self._parar(), self._fin_orden("detenido_atascado")]
 
     def _a_eje(self, x: float, y: float) -> tuple[float, float]:
         """Punto pedido para el centro del carro -> punto para el eje (con el
@@ -373,6 +711,15 @@ class ControlCarro:
         ex, ey, _ = self.pose_odo
         r = math.atan2(y - ey, x - ex)
         return x + self.x_eje * math.cos(r), y + self.x_eje * math.sin(r)
+
+    def _pose_en_linea(self, s: float, media_vuelta: float) -> None:
+        """El CENTRO del carro esta sobre la linea en `s` (siguiendola: el
+        arreglo de infrarrojos va centrado en ella), mirando a lo largo de la
+        linea (`media_vuelta` = pi de vuelta)."""
+        if not self.linea or self.pose_odo is None:
+            return
+        lx, ly, lr = self.linea[self._indice_en(s)][:3]
+        self.fijar_pose(lx, ly, _angulo(lr + media_vuelta))
 
     def _s_de(self, i: int) -> float:
         """Distancia sobre la linea desde el muelle hasta el punto i."""
@@ -495,6 +842,15 @@ class ControlCarro:
             self._cuenta_franja = 0
         if self._cuenta_franja >= 2 and self.s_fase > 0.5:
             self._cuenta_franja = 0
+            # Las franjas son puntos FIJOS y medidos de la pista, como el muelle:
+            # al verlas la odometria se vuelve a poner en su lugar. Sin esto, tras
+            # una vuelta con tres evasiones el carro "creia" estar a ~30 cm de
+            # donde estaba (se vio en la simulacion, 2026-09-27) y las ordenes que
+            # usan el mapa (no pisar el muelle ni la planta) partian de ahi.
+            if self.fase == "ida":
+                self._pose_en_linea(self.largo_linea - self.ancho_meta - self.x_ir, 0.0)
+            else:
+                self._pose_en_linea(self.s_giro + self.ancho_giro / 2 + self.x_ir, math.pi)
             if self.fase == "ida":
                 self.estado = "maniobra"
                 self._acciones = [self._parar(), {"tipo": "estado", "estado": "en_meta", "evento": "meta"}]
@@ -625,8 +981,8 @@ class ControlCarro:
                 # esquiva por su cuenta en modo de ordenes).
                 self._acciones = [self._parar(), self._fin_orden("detenido_por_obstaculo")]
                 return
-            if a.get("vigilar") and abs(di - dd) > DIFERENCIA_ATASCADO_M:
-                self._atascado(di - dd)
+            if a.get("vigilar") and not a.get("sin_atasco") and abs(di - dd) > DIFERENCIA_ATASCADO_M:
+                self._atascado(di - dd, recorrido=(di + dd) / 2)
                 return
             recorrido = (di + dd) / 2
             if a["hasta_linea"]:
@@ -686,7 +1042,9 @@ class ControlCarro:
                 hecho = True
             else:
                 w = 28.0 * e
-                v = self.v_maniobra
+                # Mas despacio (`v`) el mismo giro endereza en menos camino: sirve
+                # cuando arranca torcido respecto a la linea (reentrar al muelle).
+                v = a.get("v", self.v_maniobra)
                 self._objetivo = [v - w * self.via / 2, v + w * self.via / 2]
 
         elif t == "reversa_tope":
@@ -714,8 +1072,8 @@ class ControlCarro:
         elif t == "reversa":
             # Reversa por orden: lenta y derecha (corrigiendo con los pulsos).
             atras = -(di + dd) / 2
-            if abs(di - dd) > DIFERENCIA_ATASCADO_M:
-                self._atascado(di - dd)
+            if not a.get("sin_atasco") and abs(di - dd) > DIFERENCIA_ATASCADO_M:
+                self._atascado(di - dd, en_reversa=True, recorrido=(di + dd) / 2)
                 return
             if atras + self._frenado(abs(self._cmd[0])) >= a["distancia"]:
                 self._objetivo = [0.0, 0.0]

@@ -1,4 +1,4 @@
-"""Arma `visor-portable.html`: el visor 3D en UN solo archivo (usuario, 2026-09-28).
+"""Arma `visor-portable.html`: el visor 3D en UN solo archivo (usuario, 2026-09-27).
 
 Lo que hace visor.bat: abre este archivo al instante y arranca la simulación por detrás.
 

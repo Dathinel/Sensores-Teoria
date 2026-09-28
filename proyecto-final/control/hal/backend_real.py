@@ -122,7 +122,7 @@ class DispensadorReal(_ConPuente, DispensadorTapas):
 
 class BackendReal:
     """Todo el hardware de la estacion, como lo ve la capa de control. Los nombres y
-    los tipos son los MISMOS de backend_sim.EstacionBackendSim (auditoria 2026-09-28:
+    los tipos son los MISMOS de backend_sim.EstacionBackendSim (auditoria 2026-09-27:
     antes el sensor del interior era una distancia aqui y un si/no alla)."""
 
     def __init__(self, puente, reloj, vasos: dict | None = None):

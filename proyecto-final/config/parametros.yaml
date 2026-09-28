@@ -24,7 +24,7 @@ cinta_monedas:
   # Separacion entre casillas de la cinta indexada, en mm.
   separacion_casilla_mm: 40
   # La pausa tras cada avance esta en tiempos_ms.pausa_casilla_monedas (1000 ms). Aqui habia
-  # otra de 300 ms que nadie leia y contradecia esa (auditoria 2026-09-28).
+  # otra de 300 ms que nadie leia y contradecia esa (auditoria 2026-09-27).
 
 vasos:
   # Sensor del interior del vaso (VL53L0X mirando hacia abajo, en la
@@ -75,7 +75,7 @@ motor_paso_a_paso:
   pasos_por_revolucion: 200
   # 1/4 de micropaso (no 1/16): el firmware genera los pasos con el PWM del ESP32 y a 1/4
   # la frecuencia queda baja (~1,3 kHz). La camara de cada cinta corrige el desfase igual.
-  # (Antes: 16 aqui y 4 en firmware.micropasos_firmware; auditoria 2026-09-28: uno solo.)
+  # (Antes: 16 aqui y 4 en firmware.micropasos_firmware; auditoria 2026-09-27: uno solo.)
   microstepping: 4
 
 canaleta_entrega:
@@ -309,6 +309,30 @@ vehiculo:
   # el infrarrojo de la cuna ve que ya no esta y el carro vuelve solo.
   espera_descarga_meta_s: 4
   espera_meta_sin_enlace_s: 20      # sin radio, en la meta espera como mucho esto y vuelve (con el vaso si no se lo sacaron)
+  # Si una orden lo deja `atascado` (una rueda cuenta mucho mas que la otra), frena y se aparta
+  # esto por donde vino, para no quedar apretado contra lo que lo trabo (usuario, 2026-09-27).
+  apartarse_atascado_mm: 50
+
+# Donde PUEDE andar el carro por orden (usuario, 2026-09-27: el asistente lo mando "a donde esta
+# el filtro de monedas" y se trabo contra el muelle). El laser (7,4 cm del piso) y el ultrasonico
+# (5,7 cm) no ven lo bajo -- las guias del muelle miden 2 cm y sus topes 4,5 -- y la planta no esta
+# en la pista. sim/geometria.py (`zonas_carro`) arma con esto y con la geometria de siempre un
+# rectangulo de piso libre y las huellas prohibidas (planta, canaleta, muelle, poste de la camara);
+# el carro (control/vehiculo.py) rechaza un destino o un camino recto que las toque.
+zonas_carro:
+  # PROVISIONAL: cuanto sobresale la estructura de la planta (patas de las mesas, portico,
+  # cubetas, postes de las camaras) mas alla de los puntos conocidos (estaciones de las dos
+  # cintas, almacen y bandejas). El visor la dibuja hasta ~7 cm afuera; medir en el montaje.
+  margen_planta_mm: 100
+  # PROVISIONAL: soportes de la canaleta a cada lado de su eje (el visor: 28 mm afuera de cada
+  # riel + el perfil).
+  medio_ancho_canaleta_mm: 75
+  # PROVISIONAL: poste de la camara de vasos, que llega al piso al lado de la cinta (pie de
+  # 3 cm, 2 cm detras de la camara): cuadrado de este medio lado alrededor de la camara.
+  medio_lado_poste_camara_mm: 40
+  # PROVISIONAL: piso libre alrededor de la pista (desde el borde de la pista) por el que el carro
+  # puede andar por orden. Depende del salon: medirlo el dia de la sustentacion.
+  margen_zona_libre_mm: 300
 
 # ---------------------------------------------------------------------
 # REPLICACION EN LA VIDA REAL (docs/replicacion.md se genera de aqui).

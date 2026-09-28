@@ -3,7 +3,7 @@
 
 # Componentes (lista de materiales)
 
-46 piezas más los 13 sensores de [sensores.md](sensores.md). Son 5 servos: caben en un solo PCA9685 de 16 canales (sobran 11). En el visor 3D, pestaña **Componentes**, cada uno se resalta en la escena (`http://localhost:8765/?componente=<id>`).
+46 piezas más los 13 sensores de [sensores.md](sensores.md). Son 6 servos: caben en un solo PCA9685 de 16 canales (sobran 10). En el visor 3D, pestaña **Componentes**, cada uno se resalta en la escena (`http://localhost:8765/?componente=<id>`).
 
 **Estado en la simulación** (calculado en `sim/catalogos.py`, no escrito a mano): *simulado* = la simulación hace lo que hace la pieza; *efecto simulado* = su efecto lo hace otra pieza en la simulación (los drivers: la cinta avanza igual); *solo visual* = nada en la simulación depende de ella. La columna **Hilos** cuenta su conexionado pin a pin ([conexiones.md](conexiones.md)).
 

@@ -87,7 +87,7 @@ def _corrida_corta(tmp_path):
 
 
 def test_sin_internet_y_sin_simulacion_se_ve_de_lejos(monkeypatch, tmp_path):
-    """Usuario, 2026-09-28: que sea evidente que no hay internet o que no es en vivo."""
+    """Usuario, 2026-09-27: que sea evidente que no hay internet o que no es en vivo."""
     import urllib.request
 
     from app import asistente

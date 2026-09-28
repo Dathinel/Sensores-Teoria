@@ -60,7 +60,7 @@ TORQUE_BAJO = 0.035
 
 class SimCarro:
     def __init__(self, parametros: dict, *, errores: bool = False, semilla: int | None = None):
-        from sim.geometria import geometria_completa
+        from sim.geometria import geometria_completa, zonas_carro
 
         self.cfg = dict(parametros["vehiculo"])
         pista = parametros["pista"]
@@ -104,7 +104,7 @@ class SimCarro:
         # volver a poner su odometria en cero cada vez que entra al muelle.
         self.control = ControlCarro(self.cfg, largo_linea_m=self.largo_linea,
                                     linea=[(q.x, q.y, q.rumbo, q.s) for q in self.linea],
-                                    pose_muelle=self.salida)
+                                    pose_muelle=self.salida, zonas=zonas_carro(parametros, geo))
         n = max(1, round(1 / (self.cfg["control_hz"] * PASO_FISICA)))
         self.pasos_por_control = n
         self.dt_control = n * PASO_FISICA

@@ -305,7 +305,8 @@ verse pulido.
 Tiempos LENTOS a propósito (grupo, 2026-09-22: el montaje real verifica con calma): pausa de
 1000 ms, ciclo de 1,6 s. La simulación corre con esos mismos tiempos (supervisor a velocidad 1 y
 ventana de PyBullet).
-El conexionado y los voltajes de cada componente van en la sección de firmware (fase 8).
+El conexionado y los voltajes de cada componente están en `sim/conexiones.py` (fuente única) →
+`docs/conexiones.md`, y la revisión de cada sensor en `docs/revision-final.md`.
 
 ## 7. Reglas de decisión del filtrado
 
@@ -590,8 +591,8 @@ Sirve para tres cosas: demostrar el funcionamiento antes de tener hardware, vali
 lógica de control contra escenarios que en físico son difíciles de repetir, y generar el
 material visual de la sustentación.
 
-**Escena.** Bancada, cinta de monedas con separadores, seis estaciones marcadas, canaletas
-de rechazo, cinta de vasos, tubo de tapas, prensa, canaleta de entrega, pista con línea y
+**Escena.** Bancada, cinta de monedas con separadores, cuatro estaciones marcadas (filtro
+total, 2026-09-25), una sola bandeja de rechazo, cinta de vasos, tubo de tapas, prensa, canaleta de entrega, pista con línea y
 tres obstáculos, y el vehículo.
 
 **Cómo se mueve la cinta indexada.** No hay que simular una banda flexible. Modele la cinta
@@ -620,9 +621,10 @@ El par capacitivo e inductivo se emula consultando la bandera de material del cu
 esté dentro del volumen de la estación. El capacitivo responde a cualquier cuerpo presente,
 el inductivo solo a los marcados como metálicos.
 
-La cámara se emula con `getCameraImage` desde una posición cenital sobre la estación cinco,
-con la cinta negra como fondo. La imagen resultante alimenta el mismo pipeline de visión
-que usaría la webcam. Para las fases tempranas, el clasificador corre en modo oráculo: lee
+La cámara (cenital sobre E3, con la cinta negra como fondo) HOY es un oráculo: no hay render ni
+pipeline de OpenCV todavía (`sim/sensores_sim.py`); lo previsto es emularla con `getCameraImage`
+y pasar esa imagen por el mismo pipeline que usaría la webcam (fase 5, pendiente). El
+clasificador corre en modo oráculo: lee
 la clase real del cuerpo y le aplica un ruido configurable de confusión, de modo que la
 línea completa se puede probar antes de tener el modelo entrenado.
 
@@ -760,7 +762,7 @@ pierde las instrucciones. Las órdenes claras las decide el intérprete de regla
 inventó una secuencia de 4 órdenes para "gira a la derecha"), el signo del giro lo manda la frase
 y se acepta UNA sola orden al carro por mensaje, con cualquier proveedor.
 
-**Modelo local, segunda ronda (2026-09-28):** `qwen2.5-proyecto` = qwen2.5:3b con 8192 tokens de
+**Modelo local, segunda ronda (2026-09-27):** `qwen2.5-proyecto` = qwen2.5:3b con 8192 tokens de
 contexto (`python -m app.asistente --preparar-local`; 3,5 de 4 GB en la RTX 3050), ~9000 caracteres
 de documentación, el estado en vivo PEGADO a la pregunta (al principio de un texto largo el modelo
 chico lo ignoraba) y, si las reglas ya tienen la cifra exacta, va como "DATO VERIFICADO" (confundía
@@ -772,7 +774,7 @@ DeepSeek o la laptop (teclado RGB, luz de actividad, pantalla) si piensa el mode
 `python -m app.evaluar_asistente`: 24 casos reales (cifras, técnico, costos, sin dato, órdenes con
 errores de ortografía, seguridad, inglés) → 24/24 local (mediana 7,5 s) y 24/24 reglas.
 
-**Sin internet (2026-09-28):** `hay_internet()` (conexión TCP a DeepSeek o Google, recordada 15 s).
+**Sin internet (2026-09-27):** `hay_internet()` (conexión TCP a DeepSeek o Google, recordada 15 s).
 Sin red no se intenta DeepSeek (no se espera su timeout). Voz: con internet Google + gTTS; sin
 internet **Whisper `small`** (faster-whisper, CPU int8, ~2,5 s por frase; `base` oía "abanza" y
 "muye") y la **voz de Windows** (pyttsx3, en un proceso aparte: se cuelga si se llama dos veces en
@@ -826,7 +828,8 @@ que alimentan secuencias de elementos ficticios y verifican que cada uno termina
 destino correcto, incluyendo los casos de sabotaje de vaso. Sin PyBullet todavía.
 
 **Fase 2. Mundo simulado.** URDF de la estación, escena en PyBullet, movimiento indexado de
-las dos cintas, inyección de elementos, servos de expulsión. Criterio: en modo GUI se ve un
+las dos cintas, inyección de elementos, servos de expulsión (con el filtro total del 2026-09-25
+quedó una sola compuerta de desvío en E4). Criterio: en modo GUI se ve un
 elemento recorrer la cinta y ser expulsado por el servo correcto según un veredicto
 inyectado a mano.
 
@@ -850,8 +853,8 @@ llega a la meta, y todo queda registrado.
 
 **Fase 7. Chatbot.** Cliente de DeepSeek, inyección de estado, voz. Criterio: responde
 correctamente preguntas sobre cifras reales del proceso en curso. **Hecha el 2026-09-27** (con
-órdenes al carro y a la línea, a pedido del usuario; punto 16 del paso a paso, pendiente de su
-revisión). Falta probarla con una clave de DeepSeek válida.
+órdenes al carro y a la línea, a pedido del usuario; punto 16 del paso a paso, EN PAUSA hasta el
+montaje real). Modelo local (Ollama) y voz sin internet hechos; falta probar una clave de DeepSeek válida.
 
 **Fase 8. Backend real.** Firmware de los dos ESP32, protocolo serial, backend real de la
 HAL. Criterio: el mismo código de control que corría en simulación mueve el hardware

@@ -259,3 +259,91 @@ def geometria_completa(parametros: dict) -> dict:
         "conexiones": conexiones.datos_visor(),
         "categorias_componentes": list(CATEGORIAS),
     }
+
+
+def zonas_carro(parametros: dict, geo: dict | None = None) -> dict:
+    """Donde puede andar el carro por orden (usuario, 2026-09-27): el piso
+    libre alrededor de la pista y las huellas en el piso que NO puede pisar ni
+    cruzar. Formato de control/vehiculo.py (dicts y listas: tambien va al
+    ESP32 del carro, en config_placa).
+
+    El laser y el ultrasonico del carro miran a 7,4 y 5,7 cm del piso: no ven
+    las guias del muelle (2 cm) ni sus topes (4,5 cm), y la planta (mesas,
+    canaleta, camaras) no esta en su pista. Por eso el mapa sale de la MISMA
+    geometria que dibuja el visor y usa la simulacion, con los margenes
+    PROVISIONALES de `zonas_carro` en config/parametros.yaml."""
+    from sim.vehiculo_sim import ABRE_BOCA_MUELLE, HOLGURA_MUELLE, LARGO_BOCA_MUELLE
+
+    geo = geo or geometria_completa(parametros)
+    z = parametros["zonas_carro"]
+    veh = parametros["vehiculo"]
+
+    # 1. La planta: las dos cintas con sus mesas, el almacen y las dos bandejas.
+    puntos = [e["posicion"][:2] for e in geo["cinta_monedas"]["estaciones"] + geo["cinta_vasos"]["estaciones"]]
+    alm = geo["almacen"]
+    puntos += [alm["centro"][:2], alm["rechazo_final"][:2], geo["bandeja_rechazo_vasos"][:2]]
+    # Las cintas pasan casilla y media mas alla de sus estaciones (rodillos y patas).
+    sep_m, sep_v = geo["cinta_monedas"]["separacion"], geo["cinta_vasos"]["separacion"]
+    xs = [p[0] for p in puntos]
+    ys = [p[1] for p in puntos]
+    m = z["margen_planta_mm"] / 1000
+    x0 = min(xs) - 1.5 * max(sep_m, sep_v) - m
+    x1 = max(xs) + m
+    y0, y1 = min(ys) - m, max(ys) + m
+    planta = {"clave": "planta", "nombre": "la planta (cintas, filtro de monedas y almacén)",
+              "atravesar": "atravesarla", "cx": (x0 + x1) / 2, "cy": (y0 + y1) / 2, "rumbo": 0.0,
+              "ml": (x1 - x0) / 2, "ma": (y1 - y0) / 2}
+
+    # 2. La canaleta, del borde de la cinta de vasos al muelle, con sus soportes.
+    c = geo["canaleta"]
+    (ax, ay), (bx, by) = c["inicio"][:2], c["fin"][:2]
+    canaleta = {"clave": "canaleta", "nombre": "la canaleta de entrega", "atravesar": "atravesarla",
+                "cx": (ax + bx) / 2, "cy": (ay + by) / 2, "rumbo": math.atan2(by - ay, bx - ax),
+                "ml": math.hypot(bx - ax, by - ay) / 2, "ma": z["medio_ancho_canaleta_mm"] / 1000}
+
+    # 3. El muelle: guias rectas, boca en V y topes (mismas medidas que
+    # SimCarro._crear_muelle), en el marco del carro estacionado (+x adelante).
+    # Van como PAREDES sueltas y no como un bloque: el carro estacionado esta
+    # ADENTRO del muelle y puede salir derecho por el canal; lo que no puede
+    # es cruzar una guia. Aparte va el rectangulo que lo encierra todo, para
+    # saber si el carro esta dentro (entonces solo sale derecho).
+    s = geo["pista"]["salida"]
+    largo, r = veh["largo_mm"] / 1000, veh["diametro_rueda_mm"] / 2000
+    esp = 0.006                                            # espesor de las guias
+    guia_y = (veh["rodillo_guia_y_mm"] + veh["rodillo_guia_radio_mm"]) / 1000 + HOLGURA_MUELLE
+    x0 = -largo / 2 - 0.004                                # cola de las guias rectas
+    x1 = -0.18 * largo + r + 0.015                         # fin de las rectas, empieza la boca
+    x2 = x1 + LARGO_BOCA_MUELLE
+    xt, tope = -largo / 2 - 0.010, (0.007, 0.011)          # centro y medio tamano de cada tope
+
+    def pieza(lx, ly, rumbo_local, ml, ma):
+        c, n = math.cos(s["rumbo"]), math.sin(s["rumbo"])
+        return {"clave": "muelle", "nombre": "el muelle de carga (guías y topes)", "atravesar": "atravesarlo",
+                "cx": s["x"] + lx * c - ly * n, "cy": s["y"] + lx * n + ly * c,
+                "rumbo": s["rumbo"] + rumbo_local, "ml": ml, "ma": ma}
+
+    muelle = []
+    for lado in (-1, 1):
+        ya, yb = lado * (guia_y + esp / 2), lado * (guia_y + ABRE_BOCA_MUELLE + esp / 2)
+        muelle.append(pieza((x0 + x1) / 2, ya, 0.0, (x1 - x0) / 2, esp / 2))
+        muelle.append(pieza((x1 + x2) / 2, (ya + yb) / 2, math.atan2(yb - ya, x2 - x1),
+                            math.hypot(x2 - x1, yb - ya) / 2, esp / 2))
+        muelle.append(pieza(xt, lado * 0.052, 0.0, tope[0], tope[1]))
+    atras, adelante = xt - tope[0], x2 + esp / 2
+    caja_muelle = pieza((atras + adelante) / 2, 0.0, 0.0, (adelante - atras) / 2, guia_y + ABRE_BOCA_MUELLE + esp)
+
+    # 4. El poste de la camara de vasos (llega al piso al costado de la cinta).
+    cam = next(x for x in geo["sensores"] if x["id"] == "camara_vasos")["geometria"]["posicion"]
+    lado = z["medio_lado_poste_camara_mm"] / 1000
+    poste = {"clave": "poste_camara", "nombre": "el poste de la cámara de vasos", "atravesar": "atravesarlo",
+             "cx": cam[0], "cy": cam[1], "rumbo": 0.0, "ml": lado, "ma": lado}
+
+    # Piso libre: la pista (su linea central, mas medio ancho) con un margen.
+    linea = geo["pista"]["linea"]
+    borde = geo["pista"]["ancho"] / 2 + z["margen_zona_libre_mm"] / 1000
+    libre = [min(p[0] for p in linea) - borde, min(p[1] for p in linea) - borde,
+             max(p[0] for p in linea) + borde, max(p[1] for p in linea) + borde]
+    redondo = lambda d: {k: (round(v, 4) if isinstance(v, float) else v) for k, v in d.items()}
+    return {"libre": [round(v, 4) for v in libre],
+            "muelle": redondo(caja_muelle),
+            "prohibidas": [redondo(planta), redondo(canaleta)] + [redondo(m) for m in muelle] + [redondo(poste)]}

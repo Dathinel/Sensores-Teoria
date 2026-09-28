@@ -207,3 +207,145 @@ def test_desde_el_muelle_sale_derecho_antes_de_girar():
         assert roces == 0
     finally:
         carro.cerrar()
+
+
+# ---------------------------------------------------------------------
+# Destinos imposibles (usuario, 2026-09-27): el asistente mando el carro "a
+# donde esta el filtro de monedas" -> ir_a (-0.5, 0.0) y se trabo contra el
+# muelle. El laser y el ultrasonico no ven lo bajo (guias de 2 cm, topes de
+# 4,5): el carro revisa destino y camino contra el mapa fijo (zonas_carro).
+# ---------------------------------------------------------------------
+
+
+def _hasta_media_reversa(carro: SimCarro) -> None:
+    """Un viaje completo hasta que, de vuelta, esta entrando de reversa al
+    muelle (a medio camino, en la boca): donde estaba el carro del incidente."""
+    c = carro.control
+    carro.cargar_vaso()
+    llegada = None
+    while carro.tiempo < 500:
+        carro.avanzar(0.2)
+        if c.estado == "en_meta":
+            llegada = llegada or carro.tiempo
+            if carro.tiempo - llegada >= carro.cfg["espera_descarga_meta_s"]:
+                carro.retirar_vaso()
+        if c._acciones and c._acciones[0]["tipo"] == "reversa_tope" and carro.pose()[1] > -0.66:
+            return
+    raise AssertionError("no llego a entrar de reversa al muelle")
+
+
+def test_zonas_salen_de_la_geometria():
+    from sim.geometria import zonas_carro
+    from control.vehiculo import distancia_a_zona, en_zona_libre
+
+    z = zonas_carro(cargar_parametros())
+    claves = {p["clave"] for p in z["prohibidas"]}
+    assert {"planta", "canaleta", "muelle", "poste_camara"} <= claves
+    planta = next(p for p in z["prohibidas"] if p["clave"] == "planta")
+    # El filtro de monedas (E1-E4, en y = 0) queda dentro de la planta.
+    assert distancia_a_zona(planta, 0.0, 0.0) < 0 and distancia_a_zona(planta, 0.07, 0.0) < 0
+    # El carro estacionado esta DENTRO del rectangulo del muelle pero no pisa
+    # ninguna de sus paredes; la pista entera esta en el piso libre.
+    s = cargar_parametros()
+    carro = SimCarro(s)
+    try:
+        x, y, _ = carro.salida
+        assert distancia_a_zona(z["muelle"], x, y) < 0
+        assert all(distancia_a_zona(p, x, y) > 0 for p in z["prohibidas"])
+        assert all(en_zona_libre(z, q.x, q.y) for q in carro.linea)
+    finally:
+        carro.cerrar()
+
+
+def test_ir_a_la_planta_desde_el_muelle_se_rechaza_sin_moverse():
+    """El caso real: ir_a (-0.5, 0.0) desde el muelle."""
+    carro = SimCarro(cargar_parametros(), errores=True, semilla=3)
+    try:
+        c = carro.control
+        x0, y0, _ = carro.pose()
+        ok, motivo = c.ordenar({"accion": "ir_a", "x": -0.5, "y": 0.0})
+        assert not ok
+        assert "fuera del piso" in motivo and "la planta" in motivo and "no puede atravesarla" in motivo
+        ok, motivo = c.ordenar({"accion": "ir_a", "x": 0.0, "y": 0.0})       # el filtro de monedas
+        assert not ok and "dentro de la planta" in motivo and "no puede ir ahí ni atravesarla" in motivo
+        ok, motivo = c.ordenar({"accion": "ir_a", "x": 0.36, "y": -0.3})     # bajo la canaleta
+        assert not ok and "canaleta" in motivo
+        carro.avanzar(3.0)
+        x, y, _ = carro.pose()
+        assert c.estado == "esperando_carga" and math.hypot(x - x0, y - y0) < 0.005
+    finally:
+        carro.cerrar()
+
+
+def test_camino_por_el_muelle_se_rechaza_y_propone_rodeo():
+    from control.vehiculo import holguras_carro, ruta_libre, tramo_bloqueado
+    from sim.geometria import zonas_carro
+
+    p = cargar_parametros()
+    z = zonas_carro(p)
+    lateral, _, giro = holguras_carro(p["vehiculo"])
+    # De un lado del muelle al otro, derecho, pasa por encima de sus guias.
+    assert tramo_bloqueado(z, 0.05, -0.55, 0.70, -0.55, lateral)["clave"] == "muelle"
+    ruta = ruta_libre(z, 0.05, -0.55, 0.70, -0.55, lateral, giro)
+    assert ruta and len(ruta) > 1 and ruta[-1] == (0.70, -0.55)
+    puntos = [(0.05, -0.55)] + ruta
+    assert all(tramo_bloqueado(z, a[0], a[1], b[0], b[1], lateral) is None for a, b in zip(puntos, puntos[1:]))
+
+
+def test_desde_el_muelle_un_punto_valido_se_sigue_cumpliendo_sin_rozar():
+    import pybullet as pb
+
+    carro = SimCarro(cargar_parametros(), errores=True, semilla=3)
+    try:
+        eventos = _cumplir(carro, {"accion": "ir_a", "x": 0.0, "y": -0.9})
+        assert "llego_al_punto" in [e["ev"] for e in eventos]
+        x, y, _ = carro.pose()
+        assert math.hypot(x - 0.0, y + 0.9) < 0.06
+        assert not any(pb.getContactPoints(carro.carro, m, physicsClientId=carro.cli) for m in carro.muelle)
+    finally:
+        carro.cerrar()
+
+
+def test_la_odometria_se_corrige_en_la_marca_de_giro():
+    """Tras una vuelta con 6 evasiones la odometria se corria ~30 cm; las
+    franjas (meta y marca de giro) son puntos fijos: se vuelve a poner ahi."""
+    carro = SimCarro(cargar_parametros(), errores=True, semilla=3)
+    try:
+        _hasta_media_reversa(carro)
+        ox, oy, _ = carro.control.posicion_estimada()
+        x, y, _ = carro.pose()
+        assert math.hypot(ox - x, oy - y) < 0.05
+    finally:
+        carro.cerrar()
+
+
+def test_a_medio_muelle_la_orden_del_incidente_se_rechaza():
+    carro = SimCarro(cargar_parametros(), errores=True, semilla=1)
+    try:
+        _hasta_media_reversa(carro)
+        ok, motivo = carro.control.ordenar({"accion": "ir_a", "x": -0.5, "y": 0.0})
+        assert not ok and "planta" in motivo
+    finally:
+        carro.cerrar()
+
+
+def test_tras_detenido_atascado_volver_muelle_lo_saca():
+    """El incidente tal cual (sin el mapa, como antes): a medio entrar de
+    reversa, ir_a (-0.5, 0.0) lo mete contra la boca del muelle y da
+    `atascado` (-41 mm, igual que en la base real). Se aparta deshaciendo el
+    tramo y `volver_muelle` lo endereza con la linea y lo vuelve a entrar."""
+    carro = SimCarro(cargar_parametros(), errores=True, semilla=1)
+    try:
+        c = carro.control
+        _hasta_media_reversa(carro)
+        zonas, c.zonas = c.zonas, None           # como antes del arreglo
+        eventos = _cumplir(carro, {"accion": "ir_a", "x": -0.5, "y": 0.0}, limite_s=40)
+        nombres = [e["ev"] for e in eventos]
+        assert "atascado" in nombres and "detenido_atascado" in nombres, nombres
+        c.zonas = zonas
+        eventos = _cumplir(carro, {"accion": "volver_muelle"}, limite_s=120)
+        assert c.estado == "esperando_carga", [e["ev"] for e in eventos]
+        x, y, r = carro.pose()
+        assert abs(x - carro.salida[0]) < 0.01 and abs(y - carro.salida[1]) < 0.01
+    finally:
+        carro.cerrar()

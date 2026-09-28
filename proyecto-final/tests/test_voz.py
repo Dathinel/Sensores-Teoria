@@ -1,4 +1,4 @@
-"""Voz y asistente SIN internet (usuario, 2026-09-28): oir con Whisper local y hablar con la
+"""Voz y asistente SIN internet (usuario, 2026-09-27): oir con Whisper local y hablar con la
 voz de Windows; DeepSeek ni se intenta (sin esperar su tiempo de espera)."""
 
 from app import asistente, db

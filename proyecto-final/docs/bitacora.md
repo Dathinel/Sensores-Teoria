@@ -931,7 +931,7 @@ fotos); clave de DeepSeek válida (la dada da 401).
   teclado, touchpad, bisagra, tapa a ~110°) y el asistente en su pantalla (el panel ya no flota
   sobre la nube).
 
-## 2026-09-28 — Auditoría general, modelo local más completo y laptop ×1,5
+## 2026-09-27 — Auditoría general, modelo local más completo y laptop ×1,5
 
 - Laptop ASUS TUF Gaming A15 rehecha al nivel de los modelos de Blender de los labs: esquinas
   redondeadas, teclado completo en relieve con letras (WASD translúcidas), touchpad, luces de
@@ -953,7 +953,7 @@ fotos); clave de DeepSeek válida (la dada da 401).
   placa). Sin código muerto. Solapes restantes (24): montajes, ejes dentro de rodillos, vasos en
   la bandeja, piezas del carro; la auditoría trata cilindros como cajas y exagera.
 
-## 2026-09-28 — Visor portable que pasa solo al vivo
+## 2026-09-27 — Visor portable que pasa solo al vivo
 
 - `visor.bat` abre `visor-portable.html` (un solo archivo de ~2 MB: Three.js y OrbitControls como
   módulos embebidos en el importmap, el visor y la demo grabada) y arranca la simulación por
@@ -964,7 +964,7 @@ fotos); clave de DeepSeek válida (la dada da 401).
   al arrancarla 12 s después → vivo a los 22 s, sin errores. Sin Python ni internet (otro PC) se
   queda en la demo. `tests/test_portable.py` (5 pruebas).
 
-## 2026-09-28 — Voz sin internet y avisos de "no es en vivo" / "sin internet"
+## 2026-09-27 — Voz sin internet y avisos de "no es en vivo" / "sin internet"
 
 - Voz: con internet Google (oír) y gTTS (hablar), como el tema 4; sin internet Whisper `small` en
   el PC y la voz de Windows (Helena, es-ES). Probado en cadena (voz de Windows → WAV → Whisper):
@@ -979,7 +979,7 @@ fotos); clave de DeepSeek válida (la dada da 401).
 - Pruebas: `tests/test_voz.py` (5) y 2 del dashboard. Capturas con Chrome sin ventana y la red
   cortada por DevTools.
 
-## 2026-09-28 — Arreglo del falso "sin internet" del visor
+## 2026-09-27 — Arreglo del falso "sin internet" del visor
 
 - Al abrir `visor.bat` el visor decía "sin internet" con internet (DeepSeek respondía en 0,6 s).
   Causa: probaba UNA vez al arrancar, desde el navegador, mientras armaba la escena 3D; el intento
@@ -990,3 +990,31 @@ fotos); clave de DeepSeek válida (la dada da 401).
   letrero de la nube que se encimaba y el recuadro central repetido. El paso del HTML al vivo se
   volvió a probar desde el archivo: vivo en ~1 s, chip "con internet", sin avisos.
 
+
+## 2026-09-27 — Carro: destinos imposibles, README, revisión final y agentes
+
+- **El carro se atoró** cuando el usuario le pidió al asistente (modelo local) "que vaya a donde está
+  el filtro de monedas, lo atraviese…": el modelo prometió "cruzará por él" y mandó `ir_a (-0,5; 0)`.
+  Causa: el láser (7,4 cm del piso) y el ultrasónico (5,7 cm) no ven las guías del muelle (2 cm) ni sus
+  topes (4,5 cm), y la planta no existe en el mundo del carro; además la odometría llegaba corrida
+  ~30 cm tras la vuelta. Reproducido en simulación (mismo `atascado` de -41 mm).
+- Arreglo en el carro (`control/vehiculo.py`, compatible con MicroPython): mapa FIJO de dónde puede
+  andar (`sim/geometria.py: zonas_carro`, márgenes PROVISIONALES en `config/parametros.yaml`,
+  `zonas_carro`): piso libre alrededor de la pista y huellas prohibidas (planta, canaleta, muelle,
+  poste de la cámara). `ir_a` y `avanzar` rechazan sin moverse un destino o un camino recto que las
+  toque; la odometría se corrige en la meta y en la marca de giro; atascado, se aparta por donde vino;
+  `volver_muelle` pegado al muelle se endereza y entra de reversa.
+- Arreglo en el asistente: pedir que el carro atraviese la planta se contesta con reglas ("Eso no se
+  puede…"), con cualquier proveedor, sin órdenes; un `ir_a` a un punto prohibido ni se manda y la
+  respuesta dice por qué (mismo mapa). 14 pruebas en `tests/test_asistente_planta.py` + 7 del carro.
+- Pendiente visto al reproducir: el paso `reversa_tope` no tiene tiempo límite (se vio 35 s avanzando
+  milímetro a milímetro antes de la orden).
+- Visor: la etiqueta "API de DeepSeek" de la nube cambia a "· sin internet". La primera vez no se veía
+  bien porque `actualizarEtiquetas` volvía a encender en cada cuadro las etiquetas apagadas: ahora
+  respeta `userData.oculta` (también arreglaba el rótulo del vaso del carro). Vista del carro y sus
+  componentes al doble de distancia (~0,6 m).
+- `visor.bat` abre también el dashboard de Streamlit cuando responde (`lanzar --abrir-dashboard`).
+- README del proyecto reescrito a fondo; revisión final (textos desactualizados corregidos: TCRT5000 →
+  FC-51, cámara a 15 cm, 6 servos, estados del paso a paso, CLAUDE.md §11/§16). Fechas de estos días
+  corregidas a 2026-09-27.
+- Se usaron subagentes (máx. 4 a la vez); quedaron guardados para reusar en `Micors-teoria/.claude/agents/`.

@@ -45,4 +45,6 @@ def test_solo_cierran_los_tres_scripts():
 def test_el_bat_abre_el_portable_y_arranca_la_simulacion():
     bat = (portable.RAIZ / "visor.bat").read_text(encoding="utf-8")
     assert "visor-portable.html" in bat and "app.lanzar" in bat
-    assert "--abrir" not in bat   # la pestaña ya esta abierta: pasa sola al visor en vivo
+    # La pestaña del visor ya esta abierta (pasa sola a en vivo): no se abre otra. Si el dashboard.
+    assert not re.search(r"--abrir(?!-)", bat)
+    assert "--abrir-dashboard" in bat

@@ -10,7 +10,8 @@ from logica import CarroFirmware
 from vehiculo import ControlCarro
 
 radio = Radio()
-control = ControlCarro(CFG["vehiculo"], largo_linea_m=CFG["largo_linea_m"], linea=LINEA, pose_muelle=POSE_MUELLE)
+control = ControlCarro(CFG["vehiculo"], largo_linea_m=CFG["largo_linea_m"], linea=LINEA, pose_muelle=POSE_MUELLE,
+                       zonas=CFG.get("zonas"))
 carro = CarroFirmware(Hardware(CFG), control, CFG, radio.enviar)
 periodo = 1000 // CFG["vehiculo"]["control_hz"]
 prox = time.ticks_ms()

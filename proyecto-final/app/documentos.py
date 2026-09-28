@@ -242,7 +242,8 @@ def generar_componentes() -> str:
     from sim.catalogos import CATEGORIAS, COMPONENTES
 
     total = sum(c["cantidad"] for c in COMPONENTES)
-    servos = sum(c["cantidad"] for c in COMPONENTES if c["id"].startswith("servo"))
+    # Por el nombre, no por el id: el de la prensa se llama por su mecanismo (leva) y quedaba afuera.
+    servos = sum(c["cantidad"] for c in COMPONENTES if c["nombre"].lower().startswith("servo"))
     L = [AVISO, "# Componentes (lista de materiales)\n",
          f"{total} piezas más los {len(CATALOGO_SENSORES)} sensores de [sensores.md](sensores.md). "
          f"Son {servos} servos: caben en un solo PCA9685 de 16 canales (sobran {16 - servos}). En el visor 3D, "
