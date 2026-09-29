@@ -40,13 +40,27 @@ Dónde está cada cosa después de rehacerla:
   prensa, Canaleta · Carro, Pista · Caja de control · Asistente. El activo queda marcado.
 - [x] Vuelo suave de la cámara a cada vista (0,9 s).
 - [x] Vista Carro: la cámara sigue al carro mientras avanza, hasta que el usuario mueve la vista.
-- [x] Con el panel abierto (pantalla > 900 px), TODA toma (vistas, enfocar sensor, encuadrar
-  componente, paso a paso) se corre de lado en el plano de la pantalla para que lo enfocado quede
-  en el centro de la parte libre, y se aleja en proporción (ancho total / ancho libre, hasta
-  ×1,4) para que lo encuadrado quepa ahí (antes solo las vistas, corridas a lo largo de -x del
-  mundo: según el ángulo quedaban detrás del panel). La vista Asistente no se aleja (la laptop
-  está detrás de la cinta y la taparía). Al enfocar un sensor o componente se suelta el botón de
-  vista marcado.
+- [x] Con el panel abierto, a CUALQUIER ancho, TODA toma (vistas, enfocar sensor, encuadrar
+  componente, paso a paso) se corre en el plano de la pantalla (de lado y de alto) para que lo
+  enfocado quede en el centro de la parte libre que mide la interfaz (`zonaLibre`: debajo de las
+  vistas y a la derecha del panel; en pantalla angosta, entre las vistas y la hoja de abajo), y se
+  aleja según la dimensión más recortada (de lado hasta ×1,4; con la hoja de abajo hasta ×1,9).
+  Antes solo se corría de lado con el panel lateral: a 900 px la hoja tapaba el carro y las
+  estaciones (revisión visual, 2026-09-28). La vista Asistente de lado no se aleja (la laptop está
+  detrás de la cinta y la taparía); con la hoja de abajo se aleja hasta ×1,45 para que la
+  pantalla quepa. Al enfocar un sensor o componente se suelta el botón de vista marcado.
+- [x] Tomas revisadas (2026-09-28): Monedas desde la esquina de la carga, 40° desde arriba (de
+  frente la pantalla del portátil quedaba justo detrás de la cinta); Material desde atrás y
+  abajo, ~24° bajo la horizontal y más lejos (buscada por raycast: los dos M18 enteros a
+  cualquier distancia de 0,28 a 0,52 m; antes la cámara quedaba metida entre las vigas).
+- [x] Etiquetas 3D sin encimarse: en cada cuadro se proyectan a la pantalla y se reparten por
+  prioridad (la del sensor resaltado, después la más cercana al foco de la vista; las estaciones
+  E1..E4 y las de la cinta de vasos con ventaja); si una choca con otra ya puesta o con la
+  interfaz (barras, panel, avisos, bitácora, leyenda) se corre media etiqueta arriba o abajo, y si
+  no cabe se oculta. Se ocultan también las que quedan detrás de una pieza sólida (rayo cámara →
+  etiqueta, pocos por cuadro), las muy lejos del foco (de lado o detrás de lo enfocado; META y la
+  nube se quedan) y, cerca del foco, se leen enteras aunque su alcance las desvanecía (Caja de
+  control). Aparecen y desaparecen con un fundido corto.
 - [x] Clic en la escena: sobre la laptop/nube del asistente → vista Asistente; sobre un sensor →
   lo selecciona (abre el panel en Sensores, lo resalta y lo encuadra). Gana lo más cercano (antes
   la laptop ganaba aunque estuviera detrás del sensor: en la vista Monedas no se podía elegir un
@@ -54,6 +68,9 @@ Dónde está cada cosa después de rehacerla:
 - [x] `?vista=vision` y el paso 3 (zona `vision`) apuntaban a la estación 5 de la cinta, que ya no
   existe desde el filtro total (4 estaciones) y daban error: ahora apuntan a E3.
 - [x] Ayuda de ratón (arrastrar: girar · rueda: zoom · clic derecho: mover · clic en un sensor).
+- [x] Pantalla del portátil (vista Asistente): la pregunta y la respuesta se dibujan SIN los
+  símbolos de markdown (`sinMarkdown`: comillas invertidas, negritas, títulos, listas, enlaces);
+  antes se veían sueltos (`` `qwen2.5-proyecto` ``).
 
 ## Panel lateral (pestañas)
 
@@ -94,7 +111,7 @@ Dónde está cada cosa después de rehacerla:
   "Ver la prueba de este sensor" (una o varias órdenes que hacen trabajar SOLO a ese sensor, la
   cámara se queda mirándolo) con la respuesta del supervisor a esa prueba.
 - [x] **Componentes**: lista de materiales (total de piezas, sensores, servos en el PCA9685),
-  leyenda de etiquetas (simulado / efecto simulado / solo visual, 3D, N hilos, sin 3D); AHORA
+  leyenda de etiquetas (simulado / efecto simulado / solo visual, 3D, N hilos —"1 hilo" en singular—, sin 3D); AHORA
   agrupados por subsistema (línea de monedas, almacén, línea de vasos, canaleta y muelle, carro y
   pista, caja de control y PC) con sensores y componentes juntos; clic en un componente → se
   resalta (pulso ámbar) y se encuadra, detalle (modelo, para qué sirve, estado en la simulación,
@@ -111,6 +128,10 @@ Dónde está cada cosa después de rehacerla:
   de la barra; se recolocan al cambiar el tamaño de la ventana o abrir/cerrar el panel.
 - [x] Avisos de la línea (arriba a la derecha): cortina activa (rojo), tubo lleno / moneda en
   espera (ámbar), faltan vasos (ámbar). Van debajo del aviso grande si lo hay (antes se encimaban).
+  Desde 2026-09-28 cada uno es UNA línea (título corto, p. ej. "Cortina activa · prensa
+  detenida") y el detalle sale al pasar el ratón (y en la bitácora): el globo completo tapaba el
+  cartel META en la vista Todo. En el tubo lleno decía "espera en E7" (quedaban 4 estaciones):
+  ahora "en la descarga (E4)".
 
 ## Bitácora de eventos
 
@@ -122,6 +143,10 @@ Dónde está cada cosa después de rehacerla:
 
 - [x] Solo con los cables a la vista: total de cables, hilos y metros de campo (+20 %), por tipo
   (color, cantidad, largo de cada cable) y "pin a pin" (cada hilo con su color, de → a y función).
+- [x] A la derecha, debajo de las vistas y de los avisos de la línea, sin bajar más allá de la
+  bitácora (o de la hoja del panel en pantalla angosta); arranca PLEGADA en una línea con los
+  totales y el botón Abrir/Plegar (se recuerda en `localStorage.leyendaPlegada`). Antes se abría a
+  la izquierda, en medio de la escena, y tapaba la planta en la vista Todo (2026-09-28).
 
 ## Modo demo y portable
 

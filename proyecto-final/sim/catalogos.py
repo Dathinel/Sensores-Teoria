@@ -27,7 +27,7 @@ CATALOGO_SENSORES = [
     },
     {
         "numero": 2, "id": "capacitivo", "nombre": "Sensor capacitivo", "subsistema": "cinta de monedas",
-        "estacion": "E2 · Material (montado BAJO la cinta, en la casilla E1)", "modelo": "LJC18A3-H-Z/BX (NPN, 5-40 V)",
+        "estacion": "E2 · Material (montado BAJO la cinta, en la casilla E1)", "modelo": "LJC18A3-H-Z/BX (NPN, 6-36 V)",
         "fenomeno": "Cualquier objeto cerca cambia la capacitancia de su placa (plástico, metal, madera...). "
                     "Va debajo de la cinta, mirando hacia arriba, y lee la pieza a través de la banda (2 mm); "
                     "la banda y los separadores siempre están iguales en cada pausa, así que se calibra con "
@@ -294,7 +294,7 @@ _REPLICACION = {
      'error_config': None},
     'cuna': {'rango': 'TCRT5000: 2-15 mm',
      'tiempo_respuesta': '< 1 ms',
-     'error_tipico': 'Igual que el de presencia: vasos transparentes reflejan poco.',
+     'error_tipico': 'Un fondo muy oscuro o brillante refleja poco; luz ambiente fuerte.',
      'mitigacion': 'Apuntarlo al fondo opaco del vaso; voto de 3 lecturas.',
      'conexion': 'Entrada digital del ESP32 del carro.',
      'error_config': None},
@@ -353,8 +353,9 @@ COMPONENTES = [
     {"id": "motor_prensa", "categoria": "Actuadores", "nombre": "Servo de la prensa",
      "cantidad": 1, "modelo": "MG996R (~10 kg·cm) con leva excéntrica de 6,5 mm y resorte",
      "funcion": "Gira la leva 0 → 180 → 0 grados: el pistón baja 13 mm y asienta la tapa. Con 6,5 mm de "
-                "excentricidad empuja con ≥150 N (una tapa a presión pide ~30-50 N, PROVISIONAL hasta medirla); "
-                "el resorte limita la fuerza. Al ser servo, sabe en qué ángulo quedó: no hace falta sensor de "
+                "excentricidad apunta a 60 N: la tapa sella a presión (snap-fit) y pide ~30-50 N, PROVISIONAL "
+                "hasta medirla; 60 N es la más dura con margen x1,2 y el resorte limitador no deja pasar de ahí "
+                "(el MG996R la sostiene con margen >x2 a 6 V; ver docs/peso.md). Al ser servo, sabe en qué ángulo quedó: no hace falta sensor de "
                 "posición ni puente H.",
      "estado": "simulado", "zona": "tapa"},
     {"id": "servo_empujador", "categoria": "Actuadores", "nombre": "Servo del empujador de descarga",

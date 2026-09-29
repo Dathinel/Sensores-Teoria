@@ -47,28 +47,104 @@ def parsear_linea(linea: str | bytes) -> dict | None:
     return m if isinstance(m, dict) and "t" in m else None
 
 
+def nueva_sesion() -> int:
+    """Numero de SESION de un emisor (1..65535), sorteado al arrancar.
+
+    Por que: los `id` de los comandos (PC) y de los eventos del carro vuelven
+    a 1 cada vez que ese lado se reinicia. Si el otro lado sigue encendido,
+    recordaria esos ids como "ya vistos" y confirmaria los nuevos SIN
+    ejecutarlos (probado: el PC reiniciado manda linea.avanzar id=1 -> ack ok,
+    0 pasos). Con la sesion en cada mensaje (campo corto `"s"`), el receptor
+    ve que el otro lado arranco de nuevo y olvida los ids viejos. Se sortea
+    (no se cuenta) porque ninguna placa guarda nada entre reinicios."""
+    try:
+        import os
+        b = os.urandom(2)                  # en el ESP32: generador de hardware
+        v = (b[0] << 8) | b[1]
+    except (ImportError, AttributeError, NotImplementedError):
+        import time
+        v = int(time.time() * 1000)
+    return v % 65535 + 1
+
+
 def linea(mensaje: dict) -> str:
     """Mensaje -> linea JSON compacta terminada en salto de linea."""
-    return json.dumps(mensaje, separators=(",", ":"), ensure_ascii=False) + "\n"
+    try:
+        return json.dumps(mensaje, separators=(",", ":"), ensure_ascii=False) + "\n"
+    except TypeError:
+        # MicroPython: su json.dumps no conoce `ensure_ascii` (y ya escribe los
+        # acentos tal cual, en UTF-8, que es lo mismo que se pide aqui).
+        return json.dumps(mensaje, separators=(",", ":")) + "\n"
+
+
+# Un paquete de ESP-NOW lleva como mucho 250 bytes. Un mensaje mas largo no
+# sale nunca por la radio: si quedara en la cola del carro, se reintentaria
+# cada 500 ms para siempre ocupando uno de sus 32 lugares.
+RADIO_MAX_BYTES = 250
+
+
+def tamano(mensaje: dict) -> int:
+    """Bytes que ocupa el mensaje como linea (lo que viaja)."""
+    return len(linea(mensaje).encode())
+
+
+def recortar(mensaje: dict, limite: int = RADIO_MAX_BYTES) -> dict | None:
+    """El mensaje, con su texto `detalle` recortado si hace falta para caber
+    en `limite` bytes (y `"rec": true` para que el PC sepa que falta el
+    final). None si ni sin texto cabe (entonces no se manda)."""
+    exceso = tamano(mensaje) - limite
+    if exceso <= 0:
+        return mensaje
+    d = mensaje.get("detalle")
+    if not isinstance(d, str):
+        return None
+    m = dict(mensaje)
+    m["rec"] = True
+    while d:
+        # Cada caracter ocupa 1 byte o mas: quitar `exceso` caracteres (mas
+        # los 3 de los puntos suspensivos) achica al menos lo que sobra; el
+        # bucle solo repite si "rec" y los "..." empujaron por encima.
+        d = d[:max(0, len(d) - exceso - 3)]
+        m["detalle"] = d + "..."
+        exceso = tamano(m) - limite
+        if exceso <= 0:
+            return m
+    return None
 
 
 class Emisor:
     """Numera los mensajes y los guarda hasta su ack. `reintentos` = None
     reintenta sin limite (el carro: no pierde eventos aunque el enlace se
-    corte un rato); un numero = reintentos y despues fallo (el PC)."""
+    corte un rato); un numero = reintentos y despues fallo (el PC).
 
-    def __init__(self, reintento_ms, reintentos=None, cola_max=32):
+    `sesion` (ver `nueva_sesion`): si se da, cada mensaje lleva `"s"` para
+    que el receptor note que este lado se reinicio. None = sin el campo (la
+    simulacion de la planta, donde nadie se reinicia)."""
+
+    def __init__(self, reintento_ms, reintentos=None, cola_max=32, sesion=None):
         self.reintento_ms = reintento_ms
         self.reintentos = reintentos
         self.cola_max = cola_max
+        self.sesion = sesion
         self._siguiente = 1
         self.pendientes = {}     # id -> [mensaje, t_envio, intentos]
         self.fallidos = []
         self.descartados = 0
+        self.grandes = 0         # mensajes que no cabian en `limite` (no se guardaron)
 
-    def enviar(self, mensaje: dict, t_ms: int) -> dict:
+    def enviar(self, mensaje: dict, t_ms: int, limite: int | None = None) -> dict | None:
+        """Numera y guarda el mensaje. Con `limite` (bytes: la radio), si no
+        cabe se recorta su `detalle` (`recortar`); si ni asi cabe NO se
+        guarda (nunca saldria) y devuelve None (se cuenta en `grandes`)."""
         m = dict(mensaje)
         m["id"] = self._siguiente
+        if self.sesion is not None:
+            m["s"] = self.sesion
+        if limite is not None:
+            m = recortar(m, limite)
+            if m is None:
+                self.grandes += 1
+                return None
         self._siguiente += 1
         if len(self.pendientes) >= self.cola_max:
             # Cola llena: se descarta el mas viejo (y se cuenta).
@@ -98,34 +174,82 @@ class Emisor:
 
 class Receptor:
     """Recibe mensajes numerados: contesta el ack de cada uno y descarta los
-    repetidos (un reenvio cuyo ack se perdio no se ejecuta dos veces)."""
+    repetidos (un reenvio cuyo ack se perdio no se ejecuta dos veces).
 
-    def __init__(self):
+    - Sesion: si el mensaje trae `"s"` distinta de la ultima, el emisor se
+      reinicio (sus ids volvieron a 1): se olvidan los ids vistos.
+    - Memoria acotada: guarda solo los ultimos `ventana` ids (antes crecia
+      sin tope, y en el ESP32 eso es RAM que se acaba). Como los ids de una
+      sesion solo crecen, uno MENOR que el mas viejo de la ventana es un
+      reenvio muy atrasado: se trata como repetido (ack, sin ejecutar)."""
+
+    def __init__(self, ventana=64):
+        self.ventana = ventana
         self.vistos = set()
+        self.sesion = None
         self.repetidos = 0
+        self.reinicios = 0       # veces que el otro lado arranco una sesion nueva
+
+    def ver_sesion(self, sesion) -> bool:
+        """True (y olvida los ids) si `sesion` es nueva."""
+        if sesion is None or sesion == self.sesion:
+            return False
+        if self.sesion is not None:
+            self.reinicios += 1
+        self.sesion = sesion
+        self.vistos = set()
+        return True
 
     def recibir(self, mensaje: dict) -> tuple[bool, dict]:
         id_ = mensaje["id"]
+        self.ver_sesion(mensaje.get("s"))
         ack = {"t": "ack", "id": id_, "ok": True}
-        if id_ in self.vistos:
+        if id_ in self.vistos or (len(self.vistos) >= self.ventana and id_ < min(self.vistos)):
             self.repetidos += 1
             return False, ack
         self.vistos.add(id_)
+        if len(self.vistos) > self.ventana:
+            self.vistos.discard(min(self.vistos))
         return True, ack
+
+    def olvidar(self, id_: int) -> None:
+        """Des-marca un id: el comando NO se llego a ejecutar (el ESP32 fijo lanzo
+        una excepcion a mitad, p. ej. OSError del PCA9685). Si el PC lo reenvia,
+        se vuelve a intentar en vez de contestar "ok" sin haber hecho nada."""
+        self.vistos.discard(id_)
 
 
 class Secuencia:
-    """Eventos con numero de secuencia `n` (ESP32 fijo -> PC): detecta huecos."""
+    """Eventos con numero de secuencia `n` (ESP32 fijo -> PC): detecta huecos.
+
+    Si el ESP32 se reinicia, `n` vuelve a empezar: se reinicia la cuenta al
+    ver una sesion nueva (`ver_sesion`, con la `"s"` de su latido) o, si no
+    llego ese latido, al ver que `n` retrocede (por USB no se reordena nada:
+    un `n` que baja solo puede ser un arranque nuevo)."""
 
     def __init__(self, ultimo=0, perdidos=0):
         self.ultimo = ultimo
         self.perdidos = perdidos
+        self.sesion = None
+        self.reinicios = 0
+
+    def ver_sesion(self, sesion) -> bool:
+        if sesion is None or sesion == self.sesion:
+            return False
+        if self.sesion is not None:
+            self.reinicios += 1
+            self.ultimo = 0
+        self.sesion = sesion
+        return True
 
     def recibir(self, n: int) -> int:
         """Devuelve cuantos se perdieron antes de este (0 si ninguno)."""
+        if self.ultimo and n <= self.ultimo:
+            self.reinicios += 1          # el ESP32 arranco de nuevo sin avisar
+            self.ultimo = 0
         hueco = max(0, n - self.ultimo - 1) if self.ultimo else 0
         self.perdidos += hueco
-        self.ultimo = max(self.ultimo, n)
+        self.ultimo = n
         return hueco
 
 
@@ -158,6 +282,30 @@ class Latido:
             return None
         self._vivo = v
         return "recuperado" if v else "perdido"
+
+
+class LimiteAvisos:
+    """Avisos de un error que se REPITE (el mismo sensor muerto en cada vuelta del
+    bucle, cada ~2 ms): se avisa la primera vez y despues como mucho uno cada
+    `cada_ms`; los que se callan se cuentan y van en el aviso siguiente. Antes el
+    main.py del fijo mandaba ~500 eventos por segundo al USB (y el PC a SQLite)."""
+
+    def __init__(self, cada_ms=1000):
+        self.cada_ms = cada_ms
+        self.ultimo = None       # t_ms del ultimo aviso que si salio
+        self.callados = 0        # errores desde entonces que no se avisaron
+
+    def debe_avisar(self, t_ms: int) -> bool:
+        if self.ultimo is None or t_ms - self.ultimo >= self.cada_ms:
+            self.ultimo = t_ms
+            return True
+        self.callados += 1
+        return False
+
+    def tomar_callados(self) -> int:
+        n = self.callados
+        self.callados = 0
+        return n
 
 
 def accion_sin_pc() -> dict:

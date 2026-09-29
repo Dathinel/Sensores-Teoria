@@ -4,6 +4,10 @@
 - docs/replicacion.md          <- config/*.yaml + catalogo + presupuesto de tiempos
 - docs/componentes.md          <- sim/catalogos.py (lista de materiales)
 - docs/sensores.md             <- sim/catalogos.py (un apartado por sensor)
+- docs/conexiones.md           <- sim/conexiones.py
+- docs/costos.md               <- config/precios.yaml (app/costos.py), con la estructura 3D contada
+- docs/peso.md                 <- config/masas.yaml + precios.yaml (app/masas.py), con las comprobaciones de par
+- docs/electrica.md            <- sim/electrica.py (si ya existe)
 
 No editar esos .md a mano: se sobrescriben. Se corre despues de cambiar el
 YAML del paso a paso (por ejemplo, al aprobar un punto) o el catalogo:
@@ -212,7 +216,13 @@ def generar_replicacion() -> str:
         elif "ruido_diametro_mm" in e:
             simulado = (f"diámetro ±{e['ruido_diametro_mm']} mm, clase {e['probabilidad_error_clase']:.0%}")
         elif s.get("subsistema") == "carro":
-            simulado = "pendiente (puntos 13-14)"
+            c = errores.get("cuna" if s.get("id") == "cuna" else "carro", {})
+            if "falso_negativo" in c:
+                simulado = f"FN {c['falso_negativo']:.1%}, FP {c['falso_positivo']:.1%}"
+            else:
+                simulado = (f"motores ±{c.get('diferencia_motores', 0):.0%}, ultrasónico "
+                            f"±{c.get('ruido_ultrasonico_mm', 0)} mm, láser ±{c.get('ruido_tof', 0):.0%}, "
+                            f"línea {c.get('error_linea', 0):.0%} por lectura")
         else:
             simulado = "sin error simulado"
         L.append(f"| {s['numero']} | [{s['nombre']}](sensores.md#{ancla_sensor(s)}) | {s['rango']} | "
@@ -316,6 +326,23 @@ def generar_todo() -> list[Path]:
     destino = DOCS / "costos.md"
     destino.write_text(costos.generar_md(), encoding="utf-8")
     escritos.append(destino)
+    # Peso del montaje y comprobaciones de par (config/masas.yaml + las piezas, el perfil y la
+    # tornillería de precios.yaml, que ya se contaron para el costo).
+    from app import masas
+
+    destino = DOCS / "peso.md"
+    destino.write_text(masas.generar_md(), encoding="utf-8")
+    escritos.append(destino)
+    # Parte eléctrica (consumos, fuentes, cables): la escribe sim/electrica.py. Si ese módulo todavía
+    # no existe (lo hace otra persona/agente), se salta sin romper la generación de lo demás.
+    try:
+        from sim import electrica
+    except ImportError:
+        electrica = None
+    if electrica is not None and hasattr(electrica, "generar_markdown"):
+        destino = DOCS / "electrica.md"
+        destino.write_text(electrica.generar_markdown(), encoding="utf-8")
+        escritos.append(destino)
     return escritos
 
 

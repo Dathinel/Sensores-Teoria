@@ -27,7 +27,11 @@ class CarroFirmware:
         self.hw = hw
         self.control = control
         self.enviar_radio = enviar_radio
-        self.emisor = protocolo.Emisor(p["carro_reintento_ms"], None, p.get("carro_cola_max", 32))
+        # Sesion: si el carro se reinicia y la estacion no, sus ids vuelven a 1;
+        # con la sesion en cada evento la estacion olvida los ids viejos (si
+        # no, descartaria los eventos nuevos como repetidos).
+        self.emisor = protocolo.Emisor(p["carro_reintento_ms"], None, p.get("carro_cola_max", 32),
+                                       sesion=protocolo.nueva_sesion())
         self.latido = protocolo.Latido(p["carro_latido_ms"], p["carro_enlace_perdido_ms"])
         self.receptor = protocolo.Receptor()     # ordenes (un reenvio no se ejecuta dos veces)
         self.lectura = None
@@ -40,13 +44,25 @@ class CarroFirmware:
         pos = self.control.posicion_estimada()
         if pos is not None:
             m["x"], m["y"] = round(pos[0], 3), round(pos[1], 3)
-        self.enviar_radio(protocolo.linea(self.emisor.enviar(m, t_ms)))
+        # Un paquete de ESP-NOW lleva 250 bytes: el `detalle` largo de una
+        # orden rechazada se recorta (el PC ve "rec": true); lo que ni asi cabe
+        # no se guarda en la cola (se reintentaria para siempre sin salir).
+        m = self.emisor.enviar(m, t_ms, protocolo.RADIO_MAX_BYTES)
+        if m is not None:
+            self.enviar_radio(protocolo.linea(m))
 
     def mensaje(self, texto, t_ms):
-        """Un mensaje de la estacion (por ESP-NOW)."""
+        """Un mensaje de la estacion (por ESP-NOW). `texto` puede ser bytes
+        tal cual llegaron: parsear_linea descarta lo que no es UTF-8/JSON."""
         m = protocolo.parsear_linea(texto)
-        if m is None or m.get("src") == "carro":
-            return                               # basura o el eco de lo propio
+        if m is None:
+            return                               # basura (o ESP-NOW de otro grupo)
+        # Solo cuenta como latido lo que es de NUESTRA estacion: el latido
+        # (src "estacion") o lo dirigido al carro (acks y ordenes). Otros grupos
+        # del salon tambien usan difusion; si cualquier mensaje contara, un
+        # ESP-NOW ajeno mantendria "vivo" el enlace con la estacion apagada.
+        if m.get("src") != "estacion" and m.get("dst") != "carro":
+            return
         self.latido.oido(t_ms)
         if m["t"] == "ack" and m.get("dst") == "carro":
             self.emisor.ack(m["id"])
@@ -74,7 +90,7 @@ class CarroFirmware:
         for m in self.emisor.a_reenviar(t_ms):
             self.enviar_radio(protocolo.linea(m))
         if self.latido.debe_enviar(t_ms):
-            self.enviar_radio(protocolo.linea({"t": "hb", "src": "carro"}))
+            self.enviar_radio(protocolo.linea({"t": "hb", "src": "carro", "s": self.emisor.sesion}))
         if self.latido.cambio(t_ms) == "recuperado":
             # Lo primero al volver el enlace: su estado, con la cuna (punto 15).
             self._evento({"ev": "estado", "estado": c.estado, "fase": c.fase}, t_ms)

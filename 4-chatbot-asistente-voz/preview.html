@@ -117,13 +117,19 @@ function interpretarPorReglas(texto) {
   if (["show", "espectaculo", "espectáculo", "parpade", "fiesta"].some(p => t.includes(p))) {
     datos.show = true; return datos;
   }
-  const apagar = ["apaga", "desactiva", "quita"].some(p => t.includes(p));
-  const encender = ["enciend", "prend", "activa", "pon", "dale"].some(p => t.includes(p));
-  if (!(apagar || encender)) return datos;
-  const valor = !apagar;
-  const ambos = ["los dos", "ambos", "todos", "todas"].some(p => t.includes(p));
-  if (ambos || t.includes("roj")) datos.led_rojo = valor;
-  if (ambos || t.includes("azul")) datos.led_azul = valor;
+  // Por partes, igual que en Python: cada verbo manda sobre los colores que
+  // le siguen ("enciende el rojo y apaga el azul" ya no apaga los dos).
+  const partes = t.split(/,|\by\b|\be\b|\bpero\b|\bluego\b|\bdespues\b|después/);
+  let valor = null;
+  for (const parte of partes) {
+    if (["deja", "manten", "mantén"].some(p => parte.includes(p))) { valor = null; continue; }
+    if (["apaga", "desactiva", "quita"].some(p => parte.includes(p))) valor = false;
+    else if (["enciend", "prend", "activa", "pon", "dale"].some(p => parte.includes(p))) valor = true;
+    if (valor === null) continue;
+    const ambos = ["los dos", "ambos", "todo", "todas"].some(p => parte.includes(p));
+    if (ambos || parte.includes("roj")) datos.led_rojo = valor;
+    if (ambos || parte.includes("azul")) datos.led_azul = valor;
+  }
   return datos;
 }
 

@@ -1,6 +1,7 @@
 # Reconoce digitos escritos a mano usando la webcam y el modelo CNN de
 # entrenar_modelo.py, y le manda cada digito estable al ESP-A (maestro)
-# por el puerto serial para que lo reenvie por UART2 al ESP-B (esclavo),
+# por el puerto serial para que lo reenvie al ESP-B (esclavo) por UART2 y
+# por SPI a la vez (el ESP-B escucha los dos caminos y usa el que le llegue),
 # que lo muestra en la pantalla OLED. Todo el flujo completo (camara,
 # reconocimiento, envio Y recepcion de la confirmacion del ESP-A) vive
 # en este unico script y se ve en una sola ventana — no hace falta

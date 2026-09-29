@@ -900,6 +900,12 @@ function enviarComando(comando) {
     if (!thumbArmado[comando] || ahora - ultimoDisparoThumb[comando] < COOLDOWN_MS) return;
     thumbArmado[comando] = false;
     ultimoDisparoThumb[comando] = ahora;
+    // Un pulgar arranca un modo de secuencia, que reemplaza lo que estaban
+    // haciendo los LEDs. Por eso el gesto continuo siguiente tiene que contar
+    // como NUEVO aunque sea el mismo de antes: sin esta línea, puño -> pulgar
+    // -> puño (sin bajar la mano) no mandaba el segundo FIST, porque
+    // `ultimoComandoContinuo` seguía en FIST.
+    ultimoComandoContinuo = "NONE";
     escribirEnSerial(comando);
     registrarEnLog(comando);
     return;

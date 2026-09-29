@@ -32,7 +32,7 @@ from sim.pista import generar_linea_central, punto_en
 # Ancho de la banda de cada cinta (las bancadas son 5 mm mas anchas). La de
 # vasos deja pasar la pestana del reborde.
 ANCHO_CINTA_MONEDAS_M = 0.055
-ANCHO_CINTA_VASOS_M = 0.075
+ANCHO_CINTA_VASOS_M = mundo.ANCHO_CINTA_VASOS_M      # 0,075: vive en sim/mundo.py (de ahi arranca la canaleta)
 # La cuna del carro arranca en su extremo trasero (medio largo detras del
 # centro): ahi termina la canaleta cuando el carro esta en la parada.
 CUNA_ATRAS_FRAC = 0.5
@@ -150,25 +150,18 @@ def geometria_completa(parametros: dict) -> dict:
     # vasos (del lado del operador), a la altura de la pestana del reborde:
     # el empujador pasa el vaso de lado, la pestana se sube a los rieles y el
     # cuerpo queda colgando entre ellos. Baja a la inclinacion configurada
-    # hasta la cuna del carro.
-    xd, yd, zd = mundo.posicion_estacion_vasos(mundo.ESTACION_DESCARGA_VASOS)
-    inclinacion = math.radians(parametros["canaleta_entrega"]["inclinacion_grados"])
-    largo = parametros["canaleta"]["largo_mm"] / 1000
-    diametro_riel = parametros["canaleta"]["diametro_riel_mm"] / 1000
-    # Tope del riel unos mm por debajo de la boca del vaso (entrada en
-    # embudo): la pestana cae sobre los rieles en vez de chocar con su punta.
-    caida = parametros["canaleta"]["caida_entrada_mm"] / 1000
-    z_ini = zd + vaso["altura_mm"] / 1000 - diametro_riel / 2 - caida
-    y_ini = yd - ANCHO_CINTA_VASOS_M / 2
+    # hasta la cuna del carro. La calcula sim/mundo.py (geometria_canaleta):
+    # la misma cuenta apoya ahi el vaso entregado sobre los rieles.
+    k = mundo.geometria_canaleta(parametros)
     canaleta = {
-        "inicio": _vec((xd, y_ini, z_ini)),
-        "fin": _vec((xd, y_ini - largo, z_ini - largo * math.tan(inclinacion))),
-        "separacion_rieles": parametros["canaleta"]["separacion_rieles_mm"] / 1000,
-        "separacion_entrada": parametros["canaleta"]["separacion_entrada_mm"] / 1000,
-        "largo_embudo": parametros["canaleta"]["largo_embudo_mm"] / 1000,
-        "caida_entrada": parametros["canaleta"]["caida_entrada_mm"] / 1000,
-        "diametro_riel": diametro_riel,
-        "capacidad": parametros["canaleta"]["capacidad_vasos"],
+        "inicio": _vec(k["inicio"]),
+        "fin": _vec(k["fin"]),
+        "separacion_rieles": k["separacion_rieles"],
+        "separacion_entrada": k["separacion_entrada"],
+        "largo_embudo": k["largo_embudo"],
+        "caida_entrada": k["caida_entrada"],
+        "diametro_riel": k["diametro_riel"],
+        "capacidad": k["capacidad"],
     }
 
     # La pista sale justo debajo del final de la canaleta, con el carro
@@ -258,6 +251,12 @@ def geometria_completa(parametros: dict) -> dict:
             "distancia_frenado": veh["distancia_frenado_mm"] / 1000,
             "rodillo_guia_y": veh["rodillo_guia_y_mm"] / 1000,
             "rodillo_guia_radio": veh["rodillo_guia_radio_mm"] / 1000,
+            # Llanta y muelle (pedido 13a): el visor los dibuja con estos mismos numeros de la
+            # configuracion que usa la fisica (sim/vehiculo_sim.py), no con copias fijas en el JS.
+            "ancho_rueda": veh.get("ancho_rueda_mm", 26) / 1000,
+            "muelle_largo_boca": veh.get("muelle_largo_boca_mm", 200) / 1000,
+            "muelle_abre_boca": veh.get("muelle_abre_boca_mm", 45) / 1000,
+            "muelle_holgura": veh.get("muelle_holgura_mm", 3) / 1000,
         },
         "sensores": sensores,
         "componentes": COMPONENTES,
@@ -277,7 +276,7 @@ def zonas_carro(parametros: dict, geo: dict | None = None) -> dict:
     canaleta, camaras) no esta en su pista. Por eso el mapa sale de la MISMA
     geometria que dibuja el visor y usa la simulacion, con los margenes
     PROVISIONALES de `zonas_carro` en config/parametros.yaml."""
-    from sim.vehiculo_sim import ABRE_BOCA_MUELLE, HOLGURA_MUELLE, LARGO_BOCA_MUELLE
+    from sim.vehiculo_sim import medidas_muelle
 
     geo = geo or geometria_completa(parametros)
     z = parametros["zonas_carro"]
@@ -315,10 +314,11 @@ def zonas_carro(parametros: dict, geo: dict | None = None) -> dict:
     s = geo["pista"]["salida"]
     largo, r = veh["largo_mm"] / 1000, veh["diametro_rueda_mm"] / 2000
     esp = 0.006                                            # espesor de las guias
-    guia_y = (veh["rodillo_guia_y_mm"] + veh["rodillo_guia_radio_mm"]) / 1000 + HOLGURA_MUELLE
+    largo_boca, abre_boca, holgura = medidas_muelle(veh)   # config: vehiculo.muelle_*
+    guia_y = (veh["rodillo_guia_y_mm"] + veh["rodillo_guia_radio_mm"]) / 1000 + holgura
     x0 = -largo / 2 - 0.004                                # cola de las guias rectas
     x1 = -0.18 * largo + r + 0.015                         # fin de las rectas, empieza la boca
-    x2 = x1 + LARGO_BOCA_MUELLE
+    x2 = x1 + largo_boca
     xt, tope = -largo / 2 - 0.010, (0.007, 0.011)          # centro y medio tamano de cada tope
 
     def pieza(lx, ly, rumbo_local, ml, ma):
@@ -329,13 +329,13 @@ def zonas_carro(parametros: dict, geo: dict | None = None) -> dict:
 
     muelle = []
     for lado in (-1, 1):
-        ya, yb = lado * (guia_y + esp / 2), lado * (guia_y + ABRE_BOCA_MUELLE + esp / 2)
+        ya, yb = lado * (guia_y + esp / 2), lado * (guia_y + abre_boca + esp / 2)
         muelle.append(pieza((x0 + x1) / 2, ya, 0.0, (x1 - x0) / 2, esp / 2))
         muelle.append(pieza((x1 + x2) / 2, (ya + yb) / 2, math.atan2(yb - ya, x2 - x1),
                             math.hypot(x2 - x1, yb - ya) / 2, esp / 2))
         muelle.append(pieza(xt, lado * 0.052, 0.0, tope[0], tope[1]))
     atras, adelante = xt - tope[0], x2 + esp / 2
-    caja_muelle = pieza((atras + adelante) / 2, 0.0, 0.0, (adelante - atras) / 2, guia_y + ABRE_BOCA_MUELLE + esp)
+    caja_muelle = pieza((atras + adelante) / 2, 0.0, 0.0, (adelante - atras) / 2, guia_y + abre_boca + esp)
 
     # 4. El poste de la camara de vasos (llega al piso al costado de la cinta).
     cam = next(x for x in geo["sensores"] if x["id"] == "camara_vasos")["geometria"]["posicion"]

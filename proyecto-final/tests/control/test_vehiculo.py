@@ -341,7 +341,10 @@ def test_tras_detenido_atascado_volver_muelle_lo_saca():
         # la reversa deja de corregir adentro de la V (2026-09-27) el carro
         # llega ahi en otra pose, y mas adentro las dos ruedas patinan parejo
         # contra el muelle (sin `atascado`; con el mapa esta orden ni se acepta).
-        _hasta_media_reversa(carro, y_min=-0.68)
+        # 2026-09-28: con el vaso lleno real (0,133 kg en vez de 0,10) el carro
+        # llega a la boca mas derecho y a -0,68 la orden ya no lo atasca; a -0,76
+        # se reproduce el mismo atasco (comprobado en DIRECT con esta semilla).
+        _hasta_media_reversa(carro, y_min=-0.76)
         zonas, c.zonas = c.zonas, None           # como antes del arreglo
         eventos = _cumplir(carro, {"accion": "ir_a", "x": -0.5, "y": 0.0}, limite_s=40)
         nombres = [e["ev"] for e in eventos]
@@ -433,11 +436,13 @@ def test_reversa_normal_no_se_corta():
 
 
 def test_boca_del_muelle_coincide_con_la_simulacion():
-    from sim.vehiculo_sim import LARGO_BOCA_MUELLE
+    # Pedido 13a (2026-09-28): el largo de la boca paso de una constante de sim/vehiculo_sim.py a
+    # la configuracion (vehiculo.muelle_largo_boca_mm); se lee con la misma funcion que la fisica.
+    from sim.vehiculo_sim import medidas_muelle
 
     v = cargar_parametros()["vehiculo"]
     largo, r = v["largo_mm"] / 1000, v["diametro_rueda_mm"] / 2000
-    boca = -0.18 * largo + r + 0.015 + LARGO_BOCA_MUELLE        # sim/vehiculo_sim.py, _crear_muelle
+    boca = -0.18 * largo + r + 0.015 + medidas_muelle(v)[0]     # sim/vehiculo_sim.py, _crear_muelle
     assert abs(v["boca_muelle_mm"] / 1000 - (boca + largo / 2)) < 0.002
 
 
@@ -494,3 +499,66 @@ def test_entra_al_muelle_sin_reintento(semilla, doble):
         assert "reversa_reintento" not in [e["ev"] for e in eventos]
     finally:
         carro.cerrar()
+
+
+# ----------------------------------------------------------------------
+# Cuna: la carga se acepta por FLANCO (vacia -> ocupada) en el muelle
+# ----------------------------------------------------------------------
+
+def _control_en_muelle():
+    from control.vehiculo import ControlCarro
+    from firmware.preparar import config_carro
+
+    cfg, linea, pose = config_carro(cargar_parametros())
+    return ControlCarro(cfg["vehiculo"], largo_linea_m=cfg["largo_linea_m"], linea=linea, pose_muelle=pose,
+                        zonas=cfg.get("zonas"))
+
+
+def _cuna(c, ocupada: bool, veces: int = 3) -> None:
+    from control.vehiculo import LecturaCarro
+
+    for _ in range(veces):
+        c.paso(LecturaCarro((0, 0, 1, 0, 0), None, 0, 0, 0, None, 0, ocupada), 0.02)
+
+
+def test_vuelve_con_el_vaso_y_se_queda_en_el_muelle():
+    """Bug: el carro que volvia de la meta CON el vaso (sin enlace, paso
+    `espera_meta_sin_enlace_s`) entraba al muelle con la cuna ya ocupada, lo
+    tomaba como una carga nueva y salia otra vez en el mismo ciclo."""
+    c = _control_en_muelle()
+    c.estado, c.fase = "maniobra", "vuelta"
+    c._acciones = [{"tipo": "estado", "estado": "esperando_carga", "evento": "en_muelle"}]
+    _cuna(c, True)                      # entra al muelle: la cuna trae el vaso
+    _cuna(c, True, 20)                  # sigue con el vaso un rato
+    assert c.estado == "esperando_carga"
+    assert "salida" not in [e["ev"] for e in c.eventos]
+    # Le sacan el vaso (cuna vacia) y la estacion le suelta uno nuevo: sale.
+    _cuna(c, False)
+    _cuna(c, True)
+    assert c.estado == "siguiendo" and c.fase == "ida"
+    assert [e["ev"] for e in c.eventos].count("salida") == 1
+
+
+def test_carga_normal_sale_al_ver_el_vaso():
+    """Flujo normal: arranca en el muelle con la cuna vacia, le sueltan un
+    vaso y sale apenas lo confirma (3 lecturas)."""
+    c = _control_en_muelle()
+    _cuna(c, False)
+    assert c.estado == "esperando_carga"
+    _cuna(c, True)
+    assert c.estado == "siguiendo"
+
+
+def test_eventos_del_carro_traen_ts_y_no_pisan_el_tipo():
+    """Bug: el evento traia `"t": tiempo` y la planta arma
+    {"t": "evt", **evento}: el tiempo pisaba el tipo del mensaje."""
+    carro = SimCarro(cargar_parametros())
+    try:
+        carro.cargar_vaso()
+        eventos = carro.avanzar(1.0)
+    finally:
+        carro.cerrar()
+    assert eventos and all("ts" in e and "t" not in e for e in eventos)
+    m = {"t": "evt", "src": "carro"}
+    m.update(eventos[0])
+    assert m["t"] == "evt"

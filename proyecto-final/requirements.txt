@@ -37,3 +37,4 @@ torch
 torchvision
 keras
 matplotlib
+pillow            # rótulos con tildes en los videos de sim/ver (ya viene con streamlit)

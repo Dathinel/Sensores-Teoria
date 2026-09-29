@@ -117,3 +117,15 @@ def test_denominaciones_sin_tubo_van_juntas_a_su_propio_vaso():
     assert a.lote_listo(5) is None
     assert a.lote_listo(3) == OTRAS
     assert [m.clase for m in a.sacar(OTRAS, 3)] == ["20_historica", "10_muy_antigua", "5_historica"]
+
+
+def test_vaso_vacio_desechado_queda_rechazado_en_el_registro():
+    """Revision 2026-09-28: el vaso vacio desechado devolvia "vacio" pero quedaba VALIDA ("listo
+    para llenar") en la tabla `vasos` aunque ya estaba en la bandeja. Queda RECHAZADA; el destino
+    "vacio" (evento `descarga`) es lo que lo distingue de un rechazo por sabotaje."""
+    from control.registro import EstadoVaso
+
+    e = EmbalajeVasos()
+    e.verificar_antes_de_llenado(0, presente=True, media_bloqueada=True, borde_libre=True)
+    assert e.descargar(0) == "vacio"
+    assert e.registro.obtener(0).estado == EstadoVaso.RECHAZADA

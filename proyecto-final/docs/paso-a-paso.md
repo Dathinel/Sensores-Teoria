@@ -24,7 +24,7 @@ Para verlo en 3D: doble clic en `visor.bat` (pestaña Paso a paso del visor).
 | 13 | [Acople con el carro (ESP-NOW)](#13-acople-con-el-carro-esp-now) | [12](sensores.md#12-infrarrojo-de-la-cuna-de-carga) | ✅ aprobado |
 | 14 | [Ruta del carro con tres obstáculos (ida y vuelta sola)](#14-ruta-del-carro-con-tres-obstáculos-ida-y-vuelta-sola) | [9](sensores.md#9-arreglo-de-5-infrarrojos-de-línea), [10](sensores.md#10-ultrasónico-frontal-respaldo), [11](sensores.md#11-encoders-de-las-ruedas), [13](sensores.md#13-láser-de-distancia-frontal) | ✅ aprobado |
 | 15 | [Telemetría, protocolo y 3D](#15-telemetría-protocolo-y-3d) | [12](sensores.md#12-infrarrojo-de-la-cuna-de-carga) | ✅ aprobado |
-| 16 | [Asistente (DeepSeek) y órdenes al carro](#16-asistente-deepseek-y-órdenes-al-carro) | [9](sensores.md#9-arreglo-de-5-infrarrojos-de-línea), [10](sensores.md#10-ultrasónico-frontal-respaldo), [11](sensores.md#11-encoders-de-las-ruedas), [13](sensores.md#13-láser-de-distancia-frontal) | ⏸️ en pausa (montaje real) |
+| 16 | [Asistente (DeepSeek → modelo local qwen2.5 → reglas) y órdenes al carro](#16-asistente-deepseek--modelo-local-qwen25--reglas-y-órdenes-al-carro) | [9](sensores.md#9-arreglo-de-5-infrarrojos-de-línea), [10](sensores.md#10-ultrasónico-frontal-respaldo), [11](sensores.md#11-encoders-de-las-ruedas), [13](sensores.md#13-láser-de-distancia-frontal) | ⏸️ en pausa (montaje real) |
 | 17 | [Firmware de los dos ESP32 y hardware real](#17-firmware-de-los-dos-esp32-y-hardware-real) | [1](sensores.md#1-infrarrojo-de-presencia), [2](sensores.md#2-sensor-capacitivo), [3](sensores.md#3-sensor-inductivo), [5](sensores.md#5-sensor-del-interior-del-vaso), [6](sensores.md#6-sensor-hall-del-carrusel), [8](sensores.md#8-cortina-de-seguridad), [9](sensores.md#9-arreglo-de-5-infrarrojos-de-línea), [10](sensores.md#10-ultrasónico-frontal-respaldo), [11](sensores.md#11-encoders-de-las-ruedas), [12](sensores.md#12-infrarrojo-de-la-cuna-de-carga), [13](sensores.md#13-láser-de-distancia-frontal) | ⏸️ en pausa (montaje real) |
 
 ## 1. Carga del elemento y estación 1 (presencia)
@@ -127,7 +127,7 @@ Seis tubos ($50, $100, $200, $500, $1.000 y "otras") van en un carrusel que GIRA
 
 **Cómo está implementado hoy:** Reemplaza al selector con un pico corto (poco creíble: la moneda llega con velocidad y un pico de 3 cm no la desvía con seguridad) y a las 6 compuertas con servo: ahora son un motor y un servo. La pila resbala sobre la placa fija al girar (placa lisa). Capacidad por tubo: 25 monedas (58 mm de alto); "otras": 40 (PROVISIONALES). En PyBullet el carrusel queda quieto en su posición de reposo; el visor 3D lo gira.
 
-**Para replicarlo en la vida real:** Motor 28BYJ-48 (5 V, con reducción) y driver ULN2003; al encender gira hasta que el sensor Hall ve el imán del carrusel (homing) y desde ahí cuenta pasos. Giro de hasta 180° en ~500 ms: tiene un ciclo de la cinta (1,6 s) para poner el tubo antes de que llegue la moneda, y soltar un lote y volver (2 × 500 + 600 ms) también cabe en un ciclo. Tubos de 29 mm interior (entra la de $1.000, 26,7 mm). Placa fija de acrílico o impresión lisa; obturador SG90. (detalle en [replicacion.md](replicacion.md))
+**Para replicarlo en la vida real:** Motor 28BYJ-48 (5 V, con reducción) y driver ULN2003; al encender gira hasta que el sensor Hall ve el imán del carrusel (homing) y desde ahí cuenta pasos, un medio paso cada 2 ms por temporizador (bajo el límite de arranque del motor). Media vuelta tarda ~4,1 s y un tubo vecino ~1,37 s: NO cabe en el ciclo de la cinta (1,6 s), así que la cinta de monedas espera al carrusel cuando la moneda va a un tubo lejano (decisión del grupo, 2026-09-28: se acepta). Tubos de 29 mm interior (entra la de $1.000, 26,7 mm). Placa fija de acrílico o impresión lisa; obturador SG90. (detalle en [replicacion.md](replicacion.md))
 
 **Nota de revisión:** Aprobado por el usuario (2026-09-26): almacén tipo revólver (un motor paso a paso + un servo obturador), con su sensor Hall de referencia.
 
@@ -191,7 +191,7 @@ Se repite la verificación EN ESE INSTANTE con la cámara de vasos (no se confí
 
 **Cómo está implementado hoy:** El tubo de tapas termina poco más de 1 cm por encima de la boca del vaso (la tapa cae poco y no se voltea) y cuelga del pórtico detrás de la cinta, fuera de la vista de la cámara.
 
-**Para replicarlo en la vida real:** Tapas de 74 mm (pestaña del vaso + 1 mm) con borde cónico de ~3 mm. Tubo de tapas de 78 mm de diámetro interior con un escape de dos dedos movido por un servo (uno retiene la pila, el otro suelta la de abajo). Medir la caída real y el tiempo (tiempos_ms.tapa_caida, hoy 500 ms) y que la cámara distinga la tapa (color que contraste con el panel de luz). (detalle en [replicacion.md](replicacion.md))
+**Para replicarlo en la vida real:** Tapas de 78 mm (cubren la pestaña del vaso, 62 + 2 x 8 mm) con borde cónico de ~3 mm. Tubo de tapas de 82 mm de diámetro interior (tapa + 4 mm, como en el 3D) con un escape de dos dedos movido por un servo (uno retiene la pila, el otro suelta la de abajo). Medir la caída real y el tiempo (tiempos_ms.tapa_caida, hoy 500 ms) y que la cámara distinga la tapa (color que contraste con el panel de luz). (detalle en [replicacion.md](replicacion.md))
 
 **Nota de revisión:** Aprobado por el grupo (2026-09-25). No hace falta un sensor que confirme la caída de la tapa: lo hace la cámara de vasos. Primero se decidió tapar y entregar los vasos vacíos; en la misma revisión el grupo lo cambió: los vasos vacíos NO se tapan ni se prensan, se desechan, para que la cinta quede libre en cada medición y cada corrida arranque de cero.
 
@@ -210,7 +210,7 @@ Con la cinta quieta, un servo MG996R gira una leva excéntrica de 0 a 180 grados
 {"t":"cmd","id":45,"dst":"vasos","act":"prensar"}
 ```
 
-**Cómo está implementado hoy:** Fuerza: con 10 kg·cm y 6,5 mm de excentricidad la leva empuja con al menos ~150 N (más cerca del punto muerto de abajo); una tapa a presión de vaso pide del orden de 30-50 N, así que el servo alcanza con margen y no hace falta motorreductor, puente H ni sensor de posición (el servo sabe en qué ángulo quedó y siempre vuelve arriba antes de que avance la cinta).
+**Cómo está implementado hoy:** Fuerza: la tapa sella a presión (su reborde salta sobre el labio del vaso), lo que pide del orden de 30-50 N (PROVISIONAL); apretar más solo deforma el vaso. La leva (6,5 mm de excentricidad, MG996R) apunta a 60 N (la tapa más dura x 1,2) con un resorte limitador, y el servo lo da con margen x2,8 (docs/peso.md): no hace falta motorreductor, puente H ni sensor de posición (el servo sabe en qué ángulo quedó y siempre vuelve arriba antes de que avance la cinta). La placa nunca mueve prensa y empujador a la vez.
 
 **Para replicarlo en la vida real:** Medir la fuerza real para asentar una tapa (empujarla sobre una báscula de cocina: kg × 9,8 = N) y confirmar que sobra margen con el MG996R. Resorte que empiece a ceder un poco por encima de esa fuerza. Cronometrar el ciclo (tiempos_ms.prensa_ciclo, hoy 1400 ms). (detalle en [replicacion.md](replicacion.md))
 
@@ -325,7 +325,7 @@ El ESP32 fijo manda cada evento por USB serial al PC (y reenvía los del carro q
 
 **Cómo está implementado hoy:** control/protocolo.py (numeración, ack, reintentos, latido y la regla de soltar vasos, con pruebas). En la simulación el carro y la estación hablan por una radio simulada: el botón "Cortar la radio del carro" muestra que el carro termina la vuelta, guarda sus mensajes, y al reconectar llegan en orden; no se le carga otro vaso hasta que diga que la cuna está vacía (prueba en tests/sim/test_planta.py). El firmware (fase 8) implementa el mismo contrato.
 
-## 16. Asistente (DeepSeek) y órdenes al carro
+## 16. Asistente (DeepSeek → modelo local qwen2.5 → reglas) y órdenes al carro
 
 **Revisión:** ⏸️ en pausa (montaje real)
 

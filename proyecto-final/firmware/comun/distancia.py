@@ -30,7 +30,14 @@ class Laser:
         self.sensor = vl53l0x.VL53L0X(i2c, direccion)
         self.sensor.start(periodo_ms)              # modo continuo
         self.ultima = None                         # mm, o None si no ve nada
-        self.medidas = 0                           # cuantas mediciones lleva (el control cuenta mediciones nuevas)
+        # Cuantas mediciones lleva. OJO: `ultima` NO se borra cuando el sensor
+        # deja de medir (OSError, cable flojo): queda congelada en su ultimo
+        # valor, que casi siempre es None = "no ve nada". Quien la use para
+        # seguridad tiene que mirar si `medidas` sigue creciendo (la cortina lo
+        # hace en firmware/fijo/estacion.py, _revisar_cortina) y tratar una
+        # lectura vieja como peligrosa, no como "libre".
+        self.medidas = 0
+        self.errores = 0                           # lecturas I2C fallidas (diagnostico)
 
     def actualizar(self):
         """Lee solo si hay una medicion nueva. Devuelve True si la hubo."""
@@ -38,7 +45,8 @@ class Laser:
             if not self.i2c.readfrom_mem(self.direccion, _REG_INTERRUPCION, 1)[0] & 0x07:
                 return False
             mm = self.sensor.read()
-        except OSError:                            # cable flojo, ruido: se sigue
+        except OSError:                            # cable flojo, ruido: no se cae, pero `medidas` no crece
+            self.errores += 1
             return False
         self.ultima = None if (mm <= 0 or mm >= self.alcance) else mm
         self.medidas += 1

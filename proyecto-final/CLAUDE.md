@@ -196,10 +196,14 @@ reproducirla paso a paso.
     La misma cámara confirma que la tapa quedó puesta (sin sensor aparte); si no, se suelta
     otra una vez y si tampoco, el vaso queda inválido. Si el vaso fue retirado o cambiado, no
     se suelta tapa.
-12. Prensa. Una leva excéntrica movida por un servo MG996R (0 → 180 → 0 grados; con 6,5 mm
-    de excentricidad empuja con ≥150 N, y una tapa pide ~30-50 N, PROVISIONAL) asienta la tapa
-    a presión con la cinta detenida. El servo sabe su ángulo: no hay sensor de posición ni
-    puente H. Un resorte limita la fuerza máxima, de modo que un objeto extraño no rompe nada.
+12. Prensa. Una leva excéntrica movida por un servo MG996R (0 → 180 → 0 grados, 6,5 mm de
+    excentricidad) asienta la tapa a presión con la cinta detenida. La tapa sella por snap-fit
+    (su reborde salta sobre el labio del vaso: ~30-50 N, PROVISIONAL); la prensa apunta a
+    **60 N** (la más dura x1,2) y un resorte limita la fuerza a eso, de modo que un objeto
+    extraño no rompe nada (usuario, 2026-09-28: antes decía "≥150 N", que el MG996R con la leva
+    no sostiene y la tapa no necesita; `config/masas.yaml`, `docs/peso.md`). El servo sabe su
+    ángulo: no hay sensor de posición ni puente H. La placa no mueve prensa y empujador a la
+    vez (el segundo espera a que el primero vuelva; sección 15).
     Antes de prensar, la cámara de vasos (que también ve esta casilla) revisa vaso, marcador,
     tapa y fondo.
 13. Descarga. En la última casilla, si el registro dice vaso válido con tapa, un empujador
@@ -298,7 +302,7 @@ mecanismo (carrusel del almacén con motor y obturador, empujador con manivela, 
 prensa, desvío de la descarga), y nada queda en el aire: la mesa de monedas (43 cm, para que
 la moneda baje por gravedad al carrusel y de ahí al vaso) y un pórtico trasero de perfil 2020
 (viga a 40 cm) sostienen almacén, tubo de tapas, prensa y panel de luz. Rieles de la canaleta a
-69 mm (el cuerpo del vaso, 62 mm, pasa entre ellos; la pestaña del reborde, 72 mm, se
+69 mm (el cuerpo del vaso, 62 mm, pasa entre ellos; la pestaña del reborde, 78 mm = 62 + 2 × 8, se
 apoya). El visor 3D (`app/visor3d/visor.js`) es además el boceto de presentación: tiene que
 verse pulido.
 
@@ -391,6 +395,8 @@ y un índice de `docs/` (`docs/README.md`).
   CONTEXTO-SESION.md            reglas del usuario y en qué quedó el trabajo (leer primero)
   README.md                     resumen público y cómo verlo
   visor.bat                     doble clic: abre visor-portable.html y arranca la simulación por detrás
+  simulaciones.bat, simulaciones/   menú / un .bat por escena de PyBullet en ventana (sim/ver/)
+  wokwi/                        el circuito de cada ESP32 para wokwi.com (diagram.json + main.py)
   visor-portable.html           visor en UN archivo (demo embebida); pasa solo al vivo (generado)
   instalar.bat                  deja todo listo en un PC nuevo (entorno, firmware, Ollama, Whisper, chequeo)
   .env.example                  cómo poner DEEPSEEK_API_KEY (el .env real queda fuera de git)
@@ -399,12 +405,17 @@ y un índice de `docs/` (`docs/README.md`).
   datos/                        planta.db, la base SQLite local (fuera de git)
   config/parametros.yaml        umbrales, valores físicos, tiempos y errores de sensores
   config/monedas.yaml           tabla de monedas: 4 generaciones (sección 6)
-  config/precios.yaml           precio en Colombia de cada componente + ahorros propuestos (→ docs/costos.md)
+  config/precios.yaml           precio en Colombia de cada componente, estructura 3D pieza por pieza + ahorros (→ docs/costos.md)
+  config/masas.yaml             masa de cada componente y pieza (→ docs/peso.md, app/masas.py)
   .streamlit/config.toml        tema del dashboard
   docs/                         índice en docs/README.md
     paso-a-paso.yaml            los 17 puntos con su estado de revisión (fuente única)
     paso-a-paso.md, sensores.md, componentes.md, replicacion.md, conexiones.md   generados (python -m app.documentos)
     costos.md                   generado desde config/precios.yaml; pruebas-asistente.md: python -m app.evaluar_asistente
+    peso.md, electrica.md       generados (app.documentos; electrica.md sale de sim/electrica.py)
+    fisica-vs-3d.md             generado por python tests/sim/test_fisica_vs_3d.py
+    logica-interna.md, modelo-local.md   escritos a mano: la lógica con el código, y el LLM local
+    videos/                     simulaciones de PyBullet grabadas (python -m sim.ver.grabar)
     bitacora.md                 avance y decisiones por sesión
     revision-final.md           revisión total del diseño antes del protocolo
     interfaz-visor.md, interfaz-dashboard.md   inventarios de funciones de las dos interfaces
@@ -432,6 +443,8 @@ y un índice de `docs/` (`docs/README.md`).
     geometria.py                geometría de todo el sistema para el visor 3D
     catalogos.py                sensores numerados y lista de materiales (sin dependencias)
     conexiones.py               conexionado pin a pin: módulos, pines, cada hilo (fuente única)
+    electrica.py                parte eléctrica simulada: rieles, ciclo real, caídas, fusibles, pasivos
+    ver/                        escenas en ventana GUI de PyBullet (filtro, vasos, carro, todo) y grabar.py
     carga_escenarios.py         lectura de escenarios YAML, pruebas de un filtro y piezas sueltas
     escenarios/                 prueba_completa.yaml (la corrida normal de la interfaz)
       pruebas_aisladas/         un escenario por filtro + mixto_20 (pytest y "probar un filtro")
@@ -439,7 +452,7 @@ y un índice de `docs/` (`docs/README.md`).
   app/
     lanzar.py                   supervisor + dashboard (lo usa visor.bat)
     supervisor.py               corre la simulación, escribe SQLite, sirve el visor
-    servidor.py                 HTTP del supervisor: visor 3D + /api/estado (127.0.0.1)
+    servidor.py                 HTTP del supervisor: visor 3D + /api/estado (127.0.0.1); POST /api/orden solo JSON, sin CORS, tipos revisados
     visor3d/                    visor 3D en Three.js (vendor/ local, sin CDN; demo/ grabada); inventario en docs/interfaz-visor.md
       index.html, visor.js      página y escena: cámara, render, optimización, animación
       interfaz.js, estilo.css   el panel (pestañas, avisos, controles de prueba en un solo lugar) y su diseño
@@ -458,8 +471,9 @@ y un índice de `docs/` (`docs/README.md`).
     grabar_demo.py              graba una corrida para el modo demo del visor (y rehace el portable)
     portable.py                 arma visor-portable.html (three.js en data: URLs + visor + demo)
     documentos.py               genera los .md de docs/ (incluido costos.md)
-    costos.py                   lee config/precios.yaml: totales por subsistema, ahorros
-    evaluar_asistente.py        batería REAL del asistente (24 casos) -> docs/pruebas-asistente.md
+    costos.py                   lee config/precios.yaml: totales por subsistema, estructura 3D, ahorros
+    masas.py                    lee config/masas.yaml: peso por subsistema y comprobaciones de par
+    evaluar_asistente.py        batería REAL del asistente (50 casos) -> docs/pruebas-asistente.md
     puente_serial.py            fase 8: PC <-> ESP32 fijo (y estación EMULADA si no hay placa)
   firmware/                     fase 8, MicroPython (ver firmware/README.md)
     fijo/  carro/  comun/       lógica pura (se prueba en el PC) + hw.py (pines) + main.py
@@ -468,9 +482,9 @@ y un índice de `docs/` (`docs/README.md`).
   tests/                        pruebas por capa, sin __init__.py (cada test_*.py con nombre único)
     conftest.py                 cierra los mundos de PyBullet que un archivo deje abiertos (si no, ensucian al siguiente)
     control/                    reglas, linea, embalaje, registro, almacen, monedas, tiempos, protocolo, vehiculo
-    sim/                        planta, backend_sim, escenarios, conexiones
+    sim/                        planta, backend_sim, escenarios, conexiones, electrica, fisica_vs_3d
     visor/                      visualizacion (geometría, servidor HTTP, docs generados), portable
-    app/                        supervisor, db, dashboard, asistente, asistente_planta, voz, costos, chequeo, pruebas_filtro
+    app/                        supervisor, db, dashboard, asistente, asistente_planta, voz, costos, masas, chequeo, pruebas_filtro
     firmware/                   firmware (mpy-cross y las dos placas contra la estación emulada)
 ```
 
@@ -510,10 +524,34 @@ numeración es un mensaje perdido y se registra.
 {"t":"tel","n":1203,"ms":130500,"linea":"run","vasos":"run","seguridad":"ok","casilla":17,"vaso":4}
 ```
 
-**Latido en los dos sentidos: `{"t":"hb","n":...}` cada 500 ms.**
+**Latido en los dos sentidos: `{"t":"hb","n":...,"s":...}` cada 500 ms** (el del PC lleva en `n` su último id).
+
+**Sesión (2026-09-28).** Cada emisor sortea al arrancar un número de sesión `s` (1..65535, `protocolo.nueva_sesion`)
+y lo manda en sus `cmd`, `evt` y `hb`. El receptor, al ver una sesión nueva, olvida los ids vistos y reinicia la
+secuencia `n` (si no, tras reiniciar el PC el fijo confirmaba el id 1 pero no lo ejecutaba). De cada sesión
+guarda solo una ventana de 64 ids (la memoria del ESP32 no crece). Sin `s` se comporta como antes.
+
+**Carrusel (2026-09-28).** `{"t":"cmd","dst":"carrusel","act":"ir","tubo":3,"lugar":"carga"|"agujero"}`
+(`tubo` = índice 0 a 5, no la denominación);
+el fijo avisa `{"t":"evt","src":"carrusel","ev":"llego","tubo":..,"lugar":..,"giro_ms":..,"pedido":<id del cmd>}` y manda
+`carrusel_mov` en la telemetría. El PC no da el tubo por puesto hasta ese aviso
+(`backend_real.carrusel_en()`). En la simulación el mismo modelo es `control/carrusel.py`: la moneda
+aceptada espera en E4 (`e4 espera motivo=carrusel_girando`) hasta que su tubo esté quieto bajo la carga, y
+el lote espera a que su tubo esté sobre el agujero; el visor gira con el evento `carrusel/gira` (`dur_ms`).
+
+**Tamaño por radio.** ESP-NOW admite 250 bytes por paquete: si un mensaje no cabe, su `detalle` se recorta
+(con `"rec": true`); si ni así cabe, no se encola (se cuenta como `grandes`).
 - Si el ESP32 no oye al PC en 2 s, hace una parada segura: cintas quietas, prensa arriba,
-  desvío al rechazo y escapes cerrados.
-- Si el PC no oye al ESP32, pausa la línea y da la alarma `sin_esp32`.
+  desvío al rechazo, escapes cerrados y carrusel detenido donde esté (`carrusel/detenido`).
+  La parada guarda su MOTIVO (`motivo_parada`): `sin_pc` se levanta sola cuando vuelve el
+  latido; `paro` (del dashboard) y `error` (una excepción del bucle) quedan ENCLAVADOS hasta
+  `estado.reanudar` (Iniciar/Reanudar del PC).
+- Si el PC no oye al ESP32, pausa la línea y da la alarma `sin_esp32` (`Supervisor._pausar_si_no_oye_al_esp32`;
+  sale con "reanudar" cuando la placa se vuelve a oír). Con hardware, como en la simulación,
+  "reanudar" solo saca de la pausa: del paro se sale con Iniciar.
+- El puente del PC lee a un buffer propio y parte por `
+` (`readline()` con timeout 0 devolvía
+  media línea y la perdía).
 
 **Carro ↔ ESP32 fijo (ESP-NOW).** El fijo reenvía al PC con `src:"carro"`.
 - **Eventos numerados.** El carro numera sus eventos (`id`) y le agrega la lectura del
@@ -549,7 +587,10 @@ vuelva a decir `en_muelle`.
 
 **Reglas del carro:**
 - El carro decide solo, con su infrarrojo de la cuna (3 lecturas iguales), que ya lo
-  cargaron: sale del muelle.
+  cargaron: sale del muelle. Solo por FLANCO: tiene que haber visto la cuna VACÍA en el muelle
+  antes (si vuelve con el vaso porque nadie lo sacó, se queda en el muelle y no sale otra vez).
+- Solo cuenta como latido lo que viene de `src:"estacion"` o va a `dst:"carro"` (el ESP-NOW de
+  otro grupo en el salón no mantiene vivo el enlace).
 - También decide solo que en la meta le sacaron el vaso: vuelve.
 - Si pierde el enlace, termina la vuelta y queda en el muelle. En la meta espera como mucho
   `espera_meta_sin_enlace_s`; si nadie saca el vaso, vuelve con él.
@@ -581,7 +622,8 @@ Si no, no carga. Si la cuna está ocupada, da la alarma `cuna_ocupada`.
 ```
 
 Las causas posibles son exactamente las de la sección 7. No se inventan causas nuevas sin
-actualizar este archivo.
+actualizar este archivo. Una pieza que llega a la descarga sin registro (fallaron presencia y
+capacitivo a la vez) sale con causa `no_reconocida` y `motivo: sin_registro` en el evento.
 
 ### 10.3 Esquema de SQLite
 
@@ -794,13 +836,17 @@ y se acepta UNA sola orden al carro por mensaje, con cualquier proveedor.
 contexto (`python -m app.asistente --preparar-local`; 3,5 de 4 GB en la RTX 3050), ~9000 caracteres
 de documentación, el estado en vivo PEGADO a la pregunta (al principio de un texto largo el modelo
 chico lo ignoraba) y, si las reglas ya tienen la cifra exacta, va como "DATO VERIFICADO" (confundía
-"cuánto pesan" con pesos). Candados para TODOS los proveedores: una pregunta nunca da órdenes; el
-modelo local no puede mover el carro si la frase no pide un movimiento; las medidas que ningún
+"cuánto pesan" con pesos). Candados para TODOS los proveedores: una pregunta nunca da órdenes, y
+un pedido de información sin "?" tampoco ("dime", "explícame", "cuéntame", "muéstrame", "qué es"...:
+Whisper no pone signos; revisión 2026-09-28); ninguna orden al carro si la frase no pide un
+movimiento (antes solo para el modelo local); el paro solo con un imperativo ("haz paro", "para
+todo", "detén la línea", o la frase entera "¡paro!"); las medidas que ningún
 sensor toma (temperatura, voltaje, corriente) las responden las reglas sin inventar. Estado
 "pensando" (tabla `asistente_pensando`, en `/api/asistente`): el visor anima la nube si piensa
 DeepSeek o la laptop (teclado RGB, luz de actividad, pantalla) si piensa el modelo local.
-`python -m app.evaluar_asistente`: 24 casos reales (cifras, técnico, costos, sin dato, órdenes con
-errores de ortografía, seguridad, inglés) → 24/24 local (mediana 7,5 s) y 24/24 reglas.
+`python -m app.evaluar_asistente`: 60 casos reales (frases trampa, promesas sin orden, tiempos del carro, pausa de la línea, pedidos con "que") (monedas, carro, cifras, técnico, costos, peso,
+consumo, sin dato, órdenes con errores de ortografía, seguridad, inglés) → 60/60 local (mediana 5,7 s)
+y 60/60 reglas (2026-09-29, con una sola copia de la base para los dos proveedores).
 
 **Sin internet (2026-09-27):** `hay_internet()` (conexión TCP a DeepSeek o Google, recordada 15 s).
 Sin red no se intenta DeepSeek (no se espera su timeout). Voz: con internet Google + gTTS; sin
@@ -837,7 +883,41 @@ Wi-Fi del PC, que se necesita para la API del chatbot.
 **Estructura del firmware.** Bucle no bloqueante basado en máquina de estados y temporizadores
 por milisegundos. Prohibido usar delay en el bucle principal. Los pasos del motor se
 generan por temporizador o por librería de aceleración. El parser de comandos es tolerante
-a líneas incompletas.
+a líneas incompletas (y a bytes que no son UTF-8: `parsear_linea` los descarta). En el carro
+cada vuelta del bucle va en try/except (motores a 0 si algo falla) con perro guardián
+`machine.WDT` (`firmware.carro_wdt_ms`; con el perro activo, detener `main.py` en Thonny
+reinicia la placa a los 2 s). El fijo igual: try/except por vuelta (una excepción = parada segura
+con motivo `error`) y `firmware.fijo_wdt_ms`.
+**Perro armado tarde (2026-09-29):** el fijo arma el WDT con el PRIMER latido del PC y el carro con
+el primer mensaje de su estación (en el ESP32 no se puede desarmar, y `firmware.subir`/mpremote
+interrumpe `main.py`: con el perro armado desde el arranque reiniciaba la placa a mitad de la copia).
+Un error que se repite en cada vuelta se avisa la primera vez y después como mucho uno cada
+`firmware.aviso_error_cada_ms` (1 s, con `repetidos`), no ~500 líneas/s.
+
+**Cortina en la placa.** Vota: hacen falta `planta.lecturas_por_decision` mediciones NUEVAS seguidas
+para activarla y otras tantas para despejarla (una lectura suelta no la dispara). Umbral: 140 mm, el
+alcance del cono simulado (`sim/sensores_sim.ventana_cortina_mm()`, fuente única que `preparar` pasa a
+la placa). Si pasan más de `firmware.cortina_sin_lectura_ms` (150) sin una medición nueva (cable I2C
+flojo), queda ACTIVA con `cortina_sin_lectura`: falla del lado seguro.
+
+**Canaleta en la placa.** El fijo guarda el último estado del carro (fresco, en_muelle, cuna) y aplica
+`protocolo.puede_soltar_vaso` antes de soltar; si no se cumple, ack `ok:false` con
+`vaso retenido: <motivo>` (y `cuna_ocupada` si corresponde).
+
+**Reglas que cumple la placa por sí sola (2026-09-28, hallazgos de `docs/electrica.md`).**
+- Prensa y empujador nunca se mueven a la vez (`firmware/fijo/estacion.py`, `EXCLUYENTES`): si
+  llega uno mientras el otro está en su ciclo (ida o vuelta), la placa confirma el comando
+  (`ack ok:true`), manda `{"src":"servo","ev":<servo>,"ciclo":"en_espera","espera_a":<otro>}` y
+  lo arranca cuando el otro vuelve a reposo (`"ciclo":"arranca"`). La cortina o la parada segura
+  cancelan lo que esperaba (`"ciclo":"cancelado"`).
+- Motores TT del carro con el PWM topado en `firmware.carro_pwm_max` (0,70), también tras la
+  corrección integral. Bus I2C largo (VL53L0X) a `firmware.i2c_bus_largo_hz` (100 kHz).
+- A4988: ENABLE se suelta tras `firmware.a4988_reposo_ms` con las dos cintas quietas (más que las
+  pausas normales: con la línea andando no se sueltan) y se vuelve a dar antes del primer paso.
+- Carrusel: un medio paso cada `firmware.carrusel_ms_por_paso` (2 ms) por Timer; media vuelta =
+  `tiempos_ms.carrusel_giro` (4096 ms, derivado; una prueba lo exige). No cabe en el ciclo de
+  1,6 s: la cinta de monedas espera al carrusel en esos ciclos (`control/tiempos.py`).
+- Cintas: rodillo Ø22 del modelo 3D → `firmware.mm_por_vuelta_cinta` = 69,1 mm (π·22).
 
 ---
 

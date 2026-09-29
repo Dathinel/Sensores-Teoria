@@ -52,7 +52,7 @@ items:
   bateria_carro: {subsistema: Carro, precio: 71500, tienda: ferretronica, fuente: tienda, producto: "Par de 18650 2500 mAh (60 000) + portapilas 2S (3 500) + BMS 2S (8 000)"}
   interruptor_carro: {subsistema: Carro, precio: 4000, tienda: ferretronica, fuente: estimado, producto: "Interruptor de palanca + portafusible aéreo con fusible 3 A"}
   rodillos_guia: {subsistema: Carro, precio: 3000, cantidad: 2, tienda: mercadolibre, fuente: estimado, producto: "Rodamiento 623 (10 mm)"}
-  cuna_carro: {subsistema: Carro, precio: 0, fuente: estimado, producto: "Impresa en 3D (el PLA va en extras)"}
+  cuna_carro: {subsistema: Carro, calculado: impresas, fuente: estimado, producto: "Impresa en 3D: sus piezas en estructura_3d.piezas_impresas"}
   # ------------------------------------------------------------------ control y potencia
   esp32_fijo: {subsistema: Control y potencia, precio: 39500, tienda: electronilab, fuente: tienda, producto: "ESP32 DevKit 38 pines CH9102F"}
   drivers_cintas: {subsistema: Control y potencia, precio: 8000, cantidad: 2, tienda: ferretronica, fuente: tienda, producto: "Driver A4988"}
@@ -70,24 +70,168 @@ items:
   canaletas_caja: {subsistema: Control y potencia, precio: 25000, tienda: mercadolibre, fuente: estimado, producto: "Canaleta ranurada 25 x 30 mm (1 m) + prensaestopas PG"}
   pc: {subsistema: Control y potencia, precio: 0, fuente: tienda, producto: "El portátil del grupo (no se compra)"}
   # ------------------------------------------------------------------ estructura
-  estructura: {subsistema: Estructura, precio: 56900, cantidad: 3, tienda: electronilab, fuente: tienda, producto: "Perfil V-Slot 2020 de 1 m (estimado: 3 m para patas y pórtico)"}
+  # Antes: 3 m "estimados". Ahora la cantidad de barras sale del despiece de los tramos MEDIDOS en el
+  # modelo 3D (estructura_3d.perfiles): app/costos.py los acomoda en barras de 1 m.
+  estructura: {subsistema: Estructura, precio: 56900, calculado: perfileria, tienda: electronilab, fuente: tienda, producto: "Perfil V-Slot 2020 en barras de 1 m (despiece de los tramos medidos en el modelo 3D)"}
   cinta_monedas: {subsistema: Estructura, precio: 40000, tienda: mercadolibre, fuente: estimado, producto: "Banda de caucho negra mate 55 mm + 2 rodillos"}
   cinta_vasos: {subsistema: Estructura, precio: 45000, tienda: mercadolibre, fuente: estimado, producto: "Banda de caucho 75 mm + 2 rodillos"}
   almacen: {subsistema: Estructura, precio: 30000, tienda: mercadolibre, fuente: estimado, producto: "6 tubos de acrílico de 29 mm (el disco y la placa van en PLA)"}
-  tubo_tapas: {subsistema: Estructura, precio: 15000, tienda: mercadolibre, fuente: estimado, producto: "Tubo de acrílico de 78 mm"}
+  tubo_tapas: {subsistema: Estructura, precio: 15000, tienda: mercadolibre, fuente: estimado, producto: "Tubo de acrílico de 82 mm de diámetro interior (tapa de 78 mm + 4)"}
   canaleta_entrega: {subsistema: Canaleta y muelle, precio: 25000, tienda: mercadolibre, fuente: estimado, producto: "2 varillas de 4 mm + cinta de PTFE"}
   pista: {subsistema: Carro, precio: 11000, tienda: ferretronica, fuente: tienda, producto: "Cinta aislante negra 3M 18 mm x 18 m"}
-  canaletas_rechazo: {subsistema: Estructura, precio: 0, fuente: estimado, producto: "Impresa en 3D (el PLA va en extras)"}
-  bandeja_rechazo_vasos: {subsistema: Estructura, precio: 0, fuente: estimado, producto: "Impresa en 3D (el PLA va en extras)"}
-  canal_e7: {subsistema: Estructura, precio: 0, fuente: estimado, producto: "Impreso en 3D (el PLA va en extras)"}
-  muelle_carga: {subsistema: Canaleta y muelle, precio: 0, fuente: estimado, producto: "Impreso en 3D (el PLA va en extras)"}
+  canaletas_rechazo: {subsistema: Cinta de monedas, calculado: impresas, fuente: estimado, producto: "Impresa en 3D: canal y bandeja (estructura_3d.piezas_impresas)"}
+  bandeja_rechazo_vasos: {subsistema: Cinta de vasos, calculado: impresas, fuente: estimado, producto: "Impresa en 3D (estructura_3d.piezas_impresas)"}
+  canal_e7: {subsistema: Cinta de monedas, calculado: impresas, fuente: estimado, producto: "Impreso en 3D: embudo, canales cortos y oreja (estructura_3d.piezas_impresas)"}
+  muelle_carga: {subsistema: Canaleta y muelle, calculado: impresas, fuente: estimado, producto: "Impreso en 3D: guías en V y topes (estructura_3d.piezas_impresas)"}
 
 extras:
-  pla: {subsistema: Estructura, precio: 93900, cantidad: 2, tienda: electronilab, fuente: tienda, producto: "Filamento PLA 1,75 mm 1 kg (estimado: 2 kg para todas las piezas impresas)"}
   rueda_loca: {subsistema: Carro, precio: 9500, tienda: ferretronica, fuente: tienda, producto: "Rueda loca de bola de acero 3/4\""}
-  tornilleria: {subsistema: Estructura, precio: 40000, fuente: estimado, producto: "Tornillos M3/M4/M5, tuercas en T, escuadras 2020"}
   cables: {subsistema: Control y potencia, precio: 30000, fuente: estimado, producto: "Cables dupont, cable 18 AWG, termoencogible, conectores JST"}
   base: {subsistema: Estructura, precio: 40000, fuente: estimado, producto: "Tablero MDF de 9 mm para la base y la pista"}
+
+# ======================================================================================
+# Estructura 3D: piezas impresas, perfilería y tornillería CONTADAS (usuario, 2026-09-28:
+# "costos en estructura 3D completos, en tablas y todo"). Antes el PLA era "2 kg estimados" y el
+# perfil "3 m estimados"; ahora cada cosa sale del modelo 3D del visor (app/visor3d):
+#   - medidas_mm: la caja que ocupa la pieza en el modelo (redondeada al mm);
+#   - volumen_cm3: el volumen de MATERIAL de la pieza (lo que el laminador llama "volumen del
+#     modelo"). origen "malla" = medido sumando los tetraedros de la malla del visor (visor con
+#     ?auditar&sinoptimizar, 2026-09-28); "estimado" = la malla no es cerrada o incluye otras
+#     cosas, y se calculó a mano con superficie x espesor de pared (se dice cómo en `como`).
+#   - maciza: true = paredes de 3 mm o menos: con 3 perímetros de 0,45 mm la pieza sale llena
+#     (el relleno no aplica); false = pieza gruesa, lleva cáscara + relleno.
+# app/costos.py calcula gramos, horas y costo de cada una; app/masas.py reusa esos gramos.
+estructura_3d:
+  consultado: "2026-09-28"
+  impresion:
+    # Gramos de una pieza:  g = V x densidad x f x (1 + desperdicio)
+    #   f = 1                                   si la pieza es maciza (pared <= 3 mm)
+    #   f = paredes + (1 - paredes) x relleno   si no: la cáscara (perímetros + pisos y techos)
+    #       sale sólida y el interior lleva el `relleno`. `paredes` = fracción del volumen que ocupa
+    #       la cáscara en una pieza mediana de este proyecto (20-60 mm de lado): ~0,40.
+    densidad_g_cm3: 1.24          # PLA (hoja de datos de cualquier marca: 1,24-1,25)
+    relleno: 0.20                 # 20 %, el de fábrica en Cura/PrusaSlicer
+    paredes: 0.40                 # estimado (ver arriba)
+    desperdicio: 0.10             # purga, falda, soportes y alguna impresión fallida: estimado
+    gramos_por_hora: 10           # impresora tipo Ender 3, boquilla 0,4, capa 0,2, ~50 mm/s: estimado
+    kwh_por_hora: 0.12            # consumo medio de una Ender 3 con cama caliente a 60 °C: estimado
+    tarifa_kwh: 800               # COP/kWh, estrato 3-4 en Colombia 2026: ESTIMADO (ver el recibo)
+    precio_kg: 93900              # filamento PLA 1,75 mm, 1 kg
+    tienda: electronilab
+    fuente_precio: tienda
+    # Costo de una pieza = gramos x precio_kg / 1000  +  horas x kwh_por_hora x tarifa_kwh,
+    # con horas = gramos / gramos_por_hora.
+
+  # subsistema: el de costos (los mismos de `items`). zona: el de docs/peso.md (si falta, es el
+  # subsistema). componente: id del catálogo al que pertenece (su fila de costos suma estas
+  # piezas); sin componente (o si su componente se compra aparte, como los tubos del almacén), la pieza va a
+  # la fila "Otras piezas impresas" de su subsistema.
+  # tornillos: lo que sujeta UNA pieza (tipos en `tornilleria.tipos`).
+  piezas_impresas:
+    # ---------------------------------------------------------------- cinta de monedas
+    - {id: cojinete_608_fijo, nombre: "Bloque del rodamiento 608 (rodillo motriz)", subsistema: Cinta de monedas, cantidad: 2, medidas_mm: [30, 22, 12], volumen_cm3: 6.6, origen: malla, maciza: false, tornillos: {m5x10: 2, tuerca_t: 2}}
+    - {id: cojinete_608_tensor, nombre: "Bloque tensor del rodamiento 608", subsistema: Cinta de monedas, cantidad: 2, medidas_mm: [44, 22, 12], volumen_cm3: 8.0, origen: malla, maciza: false, tornillos: {m5x10: 2, tuerca_t: 2, m3x30: 1, tuerca_m3: 1}}
+    - {id: jaula_nema17_monedas, nombre: "Jaula del NEMA 17 de la cinta de monedas", subsistema: Cinta de monedas, cantidad: 1, medidas_mm: [78, 50, 47], volumen_cm3: 27.8, origen: malla, maciza: false, tornillos: {m3x10: 4, m5x10: 2, tuerca_t: 2}}
+    - {id: guias_banda_monedas, nombre: "Guía lateral de la banda de monedas", subsistema: Cinta de monedas, cantidad: 2, medidas_mm: [200, 6, 2], volumen_cm3: 2.4, origen: malla, maciza: true, tornillos: {m3x10: 2, tuerca_m3: 2}}
+    - {id: brazos_platinas_m18, nombre: "Brazo de las platinas M18 (capacitivo e inductivo)", subsistema: Cinta de monedas, cantidad: 4, medidas_mm: [14, 95, 3], volumen_cm3: 4.0, origen: malla, maciza: true, tornillos: {m3x10: 2, tuerca_m3: 2}}
+    - {id: tacos_platinas_m18, nombre: "Taco de las platinas M18", subsistema: Cinta de monedas, cantidad: 2, medidas_mm: [14, 20, 3], volumen_cm3: 0.8, origen: malla, maciza: true, tornillos: {m5x10: 1, tuerca_t: 1}}
+    - {id: abrazadera_cam_cenital, nombre: "Abrazadera de la cámara cenital", subsistema: Cinta de monedas, cantidad: 1, medidas_mm: [30, 24, 6], volumen_cm3: 4.3, origen: estimado, maciza: true, como: "bloque de 30 x 24 x 6 mm (medidas del modelo) = 4,3 cm³", tornillos: {m5x10: 2, tuerca_t: 2}}
+    - {id: aleta_desvio_e4, nombre: "Aleta de la compuerta de desvío (E4)", subsistema: Cinta de monedas, cantidad: 1, medidas_mm: [34, 26, 19], volumen_cm3: 1.5, origen: malla, maciza: true, tornillos: {m2x8: 2}}
+    - {id: brida_sg90, nombre: "Brida de servo SG90 (desvío y obturador)", subsistema: Cinta de monedas, cantidad: 2, medidas_mm: [12, 40, 19], volumen_cm3: 1.5, origen: malla, maciza: true, tornillos: {m2x8: 2, m3x10: 2, tuerca_m3: 2}}
+    - {id: taco_poste_e4, nombre: "Taco del poste de la compuerta E4", subsistema: Cinta de monedas, cantidad: 1, medidas_mm: [20, 20, 4], volumen_cm3: 1.6, origen: malla, maciza: true, tornillos: {m5x10: 1}}
+    - {id: embudo_descarga, nombre: "Embudo de la descarga de la cinta", subsistema: Cinta de monedas, componente: canal_e7, cantidad: 1, medidas_mm: [40, 40, 26], volumen_cm3: 5.0, origen: estimado, maciza: true, como: "cono de Ø40 a Ø12 en 26 mm con pared de 2 mm: π·(20 + 6)·29 mm² x 2 mm ≈ 4,7 cm³ (la malla no es cerrada)", tornillos: {m3x10: 2, tuerca_m3: 2}}
+    - {id: canales_cortos, nombre: "Canal corto al carrusel / al rechazo", subsistema: Cinta de monedas, componente: canal_e7, cantidad: 2, medidas_mm: [60, 20, 15], volumen_cm3: 6.0, origen: estimado, maciza: true, como: "U de 60 mm de largo, fondo de 20 y alas de 15, pared de 2 mm: 60 x (20 + 2·15) x 2 = 6 cm³", tornillos: {m3x10: 2, tuerca_m3: 2}}
+    - {id: oreja_bisagra, nombre: "Oreja de la bisagra de la compuerta", subsistema: Cinta de monedas, componente: canal_e7, cantidad: 1, medidas_mm: [3, 12, 7], volumen_cm3: 0.25, origen: malla, maciza: true}
+    - {id: canal_rechazo_monedas, nombre: "Canal largo a la bandeja de rechazo", subsistema: Cinta de monedas, componente: canaletas_rechazo, cantidad: 1, medidas_mm: [38, 353, 105], volumen_cm3: 39.1, origen: malla, maciza: true, tornillos: {m3x10: 2, tuerca_m3: 2}}
+    - {id: bandeja_rechazo_monedas, nombre: "Bandeja de rechazo de monedas", subsistema: Cinta de monedas, componente: canaletas_rechazo, cantidad: 1, medidas_mm: [90, 90, 35], volumen_cm3: 51.0, origen: estimado, maciza: true, como: "fondo de 90 x 90 + 4 paredes de 90 x 35, pared de 2,5 mm: (8100 + 12600) mm² x 2,5 ≈ 51 cm³ (la malla cuenta también el rótulo)"}
+    # ---------------------------------------------------------------- almacén
+    - {id: placa_fija_almacen, nombre: "Placa fija del almacén (con el agujero)", subsistema: Cinta de monedas, zona: Almacén, componente: almacen, cantidad: 1, medidas_mm: [116, 116, 15], volumen_cm3: 57.1, origen: malla, maciza: false, tornillos: {m5x10: 4, tuerca_t: 4}}
+    - {id: disco_carrusel, nombre: "Disco del carrusel (6 agujeros y cubo)", subsistema: Cinta de monedas, zona: Almacén, componente: almacen, cantidad: 1, medidas_mm: [146, 146, 11], volumen_cm3: 18.2, origen: malla, maciza: false, tornillos: {m3x10: 2}}
+    - {id: obturador, nombre: "Obturador del almacén", subsistema: Cinta de monedas, zona: Almacén, componente: almacen, cantidad: 1, medidas_mm: [46, 59, 6], volumen_cm3: 2.6, origen: malla, maciza: true, tornillos: {m2x8: 1}}
+    - {id: soporte_28byj48, nombre: "Placa del motor del carrusel (28BYJ-48)", subsistema: Cinta de monedas, zona: Almacén, componente: almacen, cantidad: 1, medidas_mm: [42, 56, 13], volumen_cm3: 11.9, origen: malla, maciza: false, tornillos: {m4x12: 2, tuerca_m4: 2, m5x10: 2, tuerca_t: 2}}
+    - {id: embudo_vaso, nombre: "Embudo corto del almacén al vaso", subsistema: Cinta de monedas, zona: Almacén, componente: almacen, cantidad: 1, medidas_mm: [38, 38, 32], volumen_cm3: 6.0, origen: estimado, maciza: true, como: "cono de Ø38 a Ø30 en 32 mm, pared de 2 mm: π·(19 + 15)·32 x 2 ≈ 6,8 cm³ (la malla es un sólido)"}
+    - {id: portacables_obturador, nombre: "Portacables del servo del obturador", subsistema: Cinta de monedas, zona: Almacén, cantidad: 1, medidas_mm: [11, 10, 35], volumen_cm3: 0.9, origen: malla, maciza: true}
+    # ---------------------------------------------------------------- cinta de vasos
+    - {id: tacos_casilla_vasos, nombre: "Taco separador de la banda de vasos", subsistema: Cinta de vasos, cantidad: 7, medidas_mm: [47, 75, 15], volumen_cm3: 17.4, origen: malla, maciza: false, tornillos: {m3x10: 2, tuerca_m3: 2}}
+    - {id: placa_nema17_vasos, nombre: "Placa del NEMA 17 de la cinta de vasos", subsistema: Cinta de vasos, cantidad: 1, medidas_mm: [50, 48, 6], volumen_cm3: 12.0, origen: estimado, maciza: false, como: "placa de 50 x 48 x 6 menos el agujero Ø23 del motor: 14,4 - 2,5 ≈ 12 cm³ (la malla del grupo incluye el motor)", tornillos: {m3x10: 4, m3x30: 4, tuerca_m3: 4}}
+    - {id: cabezal_escape_tapas, nombre: "Cabezal del escape de tapas", subsistema: Cinta de vasos, cantidad: 1, medidas_mm: [92, 92, 16], volumen_cm3: 21.8, origen: malla, maciza: false, tornillos: {m3x10: 4, tuerca_m3: 4}}
+    - {id: abrazadera_servo_tapas, nombre: "Abrazadera del tubo con el servo de tapas", subsistema: Cinta de vasos, cantidad: 1, medidas_mm: [94, 94, 10], volumen_cm3: 11.3, origen: malla, maciza: false, tornillos: {m2x8: 2, m3x10: 2, tuerca_m3: 2}}
+    - {id: escape_tapas, nombre: "Balancín y dedos del escape de tapas", subsistema: Cinta de vasos, cantidad: 1, medidas_mm: [34, 31, 9], volumen_cm3: 2.1, origen: malla, maciza: true, tornillos: {m2x8: 1}}
+    - {id: leva_prensa, nombre: "Leva excéntrica de la prensa", subsistema: Cinta de vasos, cantidad: 1, medidas_mm: [44, 44, 8], volumen_cm3: 12.1, origen: malla, maciza: false, tornillos: {m2x8: 4}}
+    - {id: piston_prensa, nombre: "Pistón de la prensa", subsistema: Cinta de vasos, cantidad: 1, medidas_mm: [62, 62, 96], volumen_cm3: 27.3, origen: malla, maciza: false}
+    - {id: buje_prensa, nombre: "Buje guía del pistón", subsistema: Cinta de vasos, cantidad: 1, medidas_mm: [22, 20, 16], volumen_cm3: 7.0, origen: malla, maciza: false, tornillos: {m3x10: 2, tuerca_m3: 2}}
+    - {id: bloque_varillas_prensa, nombre: "Bloque de las varillas guía de la prensa", subsistema: Cinta de vasos, cantidad: 1, medidas_mm: [57, 18, 10], volumen_cm3: 10.3, origen: malla, maciza: false, tornillos: {m3x10: 2, tuerca_m3: 2}}
+    - {id: soportes_mg996r_prensa, nombre: "Orejas y bridas del MG996R de la prensa", subsistema: Cinta de vasos, cantidad: 1, medidas_mm: [42, 25, 29], volumen_cm3: 16.9, origen: malla, maciza: true, como: "suma de las 8 mallas impresas del soporte: 2 x 2,9 + 4,6 + 1,9 + 0,7 + 2 x 0,3 + 3,3", tornillos: {m4x12: 4, tuerca_m4: 4}}
+    - {id: manivela_empujador, nombre: "Manivela del empujador", subsistema: Cinta de vasos, cantidad: 1, medidas_mm: [15, 46, 11], volumen_cm3: 3.0, origen: malla, maciza: true, tornillos: {m2x8: 2, m3x10: 1, tuerca_m3: 1}}
+    - {id: paleta_empujador, nombre: "Paleta del empujador", subsistema: Cinta de vasos, cantidad: 1, medidas_mm: [60, 18, 130], volumen_cm3: 34.3, origen: malla, maciza: false, tornillos: {m3x10: 1, tuerca_m3: 1}}
+    - {id: porta_vl53_interior, nombre: "Porta-sensor del VL53L0X del interior", subsistema: Cinta de vasos, cantidad: 1, medidas_mm: [30, 7, 14], volumen_cm3: 1.1, origen: malla, maciza: true, tornillos: {m2x8: 2}}
+    - {id: placa_camara_vasos, nombre: "Placa de la cámara de vasos (sobre su poste)", subsistema: Cinta de vasos, cantidad: 1, medidas_mm: [24, 36, 4], volumen_cm3: 3.3, origen: estimado, maciza: true, como: "24 x 36 x 4 mm menos el agujero del tornillo de 1/4 de pulgada", tornillos: {m5x10: 1, tuerca_t: 1}}
+    - {id: bandeja_rechazo_vasos, nombre: "Bandeja de rechazo de vasos", subsistema: Cinta de vasos, componente: bandeja_rechazo_vasos, cantidad: 1, medidas_mm: [104, 124, 60], volumen_cm3: 100.0, origen: estimado, maciza: true, como: "fondo de 104 x 124 + paredes de 2·(104 + 124) x 60, pared de 2,5 mm: 40 300 mm² x 2,5 ≈ 100 cm³ (la malla del grupo cuenta el rótulo)", tornillos: {m4x12: 2}}
+    - {id: soporte_bandeja_vasos, nombre: "Soporte de la bandeja de rechazo de vasos", subsistema: Cinta de vasos, componente: bandeja_rechazo_vasos, cantidad: 1, medidas_mm: [33, 41, 75], volumen_cm3: 11.3, origen: malla, maciza: true, tornillos: {m5x10: 2, tuerca_t: 2}}
+    # ---------------------------------------------------------------- canaleta y muelle
+    - {id: cabezal_riel_canaleta, nombre: "Cabezal del riel de la canaleta", subsistema: Canaleta y muelle, cantidad: 4, medidas_mm: [41, 20, 15], volumen_cm3: 9.5, origen: malla, maciza: false, tornillos: {m5x10: 1, m3x10: 1}}
+    - {id: balancin_escape_canaleta, nombre: "Balancín de dos dedos del escape", subsistema: Canaleta y muelle, cantidad: 1, medidas_mm: [42, 27, 85], volumen_cm3: 3.6, origen: malla, maciza: true, tornillos: {m2x8: 1}}
+    - {id: soporte_servo_canaleta, nombre: "Soporte del SG90 del escape", subsistema: Canaleta y muelle, cantidad: 1, medidas_mm: [18, 29, 38], volumen_cm3: 5.3, origen: malla, maciza: true, tornillos: {m2x8: 2, m5x10: 1}}
+    - {id: guia_v_muelle, nombre: "Guía en V del muelle (tramo recto + V)", subsistema: Canaleta y muelle, componente: muelle_carga, cantidad: 2, medidas_mm: [61, 204, 20], volumen_cm3: 46.6, origen: malla, maciza: true, como: "malla del tramo en V (30,4) + la del tramo recto (16,2)", tornillos: {m4x12: 4}}
+    - {id: tope_muelle, nombre: "Tope del muelle con refuerzo", subsistema: Canaleta y muelle, componente: muelle_carga, cantidad: 2, medidas_mm: [34, 45, 28], volumen_cm3: 11.4, origen: malla, maciza: true, como: "bloque 7,8 + pie 2,9 + refuerzo 0,7", tornillos: {m4x12: 2}}
+    # ---------------------------------------------------------------- carro
+    - {id: cuna_carro, nombre: "Cuna del vaso (mampara, postes, brazos, asientos, lengüeta)", subsistema: Carro, componente: cuna_carro, cantidad: 1, medidas_mm: [111, 112, 89], volumen_cm3: 37.5, origen: malla, maciza: true, como: "suma de las mallas impresas de la cuna: mampara 19,3 + base 1,8 + 2 x 6,5 de postes y asientos + lengüeta 0,6 + 2,8 de detalles", tornillos: {m3x10: 6, tuerca_m3: 6}}
+    - {id: escuadra_frontal_carro, nombre: "Escuadra frontal del HC-SR04 y el VL53L0X", subsistema: Carro, cantidad: 1, medidas_mm: [51, 20, 34], volumen_cm3: 6.3, origen: malla, maciza: true, tornillos: {m3x10: 2, tuerca_m3: 2, m2x8: 4}}
+    - {id: soporte_encoder, nombre: "Soporte del encoder H206", subsistema: Carro, cantidad: 2, medidas_mm: [11, 9, 32], volumen_cm3: 1.0, origen: malla, maciza: true, tornillos: {m3x10: 1, tuerca_m3: 1}}
+    - {id: brazo_rodillo_guia, nombre: "Brazo del rodillo guía trasero", subsistema: Carro, cantidad: 2, medidas_mm: [40, 14, 12], volumen_cm3: 3.0, origen: estimado, maciza: true, como: "bloque atornillado + brazo de 4 mm (la malla incluye los rodamientos)", tornillos: {m3x30: 1, tuerca_m3: 1, m3x10: 2}}
+    - {id: caja_interruptor_carro, nombre: "Caja del interruptor y el fusible", subsistema: Carro, cantidad: 1, medidas_mm: [36, 16, 12], volumen_cm3: 3.0, origen: estimado, maciza: true, como: "caja de 36 x 16 x 12 hueca con pared de 2 mm (la malla es un sólido)", tornillos: {m3x10: 2}}
+    # ---------------------------------------------------------------- caja de control
+    - {id: tacos_tapa_caja, nombre: "Taco de esquina de la tapa de la caja", subsistema: Control y potencia, zona: Caja de control, cantidad: 4, medidas_mm: [14, 14, 15], volumen_cm3: 2.9, origen: malla, maciza: false, tornillos: {m4x12: 1, tuerca_m4: 1}}
+
+  # Perfil 2020: cada tramo con su largo MEDIDO en el modelo (las mallas `perfil_2020` y `viga` del
+  # visor, 2026-09-28). Los postes de las dos cámaras no son malla de perfil sino caja: se midió su
+  # alto en el modelo (poste cenital: 262 mm con abrazadera y pie; el de la cámara de vasos: 190).
+  perfil:
+    largo_barra_mm: 1000        # se compra en barras de 1 m
+    corte_mm: 3                 # lo que se come la sierra en cada corte
+    kg_por_m: 0.50              # V-Slot 2020 (hoja de datos: 0,49-0,51 kg/m)
+    tramos:
+      - {zona: Cinta de monedas, nombre: "Larguero del riel de la cinta de monedas", largo_mm: 251, cantidad: 2}
+      - {zona: Cinta de monedas, nombre: "Pata de la mesa de monedas", largo_mm: 418, cantidad: 3}
+      - {zona: Cinta de monedas, nombre: "Travesaño de la cola (a lo ancho)", largo_mm: 61, cantidad: 1}
+      - {zona: Cinta de monedas, nombre: "Travesaño lateral (a lo largo)", largo_mm: 155, cantidad: 1}
+      - {zona: Cinta de monedas, nombre: "Poste de la compuerta de desvío E4", largo_mm: 377, cantidad: 1}
+      - {zona: Cinta de monedas, nombre: "Poste de la cámara cenital", largo_mm: 240, cantidad: 1}
+      - {zona: Cinta de monedas, nombre: "Brazo de la cámara cenital", largo_mm: 70, cantidad: 1}
+      - {zona: Cinta de vasos, nombre: "Pata de la mesa de vasos", largo_mm: 88, cantidad: 4}
+      - {zona: Cinta de vasos, nombre: "Larguero de la mesa de vasos", largo_mm: 340, cantidad: 2}
+      - {zona: Cinta de vasos, nombre: "Travesaño de la mesa de vasos", largo_mm: 40, cantidad: 2}
+      - {zona: Cinta de vasos, nombre: "Poste de la cámara de vasos", largo_mm: 190, cantidad: 1}
+      - {zona: Pórtico, nombre: "Columna del pórtico", largo_mm: 398, cantidad: 2}
+      - {zona: Pórtico, nombre: "Viga del pórtico (a 40 cm)", largo_mm: 330, cantidad: 1}
+      - {zona: Canaleta y muelle, nombre: "Poste alto de la canaleta", largo_mm: 163, cantidad: 2}
+      - {zona: Canaleta y muelle, nombre: "Poste bajo de la canaleta", largo_mm: 137, cantidad: 2}
+      - {zona: Canaleta y muelle, nombre: "Travesaño de la canaleta", largo_mm: 105, cantidad: 2}
+      - {zona: Canaleta y muelle, nombre: "Larguero de la canaleta", largo_mm: 78, cantidad: 2}
+      - {zona: Canaleta y muelle, nombre: "Poste del escape de la canaleta", largo_mm: 43, cantidad: 1}
+
+  # Tornillería. `uniones` = lo de la estructura de perfil (contado en el modelo: 22 escuadras con
+  # 44 tornillos M5 y 15 pies niveladores; + 2 escuadras de los postes de las cámaras); lo de cada
+  # pieza impresa está en su `tornillos`. Se compra un `repuesto` de más (se pierden, se barren).
+  tornilleria:
+    repuesto: 0.10
+    tipos:
+      escuadra_2020: {nombre: "Escuadra 2020 de fundición", precio: 2500, masa_g: 14, fuente: estimado, tienda: mercadolibre}
+      pie_nivelador: {nombre: "Pie nivelador M6 Ø26 con contratuerca", precio: 3500, masa_g: 20, fuente: estimado, tienda: mercadolibre}
+      tuerca_t: {nombre: "Tuerca en T M5 (martillo) para 2020", precio: 450, masa_g: 2, fuente: estimado, tienda: mercadolibre}
+      m5x8: {nombre: "Tornillo M5 x 8 ISO 7380 (escuadras)", precio: 300, masa_g: 2.5, fuente: estimado, tienda: ferretronica}
+      m5x10: {nombre: "Tornillo M5 x 10 cabeza Allen", precio: 350, masa_g: 3, fuente: estimado, tienda: ferretronica}
+      m4x12: {nombre: "Tornillo M4 x 12 (o autorroscante para MDF)", precio: 250, masa_g: 2, fuente: estimado, tienda: ferretronica}
+      tuerca_m4: {nombre: "Tuerca M4", precio: 80, masa_g: 0.8, fuente: estimado, tienda: ferretronica}
+      m3x10: {nombre: "Tornillo M3 x 10", precio: 150, masa_g: 1, fuente: estimado, tienda: ferretronica}
+      m3x30: {nombre: "Tornillo M3 x 30", precio: 250, masa_g: 2, fuente: estimado, tienda: ferretronica}
+      tuerca_m3: {nombre: "Tuerca M3", precio: 50, masa_g: 0.4, fuente: estimado, tienda: ferretronica}
+      m2x8: {nombre: "Tornillo M2 x 8 autorroscante (servos, placas)", precio: 100, masa_g: 0.3, fuente: estimado, tienda: ferretronica}
+    uniones:
+      - {zona: Cinta de monedas, nombre: "Mesa de monedas (4 escuadras, 3 pies) + poste E4 (1 pie) + poste cenital (1 escuadra)", tornillos: {escuadra_2020: 5, m5x8: 10, tuerca_t: 10, pie_nivelador: 4}}
+      - {zona: Cinta de vasos, nombre: "Mesa de vasos (8 escuadras, 4 pies) + poste de la cámara de vasos (1 escuadra)", tornillos: {escuadra_2020: 9, m5x8: 18, tuerca_t: 18, pie_nivelador: 4}}
+      - {zona: Pórtico, nombre: "Pórtico (2 escuadras bajo la viga, 2 pies)", tornillos: {escuadra_2020: 2, m5x8: 4, tuerca_t: 4, pie_nivelador: 2}}
+      - {zona: Canaleta y muelle, nombre: "Soportes de la canaleta (8 escuadras, 4 pies) + poste del escape (1 pie)", tornillos: {escuadra_2020: 8, m5x8: 16, tuerca_t: 16, pie_nivelador: 5}}
 
 # Dónde abaratar (PROPUESTAS: el diseño NO se cambia sin que el grupo lo apruebe).
 # riesgo: bajo = mismo comportamiento; medio = funciona pero hay que medir algo; alto = cambia el diseño.
@@ -104,9 +248,9 @@ ahorros:
     detalle: "Con el filtro total, que haya pieza ya lo dice el infrarrojo de presencia (E1); no metálico = presencia sí e inductivo no. Se ahorran el LJC18A3 (32 606) y un canal del optoacoplador (~8 000). Se pierde la segunda confirmación de que la pieza sigue en la casilla en E2."
   - id: perfil_por_tubo
     titulo: "Pórtico en tubo cuadrado de aluminio de ferretería en vez de perfil 2020"
-    ahorro: 120000
+    ahorro: 290000
     riesgo: medio
-    detalle: "3 m de perfil V-Slot cuestan ~170 700; tubo cuadrado de 3/4\" cuesta ~15 000/m en ferretería. Se pierde lo modular (tuercas en T): hay que taladrar y ajustar alturas a mano."
+    detalle: "Los 6,1 m de perfil medidos en el modelo 3D salen en 7 barras de V-Slot (398 300); 7 m de tubo cuadrado de 3/4\" cuestan ~105 000 en ferretería (~15 000/m, estimado). Se pierde lo modular (tuercas en T): hay que taladrar y ajustar alturas a mano, y las escuadras de fundición ya no sirven tal cual."
   - id: pca9685_directo
     titulo: "Servos directo al PWM del ESP32 (sin PCA9685)"
     ahorro: 29500

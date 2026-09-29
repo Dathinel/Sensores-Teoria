@@ -18,7 +18,7 @@ tabla `ordenes`; no importa PyBullet ni abre el puerto serial; se refresca con
 | G2 | `visor.bat` → `app.lanzar --abrir-dashboard` | sin cambios | `tests/visor/test_portable.py` |
 | G3 | `?pestana=<clave>` abre directo una pestaña (resumen, produccion/monedas, calidad/rechazos/inspeccion, linea, ruta/carro, replicacion, asistente, ayuda) | `inicio.py` (+ clave nueva `pruebas`) | `test_query_pestana` |
 | G4 | Título de la página "Monedas inteligentes", ícono 🪙, ancho completo | `inicio.py` | — |
-| G5 | Tema oscuro (fondo #0e1116, paneles #161b22, ámbar como color principal) | `.streamlit/config.toml` + `estilo.py` | — |
+| G5 | Tema oscuro (fondo #0e1116, paneles #161b22, ámbar como color principal); las 9 pestañas siempre a la vista: si no caben en una fila (~900 px) pasan a una segunda, sin flecha de desplazamiento | `.streamlit/config.toml` + `estilo.py` | — |
 | G6 | `PLANTA_BD` apunta a otra base (pruebas) | `datos.py` (vía `configuracion.ruta_bd`) | todas |
 
 ## Cabecera (se refresca sola)
@@ -59,7 +59,7 @@ tabla `ordenes`; no importa PyBullet ni abre el puerto serial; se refresca con
 | R2 | 5 indicadores: valor aceptado, monedas aceptadas, piezas rechazadas, vasos entregados, peso estimado (con explicación: por conteo, no hay balanza) | `pestanas/resumen.py` | `test_con_una_corrida_completa_todas_las_pestanas_funcionan` |
 | R3 | Tarjetas de estado: cinta de monedas (piezas por cargar, moneda en espera), almacén (valor guardado, lote), cinta de vasos (cortina, tapas, vasos en la canaleta), carro (estado, radio, vaso que lleva / "reemplazo simulado") | `pestanas/resumen.py` | ídem |
 | R4 | Aviso con las alarmas activas | `pestanas/resumen.py` | — |
-| R5 | "Recorrido de las piezas": diagrama Sankey cargadas → aceptadas / rechazo por material / por visión → tubos / vasos → entregadas | `pestanas/resumen.py` | ídem |
+| R5 | "Recorrido de las piezas": diagrama Sankey cargadas → aceptadas (esta corrida) / rechazo por material / por visión → tubos / vasos → entregadas, con una segunda fuente "Del turno anterior" (monedas que ya estaban en los tubos); debajo, una frase que explica la diferencia entre valor aceptado, guardado y lo del turno anterior (`datos.cuentas_de_monedas`, las mismas cifras que Monedas y vasos) | `pestanas/resumen.py` + `datos.py` | ídem, `test_las_monedas_del_turno_anterior_se_cuentan_aparte` |
 | R6 | "Qué está pasando": últimos 11 eventos en frases simples con hora e ícono | `pestanas/resumen.py` + `textos.py` | ídem |
 
 ## Pestaña Monedas y vasos
@@ -69,7 +69,7 @@ tabla `ordenes`; no importa PyBullet ni abre el puerto serial; se refresca con
 | M1 | Barras de monedas aceptadas por denominación (cantidad · valor) | `pestanas/monedas.py` | ídem |
 | M2 | Valor acumulado en el tiempo (escalones, relleno) o "todavía no hay monedas aceptadas" | `pestanas/monedas.py` | ídem |
 | M3 | Almacén: barras por tubo (50…1000 y "otras") con la línea punteada del lote; verde si el lote está listo | `pestanas/monedas.py` | ídem |
-| M4 | Tabla de los vasos de la corrida (estado en palabras, denominación, monedas, valor, hora de llenado y de entrega) | `pestanas/monedas.py` | ídem |
+| M4 | Tabla de los vasos de la corrida (estado en palabras, denominación, monedas, valor, hora de llenado y de entrega); el subtítulo dice cuántas monedas de los vasos son de esta corrida y cuántas del turno anterior, y debajo la misma frase del Resumen | `pestanas/monedas.py` | ídem |
 
 ## Pestaña Calidad del filtro
 
@@ -77,7 +77,7 @@ tabla `ordenes`; no importa PyBullet ni abre el puerto serial; se refresca con
 |---|---|---|---|
 | Q1 | Mensaje sin piezas | `pestanas/calidad.py` | `test_sin_datos_todas_las_pestanas_cargan` |
 | Q2 | Indicadores: decisiones correctas (%), monedas buenas rechazadas, piezas malas aceptadas, piezas procesadas | `pestanas/calidad.py` | `test_con_una_corrida_completa…` ("Decisiones correctas") |
-| Q3 | Matriz "qué era cada pieza y qué decidió la línea" (verde aciertos, rojo errores) | `pestanas/calidad.py` | ídem |
+| Q3 | Matriz "qué era cada pieza y qué decidió la línea" (verde aciertos, rojo errores), agrupada por el tipo REAL de la pieza (moneda extranjera y cara con otro diámetro → "moneda que debe rechazarse"; disco → botón metálico); ninguna pieza se descarta y el total, escrito debajo, es el de "Piezas procesadas" | `pestanas/calidad.py` + `datos.matriz_aciertos` | `test_la_matriz_de_calidad_no_pierde_ninguna_pieza`, `test_la_matriz_cuadra_con_las_piezas_procesadas_de_una_corrida` |
 | Q4 | "Por qué se rechaza cada cosa": conteo por causa, qué filtra y qué etapa (sensores de material / cámara); filtros que no actuaron | `pestanas/calidad.py` | ídem |
 | Q5 | Detalle de la cámara: últimas 15 piezas medidas (diámetro, redondez, agujeros, clase, seguridad, decisión) + nota de cámara simulada | `pestanas/calidad.py` | — |
 
@@ -92,7 +92,7 @@ tabla `ordenes`; no importa PyBullet ni abre el puerto serial; se refresca con
 | L5 | Almacén tipo revólver: 5 tubos dibujados con nivel y marca del lote + compartimiento "otras" | `pestanas/linea.py` + `dibujos.py` | — |
 | L6 | Cinta de vasos: 5 casillas (verificación … descarga) con vaso dibujado (nivel, tapa, retirado, figura), estado, monedas y valor, denominación; tapas en el tubo y prensadas | `pestanas/linea.py` + `dibujos.py` | — |
 | L7 | LEDs: cortina (8, alarma), sensor del interior del vaso (5), Hall del carrusel (6) | `pestanas/linea.py` | — |
-| L8 | Bitácora detallada: 16 eventos, frase simple o el evento técnico tal cual | `pestanas/linea.py` | — |
+| L8 | Bitácora detallada: 16 eventos, frase simple o el evento técnico con sus valores en palabras (un conteo por tubo sale "$50: 4 · $100: 1", no un diccionario de Python) | `pestanas/linea.py` + `textos.valor_legible` | `test_la_bitacora_no_muestra_diccionarios_de_python` |
 | L9 | Sabotajes: retirar un vaso, cambiar por un vaso igual, cambiar por una figura, vaso con algo adentro, mano en la carga, mano que saca un vaso, mano en tapa/prensa ↔ quitar la mano, cortar ↔ reconectar la radio del carro (cada uno activo solo cuando tiene sentido) | **movido** a 🧪 Pruebas (sección 3) | `test_pestana_pruebas_tiene_todo` |
 | L10 | "📦 Empacar lo guardado en los tubos (fin de turno)" (`embalar_parciales`, activo si hay algo guardado) | **movido** a 🧪 Pruebas (sección 4) | ídem |
 
@@ -102,7 +102,7 @@ tabla `ordenes`; no importa PyBullet ni abre el puerto serial; se refresca con
 |---|---|---|---|
 | K1 | Tarjetas del carro: qué hace (tramo), carga (vaso, inclinación), radio ESP-NOW (mensajes guardados), cuna (infrarrojo 12), odometría (error en mm); o "no hay carro con física" | `pestanas/carro.py` | — |
 | K2 | Indicadores: vasos entregados, obstáculos esquivados, distancia recorrida | `pestanas/carro.py` | — |
-| K3 | Mapa de la pista: línea, muros, meta, marca de giro, muelle, recorrido real, hitos (obstáculo, esquiva, vuelve a la línea, detenido, orden, camino bloqueado, bloqueado, atascado), odometría y el carro con su rumbo; leyenda en palabras | `pestanas/carro.py` | — |
+| K3 | Mapa de la pista (rango y alto ajustados a todo lo dibujado: muros, recorrido real con sus esquivas y el carro, más un margen): línea, muros, meta, marca de giro, muelle, recorrido real, hitos (obstáculo, esquiva, vuelve a la línea, detenido, orden, camino bloqueado, bloqueado, atascado), odometría y el carro con su rumbo; leyenda en palabras | `pestanas/carro.py` | — |
 | K4 | Pista desde `/api/geometria` del supervisor o, si no corre, desde la demo grabada; "No hay geometría" si ninguna | `datos.py` | — |
 | K5 | Tabla de eventos del recorrido | `pestanas/carro.py` | — |
 | K6 | Tabla de viajes del carro (sale, ida, ¿entregado?, viaje completo) | `pestanas/carro.py` | — |
@@ -114,7 +114,7 @@ tabla `ordenes`; no importa PyBullet ni abre el puerto serial; se refresca con
 |---|---|---|---|
 | T1 | Nota: valores PROVISIONALES, detalle en `docs/replicacion.md` | `pestanas/montaje.py` | — |
 | T2 | Indicadores: ciclo de la cinta, ritmo (elem/min), esta corrida en el montaje real (s), reacción de la cortina | `pestanas/montaje.py` | — |
-| T3 | Tabla del presupuesto de tiempos (necesita, disponible, margen, OK/NO CABE, por qué) + aviso de margen justo (<15 %) | `pestanas/montaje.py` | — |
+| T3 | Tabla del presupuesto de tiempos (necesita, disponible, margen, OK / NO CABE / "espera aceptada" en ámbar para las esperas del carrusel que el grupo aceptó, con su nota; por qué), con tildes y la estación de la cámara actual (`textos.con_tildes`, sin tocar `control/tiempos.py`) + aviso de margen justo (<15 %) | `pestanas/montaje.py` | `test_la_tabla_de_tiempos_tiene_tildes_y_esperas_aceptadas` |
 | T4 | Errores de los sensores en esta corrida (falsos rechazos, falsas aceptaciones, clase equivocada) o "sensores perfectos"; nota de lecturas por decisión | `pestanas/montaje.py` | — |
 | T5 | Costo del proyecto en Colombia por subsistema (barras) + tabla de dónde abaratar | `pestanas/montaje.py` | — |
 | T6 | Monedas por medir (clases con medidas provisionales) | `pestanas/montaje.py` | — |
@@ -143,7 +143,7 @@ tabla `ordenes`; no importa PyBullet ni abre el puerto serial; se refresca con
 |---|---|---|---|
 | H1 | Qué hace el sistema en tres pasos (clasificar, empacar, entregar) | `pestanas/ayuda.py` | — |
 | H2 | Qué muestra cada pestaña | `pestanas/ayuda.py` (+ la pestaña Pruebas nueva) | — |
-| H3 | Palabras que aparecen (lote, cortina, rechazo por material/visión, radio, peso estimado, odometría) | `pestanas/ayuda.py` | — |
+| H3 | Palabras que aparecen (lote, cortina, rechazo por material/visión, radio, peso estimado, del turno anterior, espera aceptada, odometría); el asistente se describe en su orden real: DeepSeek → modelo local qwen2.5 (Ollama) → reglas | `pestanas/ayuda.py` | — |
 | H4 | "Para ver la planta en 3D … abra visor.bat" | `pestanas/ayuda.py` | — |
 
 ## Frases simples de los eventos (para quien no conoce el sistema)

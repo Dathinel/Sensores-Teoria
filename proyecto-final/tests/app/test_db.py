@@ -46,3 +46,17 @@ def test_almacen_turno_sobrevive_a_reiniciar_corrida(tmp_path):
         assert db.leer_almacen_turno(conexion) == monedas
     finally:
         conexion.close()
+
+
+def test_ultima_telemetria_salta_un_payload_vacio(tmp_path):
+    """El dashboard lee mientras el supervisor escribe: una telemetria con
+    payload vacio o `null` no tiene que tumbarlo; se usa la anterior valida."""
+    conexion = db.conectar(tmp_path / "prueba.db")
+    try:
+        for payload in ('{"linea": "run"}', "", "null"):
+            conexion.execute("INSERT INTO eventos (ts, origen, tipo, payload) VALUES (?, ?, ?, ?)",
+                             ("2026-01-01T00:00:00", "planta", "tel", payload))
+        conexion.commit()
+        assert db.ultima_telemetria(conexion)["linea"] == "run"
+    finally:
+        conexion.close()

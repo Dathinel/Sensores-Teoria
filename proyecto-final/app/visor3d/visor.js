@@ -227,7 +227,7 @@ function embudo(centroArriba, radioArriba, centroAbajo, radioAbajo, color, extra
 // Etiquetas: se muestran solo cuando la camara esta lo bastante cerca para
 // leerlas (con todo el sistema en pantalla serian manchas encimadas).
 const ETIQUETAS = [];
-function etiqueta(texto, { alto = 0.012, color = '#e6e8eb', fondo = 'rgba(14,17,22,0.78)', borde = null, alcance = null } = {}) {
+function etiqueta(texto, { alto = 0.012, color = '#e6e8eb', fondo = 'rgba(14,17,22,0.78)', borde = null, alcance = null, prioridad = 0 } = {}) {
   const lienzo = document.createElement('canvas');
   const ctx = lienzo.getContext('2d');
   const fuente = 44;
@@ -249,45 +249,208 @@ function etiqueta(texto, { alto = 0.012, color = '#e6e8eb', fondo = 'rgba(14,17,
   const h = THREE.MathUtils.clamp(0.017 + (alto - 0.004) * 0.9, 0.017, 0.03);
   sprite.scale.set(h * lienzo.width / lienzo.height, h, 1);
   sprite.renderOrder = 10;
-  sprite.userData.etiqueta = { alcance: (alcance ?? alto * 60) * 1.8 };
+  sprite.userData.etiqueta = { alcance: (alcance ?? alto * 60) * 1.8, texto };
+  // Metros de ventaja al repartir el lugar en pantalla (las estaciones ganan a sus vecinas).
+  sprite.userData.prioridad = prioridad;
   ETIQUETAS.push(sprite);
   return sprite;
 }
 
 const _p = new THREE.Vector3();
 const _q = new THREE.Vector3();
-// 1 si la etiqueta queda entera por debajo de las barras de arriba (barra fija, vistas y aviso
-// de modo, medidas por interfaz.js), 0 si queda debajo de ellas, y un fundido entre medio: las
-// etiquetas cerca del borde de arriba quedaban tapadas a medias por los botones (2026-09-28).
+const _dir = new THREE.Vector3();
+
+// --- Etiquetas sin encimarse (revision visual, 2026-09-28) ---
+// Antes cada etiqueta solo miraba su distancia a la camara: en las vistas cercanas se apilaban
+// (E1..E4, las placas del carro, las de la caja de control) y se leian a traves de las piezas
+// (depthTest apagado). Ahora, en cada cuadro:
+//  1. se proyecta cada etiqueta a la pantalla (su rectangulo en pixeles);
+//  2. se ordenan por PRIORIDAD: la del sensor resaltado primero, despues la mas cercana al punto
+//     que mira la camara (el foco de la vista actual gana);
+//  3. se colocan en ese orden: si choca con una ya puesta (o con la interfaz: barras, panel,
+//     avisos, bitacora, leyenda), se prueba correrla media etiqueta arriba o abajo; si tampoco
+//     cabe, se oculta;
+//  4. se ocultan las que quedan DETRAS de una pieza solida (profundidad de la escena medida en la
+//     GPU cada ~250 ms) y las muy lejos del foco de la vista;
+//  5. aparecen y desaparecen con un fundido corto (no parpadean al girar).
 // Tamaño en pantalla del sprite (sizeAttenuation false): escala x (1/tan(fov/2)) x media altura.
-function fueraDeLasBarras(e) {
-  const zonas = ui.zonasArriba();
-  if (!zonas.length) return 1;
-  _q.copy(_p).project(camara);
-  if (_q.z > 1) return 1;
+let zonasUI = [];
+let zonasUIHechas = -1e9;
+// Cuanto corrio volarA la mira para centrar lo enfocado en la parte libre: el foco REAL de la
+// vista es controles.target - desfaseFoco (vale tambien si el usuario gira o acerca la camara).
+const desfaseFoco = new THREE.Vector3();
+const _foco = new THREE.Vector3();
+
+// Oclusion por PROFUNDIDAD en la GPU: cada ~250 ms se dibuja la escena a 256 px de ancho con un
+// material que solo guarda la profundidad de cada pixel (solo las piezas solidas: sin conos ni
+// campos, vidrios, lineas, LED, etiquetas ni tornilleria instanciada) y se lee a la CPU. Una
+// etiqueta esta "tapada" si en su pixel hay una pieza mas cerca que ella. Se probo antes con rayos
+// (Raycaster), pero las mallas unidas por optimizar.js son enormes: 7-10 ms por rayo.
+const OCLU_ANCHO = 256;
+const ocluRT = new THREE.WebGLRenderTarget(OCLU_ANCHO, 128, { depthBuffer: true });
+const ocluMat = new THREE.ShaderMaterial({
+  side: THREE.DoubleSide,
+  vertexShader: 'void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  // gl_FragCoord.z (0..1) repartido en 3 bytes (r + g/255 + b/255^2).
+  fragmentShader: 'void main() { float z = gl_FragCoord.z; vec3 e = fract(z * vec3(1.0, 255.0, 65025.0));'
+    + ' e -= e.yzz * vec3(1.0 / 255.0, 1.0 / 255.0, 0.0); gl_FragColor = vec4(e, 1.0); }',
+});
+const ocluCam = new THREE.PerspectiveCamera();
+let ocluPix = null;
+let ocluAlto = 128;
+let ocluHecha = -1e9;
+const _blancoOclu = new THREE.Color(0xffffff);
+function esSolidoParaOclusion(o) {
+  if (o.isSprite || o.isLine || o.isPoints || o.isInstancedMesh) return false;
+  if (!o.isMesh) return true;
+  if (o.userData.campo) return false;
+  const mt = Array.isArray(o.material) ? o.material[0] : o.material;
+  if (!mt || mt.isMeshBasicMaterial || mt.isShaderMaterial) return false;
+  return !(mt.transparent && mt.opacity < 0.6);
+}
+function medirProfundidad(ahora) {
+  if (ahora - ocluHecha < 250) return;
+  ocluHecha = ahora;
   const W = window.innerWidth, H = window.innerHeight;
-  const x = (_q.x + 1) / 2 * W, y = (1 - _q.y) / 2 * H;
-  const k = camara.projectionMatrix.elements[5] * H / 2;
-  const alto = e.scale.y * k, ancho = e.scale.x * k;
-  let f = 1;
-  for (const z of zonas) {
-    if (x + ancho / 2 < z.izq || x - ancho / 2 > z.der) continue;
-    f = Math.min(f, THREE.MathUtils.clamp((y + alto / 2 - z.abajo) / alto, 0, 1));
+  ocluAlto = Math.max(16, Math.round(OCLU_ANCHO * H / W));
+  if (ocluRT.height !== ocluAlto) ocluRT.setSize(OCLU_ANCHO, ocluAlto);
+  const ocultos = [];
+  escena.traverseVisible((o) => { if (o !== escena && !esSolidoParaOclusion(o)) ocultos.push(o); });
+  for (const o of ocultos) o.visible = false;
+  const fondo = escena.background, niebla = escena.fog, sobre = escena.overrideMaterial;
+  const auto = renderer.shadowMap.autoUpdate, previo = renderer.getRenderTarget();
+  const colorPrevio = renderer.getClearColor(new THREE.Color()), alfaPrevio = renderer.getClearAlpha();
+  try {
+    escena.background = null; escena.fog = null; escena.overrideMaterial = ocluMat;
+    renderer.shadowMap.autoUpdate = false;
+    renderer.setRenderTarget(ocluRT);
+    renderer.setClearColor(_blancoOclu, 1);   // blanco = lo mas lejos
+    renderer.clear();
+    renderer.render(escena, camara);
+    if (!ocluPix || ocluPix.length !== OCLU_ANCHO * ocluAlto * 4) ocluPix = new Uint8Array(OCLU_ANCHO * ocluAlto * 4);
+    renderer.readRenderTargetPixels(ocluRT, 0, 0, OCLU_ANCHO, ocluAlto, ocluPix);
+    ocluCam.copy(camara);
+  } finally {
+    renderer.setRenderTarget(previo);
+    renderer.setClearColor(colorPrevio, alfaPrevio);
+    renderer.shadowMap.autoUpdate = auto;
+    escena.background = fondo; escena.fog = niebla; escena.overrideMaterial = sobre;
+    for (const o of ocultos) o.visible = true;
   }
-  return f;
+}
+// Distancia (a lo largo de la vista) de la profundidad guardada: z de 0..1 a metros.
+function linealDesdeZ(z) {
+  const n = ocluCam.near, f = ocluCam.far;
+  const ndc = z * 2 - 1;
+  return (2 * n * f) / (f + n - ndc * (f - n));
+}
+// La etiqueta en `_p` queda detras de una pieza? Mira un cuadrito de 3 x 3 pixeles y se queda con
+// lo MAS LEJANO: una viga fina delante no la tapa, una pieza que la cubre entera si.
+function tapadaPorPieza() {
+  if (!ocluPix) return false;
+  _q.copy(_p).project(ocluCam);
+  if (_q.z > 1 || Math.abs(_q.x) > 1 || Math.abs(_q.y) > 1) return false;
+  const u = Math.round((_q.x + 1) / 2 * (OCLU_ANCHO - 1)), v = Math.round((_q.y + 1) / 2 * (ocluAlto - 1));
+  let lejos = 0;
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+    const x = THREE.MathUtils.clamp(u + dx, 0, OCLU_ANCHO - 1), y = THREE.MathUtils.clamp(v + dy, 0, ocluAlto - 1);
+    const k = (y * OCLU_ANCHO + x) * 4;
+    const z = ocluPix[k] / 255 + ocluPix[k + 1] / 65025 + ocluPix[k + 2] / 16581375;
+    lejos = Math.max(lejos, z);
+  }
+  if (lejos >= 0.999) return false;   // nada solido en ese pixel
+  const pieza = linealDesdeZ(lejos);
+  const etiqueta = linealDesdeZ(_q.z * 0.5 + 0.5);
+  // Tolerancia: la etiqueta flota justo encima de su pieza; esa pieza no cuenta como "delante".
+  return pieza < etiqueta - Math.max(0.025, etiqueta * 0.06);
+}
+function chocan(a, b) {
+  return a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
 }
 function actualizarEtiquetas() {
+  const ahora = performance.now();
+  const W = window.innerWidth, H = window.innerHeight;
+  const k = camara.projectionMatrix.elements[5] * H / 2;
+  if (ahora - zonasUIHechas > 300) {
+    zonasUIHechas = ahora;
+    try { zonasUI = ui.zonasOcupadas ? ui.zonasOcupadas() : []; } catch (err) { zonasUI = []; }
+  }
+  const foco = _foco.subVectors(controles.target, desfaseFoco);
+  const distFoco = camara.position.distanceTo(foco);
+  const cand = [];
   for (const e of ETIQUETAS) {
+    const d = e.userData;
+    d.meta ??= 0;
+    d.vis ??= 0;
+    d.meta = 0;
     if (!e.parent) continue;
     e.getWorldPosition(_p);
-    const a = e.userData.etiqueta.alcance;
-    let op = Math.max(0, Math.min(1, (a - _p.distanceTo(camara.position)) / (a * 0.3)));
-    if (e.userData.sensorId && resaltados.has(e.userData.sensorId)) op = 1;
-    op *= fueraDeLasBarras(e);
-    e.material.opacity = op * (e.userData.opacidadBase ?? 1);
+    const distCam = _p.distanceTo(camara.position);
+    const a = d.etiqueta.alcance;
+    const resaltada = !!(d.sensorId && resaltados.has(d.sensorId));
+    const distF = _p.distanceTo(foco);
+    let op = Math.max(0, Math.min(1, (a - distCam) / (a * 0.3)));
+    // Cerca del foco de la vista se leen enteras aunque su `alcance` ya las estuviera desvaneciendo
+    // (en la vista Caja de control los rotulos de las placas quedaban grises, ilegibles).
+    if (resaltada || (distF < distFoco * 0.4 && distCam < a * 1.4)) op = 1;
+    d.op = op;
+    if (d.oculta || op <= 0.02) continue;
+    // Muy lejos del foco de la vista: no es de esta vista. De lado (mas de 1,15 veces la distancia
+    // de la camara al foco) o DETRAS de lo enfocado (p. ej. "Caja de control" sobre el rollo de tapas
+    // en la vista Vasos, o los sensores de material asomando detras de la cinta de vasos). Los hitos
+    // de largo alcance (META, la nube) se quedan.
+    if (!resaltada && distF > Math.max(0.3, distFoco * 1.15)) continue;
+    const detras = _dir.subVectors(_p, foco).dot(_q.subVectors(foco, camara.position).normalize());
+    if (!resaltada && a < 3 && detras > Math.max(0.1, distFoco * 0.17)) continue;
+    _q.copy(_p).project(camara);
+    if (_q.z > 1 || _q.z < -1) continue;
+    const x = (_q.x + 1) / 2 * W, y = (1 - _q.y) / 2 * H;
+    const alto = e.scale.y * k, ancho = e.scale.x * k;
+    if (x + ancho / 2 < 0 || x - ancho / 2 > W || y + alto / 2 < 0 || y - alto / 2 > H) continue;
+    // Las del centro de la vista son el TEMA de la toma: se muestran aunque una pieza las tape
+    // (p. ej. en la vista Material la del inductivo queda detras de su propio sensor).
+    const tema = resaltada || distF < Math.max(0.06, distFoco * 0.22);
+    cand.push({ e, x, y, alto, ancho, distCam, tema, prio: (resaltada ? -1e3 : 0) + distF - (d.prioridad || 0) });
+  }
+  cand.sort((u, v) => u.prio - v.prio);
+  // Oclusion: la profundidad de la escena se mide cada ~250 ms (medirProfundidad).
+  if (cand.length) { try { medirProfundidad(ahora); } catch (err) { ocluPix = null; } }
+  const puestas = [];
+  for (const c of cand) {
+    const d = c.e.userData;
+    c.e.getWorldPosition(_p);
+    try { d.tapada = tapadaPorPieza(); } catch (err) { d.tapada = false; }
+    if (d.tapada && !c.tema) continue;
+    // Donde cabe: en su lugar, media etiqueta arriba, media abajo, una entera arriba.
+    let puesto = null;
+    for (const s of [0, 0.62, -0.62, 1.15]) {
+      const r = { x0: c.x - c.ancho / 2 - 2, x1: c.x + c.ancho / 2 + 2, y0: c.y - c.alto / 2 - s * c.alto - 1, y1: c.y + c.alto / 2 - s * c.alto + 1 };
+      if (puestas.some((o) => chocan(r, o)) || zonasUI.some((z) => chocan(r, z))) continue;
+      puesto = { r, s };
+      break;
+    }
+    if (!puesto) continue;
+    puestas.push(puesto.r);
+    d.meta = 1;
+    // Correrla hacia arriba/abajo en pantalla: el ancla del sprite (center) se mueve en alturas.
+    const cy = 0.5 - puesto.s;
+    if (d.vis < 0.05 || Math.abs(c.e.center.y - cy) < 1e-3) c.e.center.y = cy;
+    else c.e.center.y += (cy - c.e.center.y) * 0.35;
+  }
+  // Fundido por tiempo real (no por cuadro): igual de rapido a 60 fps que en una captura lenta.
+  const dtReal = Math.min(0.5, Math.max(0, (ahora - (actualizarEtiquetas.antes || ahora)) / 1000));
+  actualizarEtiquetas.antes = ahora;
+  const paso = 1 - Math.exp(-dtReal * 12);
+  for (const e of ETIQUETAS) {
+    const d = e.userData;
+    if (d.vis === undefined) continue;
+    d.vis += ((d.meta || 0) - d.vis) * paso;
+    if (d.vis < 0.01) d.vis = 0;
+    const op = (d.op || 0) * d.vis;
+    e.material.opacity = op * (d.opacidadBase ?? 1);
     // `oculta`: apagada a proposito (p. ej. la de "sin internet" con internet). Sin esto, este bucle
     // la volvia a encender en cada cuadro y quedaba encimada sobre la otra (2026-09-27).
-    e.visible = !e.userData.oculta && op > 0.02;
+    e.visible = !d.oculta && op > 0.02;
   }
 }
 
@@ -349,8 +512,12 @@ const caida = (u) => u * u;                    // arranca quieto y acelera (grav
 const frenado = (u) => 1 - (1 - u) * (1 - u);  // arranca rapido y frena
 const seg = (clave, defecto) => (((G && G.tiempos_ms && G.tiempos_ms[clave]) || defecto) / 1000);
 
-function animar(segundos, fn, { retraso = 0, fin = null, dueno = null } = {}) {
-  const a = { t0: performance.now() + (retraso / VEL) * 1000, dur: Math.max(1, (segundos / VEL) * 1000), fn, fin, dueno };
+// `espera` (opcional, lo usa el carrusel): funcion que mientras devuelva true
+// no deja EMPEZAR la animacion (se corre su arranque cuadro a cuadro). Sirve
+// para ordenar por ESTADO y no por reloj: con pocos cuadros por segundo los
+// tramos encadenados se estiran y un horario fijo se adelantaba.
+function animar(segundos, fn, { retraso = 0, fin = null, dueno = null, espera = null } = {}) {
+  const a = { t0: performance.now() + (retraso / VEL) * 1000, dur: Math.max(1, (segundos / VEL) * 1000), fn, fin, dueno, espera };
   ANIMS.push(a);
   return a;
 }
@@ -362,6 +529,12 @@ function correrAnimaciones() {
   for (let i = ANIMS.length - 1; i >= 0; i--) {
     const a = ANIMS[i];
     if (ahora < a.t0) continue;
+    if (a.espera) {
+      if (a.espera()) { a.bloqueada = true; continue; }   // todavia no: arranca cuando se cumpla
+      a.espera = null;
+      // Si estuvo esperando, empieza AHORA desde 0 (no salta lo que espero).
+      if (a.bloqueada) a.t0 = ahora;
+    }
     const u = Math.min(1, (ahora - a.t0) / a.dur);
     a.fn(u);
     if (u >= 1) { ANIMS.splice(i, 1); if (a.fin) a.fin(); }
@@ -853,7 +1026,7 @@ function construirCintaMonedas() {
     grupo.add(guia);
   }
   est.forEach((p, i) => {
-    const e = etiqueta(NOMBRES_E_MONEDAS[i], { alto: 0.0085 });
+    const e = etiqueta(NOMBRES_E_MONEDAS[i], { alto: 0.0085, prioridad: 0.08 });
     e.position.copy(Vxyz(p[0], y + 0.05, zs + 0.012));
     grupo.add(e);
   });
@@ -1055,7 +1228,7 @@ function construirCintaVasos() {
   registrar('estructura', ...ladosBastidor);
   mesa(grupo, [x0 + 0.02, x1 - 0.02], [y - 0.03, y + 0.03], zb, 'estructura');
   est.forEach((p, i) => {
-    const e = etiqueta(NOMBRES_E_VASOS[i], { alto: 0.011 });
+    const e = etiqueta(NOMBRES_E_VASOS[i], { alto: 0.011, prioridad: 0.08 });
     e.position.copy(Vxyz(p[0], y - 0.075, zs + 0.004));
     grupo.add(e);
   });
@@ -1595,33 +1768,114 @@ function construirAlmacen(grupo) {
   grupo.add(motor, ...soporte);
   registrar('motor_carrusel', motor, carrusel);
   registrar('estructura', ...soporte);
-  P.carrusel = { grupo: carrusel, angulo: 0, libre: 0, cx, cy, R, zBase,
+  P.carrusel = { grupo: carrusel, angulo: 0, finGiro: 0, giros: 0, activo: 0, cx, cy, R, zBase,
     carga: ang(al.angulo_carga), agujero: ang(al.angulo_agujero) };
   const et = etiqueta('Almacén tipo revólver', { alto: 0.011, color: '#3fb68b' });
   et.position.copy(Vxyz(cx - 0.08, cy - 0.02, zArriba + 0.03));
   grupo.add(et);
 }
 
-// Gira el carrusel (en cola: un movimiento empieza cuando termina el
-// anterior) hasta que el tubo `denominacion` quede en `anguloDestino`.
-// Devuelve cuantos segundos faltan para que termine el giro.
-function girarCarrusel(denominacion, anguloDestino, retraso = 0) {
+// El carrusel SIGUE a la simulacion (usuario, 2026-09-28: "la moneda pasa sin
+// que se espere a que de la vuelta"). Antes el visor giraba por su cuenta, en
+// una cola propia que se iba atrasando (hasta 6,5 s) mientras la moneda caia
+// igual: caia a un tubo que todavia no llegaba. Ahora cada giro es un evento
+// `carrusel/gira` de la simulacion (sim/planta.py + control/carrusel.py) con
+// su angulo final, su duracion real (28BYJ-48: media vuelta = 4,1 s) y cuando
+// arranca dentro del ciclo (`en_ms`); aqui solo se anima eso, a la velocidad
+// del visor. Un giro nuevo arranca desde donde este el disco en ese momento
+// (como el firmware, que solo cambia su objetivo), asi que nunca se acumula
+// atraso. `c.finGiro` (ms de performance.now) es cuando termina el ultimo
+// giro pedido: la moneda y el lote no caen antes.
+// La CAIDA ocupa el disco (revision visual 2026-09-29: de 15 llegadas, 8 caian
+// 15-37 mm fuera de la boca con el disco girando 22-40 grados). La simulacion ya
+// retrasa el giro a la siguiente moneda hasta que la anterior llega al fondo de
+// su tubo (`en_ms`, tiempos_ms.caida_moneda_tubo). Como red de seguridad el visor
+// ordena por ESTADO, no por reloj (con pocos cuadros por segundo un horario fijo
+// se adelantaba a la animacion de la caida):
+//  - cada moneda que va al almacen y cada lote se anotan en `c.enAire` con el
+//    giro que los deja en su lugar (`necesita`: el ultimo giro pedido cuando
+//    llegaron; la simulacion solo suelta con el tubo ya puesto);
+//  - la moneda no deja la cinta (y el obturador no abre) hasta que ESE giro
+//    termino (`c.terminado`);
+//  - un giro pedido DESPUES no arranca mientras quede en el aire algo anotado
+//    antes que el (hasta que la moneda aterriza o el obturador cierra).
+// Los giros arrancan en orden (`inicioUltimo`): un giro viejo retrasado no
+// puede tomar el disco despues del nuevo.
+function girarCarrusel(e) {
   const c = P.carrusel;
-  const t = P.tubos[denominacion] || P.tubos.otras;
-  if (!c || !t) return 0;
-  let objetivo = anguloDestino - t.anguloCasa;
-  const actual = c.objetivo ?? c.angulo;
-  let dif = Math.atan2(Math.sin(objetivo - actual), Math.cos(objetivo - actual));
-  objetivo = actual + dif;
-  c.objetivo = objetivo;
-  const dur = Math.max(0.05, seg('carrusel_giro', 500) * Math.abs(dif) / Math.PI);
-  const ahora = performance.now() / 1000;
-  const inicio = Math.max(ahora + retraso / VEL, c.libre);
-  c.libre = inicio + dur / VEL;
-  const desde = actual;
-  animar(dur, (u) => { c.angulo = desde + dif * suave(u); c.grupo.rotation.y = c.angulo; },
-    { retraso: (inicio - ahora) * VEL });
-  return (c.libre - ahora) * VEL;
+  if (!c) return;
+  const id = ++c.giros;
+  const hasta = (e.hasta_grados * Math.PI) / 180;
+  const difSim = ((e.hasta_grados - e.desde_grados) * Math.PI) / 180;
+  const dur = Math.max(0.05, (e.dur_ms || 0) / 1000);
+  const ahora = performance.now();
+  const retraso = Math.max(0, (e.en_ms || 0) / 1000, (((c.inicioUltimo || 0) - ahora) / 1000) * VEL);
+  c.inicioUltimo = ahora + (retraso / VEL) * 1000;
+  // Espera si el giro anterior todavia no arranco (si no, al arrancar despues le
+  // quitaria el disco) o si algo anotado antes que este sigue cayendo.
+  const espera = () => (c.empezado || 0) < id - 1 || (c.enAire || []).some((m) => m.necesita < id);
+  let desde = null, dif = 0;
+  animar(dur, (u) => {
+    if (desde === null) {
+      // Toma el disco donde este (el giro anterior deja de mandar).
+      c.activo = id;
+      c.empezado = Math.max(c.empezado || 0, id);
+      desde = c.angulo;
+      dif = Math.atan2(Math.sin(hasta - desde), Math.cos(hasta - desde));
+      if (Math.abs(Math.abs(dif) - Math.PI) < 1e-3) dif = Math.sign(difSim || 1) * Math.PI;   // media vuelta: mismo sentido
+    }
+    if (c.activo !== id) return;
+    // Velocidad constante: el firmware da un medio paso cada 2 ms, sin rampas.
+    c.angulo = desde + dif * u;
+    c.grupo.rotation.y = c.angulo;
+    c.girando = u < 1;
+  }, { retraso, dueno: c, espera, fin: () => {
+    // Termino con el disco en su lugar (si otro giro no se lo quito antes).
+    if (c.activo === id) { c.girando = false; c.terminado = Math.max(c.terminado || 0, id); }
+  } });
+  c.finGiro = ahora + ((retraso + dur) / VEL) * 1000;
+}
+
+// Una moneda que va a su tubo, o un lote que va a caer por el obturador: queda
+// anotado con el giro que lo deja en su lugar (el ultimo pedido hasta ahora).
+function anotarEnAire() {
+  const c = P.carrusel;
+  if (!c) return null;
+  const marca = { necesita: c.giros };
+  (c.enAire = c.enAire || []).push(marca);
+  return marca;
+}
+function quitarDelAire(marca) {
+  const c = P.carrusel;
+  if (c && marca) c.enAire = (c.enAire || []).filter((m) => m !== marca);
+}
+// True mientras el giro que necesita `marca` no haya terminado (el tubo todavia
+// no esta quieto en la carga o sobre el agujero).
+function faltaSuGiro(marca) {
+  const c = P.carrusel;
+  return !!(c && marca && (c.terminado || 0) < marca.necesita);
+}
+
+// Segundos (de simulacion) que faltan para que el carrusel quede quieto (para
+// revisar desde la consola; la moneda y el lote esperan por estado, faltaSuGiro).
+function faltaCarrusel() {
+  const c = P.carrusel;
+  return c ? Math.max(0, ((c.finGiro - performance.now()) / 1000) * VEL) : 0;
+}
+
+// Visor abierto a mitad de corrida (o corrida nueva): el disco donde dice la simulacion.
+function ubicarCarrusel() {
+  const c = P.carrusel, e = estado.carrusel;
+  if (!c || !e || typeof e.angulo_grados !== 'number') return;
+  cancelar(c);
+  c.activo = ++c.giros;
+  c.angulo = (e.angulo_grados * Math.PI) / 180;
+  c.grupo.rotation.y = c.angulo;
+  c.finGiro = 0;
+  c.girando = false;
+  // Lo que se esperaba ya no cuenta: el disco esta donde dice la simulacion.
+  c.empezado = c.terminado = c.giros;
+  c.enAire = [];
 }
 
 function colorMoneda(denominacion, i) {
@@ -1631,11 +1885,20 @@ function colorMoneda(denominacion, i) {
 
 function sincronizarAlmacen() {
   const al = estado.almacen || {};
+  // La pila crece cuando la moneda termina de caer en la boca del tubo (no
+  // cuando cambia la cuenta: esa cambia al empezar la caida). Revision visual
+  // 2026-09-29: la pila de $500 crecia con el disco quieto en el tubo $200 (la
+  // cuenta subia sin animacion de caida). Ahora crece SOLO cuando termina de
+  // caer una moneda de ESE tubo (`tubo.aterrizadas`); si la cuenta sube sin
+  // caida (almacen precargado, visor abierto a mitad de corrida) se pone de una
+  // vez al arrancar, o con el disco quieto, nunca en medio de un giro.
+  const libre = !P.almacenVisto || !(P.carrusel && P.carrusel.girando);
   for (const d of [...DENOMINACIONES, 'otras']) {
     const tubo = P.tubos && P.tubos[d];
     if (!tubo) continue;
-    const n = Number(al[String(d)] || 0);
-    while (tubo.n < n) {
+    const n = Math.max(0, Number(al[String(d)] || 0) - (tubo.cayendo || 0));
+    while (tubo.n < n && (libre || (tubo.aterrizadas || 0) > 0)) {
+      if (tubo.aterrizadas > 0) tubo.aterrizadas--;
       const moneda = cilindro(tubo.radio - 0.0025, 0.0018, colorMoneda(d, tubo.n),
         new THREE.Vector3(0, 0.002 + tubo.n * G.almacen.grosor_moneda, 0), { metalness: 0.85, roughness: 0.3 });
       tubo.pila.add(moneda);
@@ -1647,36 +1910,50 @@ function sincronizarAlmacen() {
       tubo.n--;
     }
   }
+  if (estado.almacen) P.almacenVisto = true;
 }
 
 function animarEmbalado(e) {
-  // El carrusel pone ese tubo sobre el agujero, se abre el obturador y la
-  // pila entera cae por el embudo al vaso de llenado.
+  // El tubo ya llego al agujero (el giro vino antes, en su propio evento
+  // `carrusel/gira`): se abre el obturador en el instante que dice la
+  // simulacion (`en_ms`) y la pila entera cae por el embudo al vaso de
+  // llenado. Revision visual 2026-09-29 (el lote de $500 caia a 9 mm del agujero
+  // con 15 grados de giro en el segundo previo): el obturador abre recien cuando
+  // ESE giro termino (el tubo quieto sobre el agujero, por estado y no por
+  // reloj) y hasta que cierra el disco no gira (el giro de vuelta espera).
   const tubo = P.tubos[e.denominacion];
   if (!tubo) return;
   const v = vasos.get(e.vaso);
-  const listo = girarCarrusel(e.denominacion, P.carrusel.agujero);
-  const abrir = seg('compuerta_tubo', 600) * 0.25;
+  const compuerta = (e.obturador_ms || seg('compuerta_tubo', 600) * 1000) / 1000;
+  const abrir = compuerta * 0.25;
   const o = P.obturador;
-  animar(abrir, (u) => { o.rotation.x = -1.3 * suave(u); }, { retraso: listo, dueno: o });
-  animar(abrir, (u) => { o.rotation.x = -1.3 * (1 - suave(u)); }, { retraso: listo + seg('compuerta_tubo', 600) * 0.75, dueno: o });
-  P.carrusel.libre = Math.max(P.carrusel.libre, performance.now() / 1000 + (listo + seg('compuerta_tubo', 600)) / VEL);
   const n = Math.min(e.cantidad, 10);
-  tubo.vaciarEn = performance.now() + ((listo + abrir) / VEL) * 1000;
-  if (v) {
-    v.llenando = true;
-    animar(0.01, () => {}, { retraso: listo + abrir + n * 0.05 + 0.45, fin: () => { v.llenando = false; ajustarPila(v, e.cantidad); } });
-  }
-  const destino = v ? posEstacionVasos(1).add(new THREE.Vector3(0, 0.006, 0)) : P.tolva.clone();
-  for (let i = 0; i < n; i++) {
-    const desde = P.hueco.clone().add(new THREE.Vector3(0, 0.004 + 0.002 * i, 0));
-    const m = cilindro(0.011, 0.0018, colorMoneda(e.denominacion, i), desde.clone(), { metalness: 0.85, roughness: 0.3 });
-    m.visible = false;
-    escena.add(m);
-    const r = listo + abrir + i * 0.05;
-    animar(0.01, () => { m.visible = true; }, { retraso: r });
-    recorrer(m, [desde, P.tolva.clone(), destino], 0.4, { ease: caida, retraso: r, fin: () => escena.remove(m) });
-  }
+  const marca = anotarEnAire();
+  tubo.vaciarEn = Infinity;             // la pila no baja antes de abrir
+  if (v) v.llenando = true;
+  const soltar = () => {
+    animar(abrir, (u) => { o.rotation.x = -1.3 * suave(u); }, { dueno: o });
+    animar(abrir, (u) => { o.rotation.x = -1.3 * (1 - suave(u)); }, { retraso: compuerta * 0.75, dueno: o,
+      fin: () => quitarDelAire(marca) });   // obturador cerrado: el disco ya puede girar
+    tubo.vaciarEn = performance.now() + (abrir / VEL) * 1000;
+    // La pila baja JUSTO cuando se abre el obturador (con el tubo quieto sobre
+    // el agujero), no en la siguiente consulta (en la demo, una cada 1,6 s).
+    animar(0.01, () => {}, { retraso: abrir, fin: sincronizarAlmacen });
+    if (v) animar(0.01, () => {}, { retraso: abrir + n * 0.05 + 0.45, fin: () => { v.llenando = false; ajustarPila(v, e.cantidad); } });
+    const destino = v ? posEstacionVasos(1).add(new THREE.Vector3(0, 0.006, 0)) : P.tolva.clone();
+    for (let i = 0; i < n; i++) {
+      const desde = P.hueco.clone().add(new THREE.Vector3(0, 0.004 + 0.002 * i, 0));
+      const m = cilindro(0.011, 0.0018, colorMoneda(e.denominacion, i), desde.clone(), { metalness: 0.85, roughness: 0.3 });
+      m.visible = false;
+      escena.add(m);
+      const r = abrir + i * 0.05;
+      animar(0.01, () => { m.visible = true; }, { retraso: r });
+      recorrer(m, [desde, P.tolva.clone(), destino], 0.4, { ease: caida, retraso: r, fin: () => escena.remove(m) });
+    }
+  };
+  // Espera el instante de la simulacion y, por si el visor viene atrasado, que
+  // el giro al agujero haya terminado.
+  animar(0.001, () => {}, { retraso: Math.max(0, (e.en_ms || 0) / 1000), espera: () => faltaSuGiro(marca), fin: soltar });
 }
 
 // Canaleta de entrega (puntos 10 y 12): dos rieles lisos a 15 grados que
@@ -1972,18 +2249,20 @@ function construirMuelle() {
   let muelle = new THREE.Group();   // mismo marco local que el carro: +x adelante (sim)
   const L = v.largo, r = v.diametro_rueda / 2;
   // Las guias tocan los RODILLOS de las esquinas traseras (nunca las llantas),
-  // con 3 mm de holgura por lado (sim/vehiculo_sim.py).
-  const guiaY = v.rodillo_guia_y + v.rodillo_guia_radio + 0.003;
+  // con la holgura por lado de la configuracion (vehiculo.muelle_*, la misma que usa
+  // sim/vehiculo_sim.py; los numeros de respaldo son los de antes, por si la geometria es vieja).
+  const largoBoca = v.muelle_largo_boca ?? 0.20, abreBoca = v.muelle_abre_boca ?? 0.045;
+  const guiaY = v.rodillo_guia_y + v.rodillo_guia_radio + (v.muelle_holgura ?? 0.003);
   const alto = 0.02, esp = 0.006;
   const xRueda = -L * 0.18;
   // Tramo recto desde la cola (donde quedan los rodillos) y boca de ~13 grados.
-  const x0 = -L / 2 - 0.004, x1 = xRueda + r + 0.015, x2 = x1 + 0.20;   // mismas medidas que sim/vehiculo_sim.py
+  const x0 = -L / 2 - 0.004, x1 = xRueda + r + 0.015, x2 = x1 + largoBoca;   // mismas medidas que sim/vehiculo_sim.py
   const xT = -L / 2 - 0.006;
   try {
     // Topes: bloque de -L/2-11 a -L/2-3 mm y espuma de 6 mm (la caja de la simulacion va de
     // -L/2-17 a -L/2-3); paran el carro por los bloques de sus rodillos guia.
     muelle = PIEZAS_CARRO.crearMuelleCarga({
-      x0, x1, x2, guiaY, abre: 0.045, alto, esp,
+      x0, x1, x2, guiaY, abre: abreBoca, alto, esp,
       topes: [-1, 1].map((lado) => ({ x0: xT - 0.011, x1: xT - 0.003, y: lado * 0.052, ancho: 0.022, altoTope: r + 0.012, espuma: 0.006 })),
     });
     const partes = [];
@@ -1996,7 +2275,7 @@ function construirMuelle() {
       const recto = caja(x1 - x0, esp, alto, COLOR.impreso, Vxyz((x0 + x1) / 2, lado * (guiaY + esp / 2), alto / 2));
       const ptfe = caja(x1 - x0, 0.0008, alto, 0xf1f1ee, Vxyz((x0 + x1) / 2, lado * (guiaY + 0.0004), alto / 2));
       muelle.add(ptfe);
-      const a = Vxyz(x1, lado * (guiaY + esp / 2), alto / 2), b = Vxyz(x2, lado * (guiaY + 0.045 + esp / 2), alto / 2);
+      const a = Vxyz(x1, lado * (guiaY + esp / 2), alto / 2), b = Vxyz(x2, lado * (guiaY + abreBoca + esp / 2), alto / 2);
       const boca = caja(a.distanceTo(b), esp, alto, COLOR.impreso, a.clone().lerp(b, 0.5));
       boca.rotation.y = Math.atan2(-(b.z - a.z), b.x - a.x);   // girar en Y (Three) = girar en z (sim)
       muelle.add(recto, boca);
@@ -2138,7 +2417,8 @@ function construirCarro() {
 
     let rueda;
     try {
-      rueda = PIEZAS_CARRO.crearRuedaTT({ diametro: v.diametro_rueda / MM, ancho: 26, lado,
+      // Ancho de la llanta: config vehiculo.ancho_rueda_mm (el mismo cilindro que choca en PyBullet).
+      rueda = PIEZAS_CARRO.crearRuedaTT({ diametro: v.diametro_rueda / MM, ancho: (v.ancho_rueda ?? 0.026) / MM, lado,
         ejeAdentro: (D.yRueda - 0.013 - (D.yMotor - 0.018)) / MM });
       registrar('motores_carro', ...mallas(rueda));
       // Disco del encoder en la punta interior del eje, con el cubo hacia el reductor.
@@ -2149,7 +2429,7 @@ function construirCarro() {
     } catch (e) {
       console.warn('pieza rueda TT: se usa el modelo simple', e);
       rueda = new THREE.Group();
-      rueda.add(cilindro(r, 0.026, 0x111111, new THREE.Vector3(0, 0, 0), { roughness: 0.95 }));
+      rueda.add(cilindro(r, v.ancho_rueda ?? 0.026, 0x111111, new THREE.Vector3(0, 0, 0), { roughness: 0.95 }));
       rueda.add(cilindro(r * 0.72, 0.027, 0xf2c230, new THREE.Vector3(0, 0, 0), { roughness: 0.5 }));
       registrar('motores_carro', ...rueda.children);
     }
@@ -3287,6 +3567,21 @@ function envolver(ctx, texto, ancho) {
 
 const QUIEN = { deepseek: 'DeepSeek (internet)', ollama: 'modelo local qwen2.5 (este portátil)' };
 
+// La respuesta del asistente viene en markdown (el dashboard lo dibuja); en el canvas de la laptop
+// se veian los simbolos sueltos (`qwen2.5-proyecto`, **negrita**): se quitan y queda el texto.
+function sinMarkdown(t) {
+  return String(t ?? '')
+    .replace(/```[a-z]*\n?/gi, '')
+    .replace(/`([^`]*)`/g, '$1')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,;:!?]|$)/g, '$1$2')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/^\s{0,3}#{1,6}\s+/gm, '')
+    .replace(/^\s*[-*+]\s+/gm, '• ')
+    .replace(/`/g, '');
+}
+
 // La pantalla de la laptop: barra de ventana, la pregunta, la respuesta con la letra MAS GRANDE
 // que quepa entera, y abajo quien respondio. Mientras piensa: la pregunta y un indicador animado.
 function dibujarPanelAsistente(d) {
@@ -3328,13 +3623,14 @@ function dibujarPanelAsistente(d) {
     ctx.font = '500 52px "Space Grotesk", sans-serif'; ctx.fillStyle = '#8b949e'; ctx.textBaseline = 'top';
     ctx.fillText(MODO_DEMO ? 'Demo grabada: sin conversación.' : 'Todavía nadie le ha preguntado nada.', m, y);
   } else {
-    if (pregunta) bloquePregunta(pregunta.texto);
+    if (pregunta) bloquePregunta(sinMarkdown(pregunta.texto));
     // Respuesta: la letra mas grande (de 64 a 30 px) con la que cabe entera.
     const alto = H - y - 120;
+    const textoResp = sinMarkdown(respuesta.texto);
     let tam = 64, lineas;
     for (; tam >= 30; tam -= 2) {
       ctx.font = `500 ${tam}px "Space Grotesk", sans-serif`;
-      lineas = envolver(ctx, respuesta.texto, W - 2 * m);
+      lineas = envolver(ctx, textoResp, W - 2 * m);
       if (lineas.length * tam * 1.3 <= alto) break;
     }
     ctx.fillStyle = '#e6e8eb'; ctx.textBaseline = 'top';
@@ -4625,18 +4921,47 @@ function sincronizarFichas() {
       moverDesvio(false, retrasoDesvio);
       tramos(f.grupo, [...llegar, { puntos: caidaEmbudo, seg: 0.45, ease: caida }, { puntos: [a, b, cub], seg: 0.5, ease: caida }]);
     } else {
-      const d = parseInt(f.clase, 10);
+      // Sale de la cinta en el ciclo en que la simulacion la GUARDA (evento
+      // `e4/almacen`): para entonces su tubo ya esta quieto bajo la carga.
+      // Mientras esperaba al carrusel se quedo quieta en la descarga (seguia en
+      // la cinta). Cae casi vertical a la boca del tubo.
+      const guardada = (estado.eventos_tick || []).find((e) => e.src === 'e4' && e.ev === 'almacen' && e.casilla === id);
+      const d = guardada ? guardada.tubo : parseInt(f.clase, 10);
       const den = P.tubos[d] ? d : 'otras';
-      // El carrusel pone el tubo de esa denominacion bajo la carga mientras
-      // la moneda viene; la moneda cae casi vertical a la boca del tubo.
-      girarCarrusel(den, P.carrusel.carga);
+      const tubo = P.tubos[den];
       moverDesvio(true, retrasoDesvio);
       const boca = b.clone();
-      tramos(f.grupo, [...llegar,
-        { puntos: caidaEmbudo, seg: 0.4, ease: caida },
-        { puntos: [a, boca], seg: 0.25, ease: caida },
-        { puntos: [boca, boca.clone().add(new THREE.Vector3(0, -0.035, 0))], seg: 0.2, ease: caida },
-      ], () => escena.remove(f.grupo));
+      // Toda la caida (embudo, compuerta, canal corto, boca y fondo del tubo)
+      // dura lo mismo que en el montaje y en la simulacion: caida_moneda_tubo.
+      // El ultimo 0,1 s es el asentamiento en la pila (el rebote que el tiempo
+      // del config ya incluye): la moneda ya se ve en la pila y el disco sigue
+      // quieto; recien despues puede arrancar el giro siguiente.
+      const tCaida = seg('caida_moneda_tubo', 400);
+      const tAsienta = Math.min(0.1, tCaida / 4);
+      const tBaja = tCaida - tAsienta;
+      const caer = [
+        { puntos: caidaEmbudo, seg: tBaja * 0.35, ease: caida },
+        { puntos: [a, boca], seg: tBaja * 0.35, ease: caida },
+        { puntos: [boca, boca.clone().add(new THREE.Vector3(0, -0.035, 0))], seg: tBaja * 0.3, ease: caida },
+      ];
+      if (tubo) tubo.cayendo = (tubo.cayendo || 0) + 1;
+      // Anotada en el aire desde ya: el giro hacia el tubo de la SIGUIENTE
+      // moneda (que llega despues) no arranca hasta que esta aterrice.
+      const marca = anotarEnAire();
+      const alFinal = () => {
+        escena.remove(f.grupo);
+        animar(tAsienta, () => {}, { fin: () => quitarDelAire(marca) });
+        if (tubo) {
+          // ESTA moneda llego: la pila de SU tubo crece una (sincronizarAlmacen).
+          tubo.cayendo = Math.max(0, tubo.cayendo - 1);
+          tubo.aterrizadas = (tubo.aterrizadas || 0) + 1;
+          sincronizarAlmacen();
+        }
+      };
+      // Por si el visor viene atrasado respecto a la simulacion: no deja la
+      // cinta hasta que el giro que trae su tubo a la carga haya terminado.
+      tramos(f.grupo, llegar, () => animar(0.001, () => {}, { espera: () => faltaSuGiro(marca),
+        fin: () => tramos(f.grupo, caer, alFinal) }));
     }
   }
 }
@@ -4987,7 +5312,9 @@ function procesarEventos() {
   // La cinta de monedas se anima solo si de verdad avanzo en este ciclo
   // (vacia y sin carga se queda quieta: evento 'espera').
   if (!primero && estado.eventos_tick.some((e) => e.ev === 'paso' && e.src === 'linea')) moverCinta('monedas', seg('avance_casilla_monedas', 600));
+  if (primero) ubicarCarrusel();
   for (const e of estado.eventos_tick) {
+    if (e.src === 'carrusel' && e.ev === 'gira') girarCarrusel(e);
     if (e.ev === 'prensa') ciclarPrensa(seg('avance_casilla_vasos', 1000));
     if (e.ev === 'cortina' && e.activa) subirPrensa();
     if (e.ev === 'embalado') animarEmbalado(e);
@@ -5084,7 +5411,10 @@ function vista(nombre) {
     todo: [centroP.clone().add(new THREE.Vector3(-0.55, 0.05, -0.12)), new THREE.Vector3(-1.1, 1.65, 1.85)],
     planta: [centroV.clone().lerp(centroM, 0.5).add(new THREE.Vector3(0.05, 0, 0.05)), new THREE.Vector3(0.45, 0.45, 0.75)],
     carga: [em[0], new THREE.Vector3(-0.1, 0.14, 0.24)],
-    monedas: [centroM, new THREE.Vector3(0.02, 0.22, 0.4)],
+    // De la esquina de la carga (-x), 40° desde arriba: de frente (desde el operador) la pantalla del
+    // portatil quedaba justo detras de la cinta y competia con las estaciones (revision visual,
+    // 2026-09-28). Asi E1..E4 quedan en diagonal, sin encimarse, y el portatil queda al costado.
+    monedas: [centroM, new THREE.Vector3(-0.32, 0.29, 0.13)],
     vision: [em[2], new THREE.Vector3(0.06, 0.12, 0.22)],
     almacen: [almacen, new THREE.Vector3(0.12, 0.12, 0.26)],
     vasos: [centroV.clone().add(new THREE.Vector3(0, 0.07, 0)), new THREE.Vector3(0.02, 0.2, 0.52)],
@@ -5098,7 +5428,7 @@ function vista(nombre) {
     // el centro de los dos sensores (no la cinta): quedan grandes y enteros, con rosca, tuerca y
     // platina. A 0,22 m la caja de control queda detras de la camara, tambien con el panel
     // abierto (x1,4).
-    material: [centroMaterial(), DIR_BAJO_CINTA.clone().multiplyScalar(0.22)],
+    material: [centroMaterial(), new THREE.Vector3(-0.094, -0.122, -0.258)],
     // Desde arriba: en diagonal desde el operador, la cinta de vasos remodelada (tubo de tapas,
     // prensa, portico) quedaba en medio y tapaba la caja (2026-09-28).
     caja: [Vxyz(P.caja.bx, P.caja.by, 0.02), new THREE.Vector3(0, 0.45, 0.02)],
@@ -5114,7 +5444,7 @@ function vista(nombre) {
   ui.marcarVista(nombre);
   const [objetivo, desplazamiento] = vistas[nombre] || vistas.todo;
   // La laptop esta detras de la cinta: alejarse por el panel la taparia con la cinta.
-  volarA(objetivo.clone(), objetivo.clone().add(desplazamiento), { seguir: nombre === 'carro', alejar: nombre !== 'asistente' });
+  volarA(objetivo.clone(), objetivo.clone().add(desplazamiento), { seguir: nombre === 'carro', alejar: nombre !== 'asistente' ? true : 'poco' });
 }
 
 function volarA(objetivo, posicion, { seguir = false, alejar = true } = {}) {
@@ -5123,17 +5453,42 @@ function volarA(objetivo, posicion, { seguir = false, alejar = true } = {}) {
   // parte libre. A la distancia d, media pantalla de ancho son d*tan(fov/2)*aspecto metros.
   // Y se aleja en proporcion (W / ancho libre, hasta x1,4): lo encuadrado para la pantalla
   // entera cabe en la parte libre (la pantalla de la laptop quedaba cortada por el panel).
-  const tapado = ui.anchoTapado();
-  if (tapado > 0) {
-    const lejos = alejar ? Math.min(1.4, window.innerWidth / Math.max(1, window.innerWidth - tapado)) : 1;
+  // A cualquier ancho (revision visual, 2026-09-28): a 900 px o menos el panel es una hoja ABAJO
+  // (45 % de la altura) y la toma no la tenia en cuenta: el carro y las estaciones quedaban debajo
+  // de la hoja. Ahora la toma se centra en la parte libre que mide la interfaz (`zonaLibre`: a la
+  // derecha del panel, o entre las vistas de arriba y la hoja de abajo), de lado Y de alto, y se
+  // aleja segun la dimension mas recortada (de lado hasta x1,4 como antes; con la hoja, hasta x1,9).
+  let libre = null;
+  try { libre = ui.zonaLibre ? ui.zonaLibre() : null; } catch (e) { libre = null; }
+  if (!libre) {
+    const t = ui.anchoTapado();
+    libre = { izq: t, der: window.innerWidth, arriba: 0, abajo: window.innerHeight };
+  }
+  const W = window.innerWidth, H = window.innerHeight;
+  const anchoLibre = Math.max(1, libre.der - libre.izq), altoLibre = Math.max(1, libre.abajo - libre.arriba);
+  const cx = (libre.izq + libre.der) / 2, cy = (libre.arriba + libre.abajo) / 2;
+  const ndx = cx / W * 2 - 1, ndy = 1 - cy / H * 2;
+  if (Math.abs(ndx) > 1e-3 || Math.abs(ndy) > 1e-3) {
+    const hojaAbajo = libre.abajo < H - 20;
+    // Lo encuadrado para la pantalla entera (menos las barras de arriba, que siempre estuvieron).
+    const porAncho = W / anchoLibre, porAlto = (H - libre.arriba) / altoLibre;
+    // 'poco' (vista Asistente): de lado no se aleja (la cinta taparia la laptop), pero con la hoja
+    // de abajo la pantalla no cabia en la franja libre: se aleja lo justo, hasta x1,45.
+    const tope = alejar === 'poco' ? (hojaAbajo ? 1.45 : 1) : (hojaAbajo ? 1.9 : 1.4);
+    const lejos = alejar ? Math.max(1, Math.min(tope, Math.max(porAncho, porAlto))) : 1;
     posicion = objetivo.clone().addScaledVector(posicion.clone().sub(objetivo), lejos);
     const d = posicion.distanceTo(objetivo);
-    const derecha = new THREE.Vector3().subVectors(objetivo, posicion).cross(camara.up).normalize();
-    const mitad = d * Math.tan(THREE.MathUtils.degToRad(camara.fov) / 2) * camara.aspect;
-    const corr = derecha.multiplyScalar(-mitad * tapado / window.innerWidth);
+    const adelante = new THREE.Vector3().subVectors(objetivo, posicion).normalize();
+    const derecha = adelante.clone().cross(camara.up).normalize();
+    const arribaPantalla = derecha.clone().cross(adelante).normalize();
+    const mitadAlto = d * Math.tan(THREE.MathUtils.degToRad(camara.fov) / 2);
+    const mitadAncho = mitadAlto * camara.aspect;
+    // Correr la camara (y su mira) al lado contrario de donde debe verse lo enfocado.
+    const corr = derecha.multiplyScalar(-mitadAncho * ndx).addScaledVector(arribaPantalla, -mitadAlto * ndy);
     objetivo = objetivo.clone().add(corr);
     posicion = posicion.clone().add(corr);
-  }
+    desfaseFoco.copy(corr);
+  } else desfaseFoco.set(0, 0, 0);
   seguirCarro = seguir && P.carroGrupo ? { ultimo: P.carroGrupo.getWorldPosition(new THREE.Vector3()) } : null;
   vuelo = { t: 0, desdeT: controles.target.clone(), hastaT: objetivo, desdeP: camara.position.clone(), hastaP: posicion };
 }
@@ -5315,8 +5670,15 @@ function limpiarCorrida() {
   for (const v of vasos.values()) escena.remove(v.grupo);
   fichas.clear(); vasos.clear();
   for (const c of Object.values(CINTAS)) { c.moviendo = false; c.seps.forEach((m, i) => { m.position.x = c.base[i]; m.visible = i > 0; }); }
-  if (P.carrusel) { P.carrusel.angulo = 0; P.carrusel.objetivo = 0; P.carrusel.libre = 0; P.carrusel.grupo.rotation.y = 0; }
-  for (const t of Object.values(P.tubos || {})) t.vaciarEn = 0;
+  if (P.carrusel) {
+    Object.assign(P.carrusel, { angulo: 0, finGiro: 0, inicioUltimo: 0, girando: false, enAire: [] });
+    P.carrusel.activo = ++P.carrusel.giros;
+    P.carrusel.empezado = P.carrusel.terminado = P.carrusel.giros;
+    P.carrusel.grupo.rotation.y = 0;
+  }
+  for (const t of Object.values(P.tubos || {})) { t.vaciarEn = 0; t.cayendo = 0; t.aterrizadas = 0; }
+  // Corrida nueva: lo que ya hay en los tubos (turno anterior) se pone de una vez.
+  P.almacenVisto = false;
   for (const c of Object.values(enCubeta)) c.clear();
   // Las fichas que quedaron en las cubetas tambien son de la corrida vieja.
   for (const o of [...escena.children]) if (o.userData.deCubeta) escena.remove(o);
@@ -5549,7 +5911,7 @@ async function iniciar() {
 if (new URLSearchParams(location.search).has('auditar')) window.__visor = { THREE, escena, COMP, SENS, P, CABLES, G: () => G, camara, controles, PIN, PINES_REALES, renderer, vista, vuelo: () => vuelo,
   // Rendimiento: renderer.info (llamadas de dibujo, triangulos, geometrias, texturas) y lo que unio optimizar().
   info: () => ({ calls: renderer.info.render.calls, triangulos: renderer.info.render.triangles, ...renderer.info.memory, programas: renderer.info.programs.length }),
-  optimizacion: () => resumenOptimizacion };
+  optimizacion: () => resumenOptimizacion, ETIQUETAS };
 
 // La interfaz: le pasa lo que necesita de la escena (interfaz.js no toca Three.js).
 const ui = crearInterfaz({

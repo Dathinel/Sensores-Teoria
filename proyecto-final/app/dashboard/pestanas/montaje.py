@@ -12,6 +12,7 @@ from control import monedas as tabla_monedas
 from control.tiempos import presupuesto, tiempo_real_estimado_s
 
 from .. import datos
+from ..textos import con_tildes
 from ..estilo import (AMBAR, AZUL, MORADO, ROJO, VERDE, aviso, figura, html_tabla, kpis, mostrar, nota, pintar,
                       seccion, tabla)
 
@@ -38,12 +39,27 @@ def pestana() -> None:
     seccion("Presupuesto de tiempos", "¿cabe cada acción en su hueco? · tiempos en milisegundos")
     # Tabla de texto (no st.dataframe): la columna "Por qué" es larga y así se parte en líneas dentro
     # de la celda en vez de pedir desplazamiento horizontal (pantalla de ~900 px).
+    # Los textos de control/tiempos.py están sin tildes (ese módulo es ASCII): se muestran con tildes.
+    # Las esperas del carrusel NO son un error: el grupo aceptó que la cinta de monedas espere al
+    # carrusel cuando el giro no cabe en un ciclo (baja un poco la producción, no se pierde ninguna
+    # moneda). Se muestran en ámbar como "espera aceptada", no en rojo como "NO CABE".
+    def estado(c) -> str:
+        if c.ok:
+            return "OK"
+        return "espera aceptada" if "carrusel" in c.nombre.lower() else "NO CABE"
+
     pintar(html_tabla([{
-        "Chequeo": c.nombre, "Necesita": round(c.necesita_ms), "Disponible": round(c.disponible_ms),
-        "Margen": round(c.margen_ms), "Estado": "OK" if c.ok else "NO CABE", "Por qué": c.explicacion,
+        "Chequeo": con_tildes(c.nombre), "Necesita": round(c.necesita_ms), "Disponible": round(c.disponible_ms),
+        "Margen": round(c.margen_ms), "Estado": estado(c), "Por qué": con_tildes(c.explicacion),
     } for c in r["chequeos"]], {"Necesita": "num", "Disponible": "num", "Margen": "num",
-                                 "Estado": lambda v: "corto ok" if v == "OK" else "corto no"}))
-    justos = [c.nombre for c in r["chequeos"] if c.ok and c.margen_ms < 0.15 * c.disponible_ms]
+                                 "Estado": lambda v: {"OK": "corto ok", "NO CABE": "corto no"}.get(v, "corto espera")}))
+    esperas = [c for c in r["chequeos"] if estado(c) == "espera aceptada"]
+    if esperas:
+        nota(f"<b style='color:var(--ambar)'>Espera aceptada</b> ({len(esperas)}): el giro del carrusel no cabe en "
+             "un ciclo de la cinta, y el grupo decidió que en ese caso la cinta de monedas <b>espera</b> al carrusel "
+             "antes de soltar la moneda. Baja un poco la producción, pero no se pierde ni se mezcla ninguna moneda; "
+             "no es una falla.")
+    justos = [con_tildes(c.nombre) for c in r["chequeos"] if c.ok and c.margen_ms < 0.15 * c.disponible_ms]
     if justos:
         aviso("Margen justo (menos del 15 %): " + "; ".join(justos) + ". Medirlo primero en el montaje.")
 

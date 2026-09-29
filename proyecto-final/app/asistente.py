@@ -27,6 +27,12 @@ basicas con expresiones regulares, y para lo demas muestra la parte de la
 documentacion que mas se parece a la pregunta. Asi el asistente nunca queda
 mudo.
 
+Foco (usuario, 2026-09-28): la especialidad del asistente es el filtrado de monedas (elemento 7) y
+el movimiento del carro; lo demas tambien lo responde. Eso se nota en el prompt de sistema, en el
+peso de la busqueda (factor_foco), en el orden del estado en vivo (monedas, carro, lo demas) y en las
+reglas (rechazos con su causa, denominaciones, almacen, ultima inspeccion, donde esta el carro).
+Como funciona el modelo local por dentro y por que se eligio: docs/modelo-local.md.
+
 Regla de la seccion 14: nunca inventa cifras. Las cifras salen del estado
 inyectado; si una no esta, dice que no tiene ese dato.
 
@@ -52,11 +58,15 @@ MODELO = os.environ.get("DEEPSEEK_MODELO", "deepseek-chat")
 DOCUMENTOS = ["README.md", "CLAUDE.md", "docs/paso-a-paso.md", "docs/sensores.md", "docs/componentes.md",
               "docs/conexiones.md", "docs/replicacion.md", "docs/revision-final.md", "docs/costos.md",
               "docs/bitacora.md",
+              # Documentos del 2026-09-28 (si todavia no existen, se saltan).
+              "docs/logica-interna.md", "docs/electrica.md", "docs/peso.md", "docs/modelo-local.md",
+              "docs/fisica-vs-3d.md",
               "config/parametros.yaml", "config/monedas.yaml"]
 MAX_CARACTERES_DOCS = 24000      # ~7000 tokens de documentacion por pregunta
 # Proveedor LOCAL (usuario, 2026-09-27): Ollama con un modelo chico en el mismo portatil, para
-# probar el asistente sin internet ni clave. El modelo vive en la carpeta del usuario (.ollama),
-# FUERA del proyecto: no pesa en GitHub. Ollama habla el mismo formato de OpenAI, asi que se usa
+# probar el asistente sin internet ni clave. El modelo (~1,9 GB, Q4_K_M) vive FUERA del proyecto,
+# en la carpeta que diga OLLAMA_MODELS (en este portatil, D:\cosas uni\Micros\instalados): no pesa
+# en GitHub. Explicacion completa del modelo y de como se usa: docs/modelo-local.md. Ollama habla el mismo formato de OpenAI, asi que se usa
 # el mismo cliente, el mismo prompt, el mismo JSON y la misma lista blanca que con DeepSeek.
 URL_LOCAL = os.environ.get("ASISTENTE_URL_LOCAL", "http://localhost:11434")
 # `qwen2.5-proyecto` = qwen2.5:3b con 8192 tokens de contexto (Ollama trae ~4000 por defecto),
@@ -65,7 +75,8 @@ MODELO_LOCAL = os.environ.get("ASISTENTE_MODELO_LOCAL", "qwen2.5-proyecto")
 MODELO_LOCAL_BASE = "qwen2.5:3b"
 # Ollama usa por defecto un contexto de ~4000 tokens: si el prompt lo pasa, se corta POR EL
 # PRINCIPIO y el modelo pierde las instrucciones (se vio: respondia sin la clave "respuesta").
-# Por eso al modelo local va menos: sin el README y con ~3000 caracteres de documentacion.
+# Por eso al modelo local va menos: sin el README; con el contexto subido a 8192 tokens
+# (qwen2.5-proyecto) caben ~9000 caracteres de documentacion (3000 con el modelo base).
 MAX_CARACTERES_DOCS_LOCAL = 9000   # con 8192 tokens de contexto (medido: 3,5 de 4 GB en la RTX 3050)
 MAX_CARACTERES_DOCS_LOCAL_BASE = 3000
 MAX_SECCION = 3500
@@ -88,13 +99,25 @@ ACCIONES_CARRO = {
     "volver_muelle": {},
     "seguir_linea": {},
 }
+def _capacidad_tubo() -> int:
+    """El lote no puede pasar de lo que cabe en un tubo (config: planta.capacidad_tubo). Antes el
+    tope era un 25 escrito a mano: si el tubo del CAD cambia, el asistente seguia aceptando lotes
+    que nunca se completan (un lote de 40 en un tubo de 25 = `tubo_lleno` para siempre)."""
+    try:
+        from app.configuracion import cargar_parametros
+
+        return int(cargar_parametros()["planta"]["capacidad_tubo"])
+    except Exception:   # sin config legible, el valor documentado (CLAUDE.md, seccion 5)
+        return 25
+
+
 ORDENES_LINEA = {
     "iniciar": {},
     "pausar": {},
     "reanudar": {},
     "paro": {},
     "embalar_parciales": {},
-    "lote": {"valor": (1, 25)},
+    "lote": {"valor": (1, _capacidad_tubo())},
     "velocidad": {"valor": (0.25, 8.0)},
 }
 
@@ -123,6 +146,9 @@ def validar_accion(a: dict) -> tuple[dict | None, str]:
             return None, f"a '{cmd} {a.get('accion', '')}' le falta '{nombre}'"
         if not math.isfinite(valor) or not minimo <= valor <= maximo:
             return None, f"'{nombre}' = {valor:g} está fuera de {minimo:g}…{maximo:g}"
+        if cmd == "lote" and valor != int(valor):
+            # "10.5 monedas por vaso" no existe: se rechaza en vez de truncar en silencio.
+            return None, f"el lote tiene que ser un número entero de monedas (llegó {valor:g})"
         limpia[nombre] = int(valor) if cmd == "lote" else round(valor, 3)
     if cmd == "carro" and accion == "girar" and limpia["grados"] == 0:
         return None, "un giro de 0 grados no hace nada"
@@ -160,6 +186,7 @@ class Seccion:
     titulo: str
     texto: str
     palabras: set[str] = field(default_factory=set)
+    foco: float = 1.0          # peso extra por tratar de monedas o del carro (factor_foco)
 
 
 def _partir(archivo: str, texto: str) -> list[Seccion]:
@@ -196,9 +223,13 @@ def corpus(recargar: bool = False) -> list[Seccion]:
         for rel in DOCUMENTOS:
             ruta = RAIZ / rel
             if ruta.exists():
-                secciones += _partir(rel, ruta.read_text(encoding="utf-8"))
+                # Los cuadritos de color de las tablas de cables (<span style=...>■</span>) no le
+                # dicen nada al modelo y gastan contexto: se quitan.
+                texto = re.sub(r"<span[^>]*>■</span>", "", ruta.read_text(encoding="utf-8"))
+                secciones += _partir(rel, texto)
         for s in secciones:
             s.palabras = set(_palabras(s.titulo + " " + s.texto))
+            s.foco = factor_foco(s)
         n = len(secciones) or 1
         df: dict[str, int] = {}
         for s in secciones:
@@ -209,8 +240,30 @@ def corpus(recargar: bool = False) -> list[Seccion]:
     return _CORPUS
 
 
+# Foco del grupo (usuario, 2026-09-28: "LLM enfocado a la parte de monedas y movimiento del carro
+# pero sin dejar de lado lo demas"). El elemento 7 es el filtrado de monedas, y el carro es lo que
+# mas se le pide al asistente. Las secciones que TRATAN de eso (su titulo lo dice) pesan un poco
+# mas en la busqueda; las demas no se excluyen: una pregunta de costos sigue trayendo costos,
+# porque el peso extra solo multiplica un puntaje que ya existe (sin palabras en comun, 0 x 1,3 = 0).
+FOCO_MONEDAS = re.compile(r"moneda|filtr|rechaz|capacitiv|inductiv|vision|camara|diametro|circular|perfora|"
+                          r"confianza|coheren|denominaci|familia|almacen|revolver|lote|clasific")
+FOCO_CARRO = re.compile(r"carro|vehiculo|ruta|odometr|evasi|obstacul|muelle|\bmeta\b|encoder|ultrason|acople")
+PESO_FOCO = 1.3               # la seccion SE LLAMA como un tema del foco
+
+
+def factor_foco(s: Seccion) -> float:
+    """Cuanto se multiplica el puntaje de una seccion por tratar del foco del grupo. Solo cuenta el
+    TITULO (de que trata la seccion); la bitacora no, porque sus titulos resumen una sesion entera
+    ("carro mas rapido y proyecto reorganizado") y le ganaban a secciones de verdad (se vio: costos)."""
+    if s.archivo == "docs/bitacora.md":
+        return 1.0
+    titulo = normalizar(s.titulo)
+    return PESO_FOCO if FOCO_MONEDAS.search(titulo) or FOCO_CARRO.search(titulo) else 1.0
+
+
 def buscar(pregunta: str, limite_caracteres: int = MAX_CARACTERES_DOCS) -> list[Seccion]:
-    """Las secciones que mas palabras (poco comunes) comparten con la pregunta."""
+    """Las secciones que mas palabras (poco comunes) comparten con la pregunta, con un peso
+    extra para las de monedas/filtros/rechazos y carro/ruta (`factor_foco`)."""
     secciones = corpus()
     q = set(_palabras(pregunta))
     if not q:
@@ -222,7 +275,7 @@ def buscar(pregunta: str, limite_caracteres: int = MAX_CARACTERES_DOCS) -> list[
             p = sum(_IDF.get(w, 0) for w in comunes)
             # El titulo pesa el doble: una seccion que SE LLAMA como la pregunta.
             p += sum(_IDF.get(w, 0) for w in comunes & set(_palabras(s.titulo)))
-            puntaje.append((p, s))
+            puntaje.append((p * s.foco, s))
     puntaje.sort(key=lambda x: -x[0])
     elegidas, total = [], 0
     for _, s in puntaje:
@@ -236,6 +289,38 @@ def buscar(pregunta: str, limite_caracteres: int = MAX_CARACTERES_DOCS) -> list[
 # ---------------------------------------------------------------------
 # estado en vivo (de SQLite)
 # ---------------------------------------------------------------------
+
+
+def viajes_del_carro(conexion: sqlite3.Connection) -> dict:
+    """Cuanto se demora el carro: la MISMA cuenta que la pestana Carro del dashboard
+    (app/dashboard/datos.py, viajes_del_carro), sin pandas. Un viaje empieza con `carga` (sale del
+    muelle con el vaso), la ida termina en `meta` y el viaje completo en el `en_muelle` siguiente.
+    Antes el asistente no tenia este dato y contestaba "¿qué tanto se demora el carro?" con
+    vaguedades aunque el dashboard mostraba ~154 s por viaje."""
+    from datetime import datetime
+
+    viajes, actual = [], None
+    for f in conexion.execute("SELECT ts, tipo FROM eventos WHERE origen = 'carro' AND tipo IN "
+                              "('carga', 'meta', 'en_muelle') ORDER BY id").fetchall():
+        t = datetime.fromisoformat(f["ts"])
+        if f["tipo"] == "carga":
+            actual = {"sale": t, "meta": None, "vuelve": None}
+            viajes.append(actual)
+        elif actual is not None:
+            if f["tipo"] == "meta" and actual["meta"] is None:
+                actual["meta"] = t
+            elif f["tipo"] == "en_muelle" and actual["meta"] is not None and actual["vuelve"] is None:
+                actual["vuelve"] = t
+    idas = [(v["meta"] - v["sale"]).total_seconds() for v in viajes if v["meta"]]
+    completos = [(v["vuelve"] - v["sale"]).total_seconds() for v in viajes if v["vuelve"]]
+    return {
+        "viajes_empezados": len(viajes),
+        "viajes_completos": len(completos),
+        "ultimo_viaje_completo_s": round(completos[-1]) if completos else None,
+        "promedio_viaje_completo_s": round(sum(completos) / len(completos)) if completos else None,
+        "ultima_ida_a_la_meta_s": round(idas[-1]) if idas else None,
+        "promedio_ida_a_la_meta_s": round(sum(idas) / len(idas)) if idas else None,
+    }
 
 
 def estado_en_vivo(conexion: sqlite3.Connection) -> dict:
@@ -261,20 +346,37 @@ def estado_en_vivo(conexion: sqlite3.Connection) -> dict:
         "SELECT ts, origen, tipo, payload FROM eventos WHERE tipo NOT IN ('tel', 'paso', 'orden', 'espera') "
         "ORDER BY id DESC LIMIT 25").fetchall()
 
+    # Lo ultimo que vio la camara (E3) y los ultimos rechazos: con esto el asistente puede
+    # contestar "que fue lo ultimo que reviso la camara" o "por que rechazo la ultima pieza".
+    vision = conexion.execute("SELECT ts, payload FROM eventos WHERE origen = 'e3' AND tipo = 'vision' "
+                              "ORDER BY id DESC LIMIT 1").fetchone()
+    ultima_vision = None
+    if vision:
+        v = json.loads(vision["payload"])
+        ultima_vision = {k: v.get(k) for k in ("casilla", "diametro_mm", "circularidad", "contornos_internos",
+                                               "clase", "confianza", "combinacion", "veredicto", "causa")}
+        ultima_vision["hora"] = vision["ts"][11:19]
+    ultimos_rechazos = [{"casilla": f["casilla"], "causa": f["causa"], "hora": (f["ts"] or "")[11:19]}
+                        for f in conexion.execute("SELECT casilla, causa, ts FROM elementos WHERE veredicto = "
+                                                  "'rechazada' ORDER BY id DESC LIMIT 5").fetchall()]
+    eventos_carro = [f"{r['ts'][11:19]} {r['tipo']}" for r in conexion.execute(
+        "SELECT ts, tipo FROM eventos WHERE origen = 'carro' AND tipo NOT IN ('estado', 'tel') "
+        "ORDER BY id DESC LIMIT 6").fetchall()]
+
     por_denominacion = {str(f["denominacion"]): {"monedas": f["n"], "valor_pesos": f["v"],
                                                  "peso_estimado_g": round(f["g"], 1)} for f in acept}
     carro = tel.get("carro")
     if carro:
         carro = {k: carro.get(k) for k in ("estado", "fase", "x", "y", "rumbo", "odometria", "vaso_id",
                                            "inclinacion_vaso_grados", "ultima_orden", "radio")}
+        carro["que_hace"] = ESTADO_CARRO.get(carro["estado"], carro["estado"])
+        carro["ultimos_eventos"] = eventos_carro
+    # ORDEN de las claves = orden en que el modelo las lee (el JSON va tal cual): primero lo de
+    # las monedas (elemento 7, la especialidad del grupo), despues el carro y al final lo demas.
     return {
         "hay_datos": bool(fila),
         "hora_ultimo_dato": fila["ts"] if fila else None,
-        "estado_linea": tel.get("linea"),
-        "ciclo": tel.get("tick"),
-        "velocidad_simulacion": tel.get("velocidad"),
-        "monedas_por_vaso": tel.get("monedas_por_vaso"),
-        "piezas_por_cargar": tel.get("pendientes"),
+        # --- monedas: filtrado, rechazos y almacen
         "totales": {
             "monedas_aceptadas": sum(f["n"] for f in acept),
             "valor_aceptado_pesos": sum(f["v"] for f in acept),
@@ -285,16 +387,31 @@ def estado_en_vivo(conexion: sqlite3.Connection) -> dict:
         },
         "aceptadas_por_denominacion": por_denominacion,
         "rechazos_por_causa": {f["causa"]: f["n"] for f in rech},
-        "vasos_por_estado": {f["estado"]: {"vasos": f["n"], "valor_pesos": f["v"]} for f in vasos},
+        "ultimos_rechazos": ultimos_rechazos,
+        "ultima_inspeccion_camara": ultima_vision,
+        "confianza_minima": tel.get("confianza_minima"),
+        "errores_del_filtro": tel.get("errores_filtrado"),
         "almacen_tubos": tel.get("almacen"),
         "almacen_valor_pesos": tel.get("almacen_valor"),
+        "monedas_por_vaso": tel.get("monedas_por_vaso"),
+        # --- carro y ruta
+        "carro": carro,
+        "ruta": {"distancia_recorrida_m": round(distancia, 2), "evasiones": evasiones,
+                 "tiempos_de_viaje": viajes_del_carro(conexion)},
+        # --- lo demas: linea, vasos, seguridad
+        "estado_linea": tel.get("linea"),
+        "ciclo": tel.get("tick"),
+        "velocidad_simulacion": tel.get("velocidad"),
+        "piezas_por_cargar": tel.get("pendientes"),
+        "vasos_por_estado": {f["estado"]: {"vasos": f["n"], "valor_pesos": f["v"]} for f in vasos},
+        # Los vacios desechados quedan "rechazada" en la tabla vasos: aqui se cuentan aparte.
+        "vasos_vacios_desechados": conexion.execute(
+            "SELECT COUNT(*) FROM eventos WHERE tipo = 'descarga' "
+            "AND json_extract(payload, '$.destino') = 'vacio'").fetchone()[0],
         "canaleta_vasos_esperando": len(tel.get("canaleta") or []),
         "tapas_restantes": tel.get("tapas_restantes"),
         "cortina_activa": tel.get("cortina_activa"),
         "alarmas": tel.get("alarmas"),
-        "errores_del_filtro": tel.get("errores_filtrado"),
-        "carro": carro,
-        "ruta": {"distancia_recorrida_m": round(distancia, 2), "evasiones": evasiones},
         "ultima_orden": tel.get("ultima_orden"),
         "ultimos_eventos": [f"{r['ts'][11:19]} {r['origen']}.{r['tipo']} {r['payload'][:160]}" for r in recientes],
     }
@@ -343,37 +460,61 @@ def borrar_conversacion(conexion: sqlite3.Connection) -> None:
 # DeepSeek
 # ---------------------------------------------------------------------
 
-PROMPT_SISTEMA = """
+_PLANTILLA_PROMPT = """
 Eres el asistente del "Sistema de Logística de Monedas Inteligentes" (proyecto del segundo corte de
 Micros y Laboratorio, Ingeniería Mecatrónica, UMNG; grupo con el elemento 7: detector de elementos de
 monedas y vasos). Hablas español de Colombia, claro y breve, para alguien que puede no conocer el sistema.
+
+TU ESPECIALIDAD (responde esto con más detalle que lo demás):
+1. El FILTRADO DE MONEDAS, que es la parte del grupo (elemento 7). La cinta de monedas tiene 4 estaciones:
+   E1 presencia (infrarrojo: ¿hay algo en la casilla?); E2 material (capacitivo + inductivo debajo de la
+   cinta: capacitivo solo = no metálico, rechazo "no_metalico"); E3 visión (cámara cenital, dos fotos:
+   diámetro en mm fuera de {dmin}-{dmax} = "fuera_de_rango", circularidad < {circ} = "no_circular", agujeros o
+   contornos internos = "perforado", clase "otro" o confianza < {conf} = "no_reconocida", diámetro que
+   no coincide con la denominación reconocida (> {coh} mm) = "incoherente"); E4 descarga (una compuerta
+   manda lo aceptado al tubo de su denominación en el almacén revólver y TODO rechazo a una sola bandeja).
+   Denominaciones 50, 100, 200, 500 y 1000 de la familia nueva y la antigua; cada vaso lleva UNA sola
+   denominación, en lotes (monedas por vaso); lo que no completa lote queda guardado en su tubo. El peso
+   es ESTIMADO por conteo (no hay balanza ni celda de carga). Al hablar de rechazos, di la causa en
+   palabras y qué estación la detecta.
+2. El MOVIMIENTO DEL CARRO: sus órdenes (abajo), la odometría con encoders (se pone en cero en el muelle),
+   la evasión de los 3 obstáculos con el ultrasónico, la meta y la vuelta al muelle de reversa. Para
+   "dónde está / qué hace el carro" usa lo que dice el carro en ESTADO_EN_VIVO (que_hace, x, y,
+   ultimos_eventos, ruta).
+Lo demás (vasos, tapa y prensa, cortina, canaleta, costos, parte eléctrica, pines, simulación) también
+lo respondes, con los datos de DOCUMENTACION; no lo desvíes hacia las monedas si no lo preguntan.
 
 Recibes: (1) ESTADO_EN_VIVO, un JSON con las cifras reales de la corrida actual; (2) DOCUMENTACION, las
 secciones del proyecto relacionadas con la pregunta; (3) la frase de la persona.
 
 Responde ÚNICAMENTE con un objeto JSON, sin texto antes ni después:
-{"respuesta": "<texto para la persona>", "acciones": [ ...órdenes... ]}
+{{"respuesta": "<texto para la persona>", "acciones": [ ...órdenes... ]}}
 
 Reglas:
 - Nunca inventes cifras. Toda cifra de la corrida sale de ESTADO_EN_VIVO; si no está, di que no tienes ese
   dato. Lo técnico (sensores, pines, medidas, decisiones) sale de DOCUMENTACION; si no está, dilo.
 - "acciones" va vacío si la persona solo pregunta. Solo agrega órdenes si la persona pide hacer algo.
   Órdenes posibles (exactamente estas):
-  {"cmd":"carro","accion":"detener"}
-  {"cmd":"carro","accion":"avanzar","distancia_m":0.3}      (0.01 a 1.5 m, hacia adelante, despacio)
-  {"cmd":"carro","accion":"retroceder","distancia_m":0.1}   (0.01 a 0.3 m: atrás no tiene sensor)
-  {"cmd":"carro","accion":"girar","grados":90}              (-180 a 180; positivo = izquierda)
-  {"cmd":"carro","accion":"ir_a","x":1.2,"y":-0.5}           (metros, coordenadas de la pista)
-  {"cmd":"carro","accion":"ir_meta"}      {"cmd":"carro","accion":"volver_muelle"}
-  {"cmd":"carro","accion":"seguir_linea"} (retomar el recorrido automático)
-  {"cmd":"pausar"} {"cmd":"reanudar"} {"cmd":"paro"} {"cmd":"iniciar"} {"cmd":"embalar_parciales"}
-  {"cmd":"lote","valor":10} (monedas por vaso)   {"cmd":"velocidad","valor":2} (0.25 a 8)
+  {{"cmd":"carro","accion":"detener"}}
+  {{"cmd":"carro","accion":"avanzar","distancia_m":0.3}}      (0.01 a 1.5 m, hacia adelante, despacio)
+  {{"cmd":"carro","accion":"retroceder","distancia_m":0.1}}   (0.01 a 0.3 m: atrás no tiene sensor)
+  {{"cmd":"carro","accion":"girar","grados":90}}              (-180 a 180; positivo = izquierda)
+  {{"cmd":"carro","accion":"ir_a","x":1.2,"y":-0.5}}           (metros, coordenadas de la pista)
+  {{"cmd":"carro","accion":"ir_meta"}}      {{"cmd":"carro","accion":"volver_muelle"}}
+  {{"cmd":"carro","accion":"seguir_linea"}} (retomar el recorrido automático)
+  {{"cmd":"pausar"}} {{"cmd":"reanudar"}} {{"cmd":"paro"}} {{"cmd":"iniciar"}} {{"cmd":"embalar_parciales"}}
+  {{"cmd":"lote","valor":10}} (monedas por vaso)   {{"cmd":"velocidad","valor":2}} (0.25 a 8)
 - Varias órdenes seguidas se ejecutan en orden, pero una orden nueva al carro reemplaza la anterior: para
   una secuencia de movimientos del carro, manda solo la primera y explica que la siguiente se pide después.
 - Si preguntan por una medida que ningún sensor del proyecto mide EN VIVO (temperatura, voltaje o
   corriente de algo, humedad...), di claramente que no hay un sensor que la mida y que no tienes ese
   dato; puedes dar el valor NOMINAL de la documentación, aclarando que no es una medición.
-- Una pregunta (¿...?) nunca da órdenes: "acciones" va vacío.
+- Una pregunta (¿...?) nunca da órdenes: "acciones" va vacío. Tampoco un pedido de información
+  ("dime", "explícame", "cuéntame", "muéstrame").
+- Nunca digas que el carro "se moverá", "irá" o "volverá" si "acciones" no lleva esa orden: sin orden,
+  el carro NO se mueve. Escribe texto plano, sin markdown (sin `comillas invertidas` ni **negritas**).
+- En las tablas de conexiones, "G25.S" es el GPIO 25 del ESP32 (fila S = señal de la placa GVS) y
+  "M.STEP" es la entrada STEP del driver; el pin del ESP32 es el número que va después de la G.
 - El carro no choca: antes de moverse mira el camino, y si ve algo adelante se detiene; si la persona pide
   algo que lo haría chocar o salir de la pista, explícalo. Las cm se pasan a metros. El carro anda SOLO
   por el piso: nunca puede atravesar ni entrar a la planta (cintas, filtro, almacén, canaleta) ni al
@@ -385,6 +526,23 @@ Reglas:
   sensor, estación o archivo) y un dato relacionado del estado o de la documentación. No nombres
   campos internos (ESTADO_EN_VIVO, claves del JSON como valor_aceptado_pesos): habla como persona.
 """
+
+
+def _umbrales_filtrado() -> dict:
+    """Los umbrales del filtrado para el prompt, leidos de config/parametros.yaml (fuente unica;
+    ningun numero magico en el codigo). Si la configuracion no se puede leer, los de CLAUDE.md sec. 7."""
+    try:
+        from app.configuracion import cargar_parametros
+
+        f = cargar_parametros()["filtrado"]
+        valores = (f["diametro_min_mm"], f["diametro_max_mm"], f["circularidad_minima"], f["confianza_minima"],
+                   f["tolerancia_coherencia_mm"])
+    except Exception:  # sin configuracion: los valores de la seccion 7
+        valores = (16.5, 27.5, 0.90, 0.85, 1.2)
+    return {k: f"{v:g}".replace(".", ",") for k, v in zip(("dmin", "dmax", "circ", "conf", "coh"), valores)}
+
+
+PROMPT_SISTEMA = _PLANTILLA_PROMPT.format(**_umbrales_filtrado())
 
 
 def cliente_deepseek():
@@ -482,14 +640,170 @@ def _distancia_m(texto: str) -> float | None:
     return v / 100 if u.startswith("c") else v / 1000 if u.startswith("mm") or u.startswith("mili") else v
 
 
+# "que + subjuntivo" es un PEDIDO, no una pregunta (revision logica 2026-09-29): el usuario habla
+# asi ("que vaya a donde esta el filtro", "que avance el carro 30 cm", "que vuelva al muelle") y
+# `es_pregunta` tomaba el "que " inicial como el "que" interrogativo, asi que esas ordenes no daban
+# nada. El interrogativo lleva tilde ("¿qué hay?") o va seguido de es/hay/tan/cuanto/hace...: ninguna
+# de esas es un subjuntivo de esta lista, asi que siguen siendo preguntas (y una pregunta nunca
+# mueve nada). Si la frase trae "qué" CON tilde, gana la pregunta.
+_QUE_PEDIDO = re.compile(
+    r"que\s+(el carro|el carrito|el vehiculo|el robot|la linea( de produccion)?|la planta|la produccion|"
+    r"la cinta|se|lo|le)?\s*"
+    r"(avance|avancen|abance|retroceda|retrocedan|gire|giren|voltee|rote|vaya|vayan|vuelva|vuelvan|regrese|"
+    r"regresen|siga|sigan|retome|mueva|muevan|detenga|detengan|pare|paren|frene|frenen|ande|camine|lleve|"
+    r"pause|reanude|continue|arranque|inicie|empiece|empaque|embale|haga|quede|de (la|media) vuelta)\b")
+
+
+def es_pedido_con_que(frase: str) -> bool:
+    """"que vaya a la meta" (pedido) y no "qué hay en la meta" (pregunta)."""
+    t = normalizar(frase).strip().lstrip("¡ ")
+    return (not frase.strip().lstrip("¡ ").lower().startswith("qué") and "?" not in frase and "¿" not in frase
+            and bool(_QUE_PEDIDO.match(t)))
+
+
 def es_pregunta(frase: str) -> bool:
     t = normalizar(frase).strip()
+    if es_pedido_con_que(frase):
+        return False
     return "?" in t or "¿" in frase or bool(re.match(r"(cuant|que |como |donde |cual|por ?que|quien|cuando |how |what |where )", t))
 
 
-# Pide un movimiento del carro (si no, una orden al carro de un modelo chico se descarta).
-PIDE_MOVIMIENTO = re.compile(r"\b(muev|avanz|abanz|avans|retroce|reversa|gir|volte|rota|media vuelta|ve |ir |vaya|anda|"
-                             r"lleva|vuelv|regres|deten|det[eé]n|frena|para el|pare|quieto|sigue|retoma|meta|muelle|punto)")
+# Pide un movimiento del carro. Si la frase no lo pide, ninguna orden al carro pasa, venga de
+# donde venga (reglas, modelo local o DeepSeek; antes el candado era solo para el modelo local).
+# Incluye lo que el interprete de reglas entiende como orden (adelante, atras, camina, stop,
+# "da la vuelta") para que el candado no le quite una orden legitima.
+# Con las formas de "que + subjuntivo" (avance, siga, frene, lleve, camine: 2026-09-29; "avance" se
+# escribe con c y el candado le quitaba la orden a "que avance el carro 30 cm").
+PIDE_MOVIMIENTO = re.compile(r"\b(muev|avanz|avanc|abanz|abanc|avans|adelante|camin|retroce|reversa|atras|gir|volte|"
+                             r"rota|rote|media vuelta|da la vuelta|de la vuelta|ve |ir |vaya|anda|ande|llev|vuelv|"
+                             r"regres|deten|det[eé]n|fren|para el|pare|quieto|stop|sigue|siga|retom|continu|meta|"
+                             r"muelle|punto)")
+
+# ---- A quien le habla la frase: al carro, a la linea o a nadie (revision logica 2026-09-29) ----
+# `PIDE_MOVIMIENTO` solo mira si aparece un verbo de movimiento, sin importar de QUIEN se habla:
+# "la moneda avanza por la cinta" mandaba el carro 0,2 m adelante y "sigue la linea de produccion"
+# lo ponia a seguir su linea negra (la regla de reanudar nunca se alcanzaba). Ahora una orden al
+# carro exige que la frase nombre al carro o que EMPIECE con el verbo (imperativo: "avanza 30 cm",
+# "que vuelva al muelle"), y nunca sale si una moneda/pieza/cinta/la planta es el sujeto o lo que
+# se mueve.
+
+# Palabras de relleno al inicio de un pedido. "que" es el del pedido ("que vuelva al muelle"): las
+# preguntas ya se descartaron antes con `es_consulta`.
+_RELLENO = re.compile(r"^\s*((por favor|porfa|oye|ey|bueno|ok|okay|listo|entonces|ahora|y|ya|puedes|podrias|"
+                      r"haz que|haga que|hazme el favor de|haz el favor de|necesito que|quiero que|que)\s+)+")
+CARRO = re.compile(r"\b(carro|carrito|vehiculo|robot)\b")
+# Lo que NO es el carro: si es el sujeto de la frase, el movimiento es de eso (la moneda avanza por la
+# cinta, la pieza retrocede, la cinta gira) y el carro no se toca. "linea" sola es la linea negra del
+# carro; "linea de produccion", "produccion" y "planta" son la linea de la planta.
+AJENO_AL_CARRO = (r"(monedas?|piezas?|cintas?|bandas?|vasos?|elementos?|botones|boton|tapas?|carrusel|tubos?|"
+                  r"prensa|empujador|compuerta|linea de produccion|produccion|planta)")
+_AJENO = re.compile(r"\b" + AJENO_AL_CARRO + r"\b")
+# Verbos (y adverbios) con los que se le da una orden al carro. Si la frase no nombra al carro, tiene
+# que EMPEZAR con uno de estos (despues del relleno).
+_VERBO_CARRO = (r"(avanz\w*|avance\w*|abanz\w*|abance\w*|avans\w*|adelante|atras|reversa|retroce\w*|muev\w*|"
+                r"camin\w*|gir[ae]\w*|volte\w*|rot[ae]\w*|da|de|media vuelta|ve|ir|vaya\w*|vete|anda\w*|"
+                r"ande|llev[ae]\w*|vuelv\w*|volver|regres\w*|devuelve\w*|sigue|seguir|siga\w*|retom\w*|"
+                r"deten\w*|detien\w*|para|pare\w*|frena\w*|frene\w*|quieto|stop|continu\w*)")
+# Verbo que MUEVE a su complemento: "avanza la cinta", "gira el carrusel", "sigue la linea de
+# produccion", "deten la planta" hablan de mover eso, no el carro.
+_VERBO_CON_OBJETO_AJENO = re.compile(
+    r"\b(avanz\w*|avance\w*|retroce\w*|gir[ae]\w*|volte\w*|rot[ae]\w*|muev\w*|deten\w*|detenga\w*|para|pare\w*|"
+    r"frena\w*|frene\w*|sigue|seguir|siga\w*|retom\w*|continu\w*)\s+((el|la|los|las|un|una|esa|esta|esas|estas)\s+)?"
+    + AJENO_AL_CARRO + r"\b")
+
+
+def _sin_relleno(t: str) -> str:
+    """Frase normalizada, sin signos y sin el relleno del principio."""
+    return _RELLENO.sub("", re.sub(r"[¡!¿?.,;:]", " ", t)).strip()
+
+
+def pide_mover_carro(frase: str) -> bool:
+    """La frase le da una orden AL CARRO (no a una moneda, a la cinta ni a la planta)."""
+    t = _sin_relleno(normalizar(frase))
+    carro, ajeno = CARRO.search(t), _AJENO.search(t)
+    verbo = re.search(r"\b" + _VERBO_CARRO + r"\b", t)
+    if ajeno and (not carro or ajeno.start() < carro.start()) and (not verbo or ajeno.start() < verbo.start()):
+        return False     # "la moneda avanza por la cinta": el sujeto es la moneda
+    objeto = _VERBO_CON_OBJETO_AJENO.search(t)
+    if objeto and (not carro or objeto.start() < carro.start()):
+        return False     # "avanza la cinta", "sigue la linea de produccion"
+    if carro:
+        return True      # "que el carro vaya a la meta", "gira el carro 90 grados"
+    return bool(re.match(_VERBO_CARRO + r"\b", t))   # imperativo al inicio: "avanza 30 cm", "stop"
+
+
+# Pausar / reanudar LA LINEA (regla acordada con el usuario, 2026-09-29): "deten/para la linea",
+# "deten todo", "para la planta", "deten la produccion" = PAUSA (se sale con "reanudar"). El PARO
+# queda para "paro", "paro de emergencia" o la urgencia explicita ("para todo ya", `pide_paro`).
+# Antes "deten todo/la planta/la produccion" daban `carro detener` (la linea seguia) y "para todo"
+# o "para la linea" no daban nada.
+_OBJETO_LINEA = r"(todo|toda la planta|la planta|la linea( de produccion)?|la produccion|la maquina|las cintas)"
+_PAUSA_DETEN = re.compile(r"\b(deten|detenga|detengan|detener|frena|frene|frenen|frenar|pausa|pausar|pause|"
+                          r"paraliza|paralizar)\s+" + _OBJETO_LINEA + r"\b")
+# "para" tambien es preposicion ("sirve para todo", "gira el carro para la derecha"): solo cuenta
+# como verbo al inicio de la frase o justo antes de todo/la linea/la planta/la produccion, y no
+# despues de palabras que la vuelven preposicion.
+_PAUSA_PARA = re.compile(r"(?:^|\b(\w+)\s+)(para|pare|paren|parar)\s+" + _OBJETO_LINEA + r"\b")
+_ANTES_DE_PREPOSICION = {"sirve", "sirven", "usa", "usan", "util", "listo", "lista", "listos", "hecho", "hecha",
+                         "bueno", "buena", "necesario", "necesaria", "importante", "suficiente", "tiempo", "espacio"}
+
+
+def pide_pausa_linea(frase: str) -> bool:
+    t = _sin_relleno(normalizar(frase))
+    if _PAUSA_DETEN.search(t):
+        return True
+    for m in _PAUSA_PARA.finditer(t):
+        if m.group(1) not in _ANTES_DE_PREPOSICION:
+            return True
+    return False
+
+
+# Reanudar la LINEA: "sigue/continua/retoma la linea de produccion / la produccion / la planta".
+_REANUDA_LINEA = re.compile(r"\b(reanuda\w*|reanude\w*|continua\w*|continue\w*|sigue|seguir|siga\w*|retoma\w*|"
+                            r"retome\w*|arranca de nuevo)\b.*\b(linea de produccion|produccion|planta)\b")
+
+# Pedir INFORMACION no es dar una orden (revision 2026-09-28): "Dime cuantos vasos llegaron a la
+# meta" mandaba el carro a la meta, "Explicame el paro de emergencia" paraba la linea y "Cuentame
+# como hace la media vuelta el carro" lo giraba 180 grados. `es_pregunta` solo mira el "?" o la
+# primera palabra, y el reconocimiento de voz (Whisper, Google) NO pone signos de pregunta. Con
+# estos verbos de explicar/informar la frase nunca da ordenes, con ningun proveedor.
+PIDE_INFORMACION = re.compile(
+    r"\b(explica\w*|expliq\w*|cuentame|cuentanos|contame|dime|dinos|digame|hablame|hablanos|habla de|"
+    r"resume\w*|resumen|muestrame|muestranos|describe\w*|detalla\w*|informame|ensename|"
+    r"que es|que son|como funciona\w*|como se hace|como hace|quiero saber|me gustaria saber|necesito saber|"
+    r"recuerdame)\b")
+
+
+def pide_informacion(frase: str) -> bool:
+    """La frase pide que se EXPLIQUE o INFORME algo (sin signo de pregunta)."""
+    return bool(PIDE_INFORMACION.search(normalizar(frase)))
+
+
+def es_consulta(frase: str) -> bool:
+    """Pregunta o pedido de informacion: ninguna de las dos mueve nada."""
+    return es_pregunta(frase) or pide_informacion(frase)
+
+
+# Paro de emergencia: SOLO con un imperativo explicito. Antes bastaba con que la frase nombrara
+# "paro" o "emergencia" ("explicame el paro de emergencia" paraba la linea). Vale: la frase entera
+# es el grito ("paro!", "paro de emergencia", "emergencia ya") o un verbo que lo manda ("haz
+# paro", "activa el paro", "paro ya") o la urgencia explicita ("para todo ya", "deten la linea ahora
+# mismo"). "para todo" o "deten la linea" a secas son PAUSA (`pide_pausa_linea`).
+PARO_SOLO = re.compile(r"\s*(paro|emergencia|paro de emergencia)(\s+(ya|ahora|ahora mismo|inmediato|por favor))?\s*$")
+PARO_IMPERATIVO = re.compile(
+    r"\b(haz|haga|hace|activa|active|activar|pulsa|pulse|presiona|presione|aprieta|oprime|dale|da|dele|"
+    r"ejecuta|ejecute|manda|mande)\s+(un |el |al )?(boton de(l)? )?paro\b"
+    r"|\bparo( de emergencia)? (ya|ahora|inmediato)\b"
+    r"|\b(para|pare|paren|deten|detenga|detengan|frena|frene)\s+(todo|toda la planta|la planta|la linea|"
+    r"la maquina|la produccion)\s+(ya|ahora|ahora mismo|inmediatamente|de inmediato)\b")
+# "detén la línea" / "para todo" a secas NO son paro: dan PAUSA (se sigue con "reanudar"). Del PARO
+# solo se sale con Iniciar, que empieza una corrida nueva: se reserva para "paro" o para la urgencia
+# explícita ("para todo ya", "detén la línea ahora mismo").
+
+
+def pide_paro(frase: str) -> bool:
+    t = re.sub(r"[¡!.,;]", " ", normalizar(frase)).strip()
+    return bool(PARO_SOLO.match(t) or PARO_IMPERATIVO.search(t))
 
 
 # Medidas que ningun sensor del proyecto toma en vivo.
@@ -543,43 +857,121 @@ RESPUESTA_ATRAVESAR = (
     "o ir a un punto del piso libre alrededor de la pista.")
 
 
-def interpretar_orden_local(frase: str) -> list[dict]:
-    """Ordenes con expresiones regulares (sin DeepSeek). Devuelve la lista de
-    ordenes crudas (despues se validan igual que las de DeepSeek)."""
-    t = normalizar(frase).strip()
-    # Una pregunta nunca mueve nada ("¿cuantos vasos llegaron a la meta?").
-    if es_pregunta(frase):
-        return []
-    carro = re.search(r"\b(carro|vehiculo|carrito|robot)\b", t)
-    if re.search(r"\bparo( de emergencia)?\b|\bemergencia\b", t):
-        return [{"cmd": "paro"}]
-    if re.search(r"\b(deten|detente|detener|frena|frenar|quieto|para el|pare el|stop)\b", t):
-        return [{"cmd": "carro", "accion": "detener"}] if carro or "linea" not in t else [{"cmd": "pausar"}]
-    if re.search(r"\b(meta)\b", t) and re.search(r"\b(ve|ir|vaya|lleva|llevar|anda|hasta|a la)\b", t):
-        return [{"cmd": "carro", "accion": "ir_meta"}]
-    if re.search(r"\b(muelle|base|casa|inicio)\b", t) and re.search(r"\b(vuelve|volver|regresa|regresar|ve|ir|vaya)\b", t):
-        return [{"cmd": "carro", "accion": "volver_muelle"}]
-    if re.search(r"\b(sigue|seguir|retoma|retomar)\b.*\b(linea|ruta|recorrido|cinta)\b", t):
-        return [{"cmd": "carro", "accion": "seguir_linea"}]
+# Frases que PROMETEN mover el carro (revision visual 2026-09-28: el modelo local decia "se moverá a
+# tres posiciones aleatorias" o "se moverá al muelle" sin mandar ninguna orden). Si al final no sale
+# ninguna orden al carro, esas oraciones se quitan de la respuesta y se dice que no se movio.
+#
+# Dos clases (revision logica 2026-09-29): la PRIMERA PERSONA ("lo muevo", "voy a mover", "avanzaré")
+# siempre es una promesa de hacerlo ahora por una orden; la IMPERSONAL ("se moverá", "va a moverse")
+# a veces describe el FUNCIONAMIENTO AUTOMATICO ("se moverá solo a la meta cuando lo carguen", "cada
+# vez que entra al muelle...") y eso es informacion correcta: antes se borraba y se le pegaba "no se
+# mueve", que confundia. Solo se quita la impersonal si no trae una marca de automatico/condicion.
+# "(?<!no )": "No lo muevo: ese punto está dentro de la planta" es justo lo contrario de una promesa.
+PROMESA_PRIMERA_PERSONA = re.compile(
+    r"(?<!no )\b(lo movere|movere|voy a mover|lo muevo|muevo el carro|lo llevo|lo llevare|llevare el carro|"
+    r"lo mando|lo mandare|enviare el carro|mandare el carro|avanzare|retrocedere|girare|ire a)\b")
+PROMESA_IMPERSONAL = re.compile(
+    r"(?<!no )\b(se movera|va a moverse|se desplazara|comenzara a moverse|empezara a moverse)\b")
+FUNCIONAMIENTO_AUTOMATICO = re.compile(
+    r"\b(solo|sola|por si solo|por si mismo|automatic\w*|por su cuenta|cuando|cada vez|siempre|en cuanto|"
+    r"apenas|una vez que|despues de|al (terminar|llegar|cargar\w*|recibir|entrar))\b")
+# Compatibilidad (evaluador y pruebas viejas): cualquiera de las dos formas.
+PROMESA_MOVIMIENTO = re.compile(PROMESA_PRIMERA_PERSONA.pattern + "|" + PROMESA_IMPERSONAL.pattern)
+
+
+def promete_movimiento(oracion: str) -> str:
+    """El trozo de la oracion que promete mover el carro AHORA, o "" (una descripcion del recorrido
+    automatico no cuenta)."""
+    t = normalizar(oracion)
+    m = PROMESA_PRIMERA_PERSONA.search(t)
+    if m:
+        return m.group(0)
+    m = PROMESA_IMPERSONAL.search(t)
+    if m and not FUNCIONAMIENTO_AUTOMATICO.search(t):
+        return m.group(0)
+    return ""
+
+
+def quitar_promesas(texto: str) -> tuple[str, bool]:
+    """Quita las oraciones que prometen un movimiento del carro. Devuelve (texto, quito_algo)."""
+    oraciones = re.split(r"(?<=[.!?])\s+", texto.strip())
+    quedan = [o for o in oraciones if not promete_movimiento(o)]
+    return " ".join(quedan).strip(), len(quedan) != len(oraciones)
+
+
+def limpiar_markdown(texto: str) -> str:
+    """La respuesta se muestra como texto plano (visor 3D, voz): sin `codigo`, **negritas** ni
+    titulos "#". El modelo local a veces escribe `qwen2.5-proyecto` y en el visor quedaban las
+    comillas invertidas sueltas."""
+    t = texto.replace("```", "").replace("`", "")
+    t = re.sub(r"\*\*(.+?)\*\*|__(.+?)__", lambda m: m.group(1) or m.group(2), t)
+    t = re.sub(r"(?m)^\s{0,3}#{1,6}\s+", "", t)
+    return t.strip()
+
+
+def _orden_al_carro(t: str) -> dict | None:
+    """La orden al carro de una frase ya normalizada que SI le habla al carro, o None."""
+    tl = _sin_relleno(t)
+    # "para" como verbo solo al inicio o en "para el carro": "gira el carro para el lado derecho"
+    # antes lo detenia (la regla buscaba "para el" en cualquier parte).
+    if re.search(r"\b(deten|detente|detener|detenga|detengase|frena|frenar|frene|quieto|stop)\b", tl) \
+            or re.match(r"(para|pare|parate|parese)\b", tl) or re.search(r"\b(para|pare) (el|al) (carro|carrito|vehiculo|robot)\b", tl):
+        return {"cmd": "carro", "accion": "detener"}
+    if re.search(r"\b(meta)\b", t) and re.search(r"\b(ve|ir|vaya|vayan|lleva|llevar|lleve|anda|hasta|a la)\b", t):
+        return {"cmd": "carro", "accion": "ir_meta"}
+    if re.search(r"\b(muelle|base|casa|inicio)\b", t) and re.search(
+            r"\b(vuelve|volver|vuelva|regresa|regresar|regrese|ve|ir|vaya|lleva|llevar|lleve|llevalo|manda|mandar|"
+            r"mande|devuelve|devuelva)\b", t):
+        return {"cmd": "carro", "accion": "volver_muelle"}
+    if re.search(r"\b(sigue|seguir|siga|retoma|retomar|retome)\b.*\b(linea|ruta|recorrido)\b", t):
+        return {"cmd": "carro", "accion": "seguir_linea"}
     m = re.search(r"\bx\s*=?\s*" + _NUM + r".*?\by\s*=?\s*" + _NUM, t) or \
         re.search(r"\(\s*" + _NUM + r"\s*[,;]\s*" + _NUM + r"\s*\)", t)
-    if m and re.search(r"\b(ve|ir|vaya|anda|lleva|posicion|punto|a)\b", t):
-        return [{"cmd": "carro", "accion": "ir_a", "x": _num(m.group(1)), "y": _num(m.group(2))}]
-    if re.search(r"\b(gira|girar|voltea|voltear|rota|rotar|da la vuelta|media vuelta)\b", t):
-        if "media vuelta" in t or "da la vuelta" in t:
-            return [{"cmd": "carro", "accion": "girar", "grados": 180}]
+    if m and re.search(r"\b(ve|ir|vaya|anda|lleva|lleve|posicion|punto|a)\b", t):
+        return {"cmd": "carro", "accion": "ir_a", "x": _num(m.group(1)), "y": _num(m.group(2))}
+    if re.search(r"\b(gira|girar|gire|giren|voltea|voltear|voltee|rota|rotar|rote|da la vuelta|de la vuelta|"
+                 r"media vuelta)\b", t):
+        if "media vuelta" in t or re.search(r"\b(da|de) la vuelta\b", t):
+            return {"cmd": "carro", "accion": "girar", "grados": 180}
         g = re.search(_NUM + r"\s*(?:grados?|°)?", t)
         grados = _num(g.group(1)) if g else 90.0
         if "derech" in t:
             grados = -abs(grados)
-        return [{"cmd": "carro", "accion": "girar", "grados": grados}]
-    if re.search(r"\b(avanza|avanzar|abanza|abanzar|avansa|avansar|adelante|muevete|mueve|camina)\b", t):
-        return [{"cmd": "carro", "accion": "avanzar", "distancia_m": _distancia_m(t) or 0.2}]
-    if re.search(r"\b(retrocede|retroceder|atras|reversa)\b", t):
-        return [{"cmd": "carro", "accion": "retroceder", "distancia_m": _distancia_m(t) or 0.1}]
-    if re.search(r"\b(pausa|pausar|pausala)\b", t):
+        return {"cmd": "carro", "accion": "girar", "grados": grados}
+    if re.search(r"\b(avanza|avanzar|avance|avancen|avanzando|abanza|abanzar|abance|avansa|avansar|adelante|"
+                 r"muevete|mueve|muevelo|mueva|muevase|camina|camine)\b", t):
+        return {"cmd": "carro", "accion": "avanzar", "distancia_m": _distancia_m(t) or 0.2}
+    if re.search(r"\b(retrocede|retroceder|retroceda|atras|reversa)\b", t):
+        return {"cmd": "carro", "accion": "retroceder", "distancia_m": _distancia_m(t) or 0.1}
+    return None
+
+
+def interpretar_orden_local(frase: str) -> list[dict]:
+    """Ordenes con expresiones regulares (sin DeepSeek). Devuelve la lista de
+    ordenes crudas (despues se validan igual que las de DeepSeek)."""
+    t = normalizar(frase).strip()
+    # Una pregunta nunca mueve nada ("¿cuantos vasos llegaron a la meta?"), y un pedido de
+    # informacion tampoco ("dime cuantos vasos llegaron a la meta", sin signos: asi lo escribe
+    # el reconocimiento de voz).
+    if es_consulta(frase):
+        return []
+    if pide_paro(frase):
+        return [{"cmd": "paro"}]
+    # La LINEA antes que el carro: "deten todo", "para la planta" (pausa) y "sigue la linea de
+    # produccion" (reanudar) no son ordenes al carro.
+    if pide_pausa_linea(frase):
         return [{"cmd": "pausar"}]
-    if re.search(r"\b(reanuda|reanudar|continua|continuar|sigue la linea de produccion)\b", t):
+    if _REANUDA_LINEA.search(t):
+        return [{"cmd": "reanudar"}]
+    # Ordenes al carro: solo si la frase le habla al carro (ver `pide_mover_carro`). Se incluyen las
+    # formas de "que + subjuntivo" (avance, vuelva, gire...), que es como pide las cosas el usuario.
+    if pide_mover_carro(frase):
+        orden = _orden_al_carro(t)
+        if orden:
+            return [orden]
+    if re.search(r"\b(pausa|pausar|pausala|pause)\b", t):
+        return [{"cmd": "pausar"}]
+    if re.search(r"\b(reanuda|reanudar|reanude|continua|continuar|continue)\b", t):
         return [{"cmd": "reanudar"}]
     if re.search(r"\b(inicia|iniciar|empieza|empezar|arranca|arrancar)\b.*\b(corrida|prueba|linea)\b", t):
         return [{"cmd": "iniciar"}]
@@ -600,7 +992,93 @@ def _pesos(v) -> str:
 
 NOMBRE_CAUSA = {"no_metalico": "no metálico", "fuera_de_rango": "fuera de rango", "no_circular": "no circular",
                 "perforado": "perforado", "no_reconocida": "no reconocida", "incoherente": "incoherente"}
-ESTADO_CARRO = {"siguiendo": "siguiendo la línea", "maniobra": "maniobrando", "en_meta": "en la meta",
+# Qué estación detecta cada causa de rechazo y con qué regla (CLAUDE.md sec. 7). Los umbrales
+# se rellenan con los de config/parametros.yaml (_umbrales_filtrado).
+EXPLICA_CAUSA = {
+    "no_metalico": "E2 (material): el capacitivo la ve y el inductivo no, así que no es metal",
+    "fuera_de_rango": "E3 (cámara): su diámetro está fuera de {dmin}-{dmax} mm",
+    "no_circular": "E3 (cámara): circularidad menor a {circ} (bloques, fichas irregulares)",
+    "perforado": "E3 (cámara): tiene agujeros o contornos internos (botones, arandelas)",
+    "no_reconocida": "E3 (cámara): no reconoce la cara con confianza de al menos {conf} "
+                     "(monedas extranjeras o muy antiguas)",
+    "incoherente": "E3 (cámara): el diámetro medido difiere más de {coh} mm del de la denominación reconocida",
+}
+
+
+# Preguntas técnicas del FILTRADO que se repiten (foco del grupo). Sin modelo, las reglas las
+# contestan con esto en vez de un pedazo de documentación; con el modelo local, van como DATO
+# VERIFICADO (en la batería, "cómo sabe si es de metal" hizo que el modelo chico dijera que no
+# había sensor de metal, porque la búsqueda no le trajo la sección del inductivo).
+SABER_FILTRADO = [
+    (re.compile(r"\b(metal|metalic\w*|capacitiv\w*|inductiv\w*)\b"),
+     "El material lo decide la estación 2 con dos sensores DEBAJO de la cinta, mirando a través de la banda: "
+     "un capacitivo (ve cualquier objeto) y un inductivo M18 (solo ve metal). Si el capacitivo ve la pieza y "
+     "el inductivo no, no es metal y se rechaza como «no metálico», sin gastar la cámara; si los dos la ven, "
+     "es metálica y sigue a la cámara."),
+    (re.compile(r"(huec|ueco|agujer|perfor|ojal|arandela)"),
+     "Los botones y arandelas con agujeros los saca la cámara (estación 3): busca contornos internos cerrados "
+     "dentro de la pieza y, si encuentra alguno, la rechaza como «perforado»."),
+    (re.compile(r"\b(euro|euros|extranjer\w*|otro pais|otros paises|dolar\w*|centimo\w*)\b"),
+     "Una moneda extranjera no se rechaza por tamaño (un euro mide 23,25 mm, casi como una de $500), sino por "
+     "la CARA: la cámara la clasifica y, si no la reconoce como moneda colombiana con confianza de al menos "
+     "{conf}, la rechaza como «no reconocida»; y si la confunde con una colombiana, la regla de coherencia "
+     "compara su diámetro con el de esa denominación (tolerancia {coh} mm) y la rechaza como «incoherente»."),
+    (re.compile(r"\b(celdas? de carga|balanza|bascula|hx711)\b"),
+     "El proyecto no usa celdas de carga: el grupo las prohibió (difíciles de acondicionar y dan problemas). "
+     "El peso que se muestra es ESTIMADO por conteo: la suma de la masa nominal de cada moneda reconocida."),
+]
+
+
+MONTAJE = re.compile(r"\b(montaje|estructura|maquina|planta|sistema|proyecto|todo|completo|equipo|carro)\b")
+CONSUMO = re.compile(r"\b(consum\w*|potencia|vatios|watts?|energia|autonomia|dura la bateria|cuanto dura)\b")
+
+
+def _kg(gramos: float) -> str:
+    return f"{gramos / 1000:.2f}".replace(".", ",") + " kg"
+
+
+def peso_montaje() -> str:
+    """Peso de TODO el montaje (config/masas.yaml, app/masas.py), no el de las monedas. "" si falla."""
+    try:
+        from app import masas
+
+        zonas = sorted(masas.por_zona().items(), key=lambda x: -x[1])
+        return (f"El montaje completo pesa unos {_kg(masas.total())} sin el portátil (suma de masas de "
+                f"hoja de datos y estimadas, en docs/peso.md; no se pesa en la línea). Lo más pesado: "
+                + ", ".join(f"{z} {_kg(g)}" for z, g in zonas[:3]) + ".")
+    except Exception:  # config a medio editar: se sigue sin esta frase
+        return ""
+
+
+def consumo_electrico() -> str:
+    """Consumo CALCULADO (sim/electrica.py -> docs/electrica.md), no medido. "" si no está el documento."""
+    ruta = RAIZ / "docs" / "electrica.md"
+    if not ruta.exists():
+        return ""
+    texto = ruta.read_text(encoding="utf-8")
+    partes = []
+    m = re.search(r"\*\*Consumo desde la red\*\*:\s*([^\n]+?)\s*\(", texto)
+    if m:
+        partes.append(f"La planta consume, según la simulación eléctrica, {m.group(1).strip()} desde la red")
+    m = re.search(r"\*\*Autonom[ií]a\*\*[^:]*:\s*\*\*([^*]+)\*\*", texto)
+    if m:
+        partes.append(f"el carro, con su batería 2S, tiene unas {m.group(1).strip()}")
+    if not partes:
+        return ""
+    return ("; ".join(partes) + ". Son valores CALCULADOS con corrientes de hoja de datos (docs/electrica.md), "
+            "no medidos: ningún sensor mide el consumo en vivo.")
+
+
+def _denominacion_nombrada(t: str) -> int | None:
+    """La denominación que nombra una frase ya normalizada ("de 500", "de mil", "1.000"), o None."""
+    m = re.search(r"\b(1[.,]?000|mil|500|200|100|50|quinientos|doscientos|cien)\b", t)
+    if not m:
+        return None
+    palabra = m.group(1).replace(".", "").replace(",", "")
+    return {"mil": 1000, "quinientos": 500, "doscientos": 200, "cien": 100}.get(palabra) or int(palabra)
+
+
+ESTADO_CARRO = {"siguiendo":"siguiendo la línea", "maniobra": "maniobrando", "en_meta": "en la meta",
                 "esperando_carga": "en el muelle", "detenido": "detenido", "manual": "cumpliendo una orden",
                 "esperando_orden": "quieto, esperando otra orden"}
 
@@ -609,32 +1087,105 @@ def responder_local(frase: str, estado: dict) -> str:
     """Preguntas basicas con las cifras del estado (sin DeepSeek)."""
     t = normalizar(frase)
     if re.search(r"\b(costo|costos|cuesta|cuestan|precio|precios|presupuesto|barato|abaratar|ahorrar|ahorro)", t):
-        from app import costos
+        try:
+            from app import costos
 
-        subs = sorted(costos.por_subsistema().items(), key=lambda x: -x[1])
-        mejores = costos.ahorros()[:3]
-        return (f"El proyecto cuesta {costos.pesos(costos.total())} en Colombia (precios del "
-                f"{costos.cargar()['consultado']}, sin el portátil). Lo más caro: "
-                + ", ".join(f"{n} {costos.pesos(v)}" for n, v in subs[:3]) + ". Dónde ahorrar: "
-                + "; ".join(f"{a['titulo']} ({costos.pesos(a['ahorro'])}, riesgo {a['riesgo']})" for a in mejores)
-                + ". Detalle en docs/costos.md.")
+            subs = sorted(costos.por_subsistema().items(), key=lambda x: -x[1])
+            mejores = costos.ahorros()[:3]
+            return (f"El proyecto cuesta {costos.pesos(costos.total())} en Colombia (precios del "
+                    f"{costos.cargar()['consultado']}, sin el portátil). Lo más caro: "
+                    + ", ".join(f"{n} {costos.pesos(v)}" for n, v in subs[:3]) + ". Dónde ahorrar: "
+                    + "; ".join(f"{a['titulo']} ({costos.pesos(a['ahorro'])}, riesgo {a['riesgo']})"
+                                for a in mejores)
+                    + ". Detalle en docs/costos.md.")
+        except Exception:  # precios.yaml a medio editar o con otro formato: sigue con lo demás
+            pass           # (el asistente nunca se cae por una tabla; se busca en docs/costos.md)
+    # Lo técnico del filtrado no depende de la corrida: se contesta aunque no haya datos.
+    saber = [texto.format(**_umbrales_filtrado()) for patron, texto in SABER_FILTRADO if patron.search(t)]
+    # Peso de TODO el montaje (no el de las monedas) y consumo eléctrico: salen de los documentos
+    # calculados (docs/peso.md, docs/electrica.md), no de la corrida.
+    pide_peso = re.search(r"\b(peso|pesa|pesan|kilos?|kg|masa)\b", t)
+    peso_de_montaje = bool(pide_peso and MONTAJE.search(t) and not re.search(r"\bmonedas?\b", t))
+    if peso_de_montaje:
+        saber.append(peso_montaje())
+    if SIN_SENSOR.search(t):
+        saber.append("No hay un sensor que mida eso en vivo, así que no tengo ese dato; lo que sí hay son "
+                     "valores nominales o calculados de la documentación.")
+    if CONSUMO.search(t) or re.search(r"\b(voltaje|tension|corriente)\b", t):
+        saber.append(consumo_electrico())
+    saber = [x for x in saber if x]
     if not estado.get("hay_datos"):
-        return "Todavía no hay datos de ninguna corrida: empiece una desde la barra de la izquierda."
+        return " ".join(saber) or "Todavía no hay datos de ninguna corrida: empiece una desde la barra de la izquierda."
     tot = estado["totales"]
-    partes = []
+    partes = list(saber)
     if re.search(r"\b(dinero|plata|valor|pesos|cuanto se ha|money)\b", t):
         partes.append(f"Valor aceptado: {_pesos(tot['valor_aceptado_pesos'])} en {tot['monedas_aceptadas']} monedas; "
                       f"en el almacén hay {_pesos(estado.get('almacen_valor_pesos'))} guardados.")
-    if re.search(r"\b(moneda|monedas|denominacion|denominaciones|coins)\b", t) and re.search(r"\b(cuant|total|how many)", t):
+    tubos = estado.get("almacen_tubos") or {}
+    denominacion = _denominacion_nombrada(t)
+    if denominacion and re.search(r"\b(cuant|hay|tiene|llevan?|van|guardad|aceptad)", t) and \
+            re.search(r"\b(monedas?|pesos|almac|almasen|tubo|hay de)", t):
+        # "cuánto hay de 500", "cuántas monedas de mil hay en el almacén": la de esa denominación.
+        d = estado["aceptadas_por_denominacion"].get(str(denominacion), {"monedas": 0, "valor_pesos": 0,
+                                                                         "peso_estimado_g": 0})
+        texto = (f"De {_pesos(denominacion)}: {d['monedas']} monedas aceptadas en esta corrida "
+                 f"({_pesos(d['valor_pesos'])}, {d['peso_estimado_g']} g estimados)")
+        if str(denominacion) in tubos:
+            if re.search(r"\b(almac|almasen|tubo)", t):
+                # Preguntan por el ALMACEN: esa cifra va primero. El modelo local chico repite la
+                # primera cifra del dato verificado y contestaba las aceptadas (3) en vez de las
+                # que quedan en el tubo (0 tras soltar un lote).
+                n = tubos[str(denominacion)]
+                texto = ((f"El tubo de {_pesos(denominacion)} del almacén está VACÍO ahora: 0 monedas guardadas "
+                          f"(el último lote ya cayó a un vaso). ") if not n else
+                         f"En el tubo de {_pesos(denominacion)} del almacén hay {n} monedas guardadas ahora. ") +                     "Aparte, " + texto[0].lower() + texto[1:]
+            else:
+                texto += f"; en su tubo del almacén hay {tubos[str(denominacion)]} guardadas"
+        partes.append(texto + ".")
+    elif re.search(r"\b(moneda|monedas|denominacion|denominaciones|coins)\b", t) and \
+            re.search(r"\b(cuant|total|how many)", t) and not re.search(r"rechaz", t):
         por = estado["aceptadas_por_denominacion"]
         detalle = ", ".join(f"{d['monedas']} de {_pesos(int(k))}" for k, d in sorted(por.items(), key=lambda x: int(x[0])))
         partes.append(f"Monedas aceptadas: {tot['monedas_aceptadas']}" + (f" ({detalle})." if detalle else "."))
-    if re.search(r"\b(peso|pesa|pesan|gramos|masa)\b", t):
-        partes.append(f"Peso estimado: {tot['peso_estimado_g']} g ({tot['nota_peso']}).")
-    if re.search(r"\b(rechaz|rechazo|rechazos|rechazadas|causa|causas|filtro|filtros)", t):
+    if re.search(r"\b(almacen|almasen|almazen|revolver|tubos?)\b", t) and not denominacion and tubos:
+        detalle = ", ".join(f"{n} de {_pesos(int(k)) if k.isdigit() else k}" for k, n in tubos.items() if n)
+        partes.append(f"En el almacén revólver hay {_pesos(estado.get('almacen_valor_pesos'))} guardados"
+                      + (f" ({detalle})" if detalle else " (todos los tubos vacíos)")
+                      + f"; un vaso se llena cuando un tubo junta {estado.get('monedas_por_vaso')} monedas "
+                        f"de la misma denominación.")
+    if re.search(r"\b(peso|pesa|pesan|gramos|masa)\b", t) and not peso_de_montaje:
+        partes.append(f"Peso estimado de las monedas aceptadas: {tot['peso_estimado_g']} g ({tot['nota_peso']}).")
+    # "filtro" solo pide cifras de rechazos si no es una pregunta técnica ya contestada arriba: en la
+    # batería, "qué filtro saca los botones con huecos" recibió también "el último rechazo fue en la
+    # casilla 52 (no reconocida)" y el modelo local los mezcló ("el último perforado fue la 52").
+    if re.search(r"\b(rechaz|rechazo|rechazos|rechazadas|causa|causas)", t) or \
+            (re.search(r"\bfiltros?\b", t) and not saber):
         causas = estado["rechazos_por_causa"]
         detalle = ", ".join(f"{NOMBRE_CAUSA.get(c, c)}: {n}" for c, n in causas.items())
         partes.append(f"Piezas rechazadas: {tot['piezas_rechazadas']}" + (f" ({detalle})." if detalle else "."))
+        if causas and re.search(r"\b(por ?que|causa|causas|motivo|explica|razon)", t):
+            # "cuántas rechazó y POR QUÉ": qué estación detecta cada causa y con qué umbral.
+            u = _umbrales_filtrado()
+            partes.append("Por qué: " + "; ".join(f"{NOMBRE_CAUSA.get(c, c)} = {EXPLICA_CAUSA[c].format(**u)}"
+                                                  for c in causas if c in EXPLICA_CAUSA) + ".")
+        ultimos = estado.get("ultimos_rechazos") or []
+        if ultimos:
+            partes.append(f"El último rechazo fue en la casilla {ultimos[0]['casilla']} "
+                          f"({NOMBRE_CAUSA.get(ultimos[0]['causa'], ultimos[0]['causa'])}).")
+    v = estado.get("ultima_inspeccion_camara")
+    if v and (re.search(r"\bultim", t) and re.search(r"\b(moneda|pieza|camara|vision|revis|inspecc|vio)", t)
+              or re.search(r"\b(camara|vision)\b", t) and re.search(r"\b(vio|reviso|midio|detecto)\b", t)):
+        agujeros = v.get("contornos_internos")
+        partes.append(
+            f"La última pieza que revisó la cámara (casilla {v['casilla']}, {v.get('hora', '')}) midió "
+            f"{v['diametro_mm']} mm de diámetro y circularidad {v['circularidad']}, "
+            + ("sin agujeros" if not agujeros else f"con {agujeros} agujeros")
+            # "otro" no es una denominación: dicho así, el modelo local ya no la llama "una de 500".
+            + (f"; NO la reconoció como ninguna moneda colombiana (clase «otro», confianza {v['confianza']})"
+               if v.get("clase") in (None, "otro") else
+               f"; la reconoció como «{v['clase']}» con confianza {v['confianza']}")
+            + " → " + (v["veredicto"] or "")
+            + (f" ({NOMBRE_CAUSA.get(v['causa'], v['causa'])})" if v.get("causa") else "") + ".")
     if re.search(r"\b(vaso|vasos)\b", t):
         partes.append(f"Vasos entregados en la meta: {tot['vasos_entregados_en_meta']}; "
                       f"esperando en la canaleta: {estado['canaleta_vasos_esperando']}.")
@@ -644,18 +1195,39 @@ def responder_local(frase: str, estado: dict) -> str:
         c = configuracion.cargar_parametros()["filtrado"]["confianza_minima"]
         partes.append(f"La cámara acepta una moneda solo si la reconoce con confianza de al menos {c:.2f} "
                       f"({c * 100:.0f} %); por debajo se rechaza como «no reconocida».")
-    if SIN_SENSOR.search(t):
-        partes.append("No hay un sensor que mida eso en vivo, así que no tengo ese dato (solo los valores "
-                      "nominales de la documentación).")
-    if re.search(r"\b(carro|vehiculo|donde esta|ruta|obstaculo|obstaculos)\b", t) and \
-            re.search(r"\b(donde|estado|posicion|ubicacion|cuant|recorr)", t):
+    if re.search(r"\b(carro|vehiculo|carrito|donde esta|ruta|obstaculo|obstaculos|evasion|evasiones)\b", t) and \
+            re.search(r"\b(donde|estado|posicion|ubicacion|cuant|recorr|hac|asiendo|haciendo|que esta|como va|"
+                      r"evasion|metros)", t):
         c = estado.get("carro")
         if c:
-            partes.append(f"El carro está {ESTADO_CARRO.get(c['estado'], c['estado'])} en ({c['x']:.2f}, {c['y']:.2f}) m"
-                          + (f", con el vaso {c['vaso_id']}" if c.get("vaso_id") else "")
-                          + f"; lleva {estado['ruta']['distancia_recorrida_m']} m y {estado['ruta']['evasiones']} evasiones.")
+            radio = c.get("radio") or {}
+            ultimos = c.get("ultimos_eventos") or []
+            partes.append(
+                f"El carro está {ESTADO_CARRO.get(c['estado'], c['estado'])} en ({c['x']:.2f}, {c['y']:.2f}) m"
+                + (f" (tramo: {c['fase']})" if c.get("fase") else "")
+                + (f", con el vaso {c['vaso_id']}" if c.get("vaso_id") else ", sin vaso")
+                + f"; lleva {estado['ruta']['distancia_recorrida_m']} m recorridos y {estado['ruta']['evasiones']} "
+                  f"evasiones de obstáculos."
+                + (" La radio (ESP-NOW) está " + ("conectada." if radio.get("enlace") else "SIN enlace.")
+                   if radio else "")
+                + (f" Lo último que hizo: {', '.join(e.split(' ', 1)[1].replace('_', ' ') for e in ultimos[:3])}."
+                   if ultimos else ""))
         else:
             partes.append("En esta corrida no hay carro con física.")
+    if re.search(r"\b(carro|vehiculo|carrito|viaje|viajes)\b", t) and \
+            re.search(r"\b(demora\w*|tarda\w*|dura|duracion|cuanto tiempo|que tan rapido|segundos|minutos)\b", t):
+        v = estado.get("ruta", {}).get("tiempos_de_viaje") or {}
+        if v.get("viajes_completos"):
+            partes.append(
+                f"El carro se demora en promedio {v['promedio_viaje_completo_s']} s por viaje completo (sale del "
+                f"muelle con el vaso, llega a la meta y vuelve); el último tardó {v['ultimo_viaje_completo_s']} s. "
+                f"Solo la ida a la meta: {v['promedio_ida_a_la_meta_s']} s en promedio. "
+                f"Lleva {v['viajes_completos']} viajes completos (del registro de eventos del carro).")
+        elif v.get("ultima_ida_a_la_meta_s") is not None:
+            partes.append(f"El carro tardó {v['ultima_ida_a_la_meta_s']} s en llegar a la meta; todavía no "
+                          "completó un viaje de vuelta al muelle.")
+        else:
+            partes.append("Todavía no hay un viaje del carro registrado en esta corrida: no tengo ese dato.")
     if re.search(r"\b(alarma|alarmas|problema|falla)\b", t):
         al = estado.get("alarmas") or []
         partes.append("Alarmas: " + (", ".join(a.replace("_", " ") for a in al) if al else "ninguna") + ".")
@@ -664,7 +1236,11 @@ def responder_local(frase: str, estado: dict) -> str:
                       f"faltan {estado.get('piezas_por_cargar')} piezas por cargar.")
     if partes:
         return " ".join(partes)
-    docs = buscar(frase, 4000)
+    # La seccion que resume la bateria de pruebas (docs/modelo-local.md) CITA las preguntas de la
+    # bateria palabra por palabra, asi que siempre gana la busqueda para esas preguntas, pero no
+    # trae la respuesta (se vio con "¿qué pin manda los pasos (STEP)?": salia ella en vez de la
+    # tabla de conexiones). Como extracto de respuesta se prefiere otra seccion.
+    docs = [d for d in buscar(frase, 4000 + MAX_SECCION) if not d.titulo.startswith("Resultados de la batería")]
     if docs:
         s = docs[0]
         extracto = re.sub(r"\s+", " ", s.texto)[:700]
@@ -726,6 +1302,13 @@ def atender(frase: str, conexion: sqlite3.Connection, *, usar: str = "auto", usa
         # contestaba "7,4 V en este momento", que es el valor nominal, no una medicion).
         crudo = {"respuesta": responder_local(frase, estado), "acciones": [], "documentos": []}
         modo = "local"
+    if crudo is None and usar in ("auto", "ollama") and estado.get("hay_datos") \
+            and _denominacion_nombrada(normalizar(frase)) and re.search(r"\b(almac|almasen|tubo)", normalizar(frase)):
+        # "cuántas monedas de mil hay en el almacén" es una LECTURA de un número, que las reglas
+        # tienen exacto. El modelo local chico, aun con el número como dato verificado, repetía las
+        # monedas aceptadas (3) en vez de las del tubo (0, recién soltado un lote): 3 de 4 veces mal.
+        crudo = {"respuesta": responder_local(frase, estado), "acciones": [], "documentos": []}
+        modo = "local"
     if crudo is None and usar in ("auto", "ollama") and interpretar_orden_local(frase):
         # Una orden clara la decide el interprete de reglas (siempre igual), no el modelo
         # chico: en las pruebas, "gira 45 grados a la derecha" le hizo inventar 4 ordenes
@@ -761,17 +1344,29 @@ def atender(frase: str, conexion: sqlite3.Connection, *, usar: str = "auto", usa
         modo = "local"
     validas, descartadas = [], []
     carro_ya = False
-    if es_pregunta(frase) and crudo["acciones"]:
-        # Una pregunta nunca mueve nada (en las pruebas, "¿cuántos vasos llegaron a la meta?" hizo
-        # que el modelo local mandara el carro a un punto).
-        descartadas.append("una pregunta no da órdenes")
+    if not isinstance(crudo.get("acciones"), list):
         crudo["acciones"] = []
-    if modo == "ollama" and not PIDE_MOVIMIENTO.search(normalizar(frase)):
+    if es_consulta(frase) and crudo["acciones"]:
+        # Una pregunta (o un "explícame", "dime", "cuéntame"...) nunca mueve nada, con ningún
+        # proveedor (en las pruebas, "¿cuántos vasos llegaron a la meta?" hizo que el modelo local
+        # mandara el carro a un punto).
+        descartadas.append("una pregunta o un pedido de información no da órdenes")
+        crudo["acciones"] = []
+    if not PIDE_MOVIMIENTO.search(normalizar(frase)) or not pide_mover_carro(frase):
+        # Candado para TODOS los proveedores (antes solo el modelo local): sin un verbo de
+        # movimiento en la frase, ninguna orden al carro; y tampoco si el verbo es de otra cosa
+        # ("la moneda avanza por la cinta", "sigue la línea de producción": 2026-09-29).
         quitadas = [a for a in crudo["acciones"] if isinstance(a, dict) and a.get("cmd") == "carro"]
         if quitadas:
-            descartadas.append("el modelo local propuso mover el carro sin que se lo pidieran")
+            descartadas.append("se propuso mover el carro sin que la frase lo pidiera")
             crudo["acciones"] = [a for a in crudo["acciones"] if a not in quitadas]
-    for a in corregir_giros(frase, crudo["acciones"] if isinstance(crudo["acciones"], list) else []):
+    if not pide_paro(frase):
+        # El paro detiene TODO y solo sale con una corrida nueva: solo con un imperativo explícito.
+        quitadas = [a for a in crudo["acciones"] if isinstance(a, dict) and a.get("cmd") == "paro"]
+        if quitadas:
+            descartadas.append('paro: solo con una orden explícita ("haz paro", "paro de emergencia", "para todo ya")')
+            crudo["acciones"] = [a for a in crudo["acciones"] if a not in quitadas]
+    for a in corregir_giros(frase, crudo["acciones"]):
         orden, motivo = validar_accion(a)
         if orden and orden["cmd"] == "carro" and orden["accion"] == "ir_a":
             # Un destino dentro de la planta, la canaleta o el muelle, o fuera del piso: ni se
@@ -792,6 +1387,12 @@ def atender(frase: str, conexion: sqlite3.Connection, *, usar: str = "auto", usa
             validas.append(orden)
         else:
             descartadas.append(motivo)
+    crudo["respuesta"] = limpiar_markdown(str(crudo.get("respuesta") or ""))
+    if not any(o["cmd"] == "carro" for o in validas):
+        # No se promete lo que no se mandó: sin orden al carro, fuera las oraciones "se moverá...".
+        texto, quito = quitar_promesas(crudo["respuesta"])
+        if quito:
+            crudo["respuesta"] = (texto + " " if texto else "") + "No mandé ninguna orden al carro: no se mueve."
     guardar_mensaje(conexion, "usuario", frase)
     guardar_mensaje(conexion, "asistente", crudo["respuesta"], modo=modo, acciones=validas)
     return Respuesta(crudo["respuesta"], modo, validas, descartadas, crudo.get("documentos", []), aviso)
@@ -1013,7 +1614,13 @@ def preparar_local() -> str:
     import subprocess
     import tempfile
 
-    ollama = os.path.expandvars(r"%LOCALAPPDATA%\Programs\Ollama\ollama.exe") if os.name == "nt" else "ollama"
+    import shutil
+
+    # Ollama se instalo en D: (el disco del sistema no se llena; usuario, 2026-09-28); antes vivia
+    # en la carpeta del usuario. Se prueba el PATH, D: y la ruta de instalacion por defecto.
+    candidatos = [shutil.which("ollama") or "", r"D:\Program Files\Ollama\ollama.exe",
+                  os.path.expandvars(r"%LOCALAPPDATA%\Programs\Ollama\ollama.exe")]
+    ollama = next((c for c in candidatos if c and Path(c).exists()), "ollama")
     with tempfile.NamedTemporaryFile("w", suffix=".Modelfile", delete=False, encoding="utf-8") as f:
         f.write(f"FROM {MODELO_LOCAL_BASE}\nPARAMETER num_ctx 8192\nPARAMETER temperature 0.2\n")
     r = subprocess.run([ollama, "create", "qwen2.5-proyecto", "-f", f.name], capture_output=True, text=True)

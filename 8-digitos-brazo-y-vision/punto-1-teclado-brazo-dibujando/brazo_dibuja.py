@@ -30,9 +30,21 @@ try:
     # REINICIA el ESP32; durante ~1-2 s esta arrancando y no manda nada.
     time.sleep(2)
     print(f"ESP32 conectado en {PUERTO_SERIAL}: se dibuja cada digito que llegue del teclado.")
-except serial.SerialException:
+except serial.SerialException as error:
     ser = None
-    print(f"No se encontro el ESP32 en {PUERTO_SERIAL}: usa los botones 0-9 de la ventana.")
+    # Se muestra el motivo real: "Acceso denegado" / PermissionError casi
+    # siempre significa que OTRO programa tiene el puerto abierto (Thonny
+    # conectado a la placa, u otra copia de este script): Windows deja
+    # abrir un COM a un solo programa a la vez. "No se encuentra el
+    # archivo" significa que ese COM no existe (otro numero de puerto u
+    # otro PC): se listan los que si hay para corregir PUERTO_SERIAL.
+    import serial.tools.list_ports
+    print(f"No se pudo abrir {PUERTO_SERIAL}: {error}")
+    if "denegado" in str(error).lower() or "permission" in str(error).lower():
+        print("  -> el puerto esta ocupado: cierra Thonny (o desconectalo con Stop) y vuelve a correr esto.")
+    puertos = [f"{x.device} ({x.description})" for x in serial.tools.list_ports.comports()]
+    print("  Puertos disponibles:", ", ".join(puertos) if puertos else "ninguno")
+    print("Sigue sin ESP32: usa los botones 0-9 de la ventana.")
 
 # ------------------------------------------------------------------
 # Trazos de cada digito, como una lista de puntos (u, v) en un

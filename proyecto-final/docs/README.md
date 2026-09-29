@@ -13,12 +13,18 @@ Se rehacen todos con `entorno\Scripts\python -m app.documentos`:
 - `componentes.md` — lista de materiales (lo que se compra o se imprime). Sale de `sim/catalogos.py`.
 - `conexiones.md` — conexionado pin a pin: módulos, pines y cada hilo. Sale de `sim/conexiones.py`.
 - `replicacion.md` — cómo pasar del simulador al montaje real (errores, calibración, tiempos).
-- `costos.md` — costo en Colombia por subsistema y ahorros propuestos. Sale de `config/precios.yaml`.
+- `costos.md` — costo en Colombia por subsistema, la estructura 3D pieza por pieza y ahorros
+  propuestos. Sale de `config/precios.yaml`.
+- `peso.md` — peso de todo el montaje y si cada motor alcanza. Sale de `config/masas.yaml`.
+- `electrica.md` — parte eléctrica simulada: corriente de cada riel en un ciclo real, cada hilo con
+  su voltaje y corriente, pasivos. Sale de `sim/electrica.py` (también `python -m sim.electrica`).
 
 Con su propio comando:
 
 - `pruebas-asistente.md` — batería REAL del asistente: cada frase se le pregunta de verdad al
   modelo y la respuesta se revisa. Se rehace con `python -m app.evaluar_asistente`.
+- `fisica-vs-3d.md` — la física de PyBullet comparada con el 3D, medida por medida. Se rehace con
+  `python tests/sim/test_fisica_vs_3d.py`.
 
 ## Escritos a mano
 
@@ -26,6 +32,8 @@ Con su propio comando:
   `sensores.md`).
 - `bitacora.md` — avance y decisiones sesión por sesión. Es el historial: las rutas viejas que
   menciona se dejan como estaban en su fecha.
+- `logica-interna.md` — cómo decide el sistema, con el código real; primero el filtrado de monedas.
+- `modelo-local.md` — el modelo de lenguaje local (Qwen2.5-3B): arquitectura, cómo se usa y por qué.
 - `revision-final.md` — revisión total del diseño antes del protocolo (espacio físico, alcance de
   cada sensor).
 - `interfaz-visor.md` — inventario de todas las funciones de la interfaz del visor 3D (lista de
@@ -37,4 +45,5 @@ Con su propio comando:
 
 - `enunciado/` — la guía del parcial (`segundo-parcial-umng.pdf`) y sus figuras numeradas, con su
   propio `README.md`.
+- `videos/` — las simulaciones de PyBullet grabadas (mp4 y gif), con `python -m sim.ver.grabar`.
 - `capturas/` — capturas del visor y del dashboard que usa el `README.md` del proyecto.

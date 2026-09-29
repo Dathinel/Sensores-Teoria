@@ -103,7 +103,16 @@ function describirEvento(e) {
     case 'desfase_corregido': return `${ojo(`cinta de ${esc(e.cinta)} corrida`)}: la cámara vio los separadores fuera de lugar, re-sincronizada`;
     case 'sabotaje_detectado': return `${mal('sabotaje detectado')} vaso ${e.vaso}: ${esc(e.motivo)}${e.estacion === 'camara' ? ' (la cámara ve la casilla sin vaso)' : ''}`;
     case 'salto_casilla': return 'salto de casilla en la cinta de vasos';
-    case 'espera': return `#${e.casilla} espera: no hay vaso válido`;
+    case 'espera':
+      if (e.src !== 'e4') return null;   // la cinta vacia sin carga no es noticia
+      if (e.motivo === 'carrusel_girando') {
+        const tubo = e.tubo === 'otras' ? 'otras' : `$${e.denominacion}`;
+        return `#${e.casilla} ${ojo('espera en la descarga')}: el carrusel ${e.soltando_lote ? 'suelta un lote y después trae' : 'trae'} el tubo <b>${tubo}</b>${typeof e.falta_ms === 'number' ? ` (falta ${(e.falta_ms / 1000).toFixed(1)} s)` : ''}; la cinta de monedas espera`;
+      }
+      return `#${e.casilla} ${ojo('espera')}: tubo $${e.denominacion} lleno y sin vaso válido`;
+    case 'gira': return e.src === 'carrusel'
+      ? `carrusel: tubo <b>${e.tubo === 'otras' ? 'otras' : '$' + e.tubo}</b> → ${e.lugar === 'agujero' ? 'agujero (soltar lote)' : 'carga'} (${(e.dur_ms / 1000).toFixed(1)} s)`
+      : null;
     case 'fin': return '<b>fin de la corrida</b>';
     case 'almacen': return e.tubo === 'otras' ? `#${e.casilla} ${esc(e.clase)} → <b>otras</b> (va a su propio vaso)` : `#${e.casilla} ${esc(e.clase)} → <b>tubo $${e.denominacion}</b> (${e.en_tubo})`;
     case 'presencia_recuperada': return `#${e.casilla} ${ojo('presencia recuperada')} (E1 falló, E2 la vio)`;
@@ -586,7 +595,7 @@ export function crearInterfaz(ctx) {
         const en3d = ctx.sensorEn3D(s.id);
         html += `<button class="item ${sensorEnComp === s.id ? 'sel' : ''}" data-sensorcomp="${esc(s.id)}"><span data-led="${esc(s.id)}" class="${ledDe(s.id)}"></span>`
           + `<span class="n">${s.numero}</span><span class="nombre">${esc(s.nombre)}<span class="insignias">`
-          + (s.hilos ? `<span class="rev chica">${s.hilos} hilos</span>` : '') + (en3d ? '<span class="rev chica">3D</span>' : '')
+          + (s.hilos ? `<span class="rev chica">${s.hilos} ${s.hilos === 1 ? 'hilo' : 'hilos'}</span>` : '') + (en3d ? '<span class="rev chica">3D</span>' : '')
           + '<span class="rev simulado">simulado</span></span></span></button>';
         if (sensorEnComp === s.id) {
           html += `<div class="abierto"><dl class="detalle"><dt>Modelo propuesto</dt><dd>${esc(s.modelo)}</dd><dt>Conexión</dt><dd>${esc(s.conexion)}</dd></dl>`
@@ -597,7 +606,7 @@ export function crearInterfaz(ctx) {
         const clase = { propia: 'simulado', efecto: 'efecto', no: '' }[c.simulacion] ?? '';
         const tiene = ctx.tiene3D(c.id);
         html += `<button class="item ${sel === c.id ? 'sel' : ''}" data-comp="${esc(c.id)}"><span class="n">${c.cantidad}×</span><span class="nombre">${esc(c.nombre)}<span class="insignias">`
-          + (c.hilos ? `<span class="rev chica">${c.hilos} hilos</span>` : '')
+          + (c.hilos ? `<span class="rev chica">${c.hilos} ${c.hilos === 1 ? 'hilo' : 'hilos'}</span>` : '')
           + (tiene ? '<span class="rev chica">3D</span>' : '<span class="rev pendiente chica">sin 3D</span>')
           + `<span class="rev ${clase}">${esc(c.estado)}</span></span></span></button>`;
         if (sel === c.id) {
@@ -725,8 +734,52 @@ export function crearInterfaz(ctx) {
     const modo = $('#modo');
     const arriba = $('#vistas').getBoundingClientRect().bottom + 10;
     $('#aviso').style.top = (modo.childElementCount ? modo.getBoundingClientRect().bottom + 8 : arriba) + 'px';
-    // Pantalla angosta: la leyenda de cables va arriba (abajo está la hoja del panel).
-    $('#leyendaCables').style.top = window.innerWidth <= 900 ? arriba + 'px' : '';
+    // Leyenda de cables: a la derecha, debajo del último aviso de la línea (si hay) y sin bajar
+    // más allá de la bitácora (o de la hoja del panel en pantalla angosta).
+    const ley = $('#leyendaCables');
+    const avisos = [...$('#aviso').children];
+    const arribaLey = avisos.length ? avisos[avisos.length - 1].getBoundingClientRect().bottom + 8
+      : (modo.childElementCount && window.innerWidth <= 900 ? modo.getBoundingClientRect().bottom + 8 : arriba);
+    let tope = window.innerHeight - 12;
+    const bit = $('#bitacora');
+    if (bit && getComputedStyle(bit).display !== 'none') tope = Math.min(tope, bit.getBoundingClientRect().top - 10);
+    if (panelAbierto() && window.innerWidth <= 900) tope = Math.min(tope, panel.getBoundingClientRect().top - 10);
+    ley.style.top = arribaLey + 'px';
+    ley.style.maxHeight = Math.max(44, tope - arribaLey) + 'px';
+  }
+
+  // Rectángulos de la pantalla que tapa la interfaz (barra, vistas, panel, avisos, bitácora,
+  // leyenda de cables, ayuda): la escena no pone etiquetas 3D debajo de ellos (se leían cortadas
+  // o quedaban tapadas, p. ej. el cartel META bajo el aviso de la cortina, 2026-09-28).
+  function zonasOcupadas() {
+    const sels = ['#barra', '#vistas', '#modo', '#aviso', '#bitacora', '#leyendaCables', '#ayuda'];
+    if (panelAbierto()) sels.push('#panel');
+    const out = [];
+    for (const sel of sels) {
+      const el = $(sel);
+      if (!el || el.hidden) continue;
+      // Los avisos son contenedores: cuenta cada aviso, no la caja vacía que los agrupa.
+      const partes = (sel === '#aviso' || sel === '#vistas') ? [...el.children] : [el];
+      for (const p of partes) {
+        const r = p.getBoundingClientRect();
+        if (r.width < 1 || r.height < 1) continue;
+        out.push({ x0: r.left - 4, x1: r.right + 4, y0: r.top - 4, y1: r.bottom + 4 });
+      }
+    }
+    return out;
+  }
+  // La parte de la pantalla donde se ve la escena sin nada encima: debajo de las vistas, a la
+  // derecha del panel (pantalla ancha) o encima de la hoja del panel (pantalla angosta). Las
+  // tomas de la cámara centran lo enfocado AQUÍ (a 900 px la hoja de abajo tapaba el carro).
+  function zonaLibre() {
+    const W = window.innerWidth, H = window.innerHeight;
+    const z = { izq: 0, der: W, arriba: $('#vistas').getBoundingClientRect().bottom + 6, abajo: H };
+    if (panelAbierto()) {
+      const r = panel.getBoundingClientRect();
+      if (W > 900) z.izq = r.right;
+      else z.abajo = Math.max(z.arriba + 80, r.top - 6);
+    }
+    return z;
   }
 
   function vigilarInternet() {
@@ -764,13 +817,23 @@ export function crearInterfaz(ctx) {
       : `demo grabada · ${e.linea || ''}`) : (e.linea || '—');
     chip.className = 'chip ' + (demo() ? 'demo' : (e.linea || ''));   // demo: ámbar, nunca verde
     $('#chipTick').textContent = `tick ${e.tick ?? '—'}`;
-    const avisos = [];
-    if (e.cortina_activa) avisos.push('<div><b>Cortina activa</b>: la prensa sube y se detiene; tapa y empujador congelados. La cinta de monedas sigue.</div>');
-    if (e.moneda_en_espera) avisos.push('<div class="ambar"><b>Tubo lleno</b>: la moneda espera en E7 y la cinta de monedas se detiene hasta que un vaso reciba ese lote (no se descarta nada).</div>');
-    if ((e.alarmas || []).includes('faltan_vasos')) avisos.push('<div class="ambar"><b>Faltan vasos</b>: hay un lote listo y no hay vaso válido en el llenado; poner vasos en la entrada.</div>');
+    // Cada aviso es una línea corta (título) y el detalle sale al pasar el ratón: el globo completo
+    // tapaba el cartel META de la pista en la vista Todo (revisión visual, 2026-09-28). El detalle
+    // también queda en la bitácora.
+    const lista = [];
+    if (e.cortina_activa) lista.push(['', 'Cortina activa · prensa detenida', 'la prensa sube y se detiene; tapa y empujador congelados. La cinta de monedas sigue.']);
+    // Esperar al carrusel es normal (sale en la bitacora); el aviso grande es solo el tubo lleno.
+    if (e.moneda_en_espera && (e.motivo_espera || 'tubo_lleno') === 'tubo_lleno') lista.push(['ambar', 'Tubo lleno · cinta de monedas en espera', 'la moneda espera en la descarga (E4) y la cinta de monedas se detiene hasta que un vaso reciba ese lote (no se descarta nada).']);
+    // Montaje real: la placa en parada segura, con el motivo y cómo se sale (revisión 2026-09-29).
+    if (e.motivo_parada) lista.push(['', `Estación en parada segura · ${e.motivo_parada.replace('_', ' ')}`,
+      ({ sin_pc: 'la placa no oye al PC: sale sola cuando vuelve el latido.', pausa: 'pausa del PC: sale con Reanudar.',
+         paro: 'paro de emergencia: sale con Iniciar.', error: 'error del firmware: revisar y salir con Reanudar.' })[e.motivo_parada]
+      || 'la placa está detenida.']);
+    if ((e.alarmas || []).includes('faltan_vasos')) lista.push(['ambar', 'Faltan vasos en la entrada', 'hay un lote listo y no hay vaso válido en el llenado; poner vasos en la entrada.']);
+    const html = lista.map(([clase, titulo, detalle]) =>
+      `<div class="${clase}" title="${esc(titulo + ': ' + detalle)}"><b>${titulo}</b><span class="detalle"><br>${detalle}</span></div>`).join('');
     const aviso = $('#aviso');
-    const html = avisos.join('');
-    if (aviso.innerHTML !== html) aviso.innerHTML = html;
+    if (aviso.innerHTML !== html) { aviso.innerHTML = html; colocarAvisos(); }
     actualizarRespuesta(e);
     const ahora = performance.now();
     if (ahora - ultimoPintado > 1000) {
@@ -802,6 +865,14 @@ export function crearInterfaz(ctx) {
   // ---------- cables: botón y leyenda ----------
 
   let verCables = false;
+  // La leyenda arranca plegada (una línea con los totales) y se recuerda si se abrió.
+  function plegarLeyenda(si) {
+    const ley = $('#leyendaCables');
+    ley.classList.toggle('plegada', si);
+    const b = ley.querySelector('header button');
+    if (b) b.textContent = si ? 'Abrir' : 'Plegar';
+    try { localStorage.setItem('leyendaPlegada', si ? '1' : '0'); } catch { /* nada */ }
+  }
   function mostrarCables(si) {
     verCables = si;
     ctx.mostrarCables3D(si);
@@ -809,6 +880,7 @@ export function crearInterfaz(ctx) {
     document.body.classList.toggle('cables', si);
     const ley = $('#leyendaCables');
     ley.hidden = !si;
+    colocarAvisos();
     if (!si || ley.dataset.hecha) return;
     ley.dataset.hecha = '1';
     const cx = G().conexiones;
@@ -818,7 +890,8 @@ export function crearInterfaz(ctx) {
     const campo = cables.filter((c) => c.zona === 'planta' || c.zona === 'mesa');
     const total = campo.reduce((s, c) => s + c.largo, 0);
     const hilos = cx.cables.reduce((s, c) => s + c.hilos.length, 0);
-    let html = `<header>Cableado <span class="cuenta">${cx.cables.length} cables · ${hilos} hilos · ${m(total)} m de campo</span></header><div class="cuerpo">`
+    let html = `<header>Cableado <span class="cuenta">${cx.cables.length} cables · ${hilos} hilos · ${m(total)} m</span><button title="Pliega o abre la leyenda de cables">Abrir</button></header><div class="cuerpo">`
+      + `<p class="tenue" style="margin:0 0 6px">${m(total)} m de cable de campo.</p>`
       + '<p class="tenue" style="margin:0 0 6px">Largos con 20 % de holgura para amarras y curvas; tabla completa en docs/conexiones.md.</p>';
     const porTipo = {};
     for (const c of campo) (porTipo[c.tipo] ||= []).push(c);
@@ -838,6 +911,10 @@ export function crearInterfaz(ctx) {
     }
     html += '</details></div>';
     ley.innerHTML = html;
+    ley.querySelector('header button').addEventListener('click', () => plegarLeyenda(!ley.classList.contains('plegada')));
+    let plegada = true;
+    try { plegada = localStorage.getItem('leyendaPlegada') !== '0'; } catch { /* nada */ }
+    plegarLeyenda(plegada);
   }
 
   // Después de armar los cables 3D: se recuerda si estaban a la vista; ?cables los abre.
@@ -894,7 +971,7 @@ export function crearInterfaz(ctx) {
 
   return {
     // la escena pregunta
-    anchoTapado,
+    anchoTapado, zonaLibre, zonasOcupadas,
     marcarVista,
     zonasArriba: () => zonasArriba,
     // arranque

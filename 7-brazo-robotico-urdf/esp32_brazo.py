@@ -18,8 +18,9 @@
 # de tener Thonny conectado.
 #
 # Conexion I2C del teclado (SDA=GPIO21, SCL=GPIO22): expansor PCF8574,
-# direccion 0x20 (todos los pines de direccion a GND) — igual que en
-# esp32_teclado_lcd.py del tema 8.
+# direccion 0x20 (todos los pines de direccion a GND). El mismo esquema lo
+# reutiliza esp32_teclado.py del tema 9 (en el tema 8 el teclado va, en
+# cambio, directo a 8 GPIO y lo unico por I2C es la LCD).
 
 from machine import I2C, Pin
 import time
@@ -42,8 +43,8 @@ PASO_J2 = 0.05
 PASO_G = 0.005
 
 # ------------------------------------------------------------------
-# Teclado matricial 4x4 por I2C (igual que en esp32_teclado_lcd.py del
-# tema 8: P4-P7 = filas, salidas; P0-P3 = columnas, entradas con
+# Teclado matricial 4x4 por I2C (el mismo esquema que esp32_teclado.py
+# del tema 9: P4-P7 = filas, salidas; P0-P3 = columnas, entradas con
 # pull-up del propio PCF8574).
 # ------------------------------------------------------------------
 MAPA_TECLAS = [

@@ -52,7 +52,7 @@ Doble clic en **`visor.bat`**. Hace tres cosas:
    cuando el dashboard de **Streamlit** está listo se abre también en el navegador
    (<http://localhost:8501>).
 
-`visor-portable.html` es un solo archivo de unos 2 MB (Three.js, el visor y la demo van adentro).
+`visor-portable.html` es un solo archivo de unos 2,5 MB (Three.js, el visor y la demo van adentro).
 Abierto en otro PC, sin Python y sin internet, muestra la demo grabada; si en ese PC sí está la
 simulación, pasa a vivo igual. Se rehace con `python -m app.portable` (y solo, cada vez que se abre
 `visor.bat` o se graba una demo nueva con `python -m app.grabar_demo`).
@@ -67,7 +67,7 @@ Qué se ve:
   carro. Es también el boceto de cómo se construye: todo lo que existe en el diseño está modelado con
   su soporte.
 - **Dashboard** (Streamlit, <http://localhost:8501>): pestañas Resumen, Monedas y vasos, Calidad del
-  filtro, Línea en vivo, Carro y ruta, Montaje real, Asistente y Ayuda. Está pensado para alguien que
+  filtro, Línea en vivo, Carro y ruta, Pruebas, Montaje real, Asistente y Ayuda. Está pensado para alguien que
   no conoce el sistema: frases simples de "qué está pasando", una matriz de lo que era cada pieza
   contra lo que decidió la línea, el mapa del carro y los mismos sabotajes del visor.
 - **Asistente** (pestaña del dashboard; en el visor se ve en la pantalla del portátil): se le
@@ -96,6 +96,39 @@ simulación no está corriendo. Sin internet sigue funcionando todo lo de la pla
 habla con el PC por USB, el carro con el ESP32 fijo por ESP-NOW (radio directa, sin router) y los
 datos viajan por SQLite dentro del mismo PC.
 
+### Las simulaciones de PyBullet, para quien evalúa
+
+El visor 3D es para mirar, pero la física está en PyBullet. Para verla en su ventana real hay un
+menú: doble clic en **`simulaciones.bat`** y se elige una de cuatro escenas (o abrir la carpeta de
+videos). También se puede abrir cada una directo desde la carpeta `simulaciones/`. Todas usan la misma
+simulación y la misma lógica que la corrida normal, a tiempo real (espacio pausa, `r` reinicia, `q`
+sale):
+
+| Escena | Qué muestra | Comando |
+|---|---|---|
+| **1. Filtro de monedas** | Nuestra parte. 18 piezas mezcladas (y 2 casillas vacías) (monedas, botones, arandelas, bloques, extranjeras), cada una con un rótulo que la sigue con su material y, si la rechazan, su causa; cada tubo del almacén con su cuenta. Resultado: 7 al almacén y 11 a rechazo, sin ninguna falsa aceptación; una moneda buena ($50 antigua) sale rechazada como `no_reconocida` por el error de la cámara que simulamos a propósito (las dos fotos dieron clases distintas), que es justo lo que el sistema prefiere: ante la duda, rechaza. | `python -m sim.ver.filtro_monedas` |
+| 2. Embalaje de vasos | Verificación, llenado por lotes, tapa, prensa, canaleta, y los sabotajes (vaso retirado, cambiado, mano en la cortina). | `python -m sim.ver.embalaje_vasos` |
+| 3. Carro en la pista | El carro con motores y ruedas de verdad: sigue la línea, esquiva los tres muros, llega a la meta y vuelve de reversa al muelle. | `python -m sim.ver.carro_pista` |
+| 4. Todo junto | La corrida completa: la planta en la ventana de PyBullet y el carro en una segunda ventana (PyBullet permite una sola ventana por proceso y el carro vive en su propio mundo). | `python -m sim.ver.todo_junto` |
+
+![Simulación del filtro de monedas en PyBullet: cada pieza con su material o su causa de rechazo](docs/videos/filtro_monedas.gif)
+
+Videos completos: [filtro de monedas](docs/videos/filtro_monedas.mp4) ·
+[embalaje de vasos](docs/videos/embalaje_vasos.mp4) · [carro en la pista](docs/videos/carro_pista.mp4) ·
+[todo junto](docs/videos/todo_junto.mp4). Se regraban con `python -m sim.ver.grabar`.
+
+<table><tr>
+<td><img src="docs/videos/embalaje_vasos.gif" alt="Embalaje de vasos en PyBullet" width="100%"></td>
+<td><img src="docs/videos/carro_pista.gif" alt="El carro en la pista con física real" width="100%"></td>
+</tr></table>
+
+**¿La física es la misma que el 3D?** Lo revisamos medida por medida con una prueba automática
+(`tests/sim/test_fisica_vs_3d.py`): anchos de las cintas, paso de las casillas, posición de cada
+estación, las 9 monedas (masa y diámetro), el carro, el muelle, la pista y los muros. Y con física:
+cada moneda soltada sobre su tubo cae adentro, el vaso cuelga de su pestaña en los rieles y no se cae,
+y en el viaje completo el vaso se inclina menos de 1°. El informe, fila por fila y con lo que se
+corrigió, está en [`docs/fisica-vs-3d.md`](docs/fisica-vs-3d.md).
+
 ## La idea general
 
 La planta tiene cuatro subsistemas en fila: la **cinta de monedas** (filtrado y conteo), el
@@ -106,7 +139,7 @@ vasos al **carro**.
 flowchart LR
     OP["Operador<br/>pone una pieza"] --> CM
     subgraph CM["Cinta de monedas (4 casillas)"]
-        E1["E1 presencia<br/>infrarrojo"] --> E2["E2 material<br/>capacitivo + inductivo"] --> E3["E3 visión<br/>cámara cenital, 2 fotos"] --> E4["E4 descarga<br/>compuerta de desvío"]
+        E1["E1 presencia<br/>infrarrojo"] --> E2["E2 material<br/>inductivo; capacitivo bajo E1"] --> E3["E3 visión<br/>cámara cenital, 2 fotos"] --> E4["E4 descarga<br/>compuerta de desvío"]
     end
     E4 -- "rechazo, con su causa" --> RM["Bandeja de rechazo<br/>de monedas"]
     E4 -- "moneda aceptada" --> AL["Almacén revólver<br/>6 tubos"]
@@ -126,7 +159,9 @@ flowchart LR
 La cinta de monedas es negra mate, con separadores cada 40 mm que forman casillas. Un motor paso a
 paso la avanza exactamente una casilla (600 ms) y la detiene 1000 ms: en esa pausa cada estación lee
 y decide. Pusimos tiempos lentos a propósito, porque el montaje real tiene que verificar con calma:
-el ciclo es de 1,6 s, unas 37 piezas por minuto.
+el ciclo es de 1,6 s, unas 37,5 piezas por minuto si el carrusel del almacén ya tiene el tubo
+listo. Cuando la moneda va a un tubo lejano, la cinta la espera (ver el almacén, más abajo): en la
+corrida completa el ritmo real queda en unas 19,5 piezas por minuto (el carrusel tampoco gira mientras una moneda todavía está cayendo a su tubo: 0,4 s).
 
 1. **Carga.** Durante una pausa ponemos una pieza en la casilla de carga. La cinta solo avanza si
    lleva algo registrado o si el infrarrojo de la carga vio algo; vacía, espera quieta.
@@ -134,7 +169,8 @@ el ciclo es de 1,6 s, unas 37 piezas por minuto.
    "ve" algo si hay una pieza. Ocupada: se crea el registro de esa casilla, con un número propio que
    la acompaña todo el camino. Vacía: ninguna otra estación gasta tiempo en ella.
 3. **E2, material.** Un sensor capacitivo y uno inductivo, **debajo de la cinta** mirando hacia
-   arriba a través de la banda. Capacitivo sí e inductivo no: no metálico, rechazo `no_metalico`,
+   arriba a través de la banda (el capacitivo va bajo la casilla de E1 y su lectura viaja con la
+   pieza; el inductivo, bajo E2). Capacitivo sí e inductivo no: no metálico, rechazo `no_metalico`,
    y ni siquiera gasta la cámara.
 4. **E3, visión.** La casilla queda quieta bajo una cámara cenital con anillo de luz difusa (la
    cinta negra es el fondo). Se toman **dos fotos**: el PC mide el diámetro en milímetros, la
@@ -148,6 +184,9 @@ el ciclo es de 1,6 s, unas 37 piezas por minuto.
    $200, $500, $1.000 u "otras"); la moneda cae casi vertical al tubo. Si ese tubo está lleno, la
    moneda espera en la descarga y la cinta de monedas se detiene: **ninguna moneda colombiana
    aceptada se bota**.
+
+Cómo decide cada estación, con el código real, los umbrales de la configuración, el voto de tres
+lecturas y por qué un rechazo nunca se revierte: [`docs/logica-interna.md`](docs/logica-interna.md).
 
 ### El recorrido de un vaso
 
@@ -293,8 +332,10 @@ en el montaje real. Estas son las decisiones que más pesan:
   25° solo cabían dos vasos; elegimos 15° y forramos los rieles con cinta adhesiva de teflón para
   que deslicen parejo (un tubo de PTFE dejaba solo 0,5 mm de holgura). La entrada es un embudo y un
   escape de dos dedos con un solo servo suelta un vaso a la vez.
-- **Prensa de leva.** Con 6,5 mm de excentricidad, un MG996R empuja con al menos 150 N y una tapa a
-  presión pide del orden de 30 a 50 N (valor provisional hasta medirlo). El servo sabe su ángulo:
+- **Prensa de leva.** La tapa sella a presión: su reborde salta sobre el labio del vaso, y eso pide
+  del orden de 30 a 50 N (valor provisional hasta medirlo); apretar más solo deforma el vaso. Por eso
+  la leva (6,5 mm de excentricidad, movida por un MG996R) apunta a **60 N** (la tapa más dura × 1,2),
+  que el servo da con margen de ×2,8. El servo sabe su ángulo:
   no hace falta sensor de posición ni puente H. Un resorte limita la fuerza, así que un objeto
   extraño no rompe nada.
 - **Cortina de un solo sensor.** Llegamos a tener tres VL53L0X a distintas alturas. Nos quedamos
@@ -411,11 +452,88 @@ Una regla que nos pusimos desde el principio: todo tiene que poder replicarse en
 sus tiempos, medidas y el error individual de cada sensor, y todo eso queda anotado.
 [`docs/replicacion.md`](docs/replicacion.md) lista cada medida por confirmar (con dónde se cambia y
 cómo medirla), las monedas por medir, la **prueba de banco de 200 pasadas** para el error de cada
-sensor y el **presupuesto de tiempos**: comprueba que cada acción cabe en su hueco. Por ejemplo, la
+sensor y el **presupuesto de tiempos**: comprueba que cada acción cabe en su hueco (salvo el
+carrusel, que a propósito NO cabe: media vuelta tarda 4,1 s y la cinta de monedas lo espera; decisión
+del grupo, ver [Firmware](#firmware-de-los-dos-esp32)). Por ejemplo, la
 visión necesita 820 de los 1000 ms de pausa (dos fotos de 400 ms más el serial), y la cortina
 reacciona en 119 ms contra un máximo de 200. [`docs/revision-final.md`](docs/revision-final.md)
 recoge la auditoría de espacio, el alcance real de cada sensor con su error de montaje, los pines,
 la alimentación, el largo de los cables y el ruido.
+
+## Conexiones y parte eléctrica
+
+La estación se alimenta de una fuente de **12 V 10 A**. De ahí salen, cada uno con su fusible, un
+convertidor de **6 V** solo para los servos (para que sus arranques no metan ruido en lo demás), uno
+de **5 V** para el panel de luz, el anillo de la cámara y el motor del carrusel, y los **12 V** directos
+a los drivers de los NEMA 17 y a los sensores capacitivo e inductivo. El ESP32 fijo y las dos
+webcams van por USB a un **hub con fuente propia de 5 V** (así no le piden corriente al portátil), y
+el hub va al portátil por un solo cable. El carro tiene su propia batería de dos 18650, con un
+regulador de 5 V para su ESP32 y sus sensores.
+
+```mermaid
+flowchart LR
+    RED["Red 110 V"] --> F["Fuente 12 V 10 A"]
+    F -->|"F1 5 A"| B6["Buck 6 V 8 A"] --> PCA["PCA9685<br/>6 servos"]
+    F -->|"F2 2 A"| B5["Buck 5 V 3 A"] --> C5["panel de luz, anillo,<br/>28BYJ-48, módulos"]
+    F -->|"F3 3 A"| DRV["2 drivers A4988<br/>NEMA 17"]
+    F -->|"F4 1 A"| S12["capacitivo e inductivo<br/>por optoacoplador"]
+    HUB["Hub USB con fuente 5 V"] -->|"USB 5 V + datos"| E["ESP32 fijo<br/>3,3 V"]
+    HUB -->|"datos"| PC["Portátil"]
+    BAT["2 x 18650<br/>7,4-8,4 V, fusible 3 A"] --> TB["TB6612<br/>motores TT al 70 %"]
+    BAT --> EC["ESP32 del carro<br/>y sensores"]
+```
+
+Hicimos una **simulación eléctrica** (`sim/electrica.py`): recorre un ciclo real de la planta y un
+viaje del carro cada 10 ms (qué motor o servo se mueve en cada instante) y calcula la corriente de
+cada riel, la caída de tensión en cada cable, el margen de cada fusible y el calor de cada regulador.
+Ningún riel pasa de algo más de la mitad de su límite:
+
+| Riel | Promedio | Pico | Límite |
+|---|---:|---:|---:|
+| 12 V de la fuente | 1,57 A | 3,30 A | 10 A |
+| 6 V de los servos | 0,70 A | 3,92 A | 8 A |
+| 5 V de la caja | 1,36 A | 1,40 A | 3 A |
+| 3,3 V del ESP32 fijo | 0,18 A | 0,32 A | 0,6 A |
+| 5 V del hub USB (ESP32 fijo y webcams) | 0,69 A | 0,82 A | 2 A |
+| Batería del carro | 0,34 A | 0,70 A | 3 A |
+| 5 V del carro | 0,24 A | 0,37 A | 1 A |
+
+Desde la red consume unos **23 W** de promedio, y la batería del carro dura unas **6 horas andando**.
+
+![Corriente de cada riel durante un ciclo de la planta](docs/capturas/electrica-ciclo-planta.png)
+
+Los valores de los componentes pasivos salen calculados, no copiados:
+
+| Qué | Valor | Por qué |
+|---|---|---|
+| Vref del A4988 | 0,54 V | ~1 A por fase en los NEMA 17 (con la resistencia de medida de 0,068 Ω del módulo) |
+| Divisor del ECHO del HC-SR04 | 1 kΩ / 2 kΩ | baja los 5 V del sensor a 3,33 V para el GPIO del ESP32 |
+| Pull-ups del I2C largo | 2,2 kΩ, a 100 kHz | con ~170 pF de cable la subida tarda 317 ns: cumple a 100 kHz, no a 400 |
+| Pull-up del Hall | 10 kΩ a 3,3 V | el A3144 es de colector abierto y el GPIO 39 no tiene pull-up interno |
+| Optoacopladores PC817 | en la salida de 12 V del capacitivo y del inductivo | el ESP32 no aguanta 12 V; el PC817 queda saturado con 6 veces de margen |
+| Condensadores | 1000 µF en el PCA9685, 100 µF en cada driver, 100 nF en los motores TT | picos de arranque de los servos, picos al enchufar, ruido de escobillas |
+
+**Pines del ESP32 fijo** (los mismos en el firmware, el visor y Wokwi: todos salen de `sim/conexiones.py`):
+
+| Función | GPIO |
+|---|---|
+| I2C corto: PCA9685 de los 6 servos | SDA 21, SCL 22 (400 kHz) |
+| I2C largo: VL53L0X del interior del vaso y de la cortina | SDA 16, SCL 17 (100 kHz), XSHUT 18 y 19 |
+| NEMA 17 cinta de monedas / de vasos (STEP, DIR) y ENABLE común | 25, 26 / 27, 14 / 13 |
+| Carrusel 28BYJ-48 por ULN2003 | 32, 33, 23, 4 |
+| Presencia, capacitivo, inductivo, Hall | 34, 35, 36, 39 (solo entrada) |
+
+**Pines del ESP32 del carro:** TB6612 (PWMA 25, AIN 26/27, PWMB 33, BIN 32/13, STBY 4), encoders 18 y
+19, cinco infrarrojos de línea 34, 35, 36, 39 y 16, HC-SR04 (TRIG 17, ECHO 23 por el divisor), láser
+VL53L0X por I2C (21/22) e infrarrojo de la cuna 14.
+
+No se usan los pines de arranque (0, 2, 5, 12, 15) ni los de la memoria (6-11). El detalle completo:
+
+- [`docs/electrica.md`](docs/electrica.md): cada uno de los 152 hilos con su voltaje, corriente
+  nominal y pico, calibre, largo, caída y protección; los peores casos y las fórmulas de los pasivos.
+- [`docs/conexiones.md`](docs/conexiones.md): el conexionado pin a pin de las dos placas y la caja.
+- [`wokwi/`](wokwi/README.md): el circuito de cada ESP32 listo para abrir en wokwi.com y verlo
+  funcionar simulado (y con qué se reemplazó lo que Wokwi no tiene).
 
 ## El software por dentro
 
@@ -459,7 +577,7 @@ flowchart LR
   salón). La geometría sale de las mismas fuentes que la simulación, así que no puede dibujar un
   sensor donde la simulación no lo consulta. Muestra cada sensor con dos conos (el nominal y el de
   error probable de montaje), el conexionado pin a pin generado desde `sim/conexiones.py` (46
-  dispositivos, 45 cables, 150 hilos), la caja de control armada como un tablero y el portátil del
+  dispositivos, 46 cables, 152 hilos), la caja de control armada como un tablero y el portátil del
   grupo con sus medidas reales. Pasamos una **auditoría automática de espacio** sobre el modelo
   (cajas orientadas que se atraviesan) y un revisor de cables que muestrea cada uno cada 3 mm: así
   encontramos patas que atravesaban el carrusel, servos "posados" sin sujeción y cables cruzados, y
@@ -485,13 +603,31 @@ proveedor:
   de cuatro órdenes para "gira a la derecha";
 - las medidas que ningún sensor toma (temperatura, voltaje, corriente) se responden sin inventar.
 
-Lo evaluamos con una batería de 24 casos reales (cifras, preguntas técnicas, costos, preguntas sin
-dato, órdenes con errores de ortografía, intentos de saltarse las reglas y una pregunta en inglés):
-**24 de 24** con el modelo local (mediana de 7,5 s por respuesta) y 24 de 24 con las reglas. El
-informe completo, con cada respuesta, está en
+**Enfocado en lo nuestro.** Responde de todo, pero su especialidad es el filtrado de monedas (qué
+rechazó y por qué, en qué estación, cuánto hay de cada denominación, qué vio la cámara) y el
+movimiento del carro (dónde está, qué está haciendo, órdenes). Por eso el estado en vivo que recibe
+pone primero las monedas y el carro, y en la búsqueda en la documentación esas secciones pesan más.
+
+Lo evaluamos con una batería de 50 casos reales (monedas, carro, cifras, preguntas técnicas, costos,
+peso, consumo, preguntas sin dato, órdenes con errores de ortografía, intentos de saltarse las reglas,
+frases trampa que piden información pero suenan a orden, y una pregunta en inglés): **50 de 50** con
+el modelo local (mediana de ~5 s por respuesta) y 50 de 50 con las reglas. Antes del enfoque, sobre 37
+de esas preguntas, el modelo local pasaba 33 y las reglas 30 (en las de monedas, 4 de 7 y 2 de 7).
+
+Dos candados más, después de una revisión: pedir información ("explícame el paro de emergencia",
+"dime cuántos vasos llegaron a la meta") nunca da una orden, aunque no lleve signos de pregunta (Whisper
+no los pone); y "detén la línea" es una **pausa**, no un paro: el paro, del que solo se sale empezando
+una corrida nueva, sale únicamente con "paro" o con urgencia explícita ("para todo ya"). Si no mandó
+ninguna orden, tampoco promete que algo se va a mover. El informe completo, con cada respuesta, está en
 [`docs/pruebas-asistente.md`](docs/pruebas-asistente.md).
 
-![El asistente en la pantalla del portátil del visor 3D, con la nube de DeepSeek encima](docs/capturas/visor-asistente.png)
+**El modelo local por dentro.** Es Qwen2.5 de 3 mil millones de parámetros: un transformer de 36
+capas, con atención de 16 cabezas que comparten 2 de clave/valor, un vocabulario de 151.936 tokens,
+comprimido a 4 bits (1,9 GB), de modo que cabe entero en la tarjeta de video de 4 GB del portátil.
+Qué es un LLM, la arquitectura en diagrama, cómo lo usamos, por qué local y por qué ese tamaño, y lo
+que no le dejamos hacer: [`docs/modelo-local.md`](docs/modelo-local.md).
+
+![El asistente en la pantalla del portátil del visor 3D: respondió el modelo local qwen2.5 qué sensor detecta el metal y cuántas monedas se aceptaron](docs/capturas/visor-asistente.png)
 
 **Modelo local (sin internet).** Una sola vez:
 
@@ -504,7 +640,7 @@ python -m app.asistente --preparar-local
 El modelo (~1,9 GB) queda en la carpeta del usuario (`.ollama`), **fuera del proyecto**: no se sube
 a GitHub. `--preparar-local` crea `qwen2.5-proyecto`, con 8192 tokens de contexto: con el contexto por
 defecto de Ollama (~4000 tokens) un prompt largo se cortaba por el principio y el modelo perdía las
-instrucciones. En una RTX 3050 de 4 GB responde en unos 7 s. Mientras piensa, en el visor se ilumina
+instrucciones. En una RTX 3050 de 4 GB responde en unos 5,5 s. Mientras piensa, en el visor se ilumina
 el teclado del portátil; si piensa DeepSeek, en cambio, se anima la nube.
 
 **Voz sin internet.** Con internet, el micrófono lo transcribe Google y la respuesta la lee gTTS
@@ -559,9 +695,43 @@ mensajes perdidos y la última línea cruda recibida (si no cambia, el ESP32 no 
 pero no se entiende, es formato, no cables). Todo el detalle, con la tabla de pines, en
 [`firmware/README.md`](firmware/README.md).
 
+Reglas que cuidan el hardware y que viven **en la placa**, no solo en el PC:
+
+- **Prensa y empujador nunca se mueven a la vez** (`EXCLUYENTES` en `firmware/fijo/estacion.py`): si
+  llega la orden de uno mientras el otro está en su ciclo, se confirma y espera a que termine (evento
+  `en_espera` → `arranca`). Así los dos MG996R nunca piden su pico juntos. La cortina y la parada
+  segura cancelan lo que estaba esperando.
+- **Motores del carro al 70 % como máximo** (`firmware.carro_pwm_max`): son motores TT de 6 V con una
+  batería que llega a 8,4 V; así reciben ~5,9 V y trabados piden 1,07 A en vez de 1,53 A.
+- **Bus I2C largo a 100 kHz** (el de los dos VL53L0X, ~1,7 m de cable): con 2,2 kΩ y ~170 pF la señal
+  sube en 317 ns, que a 400 kHz no cumple.
+- **Drivers A4988 en reposo**: si las dos cintas llevan 3 s quietas, el ENABLE se apaga (dejan de gastar
+  ~0,2 A cada una); se vuelve a encender 5 ms antes del primer paso. Con la línea andando las pausas
+  son de 1 s, así que nunca se sueltan.
+- **Carrusel por temporizador**: un medio paso cada 2 ms (500 Hz, bajo el límite de arranque del
+  28BYJ-48). Media vuelta tarda 4,1 s y no cabe en el ciclo de 1,6 s: la cinta de monedas espera al
+  carrusel cuando la moneda va a un tubo lejano (decisión del grupo: se acepta esa espera). La placa
+  avisa `carrusel/llego` y el PC no suelta la moneda hasta ese aviso; en la simulación el mismo modelo
+  (`control/carrusel.py`) hace esperar la moneda en la descarga hasta que su tubo esté quieto bajo la
+  carga, y el lote hasta que su tubo esté sobre el agujero. Así ninguna moneda cae a un tubo que se
+  está moviendo.
+- **Paro enclavado**: la parada segura guarda su motivo. Si fue por perder al PC, se levanta sola
+  cuando vuelve el latido; si fue el paro del dashboard o un error del programa, queda enclavada hasta
+  que el PC mande reanudar. La parada segura también frena el carrusel donde esté.
+- **Cortina que falla del lado seguro**: vota varias lecturas (una lectura suelta no la dispara) y, si
+  pasan 150 ms sin una medición nueva (un cable suelto), se da por activa.
+- **La canaleta revisa antes de soltar**: la placa guarda el último estado del carro y solo suelta un
+  vaso si se cumplen las cuatro condiciones del protocolo (enlace vivo, estado fresco, carro en el
+  muelle, cuna vacía); si no, responde con el motivo.
+- **Programas que no se cuelgan**: en las dos placas cada vuelta del bucle va protegida (si algo falla,
+  motores a 0 y parada segura) y un perro guardián reinicia la placa si se queda trabada. Un paquete
+  de radio de otro grupo que no se entienda se descarta.
+- **Sesión**: cada placa y el PC sortean un número de sesión al arrancar; si uno se reinicia, el otro
+  olvida los ids viejos y vuelve a ejecutar las órdenes (antes confirmaba el id 1 sin ejecutarlo).
+
 ### Pruebas automáticas
 
-Tenemos **más de 650 pruebas** en `tests/` (ordenadas por capa: `control/`, `sim/`, `visor/`,
+Tenemos **más de 850 pruebas** en `tests/` (ordenadas por capa: `control/`, `sim/`, `visor/`,
 `app/` y `firmware/`), y todas corren sin ventana (PyBullet en modo DIRECT):
 reglas de decisión, registro de casillas, máquinas de estado de las dos cintas, almacén, protocolo,
 control del carro (incluida la ida y vuelta con 20 semillas de error sin tocar muros), la planta
@@ -571,11 +741,13 @@ presupuesto de tiempos, los costos, el visor portable, la voz y el firmware (com
 `mpy-cross` y probado de punta a punta contra la estación emulada).
 
 ```
-python -m venv entorno
-entorno\Scripts\activate
-pip install -r requirements.txt
-pytest -q
+py -3.14 -m venv entorno
+entorno\Scripts\python -m pip install -r requirements-lock.txt
+entorno\Scripts\python -m pytest -q
 ```
+
+(o directamente `instalar.bat`, que hace eso y más). Todos los comandos `python -m ...` de este README
+se corren con el Python del entorno: `entorno\Scripts\python -m ...`.
 
 ## Lo que nos enseñó la simulación
 
@@ -610,23 +782,60 @@ habrían aparecido igual, pero más caros:
 
 La historia completa, sesión por sesión, está en la [bitácora](docs/bitacora.md).
 
-## Costo en Colombia
+## Costo y peso
 
-**$1.680.746 COP** en total, sin el portátil (que es del grupo), con precios consultados el
-2026-09-27 en Ferretrónica, Electronilab, Didácticas Electrónicas y Mercado Libre. De eso, el 28 %
-son estimados (banda de las cintas, tornillería, cables, tubos: no hay un producto igual publicado).
+**Costo: $1.998.921 COP** en total, sin el portátil (que es del grupo), con precios consultados el
+2026-09-27 en Ferretrónica, Electronilab, Didácticas Electrónicas y Mercado Libre. El 38 % son
+estimados: banda de las cintas, tubos y piezas impresas no tienen un producto igual publicado.
 
 | Subsistema | Costo | % |
 |---|---:|---:|
-| Cinta de monedas | $244.346 | 15 % |
-| Cinta de vasos | $274.000 | 16 % |
-| Canaleta y muelle | $36.000 | 2 % |
-| Carro | $245.300 | 15 % |
-| Control y potencia | $312.600 | 19 % |
-| Estructura | $568.500 | 34 % |
+| Cinta de monedas | $276.058 | 14 % |
+| Cinta de vasos | $312.373 | 16 % |
+| Canaleta y muelle | $56.422 | 3 % |
+| Carro | $253.036 | 13 % |
+| Control y potencia | $313.452 | 16 % |
+| Estructura | $787.580 | 39 % |
 
-El detalle por componente y siete propuestas para **abaratarlo** (con su riesgo, ninguna aplicada
-sin aprobarla) están en [`docs/costos.md`](docs/costos.md), generado desde `config/precios.yaml`.
+La **estructura 3D** está contada pieza por pieza sobre el modelo del visor: **$716.675** en total.
+
+| Parte | Qué lleva | Costo |
+|---|---|---:|
+| Piezas impresas | 73 piezas, 957 g de PLA y unas 96 h de impresora (filamento + energía) | $99.095 |
+| Perfil 2020 | 6,10 m medidos en el modelo (patas y pórtico): 7 barras de 1 m | $398.300 |
+| Tornillería | 24 escuadras, 71 tuercas en T, 15 pies y sus tornillos, más 10 % de repuesto | $219.280 |
+
+**Peso: 13,38 kg** todo el montaje, sin el portátil (el 69 % es estimado por material × volumen:
+hay que pesarlo cuando esté armado).
+
+| Subsistema | Peso |
+|---|---:|
+| Cinta de monedas | 2,96 kg |
+| Almacén | 0,23 kg |
+| Cinta de vasos | 2,59 kg |
+| Pórtico | 1,35 kg |
+| Canaleta y muelle | 1,08 kg |
+| Carro | 0,51 kg (0,64 kg con un vaso lleno) |
+| Caja de control | 2,18 kg |
+| Pista y base | 2,47 kg |
+
+Con esas masas revisamos que cada motor dé al menos el doble de lo que se le pide:
+
+| Motor | Margen |
+|---|---:|
+| NEMA 17 de la cinta de monedas | ×9,3 |
+| NEMA 17 de la cinta de vasos (5 vasos llenos) | ×2,2 |
+| MG996R de la prensa (60 N para asentar una tapa a presión) | ×2,8 |
+| MG996R del empujador | ×38 |
+| Motores TT del carro (arranque con el vaso lleno) | ×5,9 |
+
+El vaso lleno pesa, en el peor caso, 133 g (vaso 25 g + tapa 8 g + 10 monedas de 10 g). La tapa sella
+a presión, con su reborde saltando sobre el labio del vaso: eso pide entre 30 y 50 N, y por eso la
+prensa apunta a 60 N con un resorte que no deja pasar de ahí. No hay celda de carga: el peso que
+muestra el dashboard es la suma de las masas nominales de las monedas reconocidas.
+
+Todo el detalle, con las fórmulas: [`docs/costos.md`](docs/costos.md) (con siete propuestas para
+abaratar, ninguna aplicada sin aprobarla) y [`docs/peso.md`](docs/peso.md).
 
 ## Estado del proyecto: lo hecho y lo que falta
 
@@ -668,9 +877,9 @@ sin aprobarla) están en [`docs/costos.md`](docs/costos.md), generado desde `con
 - **Entregable 1:** un documento de arquitectura con los requerimientos funcionales y no funcionales
   y un diagrama de bloques por módulo (hoy está repartido en este README, `CLAUDE.md` y
   `docs/revision-final.md`).
-- **Entregable 2:** planos acotados (vistas del modelo 3D con medidas) y un esquema eléctrico
-  dibujado; hoy el conexionado está pin a pin en [`docs/conexiones.md`](docs/conexiones.md) y en el
-  visor, pero no como esquema.
+- **Entregable 2:** planos acotados (vistas del modelo 3D con medidas). La parte eléctrica ya está
+  punto por punto y simulada ([`docs/electrica.md`](docs/electrica.md)), pin a pin
+  ([`docs/conexiones.md`](docs/conexiones.md)), en el visor y en Wokwi ([`wokwi/`](wokwi/README.md)).
 - **Pestaña de Inspección** del dashboard con la última foto y el contorno detectado: llega con el
   procesamiento de imagen.
 - Con el backend real, la línea automática espera la visión real (hoy en real hay monitoreo, prueba
@@ -709,62 +918,135 @@ entrenamiento con matriz de confusión y curva de confianza).
   pines, alimentación, cables y ruido.
 - [`docs/replicacion.md`](docs/replicacion.md): qué medir para construirlo de verdad y el presupuesto
   de tiempos.
-- [`docs/costos.md`](docs/costos.md): el precio de cada componente en Colombia y dónde ahorrar.
-- [`docs/pruebas-asistente.md`](docs/pruebas-asistente.md): las 24 preguntas y órdenes reales al
+- [`docs/logica-interna.md`](docs/logica-interna.md): cómo decide el sistema, con el código real;
+  primero y más a fondo el filtrado de monedas.
+- [`docs/electrica.md`](docs/electrica.md): la parte eléctrica simulada, cada conexión con su voltaje
+  y corriente, y los valores de los pasivos. [`wokwi/`](wokwi/README.md): el circuito en Wokwi.
+- [`docs/costos.md`](docs/costos.md): el precio de cada componente y de cada pieza impresa en
+  Colombia, y dónde ahorrar.
+- [`docs/peso.md`](docs/peso.md): el peso de todo el montaje y si cada motor alcanza.
+- [`docs/modelo-local.md`](docs/modelo-local.md): el modelo de lenguaje local (Qwen2.5-3B) por
+  dentro y por qué lo usamos.
+- [`docs/fisica-vs-3d.md`](docs/fisica-vs-3d.md): la física de PyBullet comparada con el 3D, medida
+  por medida.
+- [`docs/pruebas-asistente.md`](docs/pruebas-asistente.md): las 39 preguntas y órdenes reales al
   asistente, con su resultado y su tiempo.
 - [`docs/bitacora.md`](docs/bitacora.md): las decisiones sesión a sesión.
 - [`firmware/README.md`](firmware/README.md): el firmware, los pines y cómo subirlo.
 - [`docs/enunciado/`](docs/enunciado/): la guía del parcial (PDF) y sus figuras.
 
-Los `.md` de `docs/` (salvo la bitácora) se generan con `python -m app.documentos` desde sus
-fuentes: no se editan a mano.
+Varios `.md` de `docs/` son **generados** desde su fuente (`python -m app.documentos`, o el comando
+que dice cada uno) y no se editan a mano; otros, como la bitácora, la lógica interna o el del modelo
+local, son escritos a mano. Cuál es cuál está en [`docs/README.md`](docs/README.md).
 
-## Dónde está cada cosa
+## Qué hace cada archivo
 
-```
-visor.bat              abre el visor y el dashboard (y arranca la simulación si hace falta)
-instalar.bat           deja todo listo en un PC nuevo (entorno, firmware, Ollama, Whisper, chequeo)
-requirements.txt       dependencias; requirements-lock.txt: versiones exactas con las que se probó
-pytest.ini             configuración de las pruebas (carpeta tests/, raíz importable)
-visor-portable.html    el visor en un solo archivo, con la demo (generado: python -m app.portable)
-datos/                 la base SQLite local de la corrida (fuera de git)
-config/                parametros.yaml (todo número del diseño), monedas.yaml, precios.yaml
-control/               lógica pura, sin PyBullet ni pyserial: línea, embalaje, registro, reglas,
-                       almacén, monedas, carro, protocolo, tiempos
-  hal/                 interfaces de sensores y actuadores, backend sim y backend real
-sim/                   simulación en PyBullet
-  planta.py            LA simulación de la línea: cintas, almacén, canaleta, carro
-  mundo.py             escena de las dos cintas (URDF en sim/urdf/)
-  sensores_sim.py      sensores emulados (incluida la cámara en modo oráculo)
-  vehiculo_sim.py      el carro con física real, en su propio mundo
-  pista.py             línea central de la pista
-  geometria.py         la geometría que dibuja el visor (y las zonas prohibidas del carro)
-  catalogos.py         los 13 sensores y la lista de materiales
-  conexiones.py        conexionado pin a pin (fuente única del visor, los docs y el firmware)
-  carga_escenarios.py  lectura de escenarios, pruebas de un filtro y piezas sueltas
-  escenarios/          prueba_completa.yaml (la corrida de la interfaz)
-    pruebas_aisladas/  un escenario por filtro y el mixto de 20 (pytest y "probar un filtro")
-app/
-  lanzar.py            supervisor + dashboard (lo usa visor.bat)
-  supervisor.py        corre la simulación y escribe SQLite; servidor.py: HTTP del visor y /api
-  dashboard/           el Streamlit (python -m app.dashboard): inicio.py, estilo.py, datos.py,
-                       textos.py, cabecera.py, controles.py, dibujos.py y pestanas/ (una por módulo)
-  visor3d/             visor 3D en Three.js: index.html, visor.js (escena y render),
-                       interfaz.js y estilo.css (panel), piezas/ (una por módulo), demo/, vendor/
-  asistente.py         asistente (DeepSeek u Ollama local) con voz
-  db.py, configuracion.py, costos.py, documentos.py, portable.py, grabar_demo.py
-  chequeo.py           revisión previa a la sustentación (python -m app.chequeo)
-  evaluar_asistente.py batería real del asistente (docs/pruebas-asistente.md)
-  puente_serial.py     PC <-> ESP32 fijo (o estación emulada si no hay placa)
-firmware/              MicroPython de los dos ESP32 (fijo/, carro/, comun/), preparar.py y subir.py
-vision/                captura del dataset y entrenamiento del clasificador de monedas (fase 5)
-tests/                 pruebas automáticas, por capa (python -m pytest -q)
-  control/             reglas, línea, embalaje, registro, almacén, monedas, tiempos, protocolo, carro
-  sim/                 planta completa, sensores emulados, escenarios, conexionado
-  visor/               geometría del visor, servidor HTTP, documentos generados, visor portable
-  app/                 supervisor, base de datos, dashboard, asistente, voz, costos, chequeo,
-                       prueba de un filtro
-  firmware/            la lógica de las dos placas probada en el PC
-docs/                  documentación (índice en docs/README.md): generada, bitácora, inventarios
-                       de la interfaz, capturas y enunciado
-```
+El proyecto está separado en capas (ver [La idea general](#la-idea-general) y
+[`docs/logica-interna.md`](docs/logica-interna.md)): `control/` decide, `sim/` simula el mundo,
+`app/` muestra y guarda, `firmware/` corre en las placas. Todo número del diseño vive en `config/`.
+Aquí está cada archivo, qué hace y cuándo se usa.
+
+### En la raíz
+
+| Archivo | Qué hace |
+|---|---|
+| `visor.bat` | Doble clic para ver todo: abre `visor-portable.html` al instante, arranca la simulación por detrás y abre el dashboard cuando está listo. |
+| `simulaciones.bat` y `simulaciones/` | Menú para abrir las simulaciones de PyBullet en su ventana real (filtro de monedas, vasos, carro, todo junto) o la carpeta de videos. Un `.bat` por escena. |
+| `instalar.bat` | Deja todo listo en un PC nuevo: entorno con las versiones exactas, firmware, modelo local de Ollama, Whisper y el chequeo. |
+| `visor-portable.html` | El visor 3D en un solo archivo (Three.js + demo grabada). Funciona sin Python ni internet y pasa solo al vivo si la simulación responde. Se genera con `python -m app.portable`. |
+| `requirements.txt` / `requirements-lock.txt` | Dependencias, y las versiones exactas con las que se probó todo. |
+| `pytest.ini` | Configura las pruebas: carpeta `tests/` y la raíz importable sin instalar nada. |
+| `.env.example` | Cómo poner la clave de DeepSeek (el `.env` real no se sube). |
+| `CLAUDE.md` | El documento maestro de diseño: requisitos, secuencia de operación, contratos de datos, reglas. |
+| `CONTEXTO-SESION.md` | Reglas del grupo y en qué va el trabajo, sesión a sesión. |
+
+### `config/`: todos los números del diseño
+
+| Archivo | Qué hace |
+|---|---|
+| `parametros.yaml` | Umbrales del filtro, medidas de cintas, vasos, canaleta, pista y carro, tiempos de cada acción, error de cada sensor, protocolo y firmware. Lo que dice PROVISIONAL hay que medirlo en el montaje. |
+| `monedas.yaml` | La tabla de monedas colombianas (4 generaciones): diámetro, masa, si es ferromagnética o bimetálica. |
+| `precios.yaml` | Precio en Colombia de cada componente y de cada pieza impresa, y las propuestas para abaratar. |
+| `masas.yaml` | Masa de cada componente y pieza, para el peso total del montaje. |
+
+### `control/`: la lógica que decide (Python puro)
+
+No importa PyBullet ni pyserial: por eso corre igual en la simulación, en las pruebas y contra el
+hardware real, y el carro la lleva compilada en su ESP32.
+
+| Archivo | Qué hace |
+|---|---|
+| `reglas.py` | Las 6 causas de rechazo de monedas (material, rango, circularidad, perforado, reconocida, coherencia) y cómo se combinan las dos fotos. |
+| `linea.py` | La cinta de monedas: qué hace cada estación (E1 presencia, E2 material, E3 visión) con su lectura y a dónde va cada casilla en la descarga. |
+| `registro.py` | El registro de cada casilla (lo que cada estación descubre) y la regla de que un rechazo nunca se revierte. Estados del vaso. |
+| `almacen.py` | Los 6 tubos del almacén revólver: guardar por denominación, avisar tubo lleno, sacar un lote. |
+| `embalaje.py` | La cinta de vasos como máquina de estados: verificar, llenar, tapar, prensar, descargar; cortina que congela todo. |
+| `monedas.py` | Lee `monedas.yaml` y responde diámetro, masa y denominación de cada clase. |
+| `vehiculo.py` | El carro: seguir la línea (PD), frenar y detectar muros, esquivar por el lado libre, meta, vuelta, muelle, órdenes y odometría. |
+| `protocolo.py` | Mensajes JSON numerados con ack, latido y la regla para soltar un vaso al carro. Corre también en las dos placas. |
+| `tiempos.py` | Comprueba que cada acción del montaje real cabe en el tiempo que le da la cinta y calcula la producción por minuto. |
+| `hal/interfaces.py` | Qué es un sensor, un servo, una cinta o una cámara para la lógica (clases abstractas). |
+| `hal/backend_sim.py` | Esas interfaces sobre PyBullet. |
+| `hal/backend_real.py` | Esas interfaces sobre el ESP32 fijo (telemetría y comandos por el puente serial). |
+
+### `sim/`: el mundo simulado (PyBullet)
+
+| Archivo | Qué hace |
+|---|---|
+| `planta.py` | LA simulación de la línea, tick a tick: las dos cintas, el almacén, la canaleta, el carro, los sabotajes y las alarmas. Llama a `control/` con lo que leen los sensores. |
+| `mundo.py` | La escena de PyBullet de las dos cintas (URDF de `urdf/`), los cuerpos de monedas, botones, bloques y vasos, y cómo se mueven. |
+| `sensores_sim.py` | Los sensores emulados: rayos (`rayTest`) para infrarrojos y franjas de cámara, cono de la cortina, material por bandera, cámara en modo oráculo con ruido. |
+| `vehiculo_sim.py` | El carro con física real en su propio mundo: ruedas con torque limitado, muros, muelle, vaso que cabecea. |
+| `pista.py` | La línea central de la pista a partir de sus tramos. |
+| `urdf/` | Las dos cintas en URDF (bancada, separadores, estaciones, bandejas). |
+| `geometria.py` | La geometría que dibuja el visor 3D, sacada de las mismas fuentes que la simulación. |
+| `catalogos.py` | Los 13 sensores y la lista de materiales. |
+| `conexiones.py` | El conexionado pin a pin (fuente única de los cables del visor, `docs/conexiones.md` y los pines del firmware). |
+| `electrica.py` | La parte eléctrica simulada: corriente de cada riel en un ciclo real, caídas en cables, fusibles, pasivos y batería → `docs/electrica.md`. |
+| `carga_escenarios.py` | Lee los escenarios YAML, las pruebas de un filtro y las piezas sueltas. |
+| `escenarios/` | `prueba_completa.yaml` (la corrida de la interfaz) y `pruebas_aisladas/` (un escenario por filtro y el mixto de 20). |
+| `ver/` | Las simulaciones para quien evalúa, en ventana de PyBullet, y el grabador de los videos. |
+
+### `app/`: lo que se ve y se guarda
+
+| Archivo | Qué hace |
+|---|---|
+| `lanzar.py` | Arranca el supervisor y el dashboard en procesos separados (lo usa `visor.bat`). |
+| `supervisor.py` | El único proceso que toca la simulación (o las placas): corre la línea, consume órdenes, escribe en SQLite. |
+| `servidor.py` | HTTP del supervisor: sirve el visor 3D y `/api/estado`, `/api/geometria`, `/api/asistente`, `/api/internet`. |
+| `db.py` | Esquema de SQLite (eventos, elementos, vasos, ruta, órdenes, asistente, almacén entre turnos). |
+| `configuracion.py` | Carga `parametros.yaml`. |
+| `asistente.py` | El asistente: DeepSeek → modelo local (Ollama) → reglas; búsqueda en la documentación, estado en vivo, lista blanca de órdenes, voz con y sin internet. |
+| `evaluar_asistente.py` | La batería real de preguntas y órdenes al asistente → `docs/pruebas-asistente.md`. |
+| `puente_serial.py` | PC ↔ ESP32 fijo por USB (y una estación emulada si no hay placa); sirve también para diagnosticar. |
+| `costos.py`, `masas.py` | Totales de costo y de peso por subsistema. |
+| `documentos.py` | Genera los `.md` de `docs/` desde sus fuentes (no se editan a mano). |
+| `chequeo.py` | Revisión antes de la sustentación: versiones, puertos, Ollama, Whisper, internet, placas. |
+| `grabar_demo.py`, `portable.py` | Graban una corrida para la demo y arman `visor-portable.html`. |
+| `dashboard/` | El Streamlit: `inicio.py` (entrada), `estilo.py` (diseño común con el visor), `datos.py` (lee SQLite y manda órdenes), `textos.py` (frases simples), `cabecera.py` (avisos grandes), `controles.py` (barra lateral), `dibujos.py` (cintas y almacén) y `pestanas/` (una por pestaña: resumen, monedas, calidad, línea, carro, pruebas, montaje, asistente, ayuda). |
+| `visor3d/` | El visor en Three.js: `visor.js` (escena, cámara, animación), `interfaz.js` y `estilo.css` (panel), `piezas/` (un módulo por grupo de piezas, reutilizables), `vendor/` (Three.js local, sin CDN), `demo/`. |
+
+### `firmware/`: MicroPython de los dos ESP32
+
+| Archivo | Qué hace |
+|---|---|
+| `fijo/estacion.py` | Lógica del ESP32 fijo: comandos numerados con ack, eventos, latido y parada segura, cortina, puente ESP-NOW con el carro. No toca pines. |
+| `fijo/hw.py` | Hardware del fijo: pasos de los NEMA 17 por PWM, carrusel, servos por PCA9685, sensores. |
+| `carro/logica.py` | Lógica del carro: el mismo `ControlCarro` de la simulación conectado a la radio. |
+| `carro/hw.py` | Hardware del carro: TB6612, encoders por interrupción, HC-SR04 sin bloquear, láser. |
+| `*/main.py` | Bucle principal de cada placa, sin esperas largas. |
+| `comun/enlaces.py`, `comun/distancia.py` | USB sin bloquear, ESP-NOW, y varios VL53L0X en el mismo bus sin esperar. |
+| `preparar.py`, `subir.py` | Arman lo que va a cada placa (pines generados desde `sim/conexiones.py`, `.mpy`) y lo suben con `mpremote`. |
+
+### Lo demás
+
+| Carpeta | Qué hay |
+|---|---|
+| `wokwi/` | El circuito del ESP32 fijo y del carro para abrir en wokwi.com (`diagram.json` + `main.py`). |
+| `vision/` | `capturar_dataset.py` (fotos del montaje) y `entrenar.py` (Keras + MobileNetV2, matriz de confusión). |
+| `tests/` | Las pruebas automáticas por capa: `control/`, `sim/`, `visor/`, `app/`, `firmware/`. |
+| `docs/` | La documentación (índice en [`docs/README.md`](docs/README.md)), capturas, videos y la guía del parcial. |
+| `datos/` | La base SQLite de la corrida (no se sube). |
+| `.streamlit/config.toml` | El tema del dashboard. |
+| `firmware/README.md`, `vision/README.md`, `wokwi/README.md` | Cómo se usa cada una de esas carpetas. |
+| `firmware/salida/` | Lo que se sube a cada placa, generado por `firmware/preparar.py` (no se edita a mano). |

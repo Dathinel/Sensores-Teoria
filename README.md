@@ -2,6 +2,8 @@
 
 Repositorio con las investigaciones y proyectos de la materia de Sensores, semestre 2026-2. Cada tema tratado en clase vive en su propia carpeta, con su propio README explicando de qué se trata, y al final está el proyecto final del corte. Varios temas están basados en el repositorio [U_Militar](https://github.com/dialejobv/U_Militar/blob/main/README.md).
 
+Todos los README siguen el mismo orden, para que se entiendan sin haber estado en clase: qué pedía la actividad y qué se hizo, qué es cada concepto nuevo, la idea general en diagramas, las conexiones pin a pin (con el voltaje y el porqué de cada pin), qué hace cada archivo, la lógica del código paso a paso y cómo probarlo, con y sin el ESP32 conectado.
+
 ## Temas
 
 ### 1. [esp32-investigacion](./1-esp32-investigacion)

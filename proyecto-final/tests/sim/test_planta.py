@@ -460,6 +460,11 @@ def test_el_carro_carga_con_la_secuencia_segura(crear_planta):
     """Punto 13: en_muelle -> cuna vacia -> soltar UN vaso -> la cuna lo
     confirma (carga). Cada vaso soltado es uno que estaba en la canaleta."""
     planta = crear_planta()
+    # El carro de reemplazo pasa cada 2 ciclos (no 6): desde 2026-09-28 la
+    # cinta de monedas espera al carrusel (tiempo real) y los vasos llegan a
+    # la canaleta cerca del final de la corrida. Lo que se prueba aqui es la
+    # secuencia del muelle, no cada cuanto pasa el carro de reemplazo.
+    planta.carro_retira_cada_ticks = 2
     eventos = _correr(planta)
     orden = [e["ev"] for e in eventos if e["ev"] in ("en_muelle", "soltar", "carga")]
     assert orden and orden[:3] == ["en_muelle", "soltar", "carga"]
@@ -473,6 +478,7 @@ def test_si_la_cuna_no_confirma_no_se_suelta_otro_vaso(crear_planta):
     """El infrarrojo de la cuna no ve el vaso soltado: alarma, el carro no se
     va y el escape no suelta otro hasta que la cuna lo confirme."""
     planta = crear_planta()
+    planta.carro_retira_cada_ticks = 2   # ver test_el_carro_carga_con_la_secuencia_segura
     sensor = planta.backend.sensor_cuna
     leer_real = sensor.leer
     ciego = {"lecturas": 0}
@@ -621,3 +627,69 @@ def test_sin_radio_el_carro_termina_la_vuelta_y_no_le_cargan_otro_a_ciegas():
         if planta is not None:
             planta.cerrar()
         escena.cerrar()
+
+
+# ---------------------------------------------------------------------------
+# revision logica (2026-09-28)
+# ---------------------------------------------------------------------------
+
+
+def test_lo_que_ningun_sensor_registro_sale_con_una_causa_de_la_seccion_7(crear_planta):
+    """Bug: con E1 y E2 fallando a la vez, la pieza llegaba a la descarga sin
+    registro y `_a_rechazo(..., "sin_registro")` grababa causa NULL en
+    `elementos` (seccion 10.2: solo causas de la seccion 7). Ahora sale como
+    `no_reconocida` y el evento conserva el detalle (`motivo: sin_registro`)."""
+    import random
+
+    planta = crear_planta()
+    rng = random.Random(1)
+
+    def sensores_ciegos(p):
+        p.backend.sensor_presencia.configurar_error(1.0, 0.0, rng)
+        p.backend.sensor_capacitivo.configurar_error(1.0, 0.0, rng)
+
+    eventos = _correr(planta, {3: sensores_ciegos})
+    sin_registro = [e for e in eventos if e["ev"] == "rechazo" and e.get("motivo") == "sin_registro"]
+    assert sin_registro, "el escenario tiene que producir al menos una pieza sin registro"
+    finales = {e["casilla"]: e for e in eventos if e["ev"] == "elemento_final"}
+    for e in sin_registro:
+        assert e["causa"] == "no_reconocida"
+        assert finales[e["casilla"]]["causa"] == "no_reconocida"
+    from control.reglas import CAUSAS_VALIDAS
+    assert all(e["causa"] in CAUSAS_VALIDAS for e in finales.values() if e["destino"] == Destino.RECHAZO)
+
+
+def test_el_evento_del_carro_no_guarda_campos_del_transporte():
+    """Bug: `ts` (hora interna de la simulacion del carro) terminaba en el
+    evento de la planta, junto a su propia hora; tambien `s` (sesion)."""
+    escena = EscenaEstacion()
+    planta = None
+    try:
+        backend = EstacionBackendSim(escena, camara=CamaraOraculo(probabilidad_error=0.0))
+        planta = PlantaSimulada(escena, backend, LineaMonedas(), EmbalajeVasos(), cargar_escenario("prueba_completa"),
+                                monedas_por_vaso=LOTE, carro_fisico=True)
+        planta._mensaje_del_carro({"t": "evt", "src": "carro", "ev": "vuelta", "id": 7, "s": 9, "ts": 12.5,
+                                   "x": 0.1, "y": -0.2, "cuna": False})
+        e = planta._eventos[-1]
+        assert e["src"] == "carro" and e["ev"] == "vuelta" and e["msg"] == 7
+        assert "ts" not in e and "s" not in e and "t" not in e and "id" not in e
+        assert e["x"] == 0.1 and e["cuna"] is False
+    finally:
+        if planta is not None:
+            planta.cerrar()
+        escena.cerrar()
+
+
+def test_la_presencia_publica_el_diametro_real_de_la_pieza(crear_planta):
+    """El dashboard (matriz de Calidad) necesita la verdad de terreno del
+    diametro; antes solo tenia la medida de la camara."""
+    planta = crear_planta()
+    eventos = _correr(planta, max_ticks=12)
+    presencias = [e for e in eventos if e["ev"] == "presencia" and e["src"] == "e1"]
+    assert presencias and all("diametro_real_mm" in e for e in presencias)
+    for e in presencias:
+        elemento = planta._elementos.get(e["casilla"])
+        if elemento is None:
+            assert e["diametro_real_mm"] is None
+        else:
+            assert e["diametro_real_mm"] == round(elemento.diametro_mm, 2) and e["diametro_real_mm"] > 0

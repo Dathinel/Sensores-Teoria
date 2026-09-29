@@ -1,0 +1,556 @@
+{
+  "version": 1,
+  "author": "Grupo 7 - Sensores 2026-2",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": 0,
+      "left": 0,
+      "attrs": {
+        "env": "micropython-20231227-v1.22.0"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_pwma",
+      "top": -120,
+      "left": 220,
+      "attrs": {
+        "color": "yellow"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_led_pwma",
+      "top": -60,
+      "left": 210,
+      "attrs": {
+        "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_ain1",
+      "top": -120,
+      "left": 265,
+      "attrs": {
+        "color": "green"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_led_ain1",
+      "top": -60,
+      "left": 255,
+      "attrs": {
+        "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_ain2",
+      "top": -120,
+      "left": 310,
+      "attrs": {
+        "color": "blue"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_led_ain2",
+      "top": -60,
+      "left": 300,
+      "attrs": {
+        "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_pwmb",
+      "top": -120,
+      "left": 355,
+      "attrs": {
+        "color": "yellow"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_led_pwmb",
+      "top": -60,
+      "left": 345,
+      "attrs": {
+        "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_bin1",
+      "top": -120,
+      "left": 400,
+      "attrs": {
+        "color": "green"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_led_bin1",
+      "top": -60,
+      "left": 390,
+      "attrs": {
+        "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_bin2",
+      "top": -120,
+      "left": 445,
+      "attrs": {
+        "color": "blue"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_led_bin2",
+      "top": -60,
+      "left": 435,
+      "attrs": {
+        "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_stby",
+      "top": -120,
+      "left": 490,
+      "attrs": {
+        "color": "white"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_led_stby",
+      "top": -60,
+      "left": 480,
+      "attrs": {
+        "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn_enc_izq",
+      "top": 60,
+      "left": 260,
+      "attrs": {
+        "color": "green",
+        "bounce": "0"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn_enc_der",
+      "top": 130,
+      "left": 260,
+      "attrs": {
+        "color": "green",
+        "bounce": "0"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn_cuna",
+      "top": 200,
+      "left": 260,
+      "attrs": {
+        "color": "red",
+        "bounce": "0"
+      }
+    },
+    {
+      "type": "wokwi-dip-switch-8",
+      "id": "ir_linea",
+      "top": 60,
+      "left": -260,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_ir1",
+      "top": 0,
+      "left": -260,
+      "attrs": {
+        "value": "10000"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_ir2",
+      "top": 0,
+      "left": -230,
+      "attrs": {
+        "value": "10000"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_ir3",
+      "top": 0,
+      "left": -200,
+      "attrs": {
+        "value": "10000"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_ir4",
+      "top": 0,
+      "left": -170,
+      "attrs": {
+        "value": "10000"
+      }
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "hcsr04",
+      "top": 260,
+      "left": -120,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "pot_laser",
+      "top": 260,
+      "left": 120,
+      "attrs": {}
+    }
+  ],
+  "connections": [
+    [
+      "esp:TX",
+      "$serialMonitor:RX",
+      "",
+      []
+    ],
+    [
+      "esp:RX",
+      "$serialMonitor:TX",
+      "",
+      []
+    ],
+    [
+      "esp:25",
+      "r_led_pwma:1",
+      "orange",
+      []
+    ],
+    [
+      "r_led_pwma:2",
+      "led_pwma:A",
+      "orange",
+      []
+    ],
+    [
+      "led_pwma:C",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "esp:26",
+      "r_led_ain1:1",
+      "orange",
+      []
+    ],
+    [
+      "r_led_ain1:2",
+      "led_ain1:A",
+      "orange",
+      []
+    ],
+    [
+      "led_ain1:C",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "esp:27",
+      "r_led_ain2:1",
+      "orange",
+      []
+    ],
+    [
+      "r_led_ain2:2",
+      "led_ain2:A",
+      "orange",
+      []
+    ],
+    [
+      "led_ain2:C",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "esp:33",
+      "r_led_pwmb:1",
+      "orange",
+      []
+    ],
+    [
+      "r_led_pwmb:2",
+      "led_pwmb:A",
+      "orange",
+      []
+    ],
+    [
+      "led_pwmb:C",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "esp:32",
+      "r_led_bin1:1",
+      "orange",
+      []
+    ],
+    [
+      "r_led_bin1:2",
+      "led_bin1:A",
+      "orange",
+      []
+    ],
+    [
+      "led_bin1:C",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "esp:13",
+      "r_led_bin2:1",
+      "orange",
+      []
+    ],
+    [
+      "r_led_bin2:2",
+      "led_bin2:A",
+      "orange",
+      []
+    ],
+    [
+      "led_bin2:C",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "esp:4",
+      "r_led_stby:1",
+      "orange",
+      []
+    ],
+    [
+      "r_led_stby:2",
+      "led_stby:A",
+      "orange",
+      []
+    ],
+    [
+      "led_stby:C",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "esp:18",
+      "btn_enc_izq:1.l",
+      "green",
+      []
+    ],
+    [
+      "btn_enc_izq:2.l",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "esp:19",
+      "btn_enc_der:1.l",
+      "green",
+      []
+    ],
+    [
+      "btn_enc_der:2.l",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "esp:14",
+      "btn_cuna:1.l",
+      "green",
+      []
+    ],
+    [
+      "btn_cuna:2.l",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "ir_linea:1a",
+      "esp:34",
+      "green",
+      []
+    ],
+    [
+      "ir_linea:1b",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "r_ir1:1",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "r_ir1:2",
+      "esp:34",
+      "green",
+      []
+    ],
+    [
+      "ir_linea:2a",
+      "esp:35",
+      "green",
+      []
+    ],
+    [
+      "ir_linea:2b",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "r_ir2:1",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "r_ir2:2",
+      "esp:35",
+      "green",
+      []
+    ],
+    [
+      "ir_linea:3a",
+      "esp:VP",
+      "green",
+      []
+    ],
+    [
+      "ir_linea:3b",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "r_ir3:1",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "r_ir3:2",
+      "esp:VP",
+      "green",
+      []
+    ],
+    [
+      "ir_linea:4a",
+      "esp:VN",
+      "green",
+      []
+    ],
+    [
+      "ir_linea:4b",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "r_ir4:1",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "r_ir4:2",
+      "esp:VN",
+      "green",
+      []
+    ],
+    [
+      "ir_linea:5a",
+      "esp:16",
+      "green",
+      []
+    ],
+    [
+      "ir_linea:5b",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "hcsr04:VCC",
+      "esp:5V",
+      "red",
+      []
+    ],
+    [
+      "hcsr04:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "hcsr04:TRIG",
+      "esp:17",
+      "yellow",
+      []
+    ],
+    [
+      "hcsr04:ECHO",
+      "esp:23",
+      "blue",
+      []
+    ],
+    [
+      "esp:2",
+      "pot_laser:SIG",
+      "violet",
+      []
+    ],
+    [
+      "pot_laser:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "pot_laser:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ]
+  ],
+  "dependencies": {}
+}

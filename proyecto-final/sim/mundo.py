@@ -246,6 +246,85 @@ def posicion_bandeja_rechazo_vasos() -> tuple[float, float, float]:
     return (x + 0.11, y, 0.004)
 
 
+# Ancho de la banda de la cinta de vasos (la bancada es 5 mm mas ancha): deja
+# pasar la pestana del reborde. La canaleta arranca en su borde (lado -y).
+ANCHO_CINTA_VASOS_M = 0.075
+# Espesor de la pestana del reborde de la boca del vaso: lo que queda la boca
+# por encima de los rieles cuando el vaso cuelga (el mismo 1,2 mm de la prueba
+# fisica de tests/sim/test_fisica_vs_3d.py, colgar_vaso_en_rieles).
+ESPESOR_PESTANA_M = 0.0012
+# Donde queda estacionado el vaso entregado: a esta distancia del inicio de
+# los rieles, medida a lo largo de la canaleta (pasado el embudo de 40 mm;
+# es la misma pose de siempre, 10 cm afuera del eje de la descarga).
+DISTANCIA_VASO_ENTREGADO_M = 0.10 - ANCHO_CINTA_VASOS_M / 2
+
+
+def geometria_canaleta(parametros: dict) -> dict:
+    """Rieles de la canaleta de entrega, en metros (una sola fuente: la usan
+    sim/geometria.py para el visor y `activar_empujador_vasos` para apoyar el
+    vaso entregado). Arrancan en el borde de la cinta de vasos (lado del
+    operador) a la altura de la pestana del reborde menos `caida_entrada_mm`
+    (entrada en embudo: la pestana cae sobre los rieles en vez de chocar con
+    su punta; `inicio`/`fin` son el EJE del riel) y bajan a
+    `canaleta_entrega.inclinacion_grados` durante `canaleta.largo_mm`."""
+    import math
+
+    vaso, can = parametros["vasos"], parametros["canaleta"]
+    xd, yd, zd = posicion_estacion_vasos(ESTACION_DESCARGA_VASOS)
+    inclinacion = math.radians(parametros["canaleta_entrega"]["inclinacion_grados"])
+    largo = can["largo_mm"] / 1000
+    diametro_riel = can["diametro_riel_mm"] / 1000
+    caida = can["caida_entrada_mm"] / 1000
+    z_ini = zd + vaso["altura_mm"] / 1000 - diametro_riel / 2 - caida
+    y_ini = yd - ANCHO_CINTA_VASOS_M / 2
+    return {
+        "inicio": (xd, y_ini, z_ini),
+        "fin": (xd, y_ini - largo, z_ini - largo * math.tan(inclinacion)),
+        "inclinacion": inclinacion,
+        "separacion_rieles": can["separacion_rieles_mm"] / 1000,
+        "separacion_entrada": can["separacion_entrada_mm"] / 1000,
+        "largo_embudo": can["largo_embudo_mm"] / 1000,
+        "caida_entrada": caida,
+        "diametro_riel": diametro_riel,
+        "capacidad": can["capacidad_vasos"],
+    }
+
+
+def pose_vaso_en_canaleta(canaleta: dict, altura_vaso_m: float,
+                          distancia_m: float = DISTANCIA_VASO_ENTREGADO_M):
+    """(centro, cuaternion) del vaso colgado de su pestana en los rieles, a
+    `distancia_m` del inicio medida a lo largo de la canaleta.
+
+    Como queda de verdad (medido con la prueba fisica en DIRECT: el vaso con
+    pestana soltado sobre los rieles de PTFE): la pestana se ACUESTA sobre los
+    dos rieles, o sea el eje del vaso queda perpendicular al plano de los
+    rieles, inclinado lo mismo que la canaleta (15 grados; la prueba mide
+    14,9). Por eso no basta con bajarlo: tambien se inclina. La boca queda
+    `ESPESOR_PESTANA_M` por encima de la cara de arriba de los rieles."""
+    import math
+
+    a, b = canaleta["inicio"], canaleta["fin"]
+    largo = math.dist(a, b)
+    u = [(b[i] - a[i]) / largo for i in range(3)]              # a lo largo, bajando
+    horiz = math.hypot(u[0], u[1])
+    lat = (-u[1] / horiz, u[0] / horiz, 0.0)                  # de riel a riel (horizontal)
+    # Normal al plano de los rieles, hacia arriba: lat x u.
+    n = (lat[1] * u[2] - lat[2] * u[1], lat[2] * u[0] - lat[0] * u[2], lat[0] * u[1] - lat[1] * u[0])
+    if n[2] < 0:
+        n = tuple(-c for c in n)
+    rr = canaleta["diametro_riel"] / 2
+    # Eje de los rieles en el centro de la canaleta -> cara de arriba de los
+    # rieles (rr a lo largo de la normal) -> boca (la pestana encima) -> centro.
+    sobre = rr + ESPESOR_PESTANA_M - altura_vaso_m / 2
+    centro = [a[i] + u[i] * distancia_m + n[i] * sobre for i in range(3)]
+    # Girar el eje z del vaso hasta la normal: un giro alrededor de `lat`
+    # (Rodrigues: z -> z cos(f) + (lat x z) sen(f), porque lat es horizontal).
+    lat_x_z = (lat[1], -lat[0], 0.0)
+    angulo = math.atan2(n[0] * lat_x_z[0] + n[1] * lat_x_z[1], n[2])
+    s = math.sin(angulo / 2)
+    return centro, (lat[0] * s, lat[1] * s, lat[2] * s, math.cos(angulo / 2))
+
+
 def posicion_tubo(clave: int | str) -> tuple[float, float, float]:
     """Centro del FONDO del tubo de esa denominacion, o del compartimiento
     OTRAS (mundo, metros), con el carrusel en su posicion de reposo (el tubo
@@ -262,7 +341,11 @@ def posicion_tubo(clave: int | str) -> tuple[float, float, float]:
 class EscenaEstacion:
     """Escena con la cinta de monedas y la cinta de vasos cargadas."""
 
-    def __init__(self, *, reusar_cliente: int | None = None):
+    def __init__(self, *, reusar_cliente: int | None = None, conexion: int | None = None):
+        # `conexion`: modo de PyBullet (p.DIRECT por defecto: pruebas,
+        # supervisor y demo grabada corren sin ventana). Las escenas de
+        # `sim/ver/` pasan p.GUI para abrir la ventana de PyBullet con ESTA
+        # misma escena, sin copiar nada de su logica.
         self._pasos = {"avance_monedas": PASOS_AVANCE_CASILLA, "pausa_monedas": PASOS_PAUSA_CASILLA,
                        "avance_vasos": PASOS_AVANCE_CASILLA, "pausa_vasos": PASOS_PAUSA_CASILLA,
                        "empujador": PASOS_SERVO}
@@ -273,7 +356,7 @@ class EscenaEstacion:
             self.cliente = reusar_cliente
             p.resetSimulation()
         else:
-            self.cliente = p.connect(p.DIRECT)
+            self.cliente = p.connect(p.DIRECT if conexion is None else conexion)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setGravity(0, 0, -9.81)
         p.setPhysicsEngineParameter(fixedTimeStep=1 / 240)
@@ -700,30 +783,49 @@ class EscenaEstacion:
         for _ in range(pasos_vuelta):
             self._paso_fisica()
 
+    _canaleta_cache: dict | None = None
+
+    def _canaleta(self) -> dict:
+        """Rieles de la canaleta, de config/parametros.yaml (se lee una vez)."""
+        if self._canaleta_cache is None:
+            from app.configuracion import cargar_parametros
+
+            self._canaleta_cache = geometria_canaleta(cargar_parametros())
+        return self._canaleta_cache
+
     def activar_empujador_vasos(self, elemento: Elemento, destino: Destino) -> None:
         """Anima el empujador de la cinta de vasos y saca el vaso hacia la
         canaleta de entrega o la bandeja de rechazo (seccion 5, paso 13)."""
-        x, y0, z = self.posicion_estacion_vasos(ESTACION_DESCARGA_VASOS)
-
         self._animar_junta(self.id_cinta_vasos, self._junta_empujador_vasos,
                            self._pasos["empujador"], self._pasos["empujador"])
 
-        pos_antes, orn = p.getBasePositionAndOrientation(elemento.body_id)
+        pos_antes, orn_antes = p.getBasePositionAndOrientation(elemento.body_id)
         # Se deja estatico, para que la fisica no lo tumbe y el contenido,
-        # que es estatico, no quede flotando fuera. Entrega: de lado, colgado
-        # del reborde al inicio de la canaleta. Rechazo: no hay otro
+        # que es estatico, no quede flotando fuera. Rechazo: no hay otro
         # empujador; la cinta lo deja caer por su extremo a la bandeja.
+        # Entrega (pedido 13b, 2026-09-28): colgado de su pestana SOBRE los
+        # rieles de la canaleta, con la inclinacion de la canaleta (antes
+        # quedaba derecho y ~2 cm por encima de los rieles, a la altura de la
+        # cinta). Colocado y no soltado: el vaso de esta escena es un cilindro
+        # de 62 mm sin pestana (pasaria entre los rieles de 69 mm), la
+        # canaleta aqui es solo visual y un vaso suelto bajaria por el PTFE
+        # hasta el final sin el escape que lo retiene; que cuelga y desliza
+        # de verdad lo muestra la prueba fisica de tests/sim/test_fisica_vs_3d.py
+        # (con esa misma prueba se midio la pose que se usa aqui).
         if destino == "entrega":
-            pos_despues = [x, y0 - 0.10, z + elemento.altura_mm / 2000 + 0.002]
+            pos_despues, orn_despues = pose_vaso_en_canaleta(self._canaleta(), elemento.altura_mm / 1000)
         else:
             xb, yb, zb = posicion_bandeja_rechazo_vasos()
-            pos_despues = [xb, yb, zb + elemento.altura_mm / 2000]
-        p.resetBasePositionAndOrientation(elemento.body_id, pos_despues, orn)
+            pos_despues, orn_despues = [xb, yb, zb + elemento.altura_mm / 2000], orn_antes
+        p.resetBasePositionAndOrientation(elemento.body_id, pos_despues, orn_despues)
         p.changeDynamics(elemento.body_id, -1, mass=0)
-        delta = [a - b for a, b in zip(pos_despues, pos_antes)]
+        # Monedas y tapa viajan pegadas al vaso: se les aplica el MISMO
+        # movimiento rigido (traslacion y giro), para que sigan adentro.
+        inv_pos, inv_orn = p.invertTransform(pos_antes, orn_antes)
         for c in elemento.contenido:
-            pos_c = [o + d for o, d in zip(p.getBasePositionAndOrientation(c)[0], delta)]
-            p.resetBasePositionAndOrientation(c, pos_c, p.getBasePositionAndOrientation(c)[1])
+            pos_c, orn_c = p.getBasePositionAndOrientation(c)
+            rel = p.multiplyTransforms(inv_pos, inv_orn, pos_c, orn_c)
+            p.resetBasePositionAndOrientation(c, *p.multiplyTransforms(pos_despues, orn_despues, *rel))
 
         elemento.activo = False
 

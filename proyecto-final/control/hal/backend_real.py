@@ -146,9 +146,31 @@ class BackendReal:
         self.obturador = ServoReal(puente, reloj, "obturador")
         self.escape_canaleta = ServoReal(puente, reloj, "canaleta")
         self._reloj = reloj
+        self._carrusel: dict | None = None     # ultimo giro pedido (ver carrusel_en)
 
     def desvio(self, al_almacen: bool) -> None:
         self.puente.comando("desvio", "almacen" if al_almacen else "rechazo", self._reloj())
 
-    def carrusel_a(self, tubo: int) -> None:
-        self.puente.comando("carrusel", "ir", self._reloj(), tubo=tubo)
+    def carrusel_a(self, tubo: int, lugar: str = "carga") -> None:
+        """Pide el giro (tubo 0 a 5 bajo la `carga` o sobre el `agujero`). NO espera:
+        el 28BYJ-48 tarda hasta 4,1 s (media vuelta) y el ESP32 avisa con el evento
+        `carrusel/llego` cuando el motor para. Quien suelta la moneda o abre el
+        obturador pregunta antes `carrusel_en(tubo, lugar)` (2026-09-28: la moneda
+        no puede caer a un tubo que todavia no llego)."""
+        desde = len(self.puente.eventos)
+        pedido = self.puente.comando("carrusel", "ir", self._reloj(), tubo=tubo, lugar=lugar)
+        self._carrusel = {"tubo": tubo, "lugar": lugar, "desde": desde, "pedido": pedido}
+
+    def carrusel_en(self, tubo: int, lugar: str = "carga") -> bool:
+        """True solo si el ULTIMO giro pedido fue a ese tubo y lugar y el ESP32 ya
+        aviso que llego POR ESE PEDIDO: el evento `llego` trae el id del comando
+        que pidio el giro (`pedido`, revision 2026-09-29). Antes bastaba con que el
+        aviso fuera posterior al pedido y del mismo tubo y lugar: el `llego` de un
+        giro ANTERIOR al mismo tubo que llegaba tarde por el serial (o despues de
+        un pedido intermedio a otro tubo) daba el tubo por puesto con el disco
+        todavia girando."""
+        c = self._carrusel
+        if c is None or (c["tubo"], c["lugar"]) != (tubo, lugar):
+            return False
+        return any(e.get("src") == "carrusel" and e.get("ev") == "llego" and e.get("pedido") == c["pedido"]
+                   for e in self.puente.eventos[c["desde"]:])

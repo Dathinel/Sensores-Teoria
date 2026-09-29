@@ -27,15 +27,17 @@
       <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.02" iyz="0.0" izz="0.02"/>
     </inertial>
 
-    <!-- Placa de la bancada: 4 casillas de 40 mm, de x=-0.08 a x=0.08. -->
+    <!-- Placa de la bancada: de x=-0.12 a x=0.08 (200 mm): la banda arranca UNA casilla antes de
+         E1, como en el visor (revision 2026-09-26: el rodillo de cola a 2 cm de E1 no dejaba
+         lugar al capacitivo debajo). Corregido aqui el 2026-09-28 (fisica vs 3D): antes 160 mm. -->
     <visual>
-      <geometry><box size="0.16 0.061 0.02"/></geometry>
-      <origin xyz="0 0 0.01" rpy="0 0 0"/>
+      <geometry><box size="0.20 0.061 0.02"/></geometry>
+      <origin xyz="-0.02 0 0.01" rpy="0 0 0"/>
       <material name="azul_bancada"/>
     </visual>
     <collision>
-      <geometry><box size="0.16 0.061 0.02"/></geometry>
-      <origin xyz="0 0 0.01" rpy="0 0 0"/>
+      <geometry><box size="0.20 0.061 0.02"/></geometry>
+      <origin xyz="-0.02 0 0.01" rpy="0 0 0"/>
     </collision>
 
     <!-- Patas de perfil 2020: la mesa va a 43 cm del piso (sim/mundo.py,
@@ -49,17 +51,18 @@
     <!-- Superficie de la cinta: negra mate, fondo de contraste para la
          camara de vision (seccion 5, paso 6). -->
     <visual>
-      <geometry><box size="0.16 0.055 0.002"/></geometry>
-      <origin xyz="0 0 0.021" rpy="0 0 0"/>
+      <geometry><box size="0.20 0.055 0.002"/></geometry>
+      <origin xyz="-0.02 0 0.021" rpy="0 0 0"/>
       <material name="negro_cinta"/>
     </visual>
     <collision>
-      <geometry><box size="0.16 0.055 0.002"/></geometry>
-      <origin xyz="0 0 0.021" rpy="0 0 0"/>
+      <geometry><box size="0.20 0.055 0.002"/></geometry>
+      <origin xyz="-0.02 0 0.021" rpy="0 0 0"/>
     </collision>
 
     <!-- Separadores cada 40 mm: 5 separadores delimitan las 4 casillas.
          Solo visuales. -->
+    <visual><geometry><box size="0.003 0.055 0.003"/></geometry><origin xyz="-0.12 0 0.0235" rpy="0 0 0"/><material name="gris_separador"/></visual>
     <visual><geometry><box size="0.003 0.055 0.003"/></geometry><origin xyz="-0.08 0 0.0235" rpy="0 0 0"/><material name="gris_separador"/></visual>
     <visual><geometry><box size="0.003 0.055 0.003"/></geometry><origin xyz="-0.04 0 0.0235" rpy="0 0 0"/><material name="gris_separador"/></visual>
     <visual><geometry><box size="0.003 0.055 0.003"/></geometry><origin xyz="0.0 0 0.0235" rpy="0 0 0"/><material name="gris_separador"/></visual>

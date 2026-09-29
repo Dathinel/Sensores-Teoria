@@ -9,7 +9,9 @@ Que hace, y por que:
    cables en el visor 3D y genera docs/conexiones.md. Si alguien cambia un
    cable ahi, el firmware se entera; nunca hay dos tablas de pines.
 2. `config_placa.py` desde config/parametros.yaml: tiempos, angulos, umbrales
-   y protocolo (secciones `firmware`, `tiempos_ms`, `protocolo`, `vehiculo`).
+   y protocolo (secciones `firmware`, `tiempos_ms`, `protocolo`, `vehiculo` y
+   `planta.lecturas_por_decision`), mas el umbral de la cortina, que sale de
+   la geometria de la simulacion (sim/sensores_sim.ventana_cortina_mm).
 3. La logica COMPARTIDA con la simulacion (control/protocolo.py y, en el
    carro, control/vehiculo.py) se compila con mpy-cross, el compilador de
    MicroPython: si algo no es compatible con el ESP32, falla aqui en el PC y
@@ -63,6 +65,9 @@ def pines(placa: str) -> dict[str, int]:
 
 
 def config_fijo(p: dict) -> dict:
+    sys.path.insert(0, str(RAIZ))
+    from sim.sensores_sim import ventana_cortina_mm
+
     f = p["firmware"]
     return {
         "protocolo": p["protocolo"],
@@ -72,8 +77,17 @@ def config_fijo(p: dict) -> dict:
         "micropasos": p["motor_paso_a_paso"]["microstepping"], "mm_por_vuelta_cinta": f["mm_por_vuelta_cinta"],
         "pasos_por_vuelta_motor": p["motor_paso_a_paso"]["pasos_por_revolucion"],
         "carrusel_pasos_por_vuelta": f["carrusel_pasos_por_vuelta"], "carrusel_ms_por_paso": f["carrusel_ms_por_paso"],
-        "servos": f["servos"], "cortina_umbral_mm": f["cortina_umbral_mm"], "activo_bajo": f["activo_bajo"],
-        "telemetria_ms": f["telemetria_ms"],
+        "a4988_reposo_ms": f["a4988_reposo_ms"], "i2c_bus_largo_hz": f["i2c_bus_largo_hz"],
+        "servos": f["servos"], "activo_bajo": f["activo_bajo"], "telemetria_ms": f["telemetria_ms"],
+        # Cortina: el umbral es el largo de la zona, el MISMO numero que el
+        # alcance del cono de la simulacion (una sola fuente). La placa vota
+        # como las demas estaciones (N lecturas seguidas) y, sin mediciones
+        # nuevas por `cortina_sin_lectura_ms`, la da por activa.
+        "cortina_umbral_mm": ventana_cortina_mm(),
+        "lecturas_por_decision": p["planta"]["lecturas_por_decision"],
+        "cortina_sin_lectura_ms": f["cortina_sin_lectura_ms"],
+        "fijo_wdt_ms": f.get("fijo_wdt_ms", 2000),
+        "aviso_error_cada_ms": f.get("aviso_error_cada_ms", 1000),
     }
 
 
@@ -99,7 +113,9 @@ def config_carro(p: dict) -> tuple[dict, list, tuple]:
         puntos.append((round(q.x, 3), round(q.y, 3), round(q.rumbo, 3), round(q.s, 3)))
     cfg = {"protocolo": p["protocolo"], "vehiculo": vehiculo, "largo_linea_m": round(linea[-1].s, 4),
            "activo_bajo": f["activo_bajo"], "carro_v_max_m_s": f["carro_v_max_m_s"],
-           "carro_ganancia_ki": f["carro_ganancia_ki"],
+           "carro_ganancia_ki": f["carro_ganancia_ki"], "carro_pwm_max": f["carro_pwm_max"],
+           "carro_wdt_ms": f.get("carro_wdt_ms", 2000),
+           "aviso_error_cada_ms": f.get("aviso_error_cada_ms", 1000),
            # Piso libre y huellas prohibidas (planta, canaleta, muelle): el carro
            # rechaza por su cuenta un destino imposible (usuario, 2026-09-27).
            "zonas": zonas_carro(p, geo)}

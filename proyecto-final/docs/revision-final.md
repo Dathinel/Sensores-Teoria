@@ -112,7 +112,9 @@ por el ADC1 (32-39).
 
 - **Estación:** fuente de **12 V 10 A**:
   - 12 V directo a los dos drivers de los NEMA17 (A4988: Vref ≈ 0,54 V para ~1 A por fase;
-    corriente de reposo reducida) y a los sensores capacitivo e inductivo (piden 6-36 V).
+    en reposo el A4988 NO baja la corriente solo: el firmware suelta ENABLE (G13) cuando las dos
+    cintas llevan `firmware.a4988_reposo_ms` quietas, más que las pausas normales, así que solo
+    ahorra en las esperas largas; 2026-09-28) y a los sensores capacitivo e inductivo (piden 6-36 V).
   - **Buck 6 V 8 A solo para los servos.** Dos MG996R piden hasta 2,5 A cada uno trabados; el
     firmware nunca mueve prensa y empujador a la vez (pico real ~3,5 A). 1000 µF en la bornera V+
     del PCA9685.

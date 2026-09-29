@@ -19,7 +19,7 @@
 #
 # Conexion I2C del teclado (SDA=GPIO21, SCL=GPIO22): expansor PCF8574,
 # direccion 0x20 (todos los pines de direccion a GND) -- igual que en
-# esp32_brazo.py (tema 7) y esp32_teclado_lcd.py (tema 8).
+# esp32_brazo.py (tema 7). (En el tema 8 el teclado va directo a 8 GPIO.)
 
 from machine import I2C, Pin
 import time

@@ -5,6 +5,8 @@
 #   (m/s), no PWM: aqui se convierte con un adelanto (v / v_max) mas una
 #   correccion con los encoders medida cada 200 ms (con 20 ranuras por vuelta
 #   llegan pocos pulsos por ciclo; medir mas seguido seria puro ruido).
+#   El PWM nunca pasa de `carro_pwm_max` (0,70): los TT son motores de 3-6 V y
+#   la bateria 2S llega a 8,4 V (0,70 x 8,4 = 5,9 V medios).
 # - Encoders: interrupcion en cada ranura (el conteo no depende del bucle).
 # - Ultrasonico HC-SR04: tambien por interrupciones (subida y bajada del ECHO),
 #   para no bloquear con time_pulse_us: un disparo cada 60 ms.
@@ -29,6 +31,12 @@ class Motor:
         self.in2 = Pin(in2, Pin.OUT, value=0)
         self.v_max = cfg["carro_v_max_m_s"]
         self.ki = cfg["carro_ganancia_ki"]
+        # Tope del PWM (firmware.carro_pwm_max en config/parametros.yaml). Por que
+        # hace falta aunque el adelanto normal no llegue ahi: la correccion integral
+        # suma hasta +0,3 y, con una rueda trabada (el encoder no cuenta), empujaba
+        # el PWM al 100 %: 8,4 V en un motor de 6 V y ~1,5 A por canal, mas que los
+        # 1,2 A continuos del TB6612 y, los dos juntos, mas que el fusible de 3 A.
+        self.pwm_max = cfg["carro_pwm_max"]
         self.integral = 0.0
 
     def mover(self, v, v_medida, pwm_bajo):
@@ -41,7 +49,7 @@ class Motor:
         u = abs(v) / self.v_max + self.integral
         # PWM bajo para entrar de reversa al muelle: con poco torque el motor
         # se ahoga contra el tope y el encoder deja de contar (asi sabe que llego).
-        u = max(0.0, min(0.35 if pwm_bajo else 1.0, u))
+        u = max(0.0, min(0.35 if pwm_bajo else self.pwm_max, u))
         self.in1.value(1 if v > 0 else 0)
         self.in2.value(0 if v > 0 else 1)
         self.pwm.duty(int(u * 1023))

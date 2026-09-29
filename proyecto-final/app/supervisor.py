@@ -51,6 +51,23 @@ PARO = "paro"
 TERMINADA = "terminada"
 
 
+def _numero(valor) -> float | None:
+    """Un número finito (int, float o texto como "2.5"), o None. `bool` no cuenta como número."""
+    if isinstance(valor, bool):
+        return None
+    try:
+        v = float(valor)
+    except (TypeError, ValueError):
+        return None
+    return v if v == v and v not in (float("inf"), float("-inf")) else None
+
+
+def _entero(valor) -> int | None:
+    """Un número entero de monedas (10, 10.0 o "10"), o None ("10.5", "muchas", [3])."""
+    v = _numero(valor)
+    return int(v) if v is not None and v == int(v) else None
+
+
 class Supervisor:
     def __init__(self, ruta_bd: str | Path, *, parametros: dict | None = None,
                  puerto_http: int | None = None):
@@ -111,7 +128,8 @@ class Supervisor:
             db.reiniciar_corrida(self.conexion)
             self.escenario_nombre = "hardware real"
             self.estado_linea = CORRIENDO
-            self.puente.comando("estado", "reanudar", self._ms())
+            self._t_arranque_real = self._ms()   # desde aqui cuenta el plazo de `sin_esp32`
+            self.puente.comando("estado", "reanudar", self._t_arranque_real)
             self.conexion.commit()
             return
         if confianza_minima is not None:
@@ -166,6 +184,24 @@ class Supervisor:
         # Tambien queda como evento: el asistente muestra que paso con cada
         # orden que dio (no solo la ultima).
         db.registrar_evento(self.conexion, "supervisor", "respuesta", self.ultima_orden)
+
+    def aplicar_orden_segura(self, orden) -> None:
+        """`aplicar_orden` sin poder tumbar el bucle. Antes una orden mal formada que llegaba a la
+        tabla `ordenes` ({"cmd":"velocidad","valor":"rapido"}, un lote "10.5", un JSON que es una
+        lista) lanzaba una excepcion dentro de `vuelta` y mataba el supervisor entero: la linea,
+        el visor y el dashboard se quedaban sin datos. Ahora esa orden se contesta ok: false (queda
+        como evento `respuesta`, igual que cualquier otra) y el bucle sigue con la siguiente."""
+        if not isinstance(orden, dict):
+            db.registrar_evento(self.conexion, "supervisor", "orden", {"cruda": repr(orden)[:200]})
+            self._responder({"cmd": None}, False, "Orden mal formada: no es un objeto JSON")
+            self.conexion.commit()
+            return
+        try:
+            self.aplicar_orden(orden)
+        except Exception as error:   # noqa: BLE001 - ninguna orden puede tumbar el supervisor
+            print(f"Orden {orden!r} fallo: {type(error).__name__}: {error}")
+            self._responder(orden, False, f"Orden mal formada o fallida ({type(error).__name__}: {str(error)[:120]})")
+            self.conexion.commit()
 
     def aplicar_orden(self, orden: dict) -> None:
         cmd = orden.get("cmd")
@@ -223,15 +259,26 @@ class Supervisor:
                     self.estado_linea = CORRIENDO
                 self._responder(orden, True, "Se empaca lo guardado en los tubos")
         elif cmd == "lote":
-            # Monedas por vaso: vale para esta corrida y las siguientes.
-            valor = int(orden.get("valor", self.parametros["planta"]["monedas_por_vaso"]))
-            if self.planta is not None:
-                valor = self.planta.cambiar_lote(valor)
-            self.parametros["planta"]["monedas_por_vaso"] = max(1, valor)
-            self._responder(orden, True, f"Lote de {max(1, valor)} monedas por vaso")
+            # Monedas por vaso: vale para esta corrida y las siguientes. Entre 1 y lo que cabe en
+            # un tubo (planta.capacidad_tubo): antes, sin corrida abierta, un lote de 40 quedaba
+            # guardado tal cual y la corrida siguiente esperaba un lote que nunca se completa
+            # (`tubo_lleno` para siempre). Un valor que no es un entero se rechaza (ok: false).
+            valor = _entero(orden.get("valor", self.parametros["planta"]["monedas_por_vaso"]))
+            if valor is None:
+                self._responder(orden, False, f"Lote inválido: {orden.get('valor')!r} (un número entero de monedas)")
+            else:
+                valor = max(1, min(valor, int(self.parametros["planta"]["capacidad_tubo"])))
+                if self.planta is not None:
+                    valor = self.planta.cambiar_lote(valor)
+                self.parametros["planta"]["monedas_por_vaso"] = valor
+                self._responder(orden, True, f"Lote de {valor} monedas por vaso")
         elif cmd == "velocidad":
-            self.velocidad = max(0.25, min(8.0, float(orden.get("valor", 1.0))))
-            self._responder(orden, True, f"Velocidad x{self.velocidad:g}")
+            valor = _numero(orden.get("valor", 1.0))
+            if valor is None:
+                self._responder(orden, False, f"Velocidad inválida: {orden.get('valor')!r} (un número de 0,25 a 8)")
+            else:
+                self.velocidad = max(0.25, min(8.0, valor))
+                self._responder(orden, True, f"Velocidad x{self.velocidad:g}")
         elif cmd == "carro":
             # Fase 7: orden para el carro (asistente o botones del dashboard).
             if self.planta is None:
@@ -270,21 +317,66 @@ class Supervisor:
         from firmware.fijo.estacion import COMANDOS
 
         cmd, t = orden.get("cmd"), self._ms()
-        if cmd == "carro":
+        detenida = self.estado_linea in (PAUSADA, PARO)
+        if cmd == "carro" and detenida and orden.get("accion") != "detener":
+            # Igual que en la simulacion: en pausa o en paro el carro no se mueve
+            # (detenerlo si se puede siempre).
+            self._responder(orden, False, "La línea está en pausa o en paro: el carro no se mueve")
+        elif cmd == "carro":
             datos = {k: v for k, v in orden.items() if k not in ("cmd", "accion", "origen")}
             self.puente.comando("carro", orden.get("accion"), t, **datos)
             self._responder(orden, True, "Orden enviada al carro por la radio (él la valida y responde)")
-        elif cmd in ("pausar", "paro"):
+        elif cmd == "paro":
+            # El paro SIEMPRE llega a la placa (por seguridad, aunque no haya corrida), y deja la
+            # linea en PARO igual que en la simulacion: de ahi solo se sale con Iniciar.
             self.puente.comando("estado", "parar", t)
-            self.estado_linea = PAUSADA if cmd == "pausar" else PARO
-            self._responder(orden, True, "Estación en parada segura: cintas quietas, prensa arriba")
+            if self.estado_linea in (CORRIENDO, PAUSADA):
+                self.estado_linea = PARO
+            self._responder(orden, True, "PARO: estación en parada segura (cintas quietas, prensa arriba). "
+                                         "Sale con Iniciar")
+        elif cmd == "pausar":
+            if self.estado_linea != CORRIENDO:
+                self._responder(orden, False, "La línea no está corriendo")
+            else:
+                # `motivo: pausa`: la placa la deja ENCLAVADA (no se levanta sola si
+                # se corta y vuelve el cable) hasta el "reanudar".
+                self.puente.comando("estado", "parar", t, motivo="pausa")
+                self.estado_linea = PAUSADA
+                self._responder(orden, True, "Línea en pausa: estación en parada segura")
         elif cmd == "reanudar":
-            self.puente.comando("estado", "reanudar", t)
-            self.estado_linea = CORRIENDO
-            self._responder(orden, True, "La estación sigue")
+            # Igual que en la simulacion: "reanudar" solo saca de la PAUSA. Antes, con el
+            # hardware, tambien sacaba del PARO de emergencia (en la simulacion no).
+            # Excepcion (revision 2026-09-29): la linea CORRE pero la PLACA esta parada por
+            # un error del firmware (o por un paro/pausa que el PC ya no recuerda, p. ej.
+            # el PC se reinicio): antes "reanudar" contestaba "no esta en pausa" y no habia
+            # salida directa (solo Iniciar, que borra la corrida). Ahora saca a la placa.
+            tel = self.puente.tel
+            motivo = tel.get("motivo_parada") if tel.get("parada_segura") else None
+            if (self.estado_linea == CORRIENDO and motivo in ("error", "paro", "pausa")
+                    and self.puente.latido.vivo(t)):
+                self.puente.comando("estado", "reanudar", t)
+                self._t_arranque_real = t
+                self._responder(orden, True, f"La estación sale de la parada segura ({motivo})")
+            elif self.estado_linea != PAUSADA:
+                self._responder(orden, False, "PARO: sale con Iniciar" if self.estado_linea == PARO
+                                else "La línea no está en pausa")
+            elif not self.puente.latido.vivo(t):
+                self._responder(orden, False, "Sin ESP32: la línea sigue en pausa hasta que vuelva a oírse")
+            else:
+                self.puente.comando("estado", "reanudar", t)
+                self.estado_linea = CORRIENDO
+                self._t_arranque_real = t
+                self._responder(orden, True, "La estación sigue")
+        elif cmd == "hardware" and orden.get("dst") != "estado" and detenida and not orden.get("prueba"):
+            # Con la linea en pausa o en paro no pasan comandos de actuadores (antes
+            # pasaban y la placa, si ya se habia levantado, los ejecutaba). Solo una
+            # prueba EXPLICITA (`"prueba": true`, puesta en marcha del montaje) se manda,
+            # y aun asi la placa la rechaza si sigue en parada segura.
+            self._responder(orden, False, "La línea está en pausa o en paro: los actuadores no se mueven "
+                                          "(para probar uno, mande la orden con prueba: true)")
         elif cmd == "hardware" and orden.get("act") in COMANDOS.get(orden.get("dst"), {}):
             # Probar un actuador suelto (puesta en marcha del montaje).
-            datos = {k: v for k, v in orden.items() if k not in ("cmd", "dst", "act", "origen")}
+            datos = {k: v for k, v in orden.items() if k not in ("cmd", "dst", "act", "origen", "prueba")}
             self.puente.comando(orden["dst"], orden["act"], t, **datos)
             self._responder(orden, True, f"Comando {orden['dst']}.{orden['act']} enviado")
         else:
@@ -303,9 +395,41 @@ class Supervisor:
             db.registrar_evento(self.conexion, e.get("src", "esp32"), e.get("ev", "evento"), datos)
             if e.get("src") == "carro" and "x" in e:
                 db.registrar_ruta(self.conexion, e["x"], e["y"], e["ev"], e.get("fase", ""))
+            if e.get("src") == "pc" and e.get("ev") == "esp32_ok" and self.estado_linea in (PAUSADA, PARO):
+                # La placa se vuelve a oir con la linea en pausa o en paro: al dejar de
+                # oir al PC se paro por "sin_pc", que se levanta SOLA con el latido. Se le
+                # repite la parada enclavada para que no quede lista mientras el PC dice
+                # PAUSADA (el `parar` de la pausa pudo perderse con el cable suelto).
+                self.puente.comando("estado", "parar", t,
+                                    **({"motivo": "pausa"} if self.estado_linea == PAUSADA else {}))
+        pausada = self._pausar_si_no_oye_al_esp32(t)
         self._tick_real += 1
-        if self._tick_real % 10 == 0 or nuevos:
+        if self._tick_real % 10 == 0 or nuevos or pausada:
             self._publicar_telemetria()
+
+    def _pausar_si_no_oye_al_esp32(self, t: int) -> bool:
+        """CLAUDE.md 10.1: "Si el PC no oye al ESP32, pausa la línea y da la alarma sin_esp32".
+        Antes solo se daba la alarma y la línea seguía "corriendo" en el dashboard. Se cuenta desde
+        lo último que se oyó o, si todavía no se oyó nada, desde que arrancó/siguió la línea (la
+        primera respuesta de la placa puede tardar unas vueltas). Sale con "reanudar" (a mano, como
+        en la simulación), y solo cuando la placa se vuelve a oír."""
+        latido = self.puente.latido
+        if self.estado_linea != CORRIENDO or latido.vivo(t):
+            return False
+        desde = max(latido.ultimo_oido if latido.ultimo_oido is not None else -10**9,
+                    getattr(self, "_t_arranque_real", 0))
+        if t - desde <= latido.perdido_ms:
+            return False
+        self.estado_linea = PAUSADA
+        # La placa tambien se para con una pausa ENCLAVADA (revision 2026-09-29): antes
+        # solo pausaba el PC; la placa, sin oir al PC, quedaba en "sin_pc", que se levanta
+        # sola al volver el cable. Con el cable suelto este comando puede perderse: por
+        # eso se repite cuando la placa se vuelve a oir (`_vuelta_real`, esp32_ok).
+        self.puente.comando("estado", "parar", t, motivo="pausa")
+        db.registrar_evento(self.conexion, "pc", "linea_pausada", {"causa": "sin_esp32"})
+        self._responder({"cmd": "pausar", "origen": "supervisor"}, True,
+                        "Sin ESP32: línea en pausa (reanudar cuando vuelva a oírse la placa)")
+        return True
 
     def _ms(self) -> int:
         return int((time.monotonic() - self._t0) * 1000)
@@ -389,6 +513,10 @@ class Supervisor:
             estado = {"tick": self._tick_real, "hardware": self.puente.estado(),
                       "sensores": {k: tel.get(k) for k in ("presencia", "capacitivo", "inductivo", "hall")},
                       "cortina_activa": tel.get("seguridad") == "cortina",
+                      # Por que esta parada la placa ("sin_pc", "pausa", "paro", "error"): el
+                      # dashboard y el visor lo muestran y dicen como se sale (antes solo
+                      # "parada_segura", sin saber si hacia falta Reanudar o Iniciar).
+                      "motivo_parada": tel.get("motivo_parada") if tel.get("parada_segura") else None,
                       "alarmas": (["sin_esp32"] if not self.puente.latido.vivo(self._ms()) else [])
                       + (["parada_segura"] if tel.get("parada_segura") else [])}
         estado.update(
@@ -441,7 +569,7 @@ class Supervisor:
         probarla sin un bucle infinito)."""
         ordenes = db.tomar_ordenes_pendientes(self.conexion)
         for orden in ordenes:
-            self.aplicar_orden(orden)
+            self.aplicar_orden_segura(orden)
         if self.backend == "real":
             self._vuelta_real()
             self.conexion.commit()

@@ -49,10 +49,14 @@ class Radio:
         self._e = espnow.ESPNow()
         self._e.active(True)
         self._e.add_peer(self.DIFUSION)
+        self.demasiado_grandes = 0
 
     def enviar(self, texto):
         datos = texto.encode()
         if len(datos) > 250:                       # limite de un paquete ESP-NOW
+            # No deberia pasar: el carro recorta sus mensajes antes de
+            # encolarlos (protocolo.recortar). Se cuenta para verlo.
+            self.demasiado_grandes += 1
             return False
         try:
             self._e.send(self.DIFUSION, datos, False)
@@ -66,5 +70,9 @@ class Radio:
             _, msg = self._e.irecv(0)
             if not msg:
                 break
-            out.append(bytes(msg).decode())
+            # Se devuelven los BYTES, sin decodificar: otros grupos del salon
+            # usan ESP-NOW en difusion y un paquete suyo puede no ser UTF-8;
+            # `.decode()` aqui lanzaba UnicodeError y mataba main.py (con las
+            # ruedas en el ultimo PWM). protocolo.parsear_linea lo descarta.
+            out.append(bytes(msg))
         return out

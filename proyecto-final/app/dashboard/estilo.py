@@ -69,8 +69,15 @@ CSS = f"""
 [data-testid="stHeader"] {{ background:transparent; }}
 
 /* --- pestañas ------------------------------------------------------------ */
-.stTabs [role="tablist"] {{ gap:2px; border-bottom:1px solid var(--borde); }}
-.stTabs [role="tab"] {{ padding:6px 7px; border-radius:8px 8px 0 0; }}
+/* Las 9 pestañas tienen que verse todas, también a ~900 px: si no caben en una fila pasan a una
+   segunda (antes quedaban 4 a la vista y el resto detrás de una flecha de desplazamiento). La barra
+   ámbar que Streamlit mueve bajo la pestaña activa se calcula para UNA fila, así que se oculta y la
+   activa se marca con su propio borde inferior. */
+.stTabs [role="tablist"] {{ gap:2px; border-bottom:1px solid var(--borde); flex-wrap:wrap; overflow:visible !important; }}
+.stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"] {{ display:none; }}
+.stTabs [data-baseweb="tab-list"] ~ button, .stTabs div:has(> [role="tablist"]) > button {{ display:none; }}
+.stTabs [role="tab"] {{ padding:6px 7px; border-radius:8px 8px 0 0; border-bottom:2px solid transparent; }}
+.stTabs [role="tab"][aria-selected="true"] {{ border-bottom-color:var(--ambar); }}
 .stTabs [role="tab"] p {{ font-size:0.8rem; font-weight:500; white-space:nowrap; }}
 .stTabs [role="tab"][aria-selected="true"] {{ background:var(--panel); }}
 .stTabs [role="tab"][aria-selected="true"] p {{ color:var(--ambar); font-weight:600; }}
@@ -265,11 +272,50 @@ CSS = f"""
   border:1px solid var(--borde); border-radius:var(--r-chico); overflow:hidden; }}
 .tabla-texto th {{ text-align:left; font-weight:600; color:var(--tenue); font-size:0.7rem; text-transform:uppercase;
   letter-spacing:.05em; background:var(--panel); padding:6px 9px; border-bottom:1px solid var(--borde); }}
+/* Nunca partir una palabra a la mitad ("independien-tes", "compuert-a" a 900 px con la barra lateral
+   abierta, revisión visual 2026-09-29): el texto se corta solo entre palabras y sin guiones. Si la
+   tabla no cabe, en vez de apretar las columnas pasa a filas apiladas (ver @container abajo). */
 .tabla-texto td {{ padding:6px 9px; border-top:1px solid #21262d; vertical-align:top; color:var(--texto);
-  overflow-wrap:anywhere; }}
+  overflow-wrap:normal; word-break:normal; hyphens:none; }}
 .tabla-texto td.num {{ font-family:{MONO}; white-space:nowrap; text-align:right; }}
 .tabla-texto td.corto {{ white-space:nowrap; }}
 .tabla-texto td.no {{ color:var(--rojo); font-weight:600; }} .tabla-texto td.ok {{ color:var(--verde); }}
+.tabla-texto td.espera {{ color:var(--ambar); font-weight:600; }}
+/* Pantalla angosta: cada fila pasa a ser una tarjeta con "COLUMNA  valor" en renglones. Se mide el
+   ANCHO DE LA TABLA (container query sobre su envoltura), no el de la ventana: la misma ventana de
+   900 px da ~500 px con la barra lateral abierta y ~800 sin ella. Una tabla ancha (5 o más
+   columnas, como el presupuesto de tiempos) se apila por debajo de 680 px; una de pocas columnas
+   (dónde abaratar) solo por debajo de 420 px. */
+.tabla-env {{ container-type:inline-size; width:100%; }}
+@container (max-width:680px) {{
+  .tabla-env.ancha .tabla-texto thead {{ display:none; }}
+  .tabla-env.ancha .tabla-texto, .tabla-env.ancha .tabla-texto tbody,
+  .tabla-env.ancha .tabla-texto tr, .tabla-env.ancha .tabla-texto td {{ display:block; width:100%; }}
+  .tabla-env.ancha .tabla-texto tr {{ border-top:1px solid var(--borde); padding:4px 0; }}
+  .tabla-env.ancha .tabla-texto tr:first-child {{ border-top:none; }}
+  .tabla-env.ancha .tabla-texto td {{ border-top:none; padding:2px 10px; text-align:left; white-space:normal;
+    display:grid; grid-template-columns:7.5rem 1fr; gap:10px; }}
+  .tabla-env.ancha .tabla-texto td::before {{ content:attr(data-col); color:var(--tenue); font-size:0.68rem;
+    text-transform:uppercase; letter-spacing:.05em; padding-top:2px; font-family:inherit; font-weight:600; }}
+  .tabla-env.ancha .tabla-texto td:first-child {{ font-weight:600; }}
+  .tabla-env.ancha .tabla-texto td {{ border:none; }}
+  /* Las cifras y los estados cortos van en UNA fila (rótulo arriba, valor abajo), no uno por renglón:
+     la tarjeta queda de 3-4 renglones en vez de 7. */
+  .tabla-env.ancha .tabla-texto td.num, .tabla-env.ancha .tabla-texto td.corto {{
+    display:inline-block; width:auto; min-width:5.5rem; padding:4px 10px; }}
+  .tabla-env.ancha .tabla-texto td.num::before, .tabla-env.ancha .tabla-texto td.corto::before {{ display:block; }}
+}}
+@container (max-width:420px) {{
+  .tabla-env .tabla-texto thead {{ display:none; }}
+  .tabla-env .tabla-texto, .tabla-env .tabla-texto tbody, .tabla-env .tabla-texto tr,
+  .tabla-env .tabla-texto td {{ display:block; width:100%; }}
+  .tabla-env .tabla-texto tr {{ border-top:1px solid var(--borde); padding:4px 0; }}
+  .tabla-env .tabla-texto tr:first-child {{ border-top:none; }}
+  .tabla-env .tabla-texto td {{ border:none; padding:2px 10px; text-align:left; white-space:normal;
+    display:grid; grid-template-columns:6.5rem 1fr; gap:10px; }}
+  .tabla-env .tabla-texto td::before {{ content:attr(data-col); color:var(--tenue); font-size:0.68rem;
+    text-transform:uppercase; letter-spacing:.05em; padding-top:2px; font-weight:600; }}
+}}
 [class*="st-key-paro"] button {{ border-color:rgba(229,83,75,.7); color:#ff8a80; }}
 [class*="st-key-paro"] button:hover:not(:disabled) {{ background:var(--rojo); color:#fff; border-color:var(--rojo); }}
 [data-testid="stExpander"] details {{ border-color:var(--borde); border-radius:var(--r); }}
@@ -398,8 +444,14 @@ pio.templates["monedas"] = go.layout.Template(layout=go.Layout(
     plot_bgcolor="rgba(0,0,0,0)",
     font=dict(family="Space Grotesk, system-ui, sans-serif", color="#c9d1d9", size=13),
     colorway=[AMBAR, VERDE, AZUL, MORADO, ROJO, GRIS],
-    xaxis=dict(gridcolor="#21262d", zeroline=False, linecolor=BORDE, tickfont=dict(color=TENUE)),
-    yaxis=dict(gridcolor="#21262d", zeroline=False, linecolor=BORDE, tickfont=dict(color=TENUE)),
+    # Formato colombiano en ejes y tooltips: coma decimal y PUNTO de miles ($6.000, no $6000).
+    # `separators` es "<decimal><miles>"; `separatethousands` pone el punto también en cifras de 4
+    # dígitos (Plotly solo lo pone desde 5 dígitos). Revisión visual 2026-09-29.
+    separators=",.",
+    xaxis=dict(gridcolor="#21262d", zeroline=False, linecolor=BORDE, tickfont=dict(color=TENUE),
+               separatethousands=True),
+    yaxis=dict(gridcolor="#21262d", zeroline=False, linecolor=BORDE, tickfont=dict(color=TENUE),
+               separatethousands=True),
     hoverlabel=dict(bgcolor=PANEL, bordercolor=BORDE, font=dict(family="IBM Plex Mono, monospace", color=TEXTO)),
     margin=dict(l=10, r=10, t=10, b=10),
     showlegend=False,
@@ -444,7 +496,11 @@ def html_tabla(filas: list[dict], clases: dict[str, str] | None = None) -> str:
     def celda(col, valor):
         clase = clases.get(col, "")
         clase = clase(valor) if callable(clase) else clase
-        return f'<td class="{clase}">{esc(valor)}</td>' if clase else f"<td>{esc(valor)}</td>"
+        # data-col: el nombre de la columna, que el CSS muestra al lado del valor cuando la tabla
+        # no cabe y pasa a filas apiladas (sin encabezado).
+        return (f'<td data-col="{esc(col)}"' + (f' class="{clase}"' if clase else "") + f">{esc(valor)}</td>")
 
     cuerpo = "".join("<tr>" + "".join(celda(c, f[c]) for c in columnas) + "</tr>" for f in filas)
-    return f'<table class="tabla-texto"><thead><tr>{cab}</tr></thead><tbody>{cuerpo}</tbody></table>'
+    ancha = " ancha" if len(columnas) >= 5 else ""
+    return (f'<div class="tabla-env{ancha}"><table class="tabla-texto"><thead><tr>{cab}</tr></thead>'
+            f"<tbody>{cuerpo}</tbody></table></div>")

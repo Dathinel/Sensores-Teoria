@@ -36,7 +36,10 @@ PESTANAS = """
   moverlo con órdenes (avanzar, girar, ir a un punto, ir a la meta, volver al muelle).
 - **Montaje real**: los tiempos, los errores de los sensores y los costos para construirlo de verdad.
 - **Asistente**: se le pregunta por escrito o por voz por las cifras de la corrida o por cualquier parte del
-  proyecto, y se le puede pedir que mueva el carro o la línea (DeepSeek; sin internet, un intérprete local).
+  proyecto, y se le puede pedir que mueva el carro o la línea. Responde, en este orden, DeepSeek (en la nube,
+  con internet); si no está, el modelo local qwen2.5 que corre en este PC con Ollama (sin internet), y si
+  tampoco, las reglas. Venga de quien venga, una orden solo sale si está en la lista de órdenes permitidas, y
+  una pregunta nunca mueve nada.
 """
 
 PALABRAS = """
@@ -47,6 +50,11 @@ PALABRAS = """
 - **Radio del carro**: el carro y la estación hablan por radio (ESP-NOW). Si se corta, el carro termina la vuelta
   solo, y no se le carga otro vaso hasta saber, con su infrarrojo, que la cuna está vacía.
 - **Peso estimado**: se calcula con la masa nominal de cada moneda reconocida (no hay balanza).
+- **Del turno anterior**: monedas que quedaron guardadas en los tubos al terminar la corrida pasada y que la
+  corrida nueva encuentra al arrancar. Van a los vasos como cualquier otra, pero no cuentan en el «valor
+  aceptado», que es solo lo que pasó por los filtros en esta corrida.
+- **Espera aceptada**: cuando el carrusel no alcanza a girar en un ciclo, la cinta de monedas lo espera. Baja
+  un poco la producción, pero no se pierde ninguna moneda.
 - **Odometría**: dónde cree el carro que está, contando las vueltas de sus ruedas. Acumula error; se vuelve a
   poner en cero cada vez que entra al muelle.
 """

@@ -83,17 +83,23 @@
          suelta la compuerta de un tubo del almacen y lo lleva al vaso. Los 5
          tubos y el compartimiento "otras" (POSICIONES_CARRUSEL en sim/mundo.py) van justo encima; aqui se dibujan
          como cilindros traslucidos, solo visuales. -->
+    <!-- (2026-09-28, fisica vs 3D) Tolva y tubos en el MISMO lugar que sim/mundo.py y el visor:
+         tolva de radio 19 mm entre z = TUBO_BASE_Z - 40 mm y TUBO_BASE_Z - 8 mm, justo sobre el
+         llenado; los 6 tubos (interior 29 mm + 1 mm de pared) alrededor de centro_carrusel(), en
+         reposo (tubo de $50 en la carga), de TUBO_BASE_Z a TUBO_BASE_Z + TUBO_ALTO_M. Antes la
+         tolva tenia 50 mm de radio y los tubos estaban centrados en el llenado (no en el carrusel),
+         7 mm mas altos: las monedas guardadas quedaban fuera de sus tubos. -->
     <visual>
-      <geometry><cylinder radius="0.05" length="0.035"/></geometry>
-      <origin xyz="-0.08 0 0.1475" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.019" length="0.032"/></geometry>
+      <origin xyz="-0.08 0 0.1460" rpy="0 0 0"/>
       <material name="embudo"/>
     </visual>
-    <visual><geometry><cylinder radius="0.0155" length="0.065"/></geometry><origin xyz="-0.08000 0.03300 0.2025" rpy="0 0 0"/><material name="embudo"/></visual>
-    <visual><geometry><cylinder radius="0.0155" length="0.065"/></geometry><origin xyz="-0.10858 0.01650 0.2025" rpy="0 0 0"/><material name="embudo"/></visual>
-    <visual><geometry><cylinder radius="0.0155" length="0.065"/></geometry><origin xyz="-0.10858 -0.01650 0.2025" rpy="0 0 0"/><material name="embudo"/></visual>
-    <visual><geometry><cylinder radius="0.0155" length="0.065"/></geometry><origin xyz="-0.08000 -0.03300 0.2025" rpy="0 0 0"/><material name="embudo"/></visual>
-    <visual><geometry><cylinder radius="0.0155" length="0.065"/></geometry><origin xyz="-0.05142 -0.01650 0.2025" rpy="0 0 0"/><material name="embudo"/></visual>
-    <visual><geometry><cylinder radius="0.0155" length="0.065"/></geometry><origin xyz="-0.05142 0.01650 0.2025" rpy="0 0 0"/><material name="embudo"/></visual>
+    <visual><geometry><cylinder radius="0.0155" length="0.058"/></geometry><origin xyz="-0.09650 0.06158 0.1990" rpy="0 0 0"/><material name="embudo"/></visual>
+    <visual><geometry><cylinder radius="0.0155" length="0.058"/></geometry><origin xyz="-0.12508 0.04508 0.1990" rpy="0 0 0"/><material name="embudo"/></visual>
+    <visual><geometry><cylinder radius="0.0155" length="0.058"/></geometry><origin xyz="-0.12508 0.01208 0.1990" rpy="0 0 0"/><material name="embudo"/></visual>
+    <visual><geometry><cylinder radius="0.0155" length="0.058"/></geometry><origin xyz="-0.09650 -0.00442 0.1990" rpy="0 0 0"/><material name="embudo"/></visual>
+    <visual><geometry><cylinder radius="0.0155" length="0.058"/></geometry><origin xyz="-0.06792 0.01208 0.1990" rpy="0 0 0"/><material name="embudo"/></visual>
+    <visual><geometry><cylinder radius="0.0155" length="0.058"/></geometry><origin xyz="-0.06792 0.04508 0.1990" rpy="0 0 0"/><material name="embudo"/></visual>
 
     <!-- Tubo vertical de tapas sobre la estacion de tapa (x=0.00). Arranca
          por encima de la cortina de seguridad (vasos 90 mm + margen 20 mm). -->
@@ -151,19 +157,22 @@
       <inertia ixx="1e-5" ixy="0.0" ixz="0.0" iyy="1e-5" iyz="0.0" izz="1e-5"/>
     </inertial>
     <visual>
-      <geometry><box size="0.08 0.10 0.004"/></geometry>
-      <origin xyz="0 0 0" rpy="-0.35 0 0"/>
+      <geometry><box size="0.096 0.116 0.004"/></geometry>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
       <material name="gris_salida"/>
     </visual>
     <collision>
-      <geometry><box size="0.08 0.10 0.004"/></geometry>
-      <origin xyz="0 0 0" rpy="-0.35 0 0"/>
+      <geometry><box size="0.096 0.116 0.004"/></geometry>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
     </collision>
   </link>
   <joint name="junta_bandeja_rechazo" type="fixed">
     <parent link="bancada"/>
     <child link="bandeja_rechazo_vasos"/>
-    <origin xyz="0.16 0.10 0.005" rpy="0 0 0"/>
+    <origin xyz="0.27 0.00 -0.098" rpy="0 0 0"/>
+    <!-- (2026-09-28) En el piso al final de la cinta, donde la pone sim/mundo.py
+         (posicion_bandeja_rechazo_vasos) y la dibuja el visor; antes estaba al costado
+         de la descarga, a 10 cm de altura e inclinada (diseno viejo de dos empujadores). -->
   </joint>
 
   <!-- Marca de referencia (solo visual) de por donde sale un vaso

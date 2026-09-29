@@ -28,6 +28,7 @@ import time
 from control import protocolo
 
 BAUDIOS = 115200
+MAX_LINEA = 4096     # bytes sin "\n" a partir de los cuales se descarta el buffer
 
 
 class HardwareEmulado:
@@ -39,7 +40,9 @@ class HardwareEmulado:
         self.t_ms = 0
         self.fin = {}                         # cinta -> t_ms en que termina
         self.servos = {}
-        self.carrusel = 0
+        self.carrusel = 0                     # tubo pedido (0 a 5)
+        self.carrusel_lugar = "carga"
+        self.carrusel_fin = -1                # t_ms en que el carrusel termina de girar
         self.sensores = {"presencia": False, "capacitivo": False, "inductivo": False, "hall": False,
                          "cortina_mm": None, "interior_mm": 120}
         self.pasos = {"monedas": 0, "vasos": 0}
@@ -65,11 +68,30 @@ class HardwareEmulado:
     def servo(self, nombre, angulo):
         self.servos[nombre] = angulo
 
-    def carrusel_a(self, tubo):
+    def carrusel_a(self, tubo, lugar="carga"):
+        # El giro tarda lo que en la placa (2026-09-28): medio paso cada 2 ms,
+        # 4096 medios pasos por vuelta, por el camino corto (hasta media vuelta =
+        # 4,1 s). El agujero esta 210 grados despues de la carga.
+        def grados(k, l):
+            # Angulo del disco (como control/carrusel.py y firmware/fijo/hw.py): el
+            # tubo k llega a la carga girando -60 k; al agujero, 210 grados mas.
+            return (-k * 60 + (210 if l == "agujero" else 0)) % 360
+
+        dif = abs((grados(tubo, lugar) - grados(self.carrusel, self.carrusel_lugar) + 180) % 360 - 180)
+        self.carrusel_fin = self.t_ms + round(dif / 360 * 4096) * 2
         self.carrusel = tubo
+        self.carrusel_lugar = lugar
+
+    def carrusel_detener(self):
+        # Parada segura: el carrusel se queda donde esta (igual que Carrusel.detener() de hw.py).
+        self.carrusel_fin = self.t_ms
+
+    def carrusel_moviendose(self):
+        return self.t_ms < self.carrusel_fin
 
     def carrusel_buscar_referencia(self):
         self.carrusel = 0
+        self.carrusel_lugar = "carga"
 
 
 class EstacionEmulada:
@@ -98,6 +120,12 @@ class EstacionEmulada:
 
     def readline(self) -> bytes:
         return self._salida.pop(0) if self._salida else b""
+
+    def read(self, n: int) -> bytes:
+        """Como pyserial: hasta `n` bytes de lo que haya (el puente lee asi, no por lineas)."""
+        todo = b"".join(self._salida)
+        self._salida = [todo[n:]] if todo[n:] else []
+        return todo[:n]
 
     def write(self, datos: bytes) -> None:
         for linea in datos.decode().splitlines():
@@ -139,7 +167,11 @@ class PuenteESP32:
                 # Sin ESP32: la estacion emulada (mismo firmware, hardware falso).
                 self.emulada = EstacionEmulada(parametros)
                 self.ser = self.emulada
-        self.emisor = protocolo.Emisor(p["pc_reintento_ms"], p.get("pc_reintentos", 1))
+        # Sesion (CLAUDE.md 10.1): va en cada comando y en el latido; si el PC
+        # se reinicia y el ESP32 no, sus ids vuelven a 1 y sin esto el ESP32
+        # los tomaria por repetidos (ack sin ejecutar).
+        self.emisor = protocolo.Emisor(p["pc_reintento_ms"], p.get("pc_reintentos", 1),
+                                       sesion=protocolo.nueva_sesion())
         self.secuencia = protocolo.Secuencia()
         self.latido = protocolo.Latido(p["pc_latido_ms"], p["pc_sin_latido_ms"])
         self.tel: dict = {}
@@ -148,6 +180,8 @@ class PuenteESP32:
         self.fallidos: list[dict] = []
         self.ultima_linea_cruda = ""
         self.lineas_malas = 0
+        # Bytes recibidos que todavia no completan una linea (ver `atender`).
+        self._buf = b""
 
     def _escribir(self, mensaje: dict) -> None:
         self.ser.write(protocolo.linea(mensaje).encode())
@@ -162,10 +196,25 @@ class PuenteESP32:
     def atender(self, t_ms: int) -> None:
         if self.emulada is not None:
             self.emulada.correr_hasta(t_ms)
-        while self.ser.in_waiting > 0:
-            cruda = self.ser.readline()
-            if not cruda:
-                break
+        # Se DRENA todo lo que haya (no una sola linea por vuelta) a un buffer propio y se parte por
+        # "\n". NO se usa `readline()`: con timeout=0 (para no frenar el bucle, CLAUDE.md del repo)
+        # devuelve lo que haya llegado aunque la linea este a medias, y esa media linea se contaba
+        # como mala y se perdia (el resto llegaba en la vuelta siguiente, tambien "malo"). A 115200
+        # baudios una linea de 150 bytes tarda ~13 ms: que llegue partida entre dos vueltas del
+        # supervisor (cada 20 ms) es lo normal, no un error. Lo que no termina en "\n" se guarda
+        # para la vuelta siguiente.
+        n = self.ser.in_waiting
+        if n > 0:
+            self._buf += self.ser.read(n)
+        if len(self._buf) > MAX_LINEA and b"\n" not in self._buf:
+            # Basura sin fin de linea (baudios equivocados, ruido): se descarta para no crecer sin tope.
+            self.ultima_linea_cruda = self._buf[-120:].decode("utf-8", errors="replace")
+            self._buf = b""
+            self.lineas_malas += 1
+        while b"\n" in self._buf:
+            cruda, self._buf = self._buf.split(b"\n", 1)
+            if not cruda.strip():
+                continue
             self.ultima_linea_cruda = cruda.decode("utf-8", errors="replace").strip()
             m = protocolo.parsear_linea(cruda)
             if m is None:
@@ -176,6 +225,8 @@ class PuenteESP32:
                 self.emisor.ack(m["id"])
                 self.respuestas[m["id"]] = m
                 continue
+            if m["t"] == "hb":
+                self.secuencia.ver_sesion(m.get("s"))   # ESP32 reiniciado: `n` empieza de nuevo
             if "n" in m and m["t"] != "hb":
                 self.secuencia.recibir(m["n"])
             if m["t"] == "tel":
@@ -189,7 +240,9 @@ class PuenteESP32:
             self.eventos.append({"t": "evt", "src": "pc", "ev": "fallo_comunicacion", "cmd": m})
         self.emisor.fallidos.clear()
         if self.latido.debe_enviar(t_ms):
-            self._escribir({"t": "hb"})
+            # `n` = ultimo id mandado (el contrato pide `n` en el latido) y `s`
+            # la sesion, para que el ESP32 olvide los ids de un PC anterior.
+            self._escribir({"t": "hb", "n": self.emisor._siguiente - 1, "s": self.emisor.sesion})
         cambio = self.latido.cambio(t_ms)
         if cambio:
             self.eventos.append({"t": "evt", "src": "pc", "ev": "sin_esp32" if cambio == "perdido" else "esp32_ok"})

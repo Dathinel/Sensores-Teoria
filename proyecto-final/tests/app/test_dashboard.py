@@ -358,3 +358,189 @@ def test_lanzar_arranca_el_paquete_nuevo():
     # --reemplazar reconoce el dashboard viejo (app/dashboard.py) y el nuevo (app/dashboard/inicio.py).
     assert "Contains('app/dashboard')" in fuente
     assert Path(SCRIPT).exists() and not (RAIZ / "app" / "dashboard.py").exists()
+
+
+def test_los_vasos_vacios_desechados_quedan_rechazados_y_se_ven_como_tales(monkeypatch, corrida_completa):
+    """Revision 2026-09-28: un vaso vacio desechado quedaba "valida" ("listo para llenar") en la
+    tabla `vasos`. Ahora queda "rechazada" y la tabla del dashboard lo muestra "vacío desechado"
+    (lo distingue el destino "vacio" de su evento `descarga`)."""
+    import json
+
+    c = db.conectar(corrida_completa)
+    try:
+        vacios = {json.loads(p)["vaso"] for (p,) in c.execute("SELECT payload FROM eventos WHERE tipo = 'descarga'")
+                  if json.loads(p)["destino"] == "vacio"}
+        estados = dict(c.execute("SELECT id, estado FROM vasos").fetchall())
+    finally:
+        c.close()
+    if not vacios:
+        pytest.skip("esta corrida no desechó vasos vacíos")
+    assert {estados[v] for v in vacios} == {"rechazada"}
+    at = _correr(monkeypatch, corrida_completa, "monedas")
+    tablas = [d.value for d in at.dataframe]
+    col = next(t["Estado"] for t in tablas if "Estado" in t.columns)
+    assert (col == "vacío desechado").sum() == len(vacios)
+
+
+# ---------------------------------------------------------------------------
+# revisión visual 2026-09-28: cifras que cuadran y textos legibles
+# ---------------------------------------------------------------------------
+
+
+def _evento(c, tipo: str, **payload) -> None:
+    db.registrar_evento(c, "prueba", tipo, {"ev": tipo, **payload})
+
+
+def test_la_matriz_de_calidad_no_pierde_ninguna_pieza(monkeypatch, tmp_path):
+    """La matriz "qué era / qué decidió" sumaba 32 de 35: las piezas con `apariencia` (disco,
+    moneda extranjera) daban filas que la tabla no tenía y se descartaban. Ahora se agrupa por el
+    tipo real y toda pieza cae en una fila; el total es el de "Piezas procesadas"."""
+    from app.dashboard import datos
+
+    ruta = tmp_path / "matriz.db"
+    c = db.conectar(ruta)
+    piezas = [  # (tipo_real, apariencia, clase_real, diámetro medido, veredicto, causa, fila esperada)
+        ("moneda", None, "500_nueva", 23.6, "aceptada", None, "Moneda colombiana"),
+        ("moneda", None, "20_historica", 24.5, "rechazada", "no_reconocida", "Moneda que debe rechazarse"),
+        ("moneda", None, "500_nueva", 20.0, "rechazada", "incoherente", "Moneda que debe rechazarse"),
+        ("boton_metalico", "moneda_extranjera", None, 23.25, "rechazada", "no_reconocida", "Moneda que debe rechazarse"),
+        ("boton_metalico", "disco", None, 10.0, "rechazada", "fuera_de_rango", "Botón metálico"),
+        ("boton_metalico", None, None, 20.0, "rechazada", "perforado", "Botón metálico"),
+        ("bloque", "bloque_metalico", None, 30.0, "rechazada", "no_circular", "Bloque"),
+        ("boton_plastico", None, None, None, "rechazada", "no_metalico", "Botón de plástico"),
+        ("mano", None, None, None, "rechazada", "no_metalico", "Mano"),
+        ("arandela", None, None, 18.0, "rechazada", "perforado", "Arandela"),   # tipo nuevo: no se pierde
+    ]
+    for casilla, (tipo, apariencia, clase, diam, veredicto, causa, _) in enumerate(piezas):
+        _evento(c, "presencia", casilla=casilla, ocupada=True, tipo_real=tipo, clase_real=clase, apariencia=apariencia)
+        if diam:
+            _evento(c, "vision", casilla=casilla, diametro_mm=diam, circularidad=0.98, contornos_internos=0,
+                    clase=clase or "otro", confianza=0.9, veredicto=veredicto, causa=causa)
+        _evento(c, "elemento_final", casilla=casilla, veredicto=veredicto, causa=causa)
+    c.commit()
+    c.close()
+    monkeypatch.setenv("PLANTA_BD", str(ruta))
+    m = datos.matriz_aciertos()
+    assert len(m) == len(piezas)
+    assert list(m["real"]) == [p[-1] for p in piezas]
+    assert (m["decision"] == "Fuera de rango").sum() == 1      # la columna ya no queda vacía
+    at = _correr(monkeypatch, ruta, "calidad")
+    assert f"Total en la matriz: <b>{len(piezas)}</b>" in _texto(at)
+
+
+def test_la_matriz_cuadra_con_las_piezas_procesadas_de_una_corrida(monkeypatch, corrida_completa):
+    from app.dashboard import datos
+
+    monkeypatch.setenv("PLANTA_BD", str(corrida_completa))
+    assert len(datos.matriz_aciertos()) == len(datos.piezas_decididas())
+
+
+def test_las_monedas_del_turno_anterior_se_cuentan_aparte(monkeypatch, tmp_path):
+    """Resumen decía "En vasos 24 → Entregadas 24" y la tabla de vasos 3 × 10 = 30: las 6 de
+    diferencia venían guardadas en los tubos del turno anterior. Ahora cada cifra dice su origen
+    y las del diagrama cuadran con las de la tabla de vasos."""
+    import pandas as pd
+
+    from app.dashboard import datos
+
+    ruta = tmp_path / "turno.db"
+    c = db.conectar(ruta)
+    # Lo que la planta encontró guardado al arrancar (sim/planta.py, `almacen_precargado`): 5 + 5.
+    db.registrar_evento(c, "e4", "almacen_precargado", {"cantidad": 10, "contenido": {"500": 5, "100": 5}, "otras": 0})
+    c.commit()
+    c.close()
+    monkeypatch.setenv("PLANTA_BD", str(ruta))
+    aceptadas = pd.DataFrame({"denominacion": [500] * 8 + [100] * 16, "valor": [500] * 8 + [100] * 16})
+    vasos = pd.DataFrame({"id": [1, 2, 3], "estado": ["entregada"] * 3, "denominacion": [500, 100, 100],
+                          "cantidad_monedas": [10, 10, 10], "valor_total": [5000, 1000, 1000]})
+    d = {"aceptadas": aceptadas, "vasos": vasos}
+    # En los tubos quedaron 1 de $100 y 3 de $500: 2 de $500 y 1 de $100 venían de antes... (conservación)
+    tel = {"almacen": {"50": 0, "100": 1, "200": 0, "500": 3, "1000": 0, "otras": 0}, "almacen_valor": 1600}
+    cuentas = datos.cuentas_de_monedas(d, tel)
+    assert cuentas["en_vasos"] == 30 and cuentas["entregadas"] == 30
+    assert cuentas["aceptadas"] + cuentas["anteriores"] == cuentas["en_vasos"] + cuentas["en_tubos"]
+    assert cuentas["anteriores"] == 10                 # 5 de $500 y 5 de $100
+    assert cuentas["valor_anteriores"] == 3000
+    assert cuentas["en_vasos_anteriores"] == 10        # los tubos sueltan primero las más antiguas
+    texto = datos.explicar_cuentas(cuentas)
+    assert "20</b> son de esta corrida" in texto and "10</b> venían del turno anterior" in texto
+
+
+def test_la_bitacora_no_muestra_diccionarios_de_python():
+    from app.dashboard.textos import describir_evento, valor_legible
+
+    assert valor_legible({"50": 4, "100": 1, "otras": 0}) == "$50: 4 · $100: 1 · otras: 0"
+    linea = describir_evento({"ts": "2026-09-28T10:00:00", "origen": "linea", "tipo": "fin",
+                              "payload": '{"en_almacen": {"50": 4, "1000": 2}}'})
+    assert "{" not in linea and "$1.000: 2" in linea
+
+
+def test_la_tabla_de_tiempos_tiene_tildes_y_esperas_aceptadas(monkeypatch, corrida_completa):
+    from app.dashboard.textos import con_tildes
+
+    assert con_tildes("La vision decide en la estacion; pausa en E5 (`monedas_por_vaso`)") == \
+        "La visión decide en la estación; pausa en E3 (monedas por vaso)"
+    at = _correr(monkeypatch, corrida_completa, "montaje")
+    texto = _texto(at)
+    assert "vision " not in texto and "camara" not in texto
+    # Los dos chequeos del carrusel que no caben son una espera aceptada por el grupo (ámbar), no un error.
+    import re
+
+    # Cada celda lleva data-col (el nombre de su columna, para las filas apiladas en pantallas angostas).
+    filas_carrusel = re.findall(r"<tr><td[^>]*>El carrusel[^<]*</td>(?:<td[^>]*>[^<]*</td>){3}<td[^>]*>([^<]*)</td>", texto)
+    assert filas_carrusel and set(filas_carrusel) <= {"OK", "espera aceptada"}
+    assert "espera aceptada" in filas_carrusel or "Espera aceptada" not in texto
+
+
+# ---------------------------------------------------------------------------
+# revisión lógica 2026-09-29: turno anterior sin deducir y matriz con la verdad de terreno
+# ---------------------------------------------------------------------------
+
+
+def test_sin_almacen_previo_no_se_inventan_monedas_del_turno_anterior(monkeypatch, tmp_path):
+    """La deducción por conservación contaba como "del turno anterior" las aceptadas que van en
+    camino (cámara -> descarga, o esperando en E4 al carrusel), porque `elementos` solo trae las
+    finalizadas. Sin el evento `almacen_precargado` la corrida arrancó vacía: 0."""
+    import pandas as pd
+
+    from app.dashboard import datos
+
+    ruta = tmp_path / "vacia.db"
+    db.conectar(ruta).close()
+    monkeypatch.setenv("PLANTA_BD", str(ruta))
+    d = {"aceptadas": pd.DataFrame({"denominacion": [], "valor": []}),
+         "vasos": pd.DataFrame(columns=["id", "estado", "denominacion", "cantidad_monedas", "valor_total"])}
+    # Una de $500 ya cayó al tubo (todavía sin fila en `elementos`) y otra aceptada espera en E4.
+    tel = {"almacen": {"500": 1}, "almacen_valor": 500,
+           "casillas_monedas": [None, None, {"aceptada": True, "clase": "500_nueva"}, None]}
+    assert datos.monedas_del_turno_anterior(d, tel) == {}      # antes: {"500": 2}
+    cuentas = datos.cuentas_de_monedas(d, tel)
+    assert cuentas["anteriores"] == 0 and "arrancó con los tubos vacíos" in datos.explicar_cuentas(cuentas)
+
+
+def test_la_matriz_usa_el_diametro_real_y_recupera_la_pieza_que_e1_no_vio(monkeypatch, tmp_path):
+    from app.dashboard import datos
+
+    ruta = tmp_path / "verdad.db"
+    c = db.conectar(ruta)
+    # 1) "Cara de $500 con otro diámetro": diámetro REAL 22,0 (la de verdad mide 23,7). La cámara,
+    #    con ruido, midió 23,0: con el medido y el doble de tolerancia pasaba por moneda colombiana.
+    _evento(c, "presencia", casilla=1, ocupada=True, tipo_real="moneda", clase_real="500_nueva",
+            diametro_real_mm=22.0, apariencia=None)
+    _evento(c, "vision", casilla=1, diametro_mm=23.0, clase="500_nueva", veredicto="rechazada", causa="incoherente")
+    _evento(c, "elemento_final", casilla=1, veredicto="rechazada", causa="incoherente")
+    # 2) Una buena de $500 (diámetro real = nominal) con la cámara algo corrida: sigue siendo colombiana.
+    _evento(c, "presencia", casilla=2, ocupada=True, tipo_real="moneda", clase_real="500_nueva",
+            diametro_real_mm=23.7, apariencia=None)
+    _evento(c, "vision", casilla=2, diametro_mm=26.5, clase="500_nueva", veredicto="rechazada", causa="incoherente")
+    _evento(c, "elemento_final", casilla=2, veredicto="rechazada", causa="incoherente")
+    # 3) El infrarrojo no vio un botón de plástico; E2 lo recuperó.
+    _evento(c, "presencia", casilla=3, ocupada=False, tipo_real="boton_plastico", clase_real=None,
+            diametro_real_mm=20.0, apariencia=None)
+    _evento(c, "presencia_recuperada", casilla=3)
+    _evento(c, "elemento_final", casilla=3, veredicto="rechazada", causa="no_metalico")
+    c.commit()
+    c.close()
+    monkeypatch.setenv("PLANTA_BD", str(ruta))
+    assert list(datos.matriz_aciertos()["real"]) == [
+        "Moneda que debe rechazarse", "Moneda colombiana", "Botón de plástico"]  # antes: ..., "Pieza sin identificar"

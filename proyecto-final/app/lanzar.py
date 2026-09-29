@@ -92,20 +92,24 @@ def main() -> None:
         print("La simulacion ya esta corriendo.")
         if args.abrir:
             webbrowser.open(f"http://localhost:{puerto_visor}/" + (f"?{args.ver}" if args.ver else ""))
-        if args.abrir_dashboard and _esperar(f"http://localhost:{args.puerto}/", segundos=5):
-            webbrowser.open(f"http://localhost:{args.puerto}/")
+        if args.abrir_dashboard and _esperar(f"http://127.0.0.1:{args.puerto}/", segundos=5):
+            webbrowser.open(f"http://127.0.0.1:{args.puerto}/")
         return
 
     cmd_supervisor = [sys.executable, "-m", "app.supervisor"]
     if args.auto:
         cmd_supervisor += ["--auto", args.auto]
+    # Solo IPv4 local (127.0.0.1): en Windows, escuchando en "::" (IPv6) un cliente que corta la
+    # conexion de golpe (Chrome sin ventana de las capturas) deja el bucle que acepta conexiones de
+    # Streamlit roto (OSError WinError 64): el proceso sigue vivo pero ya no atiende a nadie. Ademas
+    # asi el tablero no queda expuesto a la red del salon.
     cmd_dashboard = [sys.executable, "-m", "streamlit", "run", "app/dashboard/inicio.py",
-                     "--server.port", str(args.puerto)]
+                     "--server.port", str(args.puerto), "--server.address", "127.0.0.1"]
 
     comandos = {"supervisor": cmd_supervisor, "dashboard": cmd_dashboard}
     procesos = {nombre: subprocess.Popen(cmd, cwd=RAIZ) for nombre, cmd in comandos.items()}
     url_visor = f"http://localhost:{puerto_visor}/" + (f"?{args.ver}" if args.ver else "")
-    url_dashboard = f"http://localhost:{args.puerto}"
+    url_dashboard = f"http://127.0.0.1:{args.puerto}"
     print(f"Visor 3D en {url_visor}")
     print(f"Dashboard en {url_dashboard}  (Ctrl+C para cerrar todo)")
     if args.abrir and _esperar(f"http://localhost:{puerto_visor}/"):
@@ -113,9 +117,26 @@ def main() -> None:
     if args.abrir_dashboard and _esperar(url_dashboard + "/"):
         webbrowser.open(url_dashboard)
     reinicios = {nombre: 0 for nombre in comandos}
+    # Salud del dashboard: un proceso VIVO que no atiende (ver arriba) no se detecta con poll().
+    # Cada 10 s se le pregunta a /_stcore/health; 3 fallos seguidos (~30 s) = se reinicia.
+    salud = {"proxima": time.monotonic() + 60, "fallos": 0}
     try:
         while True:
             time.sleep(0.5)
+            if time.monotonic() >= salud["proxima"]:
+                salud["proxima"] = time.monotonic() + 10
+                p = procesos["dashboard"]
+                if p.poll() is None:
+                    if _esperar(f"http://127.0.0.1:{args.puerto}/_stcore/health", segundos=3):
+                        salud["fallos"] = 0
+                    else:
+                        salud["fallos"] += 1
+                        if salud["fallos"] >= 3:
+                            print("dashboard vivo pero sin responder; reiniciando...")
+                            salud["fallos"] = 0
+                            salud["proxima"] = time.monotonic() + 60
+                            p.kill()
+                            p.wait(timeout=10)
             for nombre, p in procesos.items():
                 if p.poll() is None:
                     continue

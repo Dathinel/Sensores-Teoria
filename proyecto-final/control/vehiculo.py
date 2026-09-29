@@ -125,6 +125,14 @@ PASO_REVISION_M = 0.01
 TOLERANCIA_ACERCARSE_M = 0.01
 
 
+def cara_llanta_m(v: dict) -> float:
+    """Distancia del centro del carro a la cara de AFUERA de cada llanta: el
+    centro de la llanta va 13 mm afuera del chasis (sim/vehiculo_sim.py) y la
+    llanta mide `ancho_rueda_mm` (26 mm, la TT real). Antes era un 0,024 fijo
+    (llanta de 22 mm); se lee de la config para que no vuelvan a divergir."""
+    return v["ancho_mm"] / 2000 + 0.013 + v.get("ancho_rueda_mm", 26) / 2000
+
+
 def holguras_carro(v: dict) -> tuple[float, float, float]:
     """(lateral, destino, giro) en metros: lo que tiene que quedar entre el
     CENTRO del carro y una huella prohibida.
@@ -136,13 +144,14 @@ def holguras_carro(v: dict) -> tuple[float, float, float]:
       el margen;
     - giro: en un punto de paso de un rodeo gira sobre el eje de las ruedas:
       el circulo que barre, visto desde el centro, + el margen.
-    Mismas medidas que ControlCarro y sim/vehiculo_sim.py (llantas 24 mm
-    afuera del chasis, rodillos 8 mm delante de la cola)."""
+    Mismas medidas que ControlCarro y sim/vehiculo_sim.py (centro de la
+    llanta 13 mm afuera del chasis, cara de afuera a 13 mm + medio ancho de
+    llanta; rodillos 8 mm delante de la cola)."""
     largo = v["largo_mm"] / 1000
     ancho = v["ancho_mm"] / 1000
     x_eje = -0.18 * largo
     r_rueda = v["diametro_rueda_mm"] / 2000
-    y_rueda = ancho / 2 + 0.024
+    y_rueda = cara_llanta_m(v)
     y_rodillo = (v.get("rodillo_guia_y_mm", 0) + v.get("rodillo_guia_radio_mm", 0)) / 1000
     puntos = ((largo / 2, ancho / 2), (-largo / 2, ancho / 2), (x_eje + r_rueda, y_rueda),
               (x_eje - r_rueda, y_rueda), (-largo / 2 + 0.008, y_rodillo))
@@ -326,7 +335,7 @@ class ControlCarro:
         self.eje_a_us = self.x_us - self.x_eje
         self.eje_a_cola = largo / 2 + self.x_eje
         # Parte mas ancha: las ruedas o los rodillos guia de atras.
-        self.medio_ancho = max(v["ancho_mm"] / 2000 + 0.024,
+        self.medio_ancho = max(cara_llanta_m(v),
                                (v.get("rodillo_guia_y_mm", 0) + v.get("rodillo_guia_radio_mm", 0)) / 1000)
         self.v_linea = v["velocidad_linea_m_s"]
         self.v_maniobra = v["velocidad_maniobra_m_s"]
@@ -390,6 +399,15 @@ class ControlCarro:
         # a la radio, que ya lo cargaron (sale del muelle) y que en la meta
         # ya le sacaron el vaso (vuelve). 3 lecturas iguales seguidas.
         self._historia_cuna: list[bool] = []
+        # Solo se acepta una carga por FLANCO: la cuna tiene que haberse visto
+        # VACIA (3 lecturas) en el muelle antes de verla ocupada. Por que: si
+        # el carro vuelve de la meta CON el vaso (sin enlace, se cumplio
+        # `espera_meta_sin_enlace_s`), la cuna ya esta ocupada al entrar al
+        # muelle; sin esta condicion lo tomaba como "me cargaron" y salia otra
+        # vez en el mismo ciclo (daba vueltas meta<->muelle con el vaso). Con
+        # ella queda en el muelle hasta que alguien le saque el vaso (la
+        # estacion da la alarma `cuna_ocupada`) y despues le suelten uno.
+        self._cuna_vista_vacia = False
         # Enlace por radio con la estacion (lo actualiza quien maneja la
         # radio). Sin enlace, el carro sigue solo: termina la vuelta; en la
         # meta espera que saquen el vaso, pero como mucho
@@ -762,6 +780,7 @@ class ControlCarro:
     def cargar(self) -> None:
         """El infrarrojo de la cuna confirmo el vaso: sale del muelle."""
         if self.estado == "esperando_carga":
+            self._cuna_vista_vacia = False
             self.fase = "ida"
             self.s_fase = 0.0
             self.estado = "siguiendo"
@@ -794,7 +813,9 @@ class ControlCarro:
         if lectura.cuna is not None:
             self._historia_cuna = (self._historia_cuna + [bool(lectura.cuna)])[-3:]
             if len(self._historia_cuna) == 3 and len(set(self._historia_cuna)) == 1:
-                if self.estado == "esperando_carga" and self._historia_cuna[0]:
+                if self.estado == "esperando_carga" and not self._historia_cuna[0]:
+                    self._cuna_vista_vacia = True
+                elif self.estado == "esperando_carga" and self._cuna_vista_vacia:
                     self.cargar()
                 elif self.estado == "en_meta" and not self._historia_cuna[0]:
                     self._evento("vaso_retirado")
@@ -1242,6 +1263,11 @@ class ControlCarro:
             self._acciones.pop(0)
             self.estado = a["estado"]
             self._objetivo = [0.0, 0.0]
+            if a["estado"] == "esperando_carga":
+                # Entro al muelle: lo que vio la cuna en el camino no cuenta;
+                # para salir tiene que verla vacia AQUI y despues ocupada.
+                self._historia_cuna = []
+                self._cuna_vista_vacia = False
             if a["estado"] == "esperando_carga" and self.pose_muelle is not None:
                 # Entro al muelle: la posicion se vuelve a poner en la conocida
                 # (se borra el error que acumulo la odometria en la vuelta).

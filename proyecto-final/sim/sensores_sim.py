@@ -28,7 +28,8 @@ import pybullet as p
 from control import monedas
 from control.hal.interfaces import SensorDiscreto
 
-from .mundo import Elemento, EscenaEstacion
+from .mundo import (ESTACION_PRENSA_VASOS, ESTACION_TAPA_VASOS, SEPARACION_CASILLA_VASOS_M, Elemento,
+                    EscenaEstacion)
 
 
 def _con_error(real: bool, falso_negativo: float, falso_positivo: float, rng: random.Random) -> bool:
@@ -153,7 +154,7 @@ class CamaraVasos:
 class PosicionCintaCamara(SensorDiscreto):
     """Posicion de una cinta medida con su camara (grupo, 2026-09-25: reemplaza
     al sensor de ranura). Con la cinta quieta, la camara ve los separadores
-    (la de E5 los de su casilla; la de vasos los de sus 4 casillas, a
+    (la cenital, en E3, los de su casilla; la de vasos los de sus 4 casillas, a
     contraluz) y mide cuantos milimetros quedaron corridos respecto de donde
     deberian estar. `leer()` es True si quedo en su lugar; si no, el PC le
     manda al motor los micropasos que faltan (re-sincroniza) en la misma
@@ -359,6 +360,20 @@ def franja_silueta_vaso(
 # medidas).
 X_SENSOR_CORTINA_M = 0.020
 FONDO_SOPORTE_CORTINA_M = 0.013
+# La ventana de la cortina termina media casilla ANTES de la tapa: lo que este
+# mas lejos (los vasos de llenado y verificacion) no cuenta.
+MARGEN_ANTES_TAPA_M = 0.04
+
+
+def ventana_cortina_mm(casilla_inicio: int = ESTACION_TAPA_VASOS, casilla_fin: int = ESTACION_PRENSA_VASOS) -> int:
+    """Largo de la zona que vigila la cortina, en mm (140 hoy): desde media
+    casilla antes de la tapa hasta el sensor, 20 mm pasado la prensa. FUENTE
+    UNICA: es el alcance del cono en la simulacion (`sensor_cortina`) y el
+    umbral del firmware (firmware/preparar.py lo pasa como
+    `cortina_umbral_mm`: por debajo de esa distancia hay algo en la zona).
+    Antes el firmware usaba 150 de config/parametros.yaml y la simulacion 140."""
+    m = (casilla_fin - casilla_inicio) * SEPARACION_CASILLA_VASOS_M + X_SENSOR_CORTINA_M + MARGEN_ANTES_TAPA_M
+    return round(m * 1000)
 
 
 class ZonaIntrusion(SensorDiscreto):
@@ -408,16 +423,16 @@ def sensor_cortina(
     la tapa ni la prensa, que estan sobre el eje: si los tocara, se
     dispararia sola en cada ciclo. Su soporte queda fuera de la vista que la
     camara de vasos necesita."""
-    x0, y, z = escena.posicion_estacion_vasos(casilla_inicio)
+    _, y, z = escena.posicion_estacion_vasos(casilla_inicio)
     x1, _, _ = escena.posicion_estacion_vasos(casilla_fin)
     yc = y - desplazamiento_lateral_m
     # 20 mm pasado el eje de la prensa, no mas: el vaso que el empujador pasa
     # de la descarga a la canaleta ocupa desde ~44 mm pasado la prensa, y el
     # sensor y su poste (que va detras de la placa) no pueden estorbarle.
     origen = (x1 + X_SENSOR_CORTINA_M, yc, z + altura_mm / 1000)
-    # La ventana termina a media casilla antes de la tapa: lo que este mas
-    # lejos (los vasos de llenado y verificacion) no cuenta.
-    alcance = origen[0] - (x0 - 0.04)
+    # La ventana termina a media casilla antes de la tapa (ventana_cortina_mm:
+    # el mismo numero que usa el firmware como umbral).
+    alcance = ventana_cortina_mm(casilla_inicio, casilla_fin) / 1000
     return SensorCono(origen, (-1.0, 0.0, 0.0), angulo_cono_grados=angulo_cono_grados, alcance_m=alcance)
 
 

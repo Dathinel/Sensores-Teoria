@@ -37,13 +37,24 @@ from sim.pista import generar_linea_central
 
 G = 9.81
 PASO_FISICA = 1 / 240
-# Muelle: boca de las guias en V (mismas medidas en el visor). 4,5 cm de
-# apertura en 20 cm: ~13 grados (con 9 cm quedaba a 27 y empujaba de lado).
-LARGO_BOCA_MUELLE = 0.20
-ABRE_BOCA_MUELLE = 0.045
-HOLGURA_MUELLE = 0.003       # por lado: la cuna en embudo tolera ~+-5 mm
+
+
+def medidas_muelle(veh: dict) -> tuple[float, float, float]:
+    """(largo de la boca en V, cuanto se abre por lado, holgura por lado), en
+    metros, de config/parametros.yaml (vehiculo.muelle_*). Una sola fuente para
+    la fisica (`_crear_muelle`), el mapa del carro (sim/geometria.py,
+    `zonas_carro`) y el visor (construirMuelle, via /api/geometria): antes eran
+    constantes de este archivo copiadas a mano en visor.js.
+
+    Boca: 4,5 cm de apertura en 20 cm, ~13 grados (con 9 cm quedaba a 27 y
+    empujaba de lado). Las guias se ubican desde el rodillo guia: con la llanta
+    real de 26 mm (pedido 13a) los rodillos, y con ellos las guias, se
+    corrieron 2 mm por lado (config: vehiculo.rodillo_guia_y_mm)."""
+    return (veh.get("muelle_largo_boca_mm", 200) / 1000, veh.get("muelle_abre_boca_mm", 45) / 1000,
+            veh.get("muelle_holgura_mm", 3) / 1000)
+
 # Rodillos guia (rodamiento 623, 10 mm) en las esquinas traseras del chasis,
-# un poco mas afuera que las llantas (84 mm): las guias del muelle empujan
+# un poco mas afuera que las llantas (86 mm con la llanta TT de 26): las guias del muelle empujan
 # ESTOS, 5 cm detras del eje, y el carro gira hacia el centro al retroceder
 # (como un carrito de supermercado). Si la guia empujara la llanta, justo en
 # el eje, el carro no podria correrse de lado (la llanta se agarra al piso) y
@@ -59,7 +70,13 @@ TORQUE_BAJO = 0.035
 
 
 class SimCarro:
-    def __init__(self, parametros: dict, *, errores: bool = False, semilla: int | None = None):
+    # Opcional (solo `sim/ver/`): funcion que se llama tras cada periodo de
+    # control dentro de `avanzar`, para dibujar/grabar la ventana o llevar el
+    # ritmo de tiempo real. No cambia la fisica ni el control.
+    al_paso_control = None
+
+    def __init__(self, parametros: dict, *, errores: bool = False, semilla: int | None = None,
+                 conexion: int | None = None):
         from sim.geometria import geometria_completa, zonas_carro
 
         self.cfg = dict(parametros["vehiculo"])
@@ -89,7 +106,9 @@ class SimCarro:
         self.ruido_tof = e.get("ruido_tof", 0.0)
         self.error_linea = e.get("error_linea", 0.0)
 
-        self.cli = p.connect(p.DIRECT)
+        # p.DIRECT por defecto (pruebas y supervisor); `sim/ver/carro_pista`
+        # pasa p.GUI para ver este mismo mundo en la ventana de PyBullet.
+        self.cli = p.connect(p.DIRECT if conexion is None else conexion)
         p.setAdditionalSearchPath(pybullet_data.getDataPath(), physicsClientId=self.cli)
         p.setGravity(0, 0, -G, physicsClientId=self.cli)
         p.setTimeStep(PASO_FISICA, physicsClientId=self.cli)
@@ -147,20 +166,21 @@ class SimCarro:
         v = self.cfg
         largo, ancho, r = v["largo_mm"] / 1000, v["ancho_mm"] / 1000, v["diametro_rueda_mm"] / 2000
         # Las guias tocan los RODILLOS de las esquinas traseras, nunca las llantas.
-        guia_y = (v["rodillo_guia_y_mm"] + v["rodillo_guia_radio_mm"]) / 1000 + HOLGURA_MUELLE
+        largo_boca, abre_boca, holgura = medidas_muelle(v)
+        guia_y = (v["rodillo_guia_y_mm"] + v["rodillo_guia_radio_mm"]) / 1000 + holgura
         alto, esp = 0.02, 0.006
         x_rueda = -0.18 * largo
         # Tramo recto desde la cola (ahi quedan los rodillos con el carro en
         # el muelle) hasta pasar las ruedas; despues la boca.
         x0, x1 = -largo / 2 - 0.004, x_rueda + r + 0.015
-        x2 = x1 + LARGO_BOCA_MUELLE
+        x2 = x1 + largo_boca
         cuerpos = []
         r0 = self.salida[2]
         for lado in (-1, 1):
             cx, cy = self._local_a_mundo((x0 + x1) / 2, lado * (guia_y + esp / 2))
             cuerpos.append(self._caja((cx, cy), r0, ((x1 - x0) / 2, esp / 2, alto / 2), color=(0.22, 0.26, 0.31, 1)))
             ax, ay = x1, lado * (guia_y + esp / 2)
-            bx, by = x2, lado * (guia_y + ABRE_BOCA_MUELLE + esp / 2)
+            bx, by = x2, lado * (guia_y + abre_boca + esp / 2)
             ang = math.atan2(by - ay, bx - ax)
             cx, cy = self._local_a_mundo((ax + bx) / 2, (ay + by) / 2)
             cuerpos.append(self._caja((cx, cy), r0 + ang, (math.hypot(bx - ax, by - ay) / 2, esp / 2, alto / 2),
@@ -186,8 +206,28 @@ class SimCarro:
         chasis_col = p.createCollisionShape(p.GEOM_BOX, halfExtents=[L / 2, W / 2, 0.012], physicsClientId=cli)
         chasis_vis = p.createVisualShape(p.GEOM_BOX, halfExtents=[L / 2, W / 2, 0.012],
                                          rgbaColor=(0.1, 0.16, 0.25, 1), physicsClientId=cli)
-        rueda_col = p.createCollisionShape(p.GEOM_CYLINDER, radius=r, height=0.022, physicsClientId=cli)
-        rueda_vis = p.createVisualShape(p.GEOM_CYLINDER, radius=r, length=0.022, rgbaColor=(0.05, 0.05, 0.05, 1),
+        # Llanta TT de 26 mm (config: vehiculo.ancho_rueda_mm, el mismo numero que dibuja el
+        # visor). Hasta el 2026-09-28 era 22 mm aqui: el carro de la simulacion era 4 mm mas
+        # angosto que el real y entraba al muelle con una holgura que el real no tiene.
+        ancho_rueda = v.get("ancho_rueda_mm", 26) / 1000
+        # Llanta = banda de rodadura (radio completo, `rodadura_rueda_mm` al centro) + dos hombros
+        # redondeados 1,5 mm mas chicos hasta completar el ancho. Por que no un cilindro plano de
+        # 26 mm: en PyBullet un cilindro plano apoya en el piso por UNO de sus dos bordes y salta
+        # de uno al otro al girar (se midio: contactos a 60 y a 86 mm del centro del carro, nunca
+        # en el medio), o sea la trocha efectiva cambia +-13 mm de un paso a otro y la odometria
+        # se corre. Una llanta de goma real apoya en su banda del centro y tiene los hombros
+        # redondeados. El ancho completo sigue estando para los choques de costado (guias del
+        # muelle, muros).
+        rodadura = min(v.get("rodadura_rueda_mm", ancho_rueda * 1000) / 1000, ancho_rueda)
+        hombro = (ancho_rueda - rodadura) / 2
+        if hombro > 1e-6:
+            rueda_col = p.createCollisionShapeArray(
+                [p.GEOM_CYLINDER] * 3, radii=[r, r - 0.0015, r - 0.0015], lengths=[rodadura, hombro, hombro],
+                collisionFramePositions=[[0, 0, 0], [0, 0, (rodadura + hombro) / 2], [0, 0, -(rodadura + hombro) / 2]],
+                physicsClientId=cli)
+        else:
+            rueda_col = p.createCollisionShape(p.GEOM_CYLINDER, radius=r, height=ancho_rueda, physicsClientId=cli)
+        rueda_vis = p.createVisualShape(p.GEOM_CYLINDER, radius=r, length=ancho_rueda, rgbaColor=(0.05, 0.05, 0.05, 1),
                                         physicsClientId=cli)
         bola_col = p.createCollisionShape(p.GEOM_SPHERE, radius=0.008, physicsClientId=cli)
         y_rod, r_rod = v["rodillo_guia_y_mm"] / 1000, v["rodillo_guia_radio_mm"] / 1000
@@ -405,6 +445,8 @@ class SimCarro:
                     self._giro_acum[i] += abs(a - self._ang_prev[i])
                     self._ang_prev[i] = a
             self.tiempo += self.dt_control
+            if self.al_paso_control is not None:
+                self.al_paso_control(self)
             if self.tiempo + 1e-9 >= proxima_muestra:
                 x, y, r = self.pose()
                 self.camino.append((round(x, 4), round(y, 4), round(r, 4)))
@@ -419,7 +461,9 @@ class SimCarro:
                 self.traza.append((pose[0], pose[1]))
             for ev in self.control.eventos:
                 x, y, r = self.pose()
-                eventos.append({**ev, "x": round(x, 4), "y": round(y, 4), "t": round(self.tiempo, 2)})
+                # `ts` (no `t`): en el protocolo `t` es el TIPO de mensaje ("evt");
+                # la planta arma {"t": "evt", **evento} y un `t` aqui lo pisaba.
+                eventos.append({**ev, "x": round(x, 4), "y": round(y, 4), "ts": round(self.tiempo, 2)})
             self.control.eventos.clear()
         return eventos
 

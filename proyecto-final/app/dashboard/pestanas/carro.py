@@ -90,17 +90,24 @@ def mapa() -> None:
         nx, ny = -math.sin(o["rumbo"]) * o["largo"] / 2, math.cos(o["rumbo"]) * o["largo"] / 2
         fig.add_scatter(x=[o["x"] - nx, o["x"] + nx], y=[o["y"] - ny, o["y"] + ny], mode="lines",
                         line=dict(color=ROJO, width=7), hovertext=f"Muro {i + 1}", hoverinfo="text")
-    for clave, color, texto, lado in (("franja_meta", VERDE, "META", "top center"),
-                                      ("franja_giro", GRIS, "marca de giro", "middle left")):
+    # Las etiquetas de la izquierda (muelle, marca de giro) van como anotaciones corridas 18 px del
+    # punto: con textposition="middle left" la palabra quedaba pegada al marcador, y el triángulo del
+    # carro estacionado encima del muelle la tapaba (revisión visual 2026-09-29).
+    for clave, color, texto, a_la_izquierda in (("franja_meta", VERDE, "META", False),
+                                                ("franja_giro", GRIS, "marca de giro", True)):
         f = pista.get(clave)
         if f:
-            fig.add_scatter(x=[f["x"]], y=[f["y"]], mode="markers+text", text=[texto], textposition=lado,
-                            textfont=dict(color=color), marker=dict(color=color, size=11, symbol="square"),
-                            hoverinfo="skip", cliponaxis=False)
+            fig.add_scatter(x=[f["x"]], y=[f["y"]], mode="markers" if a_la_izquierda else "markers+text",
+                            text=[texto], textposition="top center", textfont=dict(color=color),
+                            marker=dict(color=color, size=11, symbol="square"), hoverinfo="skip", cliponaxis=False)
+            if a_la_izquierda:
+                fig.add_annotation(x=f["x"], y=f["y"], text=texto, showarrow=False, xanchor="right", xshift=-18,
+                                   yshift=-6, font=dict(color=color, size=12))
     sal = pista["salida"]
-    fig.add_scatter(x=[sal["x"]], y=[sal["y"]], mode="markers+text", text=["muelle"], textposition="middle left",
-                    textfont=dict(color=AMBAR), marker=dict(color=AMBAR, size=12, symbol="diamond"), hoverinfo="skip",
-                    cliponaxis=False)
+    fig.add_scatter(x=[sal["x"]], y=[sal["y"]], mode="markers", marker=dict(color=AMBAR, size=12, symbol="diamond"),
+                    hoverinfo="skip", cliponaxis=False)
+    fig.add_annotation(x=sal["x"], y=sal["y"], text="muelle", showarrow=False, xanchor="right", xshift=-18, yshift=6,
+                       font=dict(color=AMBAR, size=12))
     if len(traza):
         fig.add_scatter(x=traza["x"], y=traza["y"], mode="lines", line=dict(color=AMBAR, width=2), hoverinfo="skip")
     for ev, color, simbolo in (("obstaculo", ROJO, "x"), ("evasion", MORADO, "triangle-up"),
@@ -125,13 +132,36 @@ def mapa() -> None:
                         marker=dict(color=AZUL, size=16, symbol="triangle-up", angle=90 - math.degrees(carro["rumbo"]),
                                     line=dict(color="#ffffff", width=1)),
                         hovertext=f"carro: {carro['fase']} · {carro['estado']}", hoverinfo="text")
-    # Aire a la izquierda para las etiquetas del muelle y de la marca de giro (van a la izquierda de su
-    # punto): 0,6 m de eje más `cliponaxis=False` en esas dos trazas, así el texto se dibuja entero
-    # aunque la columna sea angosta (a 900 px se cortaban en "uelle" y "e giro"; 2026-09-28).
-    xs = lx + [sal["x"]]
-    fig.update_xaxes(range=[min(xs) - 0.6, max(xs) + 0.2])
-    fig.update_yaxes(scaleanchor="x", scaleratio=1)
-    fig.update_layout(margin=dict(l=10, r=10, t=24, b=10))
+    # Rango del mapa ajustado a TODO lo que se dibuja (línea, muros, meta, marca de giro, muelle, el
+    # recorrido real con sus esquivas y el carro), más un margen. Antes el eje x salía solo de la línea
+    # y el muelle, y la esquiva del tercer muro (que se sale de la línea) quedaba cortada a la derecha
+    # mientras sobraba espacio abajo (2026-09-28).
+    xs, ys = list(lx) + [sal["x"]], list(ly) + [sal["y"]]
+    for o in pista["obstaculos"]:
+        nx, ny = -math.sin(o["rumbo"]) * o["largo"] / 2, math.cos(o["rumbo"]) * o["largo"] / 2
+        xs += [o["x"] - nx, o["x"] + nx]
+        ys += [o["y"] - ny, o["y"] + ny]
+    for clave in ("franja_meta", "franja_giro"):
+        if pista.get(clave):
+            xs.append(pista[clave]["x"])
+            ys.append(pista[clave]["y"])
+    if len(ruta):
+        xs += [float(ruta["x"].min()), float(ruta["x"].max())]
+        ys += [float(ruta["y"].min()), float(ruta["y"].max())]
+    if carro:
+        xs.append(carro["x"])
+        ys.append(carro["y"])
+    # 0,6 m de aire a la izquierda para las etiquetas del muelle y de la marca de giro (van a la
+    # izquierda de su punto; a 900 px se cortaban en "uelle" y "e giro"); 0,12 m en los otros lados
+    # (el ancho de la cinta dibujada) y un poco más arriba para el texto "META".
+    x0, x1 = min(xs) - 0.6, max(xs) + 0.12
+    y0, y1 = min(ys) - 0.12, max(ys) + 0.18
+    fig.update_xaxes(range=[x0, x1])
+    fig.update_yaxes(range=[y0, y1], scaleanchor="x", scaleratio=1)
+    # Alto de la figura según la forma de los datos (misma escala en x e y): con el alto fijo de antes
+    # Plotly estiraba el eje y y quedaba una franja vacía abajo. ~560 px es el ancho del mapa a 1400 px.
+    fig.update_layout(height=int(min(max(560 * (y1 - y0) / (x1 - x0) + 40, 320), 640)),
+                      margin=dict(l=10, r=10, t=24, b=10))
     mostrar(fig)
     pintar(html_leyenda([
         ("━", AMBAR, "recorrido real del carro (simulación con física)"),

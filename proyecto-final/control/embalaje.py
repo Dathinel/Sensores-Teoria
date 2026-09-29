@@ -137,7 +137,12 @@ class EmbalajeVasos:
             return "entrega"
         if casilla.estado == EstadoVaso.VALIDA and casilla.cantidad_monedas == 0:
             # Vaso bueno al que no le cayo ningun lote: se desecha (no es un
-            # rechazo por sabotaje; queda contado aparte).
+            # rechazo por sabotaje; queda contado aparte por el destino
+            # "vacio" del evento `descarga`). Su estado pasa a RECHAZADA: antes
+            # quedaba VALIDA ("listo para llenar") en la tabla `vasos` aunque ya
+            # estaba en la bandeja, y el dashboard y el asistente lo contaban
+            # como un vaso que todavia se podia llenar.
+            casilla.degradar(EstadoVaso.RECHAZADA)
             return "vacio"
         casilla.degradar(EstadoVaso.RECHAZADA)
         return "rechazo"

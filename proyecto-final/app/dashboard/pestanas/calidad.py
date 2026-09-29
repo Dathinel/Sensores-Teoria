@@ -14,7 +14,10 @@ from .. import datos
 from ..estilo import AZUL, MORADO, ROJO, VERDE, figura, kpis, mostrar, nota, pintar, seccion, tabla
 from ..textos import DECISIONES, ETAPA_DE_CAUSA, NOMBRE_CAUSA, QUE_FILTRA
 
-FILAS = ["Moneda colombiana", "Moneda que debe rechazarse", "Botón de plástico", "Botón metálico", "Bloque", "Mano"]
+# Orden de las filas de la matriz. Si aparece un tipo de pieza que no está aquí, se agrega al final
+# (nunca se descarta: antes una fila que no estaba en esta lista se perdía sin avisar).
+FILAS = ["Moneda colombiana", "Moneda que debe rechazarse", "Botón de plástico", "Botón metálico", "Bloque", "Mano",
+         "Casilla vacía", "Pieza sin identificar"]
 
 
 @st.fragment(run_every=datos.REFRESCO_S)
@@ -40,13 +43,15 @@ def pestana() -> None:
     izq, der = st.columns([1.4, 1], gap="large")
     with izq:
         seccion("Qué era cada pieza y qué decidió la línea", "en verde los aciertos, en rojo los errores")
-        filas = [r for r in FILAS if r in set(m["real"])]
-        cruce = pd.crosstab(m["real"], m["decision"]).reindex(index=filas, columns=DECISIONES, fill_value=0)
+        presentes = set(m["real"])
+        filas = [r for r in FILAS if r in presentes] + sorted(presentes - set(FILAS))
+        columnas = DECISIONES + sorted(set(m["decision"]) - set(DECISIONES))
+        cruce = pd.crosstab(m["real"], m["decision"]).reindex(index=filas, columns=columnas, fill_value=0)
         z = cruce.values
-        acierto = [[(r == "Moneda colombiana") == (c == "Aceptada") for c in DECISIONES] for r in filas]
+        acierto = [[(r == "Moneda colombiana") == (c == "Aceptada") for c in columnas] for r in filas]
         colz = [[(1 if a else -1) * (v > 0) for a, v in zip(fila_a, fila_v)] for fila_a, fila_v in zip(acierto, z)]
         fig = figura(90 + 46 * len(filas))
-        fig.add_trace(go.Heatmap(z=colz, x=DECISIONES, y=filas, text=[[v or "" for v in f] for f in z],
+        fig.add_trace(go.Heatmap(z=colz, x=columnas, y=filas, text=[[v or "" for v in f] for f in z],
                                  texttemplate="%{text}",
                                  colorscale=[[0, "rgba(229,83,75,0.6)"], [0.5, "#161b22"], [1, "rgba(63,182,139,0.6)"]],
                                  zmin=-1, zmax=1, showscale=False, xgap=3, ygap=3, hoverinfo="skip",
@@ -54,6 +59,10 @@ def pestana() -> None:
         fig.update_yaxes(autorange="reversed", showgrid=False)
         fig.update_xaxes(side="top", showgrid=False)
         mostrar(fig)
+        # El total de la matriz tiene que ser el de "Piezas procesadas": cada pieza cae en una fila.
+        nota(f"Total en la matriz: <b>{int(z.sum())}</b> piezas (las mismas de «Piezas procesadas»). La fila es lo "
+             "que la pieza ES: un disco metálico cuenta como botón metálico; una moneda extranjera o una cara de "
+             "moneda con otro diámetro, como «moneda que debe rechazarse».")
     with der:
         seccion("Por qué se rechaza cada cosa", "cada causa la detecta una sola etapa")
         rechazos = datos.rechazos_por_causa()

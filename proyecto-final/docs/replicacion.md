@@ -68,11 +68,11 @@ La simulación reproduce el error de cada sensor con las probabilidades de `erro
 | 6 | [Sensor Hall del carrusel](sensores.md#6-sensor-hall-del-carrusel) | Con 4 mm de aire un iman N35 de 6 x 3 mm da ~70 mT en la cara; el A3144 conmuta con ~10-35 mT: sobra margen (hasta ~7-8 mm) | < 1 ms | Casi ninguno: no le afecta la luz ni el polvo. Solo falla si el imán se despega o queda lejos. | sin error simulado | Imán pegado en una cavidad impresa; homing lento; al terminar cada vuelta completa, comprobar que el imán aparece donde se esperaba. | Salida digital (colector abierto con pull-up) a una entrada del ESP32 fijo, 3,3-5 V. |
 | 7 | [Cámara de vasos (silueta, ArUco y tapa)](sensores.md#7-cámara-de-vasos-silueta-aruco-y-tapa) | Las 3 casillas (~24 cm de ancho) a ~22 cm de la cámara; marcador de 20 x 20 mm legible aunque esté algo inclinado; 1 px ~ 0,2 mm | ~60 ms por cuadro (captura + silueta + detectMarkers en la CPU del portátil); se votan 3 cuadros | Silueta: sombras o reflejos en el borde del vaso (casi desaparecen a contraluz). Marcador: reflejo o tapado → no lo lee; casi nunca lee un número equivocado (el diccionario ArUco corrige errores de bits). Si se cae el PC, no hay verificación de vasos. | FN 0.2%, FP 0.1% | Panel LED difuso detrás (contraluz: la silueta no depende del color ni de la luz del salón); franjas con margen de ±5 mm; marcador mate; voto de 3 cuadros; si no lee el marcador decide la silueta (no se bloquea la línea); sin PC la cinta de vasos no avanza (falla segura: nada se llena sin verificar). | USB directo al PC (segunda webcam; no pasa por el ESP32). |
 | 8 | [Cortina de seguridad](sensores.md#8-cortina-de-seguridad) | 3 cm a ~1,2 m en modo por defecto | ~33 ms por medida | +-3 % a corta distancia; las superficies negras reducen el alcance; reflejos pueden dar lecturas cortas (falso positivo). | FN 0.1%, FP 0.2% | Ventana de distancia (solo cuenta lo que esté a menos del largo de la zona); voto de 3 medidas (~100 ms); eje a 85 mm de la cinta para que el cono no toque los vasos. | I2C (SDA/SCL) al ESP32 fijo, 3,3 V. |
-| 9 | [Arreglo de 5 infrarrojos de línea](sensores.md#9-arreglo-de-5-infrarrojos-de-línea) | 2-10 mm sobre el piso | < 1 ms | Cambios de luz y de altura del chasis; brillo de la cinta aislante. | pendiente (puntos 13-14) | Montar a 3-5 mm del piso con falda contra la luz; calibrar blanco y negro al arrancar. | 5 entradas (digitales o ADC) del ESP32 del carro. |
-| 10 | [Ultrasónico frontal (respaldo)](sensores.md#10-ultrasónico-frontal-respaldo) | 2-400 cm, resolucion ~3 mm, apertura ~15 grados | ~25 ms por medida + ~60 ms recomendados entre disparos | +-3 mm tipico; ecos perdidos en superficies inclinadas; lecturas falsas por ecos de otros objetos. | pendiente (puntos 13-14) | Respaldo del laser: 2 mediciones seguidas; disparos cada 60 ms para que no se mezclen ecos. | TRIG a una salida; ECHO (5 V) por divisor a 3,3 V al ESP32 del carro. |
-| 11 | [Encoders de las ruedas](sensores.md#11-encoders-de-las-ruedas) | 20 ranuras por vuelta: con rueda de 65 mm, ~10 mm de avance por pulso | Por interrupcion | Deslizamiento de las ruedas; rebotes del sensor de ranura. | pendiente (puntos 13-14) | Interrupciones con antirrebote; corregir la odometria con la linea. | 2 entradas con interrupcion del ESP32 del carro. |
-| 12 | [Infrarrojo de la cuna de carga](sensores.md#12-infrarrojo-de-la-cuna-de-carga) | TCRT5000: 2-15 mm | < 1 ms | Igual que el de presencia: vasos transparentes reflejan poco. | pendiente (puntos 13-14) | Apuntarlo al fondo opaco del vaso; voto de 3 lecturas. | Entrada digital del ESP32 del carro. |
-| 13 | [Láser de distancia frontal](sensores.md#13-láser-de-distancia-frontal) | 3 cm a ~1,2 m (modo por defecto); cono de ~25 grados | ~33 ms por medida | +-3 % a corta distancia; superficies negras o muy brillantes y el sol directo acortan el alcance o dan lecturas falsas. | pendiente (puntos 13-14) | 3 mediciones seguidas para decidir; el ultrasonico de respaldo cubre lo que el laser no ve. | I2C (SDA/SCL) al ESP32 del carro, 3,3 V. |
+| 9 | [Arreglo de 5 infrarrojos de línea](sensores.md#9-arreglo-de-5-infrarrojos-de-línea) | 2-10 mm sobre el piso | < 1 ms | Cambios de luz y de altura del chasis; brillo de la cinta aislante. | motores ±5%, ultrasónico ±5 mm, láser ±3%, línea 1% por lectura | Montar a 3-5 mm del piso con falda contra la luz; calibrar blanco y negro al arrancar. | 5 entradas (digitales o ADC) del ESP32 del carro. |
+| 10 | [Ultrasónico frontal (respaldo)](sensores.md#10-ultrasónico-frontal-respaldo) | 2-400 cm, resolucion ~3 mm, apertura ~15 grados | ~25 ms por medida + ~60 ms recomendados entre disparos | +-3 mm tipico; ecos perdidos en superficies inclinadas; lecturas falsas por ecos de otros objetos. | motores ±5%, ultrasónico ±5 mm, láser ±3%, línea 1% por lectura | Respaldo del laser: 2 mediciones seguidas; disparos cada 60 ms para que no se mezclen ecos. | TRIG a una salida; ECHO (5 V) por divisor a 3,3 V al ESP32 del carro. |
+| 11 | [Encoders de las ruedas](sensores.md#11-encoders-de-las-ruedas) | 20 ranuras por vuelta: con rueda de 65 mm, ~10 mm de avance por pulso | Por interrupcion | Deslizamiento de las ruedas; rebotes del sensor de ranura. | motores ±5%, ultrasónico ±5 mm, láser ±3%, línea 1% por lectura | Interrupciones con antirrebote; corregir la odometria con la linea. | 2 entradas con interrupcion del ESP32 del carro. |
+| 12 | [Infrarrojo de la cuna de carga](sensores.md#12-infrarrojo-de-la-cuna-de-carga) | TCRT5000: 2-15 mm | < 1 ms | Un fondo muy oscuro o brillante refleja poco; luz ambiente fuerte. | FN 0.5%, FP 0.2% | Apuntarlo al fondo opaco del vaso; voto de 3 lecturas. | Entrada digital del ESP32 del carro. |
+| 13 | [Láser de distancia frontal](sensores.md#13-láser-de-distancia-frontal) | 3 cm a ~1,2 m (modo por defecto); cono de ~25 grados | ~33 ms por medida | +-3 % a corta distancia; superficies negras o muy brillantes y el sol directo acortan el alcance o dan lecturas falsas. | motores ±5%, ultrasónico ±5 mm, láser ±3%, línea 1% por lectura | 3 mediciones seguidas para decidir; el ultrasonico de respaldo cubre lo que el laser no ve. | I2C (SDA/SCL) al ESP32 del carro, 3,3 V. |
 
 ## 4. Tiempos
 
@@ -87,17 +87,17 @@ Valores de `tiempos_ms`. **Cómo medirlos:** en el firmware, marcar con `millis(
 | intervalo entre lecturas | 30 |
 | vision captura inferencia | 400 |
 | desvio | 150 |
-| carrusel giro | 500 |
+| carrusel giro | 4096 |
 | compuerta tubo | 600 |
+| caida moneda tubo | 400 |
 | avance casilla vasos | 1000 |
-| pausa casilla vasos | 800 |
+| pausa casilla vasos | 1400 |
 | camara vasos cuadro | 60 |
 | tapa caida | 500 |
 | prensa ciclo | 1400 |
 | empujador | 700 |
 | cortina lectura | 33 |
 | serial ida vuelta | 20 |
-| esp now latencia | 10 |
 
 ### Presupuesto: ¿cabe cada acción en su hueco?
 
@@ -105,14 +105,16 @@ Ciclo de la cinta de monedas: **1600 ms** (≈ 38 elementos por minuto). Ciclo m
 
 | Chequeo | Necesita (ms) | Disponible (ms) | Margen | Estado | Por qué |
 |---|---|---|---|---|---|
-| Las lecturas repetidas caben en la pausa | 125 | 1000 | +875 | OK | Cada estacion lee su sensor varias veces (separadas para que sean independientes) y vota, y el evento viaja al PC, con la cinta quieta. |
-| La vision decide con la cinta quieta | 820 | 1000 | +180 | OK | 2 foto(s) + segmentacion + clasificador + ida y vuelta por serial, dentro de la pausa en E5. |
-| La compuerta de desvio se pone antes de que caiga la pieza | 170 | 600 | +430 | OK | El veredicto ya se sabe desde la vision; el desvio se mueve mientras la cinta trae la pieza a la descarga. |
-| El carrusel pone el tubo bajo la carga antes de que caiga la moneda | 520 | 1600 | +1080 | OK | El carrusel gira al tubo de la denominacion durante el ciclo en que la moneda va de la vision a la descarga. |
-| El carrusel suelta un lote y vuelve entre dos monedas | 1600 | 1600 | +0 | OK | Girar el tubo al agujero, abrir y cerrar el obturador y volver a la posicion de carga, sin frenar la cinta de monedas. |
-| Llega un lote mas lento de lo que la cinta de vasos lo despacha | 2400 | 16000 | +13600 | OK | Peor caso: todas las monedas de la misma denominacion (un lote cada `lote` ciclos). |
-| La camara de vasos decide con la cinta de vasos quieta | 200 | 800 | +600 | OK | Varios cuadros votados (silueta en las franjas de medida + marcador ArUco) en cada estacion, antes de que la cinta de vasos arranque. |
-| La tapa cae y la camara la confirma en la misma pausa | 680 | 800 | +120 | OK | El escape suelta la tapa, cae por gravedad y la camara ve que quedo sobre el vaso. |
-| La cortina reacciona a tiempo | 119 | 200 | +81 | OK | Lecturas votadas del VL53L0X + aviso por serial, antes de que baje la prensa o se mueva el empujador. |
+| Las lecturas repetidas caben en la pausa | 125 | 1000 | +875 | OK | Cada estación lee su sensor varias veces (separadas para que sean independientes) y vota, y el evento viaja al PC, con la cinta quieta. |
+| La visión decide con la cinta quieta | 820 | 1000 | +180 | OK | 2 foto(s) + segmentación + clasificador + ida y vuelta por serial, dentro de la pausa en E3. |
+| La compuerta de desvío se pone antes de que caiga la pieza | 170 | 600 | +430 | OK | El veredicto ya se sabe desde la visión; el desvío se mueve mientras la cinta trae la pieza a la descarga. |
+| El carrusel pone el tubo bajo la carga antes de que caiga la moneda | 4116 | 1600 | -2516 | **NO CABE** | El carrusel gira al tubo de la denominación durante el ciclo en que la moneda va de la visión a la descarga. Peor caso: media vuelta (tubo opuesto). Si no cabe, la cinta de monedas ESPERA al carrusel antes de soltar la moneda (pausa más larga en ese ciclo: baja la producción, no se pierde ninguna moneda; un tubo vecino, 60 grados, tarda 1/3). |
+| La moneda termina de caer a su tubo antes del giro a la siguiente | 400 | 820 | +420 | OK | Del borde de la cinta al fondo del tubo (embudo, compuerta, canal corto) con el disco quieto; en régimen el giro a la siguiente moneda sale recién cuando la visión la acepta, después de esta caída. |
+| El carrusel suelta un lote y vuelve entre dos monedas | 8792 | 1600 | -7192 | **NO CABE** | Girar el tubo al agujero, abrir y cerrar el obturador y volver a la posición de carga, sin frenar la cinta de monedas. Si no cabe, la cinta de monedas ESPERA a que el carrusel vuelva (una vez por lote, cada `monedas_por_vaso` monedas de una denominación). |
+| Llega un lote más lento de lo que la cinta de vasos lo despacha | 2400 | 16000 | +13600 | OK | Peor caso: todas las monedas de la misma denominación (un lote cada `lote` ciclos). |
+| La cámara de vasos decide con la cinta de vasos quieta | 200 | 1400 | +1200 | OK | Varios cuadros votados (silueta en las franjas de medida + marcador ArUco) en cada estación, antes de que la cinta de vasos arranque. |
+| La tapa cae y la cámara la confirma en la misma pausa | 680 | 1400 | +720 | OK | El escape suelta la tapa, cae por gravedad y la cámara ve que quedó sobre el vaso (un intento). |
+| Reintento de la tapa (peor caso: dos tapas) | 1360 | 1400 | +40 | OK | Si la cámara no ve la primera tapa, el escape suelta otra y se vuelve a mirar. La pausa de la cinta de vasos se alargó a propósito para que los dos intentos quepan (grupo, 2026-09-29: los lotes llegan mucho más lento que un ciclo de vasos, así que no frena nada). Si un día no cupieran, la cinta de vasos esperaría una pausa más y la de monedas seguiría. La simulación hace los dos intentos dentro del mismo ciclo (sim/planta.py, _estacion_tapa), lo que ahora coincide con el montaje real. |
+| La cortina reacciona a tiempo | 119 | 200 | +81 | OK | Lecturas votadas del VL53L0X (el firmware exige `lecturas_por_decision` mediciones seguidas) + aviso por serial, antes de que baje la prensa o se mueva el empujador. |
 
 Si al medir un tiempo real algún chequeo queda en **NO CABE**, las salidas son: alargar la pausa (`pausa_casilla_monedas`, baja la producción), un servo más rápido, o bajar `lecturas_por_decision`.

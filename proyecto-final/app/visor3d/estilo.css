@@ -290,11 +290,16 @@ code { font: var(--t-xs)/1.5 var(--mono); color: var(--suave); }
 #modo.compacto b { font-size: var(--t-m); }
 #modo.compacto span { display: none; }
 
-#aviso { position: fixed; z-index: 7; top: calc(var(--arriba) + 48px); right: var(--e3); width: 340px; max-width: calc(100vw - 24px); display: flex; flex-direction: column; gap: 6px; }
+#aviso { position: fixed; z-index: 7; top: calc(var(--arriba) + 48px); right: var(--e3); width: 340px; max-width: calc(100vw - 24px); display: flex; flex-direction: column; align-items: flex-end; gap: 6px; pointer-events: none; }
 #aviso:empty { display: none; }
 #aviso > div { padding: var(--e2) var(--e3); border-radius: var(--r-m); font-size: var(--t-s);
   background: var(--panel-vidrio); border: 1px solid var(--rojo); border-left-width: 4px; box-shadow: var(--sombra); }
 #aviso > div.ambar { border-color: var(--ambar); }
+/* Cada aviso es una línea (su título); el detalle aparece al pasar el ratón. El globo completo
+   tapaba el cartel META de la pista en la vista Todo (2026-09-28). */
+#aviso > div { pointer-events: auto; }
+#aviso > div .detalle { display: none; }
+#aviso > div:hover .detalle { display: inline; }
 
 /* ---------- tarjetas flotantes: bitácora y leyenda de cables ---------- */
 
@@ -321,7 +326,10 @@ code { font: var(--t-xs)/1.5 var(--mono); color: var(--suave); }
 #eventos .ok { color: var(--verde); }
 #eventos .atencion { color: var(--ambar); }
 
-#leyendaCables { left: var(--izq); width: 360px; max-height: 45vh; }
+/* A la derecha, debajo de las vistas y de los avisos de la línea (interfaz.js pone top y el alto
+   máximo para no pisar la bitácora); se pliega a una línea con su botón. Antes se abría a la
+   izquierda, en medio de la escena, y tapaba la planta en la vista Todo (2026-09-28). */
+#leyendaCables { right: var(--e3); left: auto; bottom: auto; top: calc(var(--arriba) + 48px); width: 360px; max-width: calc(100vw - 24px); max-height: 45vh; }
 #leyendaCables .cuerpo { font-size: var(--t-s); }
 #leyendaCables summary { cursor: pointer; padding: 3px 0; }
 #leyendaCables .muestra { display: inline-block; width: 18px; height: 6px; border-radius: 3px; margin-right: 7px; vertical-align: 2px; border: 1px solid #555; }
@@ -338,7 +346,7 @@ code { font: var(--t-xs)/1.5 var(--mono); color: var(--suave); }
   background: var(--panel-vidrio); border: 1px solid var(--borde);
 }
 #ayuda kbd { font: inherit; color: var(--suave); }
-body.cables #ayuda, body.estrecho #ayuda { display: none; }
+body.estrecho #ayuda { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
@@ -352,7 +360,6 @@ body.cables #ayuda, body.estrecho #ayuda { display: none; }
   .chip { max-width: 190px; }
   #panel { top: auto; left: var(--e3); right: var(--e3); width: auto; height: 45vh; }
   #bitacora, #ayuda { display: none; }
-  #leyendaCables { top: calc(var(--arriba) + 48px); bottom: auto; max-height: 30vh; }
 }
 @media (max-width: 560px) {
   .acciones button .texto { display: none; }

@@ -1150,3 +1150,431 @@ fotos); clave de DeepSeek válida (la dada da 401).
   El aviso `Recording error: Container not found` venía de `st.chat_input` (no del micrófono): con un
   texto de ayuda largo el componente se reacomodaba al abrir y la librería de la onda perdía su
   recuadro; ahora el texto cabe en una línea (0 errores en 7 cargas).
+
+## 2026-09-28 — Firmware según el diseño y valores físicos (pedido 12e y 12f)
+
+Hallazgos de `docs/electrica.md` §8 que el firmware no cumplía, y tres valores físicos que no
+coincidían entre sí.
+
+- **Prensa y empujador nunca a la vez, en la placa** (`firmware/fijo/estacion.py`, `EXCLUYENTES`).
+  Causa: `_ciclo` solo impedía repetir el MISMO servo; la regla la cumplía el orden de comandos del
+  PC (un reintento o un botón de prueba la rompían). Ahora, si llega uno mientras el otro está en
+  su ciclo COMPLETO (ida y vuelta), la placa lo confirma (`ack ok:true`), avisa `en_espera` y lo
+  arranca cuando el otro vuelve a reposo (`arranca`). Se eligió esperar y no rechazar: el PC no
+  reintenta un comando confirmado y rechazarlo dejaba una tapa sin prensar. La cortina y la parada
+  segura cancelan lo que esperaba. Pruebas: los dos órdenes, cancelación con la cortina y que la tapa
+  no espera.
+- **Tope de PWM de los TT** (`firmware/carro/hw.py`): `firmware.carro_pwm_max: 0.70`, aplicado
+  después de la corrección integral (antes podía llegar a 100 % con una rueda trabada: 8,4 V en un
+  motor de 6 V, 1,53 A por canal). Con 7,4 V el carro llega a ~0,39 m/s (la línea pide 0,40): va
+  ~4 % más lento, dicho en el YAML.
+- **Bus I2C largo a 100 kHz** (`firmware.i2c_bus_largo_hz`); el bus corto del PCA9685 sigue a 400 kHz.
+- **A4988**: la "corriente de reposo reducida" no existía (ENABLE siempre en 0). Ahora ENABLE se
+  suelta tras `firmware.a4988_reposo_ms: 3000` con las dos cintas quietas (más que las pausas de
+  1000/800 ms: con la línea andando nunca se sueltan) y se vuelve a dar 5 ms antes del primer paso.
+  Seguro porque la cinta no tiene carga que la arrastre, el A4988 guarda su micropaso (máx. 0,17 mm
+  de salto) y la cámara re-sincroniza igual.
+- **Carrusel**: `carrusel_giro` decía 500 ms y el firmware tardaba 4,1 s por media vuelta (y más,
+  porque el paso lo daba el bucle principal, que ya duerme 2 ms por vuelta). Ahora el medio paso lo
+  da un `Timer` cada 2 ms (500 Hz, bajo los 600 Hz de arranque de la hoja de datos del 28BYJ-48;
+  1 ms no deja margen con los tubos cargados) y `tiempos_ms.carrusel_giro: 4096` es ese tiempo real
+  (una prueba lo ata al firmware). Los dos chequeos del carrusel de `control/tiempos.py` quedan en
+  NO CABE a propósito y dicen qué se ajusta: la cinta de monedas espera al carrusel (~2,5 s al tubo
+  opuesto, ~7 s una vez por lote). La lógica de control no se tocó. **Pendiente**: que el backend
+  real espere de verdad (hoy no hay evento de "carrusel llegó"; la telemetría trae su posición), y
+  el visor anima el carrusel con `carrusel_giro` en cola: con 4,1 s puede quedar atrás en corridas
+  con muchas denominaciones distintas.
+- **Rodillo Ø22** (el del modelo 3D, `crearRodilloCinta`, las dos cintas):
+  `firmware.mm_por_vuelta_cinta: 69.1` (π·22; antes 40 = Ø12,7 que no existe). Casilla de monedas =
+  463 micropasos, de vasos = 926 (1/4 de micropaso); ~0,8/0,9 kHz de STEP. `docs/peso.md` ya no
+  avisa del desacuerdo (lo hace solo si vuelven a separarse).
+- **Vaso lleno**: `vehiculo.masa_vaso_lleno_kg: 0.133` = vaso 25 + tapa 8 + 10 monedas de 10 g (la
+  misma suma que `config/masas.yaml`; prueba nueva que las compara).
+- **Prensa**: la tapa sella por snap-fit (~30-50 N); objetivo **60 N** (la más dura x1,2) y el
+  resorte limitador no deja pasar de ahí. Antes "≥150 N", que el MG996R con la leva no sostiene a
+  90° y la tapa no necesita. `config/masas.yaml: fuerza_prensa_objetivo_n`, `sim/catalogos.py`,
+  CLAUDE.md §5.12; `docs/peso.md`: todos los motores ALCANZAN (prensa x2,76 a 6 V).
+- Regenerados `docs/*.md` (`python -m app.documentos`), `docs/electrica.md` (`python -m sim.electrica`,
+  conclusiones actualizadas) y `firmware/salida/` (`python -m firmware.preparar`, compila).
+- **Una prueba del carro cambió por la masa, y es la física**: `test_tras_detenido_atascado_volver_
+  muelle_lo_saca` reproduce el incidente del atasco en la boca del muelle a `y_min=-0.68`. Con el vaso
+  de 0,133 kg el carro llega a esa altura MÁS derecho (rumbo −90,4° en vez de −95,5°, 13 mm más
+  centrado) y la orden ya no lo atasca: llega al punto. Con 0,10 kg sigue fallando igual que antes en
+  −0,66 y atascándose en −0,68/−0,70; con 0,133 kg se atasca en −0,76 y ahí la prueba entera pasa
+  (atasco, `volver_muelle`, vuelve a la salida ±1 cm). Arreglo propuesto (archivo fuera del alcance de
+  este pedido): `_hasta_media_reversa(carro, y_min=-0.76)` en esa prueba.
+
+## 2026-09-28 — Simulaciones de PyBullet en ventana, videos y física vs 3D (puntos f y g)
+
+**Hecho:**
+
+- `sim/mundo.py` (`EscenaEstacion(conexion=...)`) y `sim/vehiculo_sim.py` (`SimCarro(conexion=...)`,
+  gancho opcional `al_paso_control`): parámetro de conexión con `p.DIRECT` por defecto (pruebas,
+  supervisor y demo no cambian).
+- `sim/ver/`: 4 escenas en ventana GUI que reusan la planta y el carro tal cual —
+  `filtro_monedas` (mixto_20; texto por estación y junto a cada pieza, tubos con su cuenta),
+  `embalaje_vasos` (prueba_completa, lote 5, guion de sabotajes de la demo), `carro_pista`
+  (viaje completo; cámara que sigue al carro, tecla c) y `todo_junto` (prueba_completa con el carro
+  físico: ventana de PyBullet para la planta + ventana OpenCV para el mundo propio del carro,
+  sincronizadas por ciclo). Tiempo real (tiempos_ms), espacio pausa, r reinicia, q sale.
+  `--sin-ventana --segundos N` corre el mismo código en DIRECT.
+- `python -m sim.ver.grabar`: `docs/videos/<escena>.mp4` (H.264) y `.gif` (480 px, < 5 MB), con el
+  rótulo dibujado con cv2 en una banda arriba (getCameraImage no captura los textos de depuración).
+- Lanzadores: `simulaciones.bat` (menú 1-5) y `simulaciones/1..4-*.bat`.
+- `tests/sim/test_fisica_vs_3d.py` + `docs/fisica-vs-3d.md`: medidas de PyBullet vs visor y
+  chequeos físicos (moneda cae al tubo, vaso cuelga de la pestaña en rieles de 69 mm y sin pestaña
+  se cae, carro con vaso no vuelca).
+
+**Causa y arreglo de las diferencias:** los URDF tenían piezas visuales de diseños viejos que nadie
+comparaba con `sim/mundo.py`: tubos del carrusel centrados en el llenado (las monedas guardadas
+quedaban fuera de sus tubos en la ventana), tolva de 50 mm de radio (visor 19), bandeja de rechazo
+de vasos al costado y a 10 cm de altura, banda de monedas de 160 mm (visor 200). Corregidos en
+`sim/urdf/`. **No corregidos (reportados, `xfail` estricto):** llanta de 22 mm en PyBullet vs 26 mm
+en el visor (con 26 mm fallan 3 pruebas del muelle: la entrada de reversa depende de 4 mm de
+llanta, riesgo para el montaje) y el vaso entregado que `sim/mundo.py` deja ~2 cm sobre los rieles.
+CLAUDE.md dice pestaña de 72 mm; la configuración y el visor usan 78.
+
+**Decisión del grupo (2026-09-28): el carrusel se queda con el 28BYJ-48 y se ACEPTA la espera.** Media
+vuelta real tarda ~4,1 s; cuando una moneda va a un tubo lejano, la cinta de monedas espera al carrusel
+(~2,5 s de más al tubo opuesto, ~7 s una vez por lote). No se pierde ninguna moneda, solo baja la
+producción en esos casos. Los dos chequeos del carrusel de `control/tiempos.py` quedan en NO CABE a
+propósito, con esa explicación.
+
+## 2026-09-28 — Llanta TT de 26 mm en la física, muelle y vaso entregado sobre los rieles (pedido 13)
+
+**Llanta (13a).** `vehiculo.ancho_rueda_mm: 26` en la configuración; lo leen `sim/vehiculo_sim.py`
+y el visor (vía `sim/geometria.py`). El muelle (largo de boca, apertura, holgura) también pasó a la
+configuración (`vehiculo.muelle_*`, `medidas_muelle()`), en vez de constantes copiadas en `visor.js`.
+
+- **Causa real de las 3 pruebas que fallaban con 26 mm** (reproducido en DIRECT, 56 viajes: semillas
+  1-44, 11 con el doble de error y uno sin error): NO era el muelle (0 reintentos, la llanta nunca
+  tocó una guía) sino un **muro** en la evasión. Un cilindro plano en PyBullet apoya por uno de sus
+  bordes y salta al otro (contactos medidos a 60 y 86 mm del centro, nunca a 73): la trocha efectiva
+  varía ±13 mm, la odometría se corre más (`ir_a` desde el muelle: error medio 46 → 62 mm en 16
+  semillas) y el carro vuelve a la línea torcido.
+- **Arreglo (física, no el control):** la llanta es una banda de rodadura de 20 mm
+  (`vehiculo.rodadura_rueda_mm`) con hombros de 3 mm 1,5 mm más chicos, como una goma real; sigue
+  midiendo 26 mm para los choques de costado. Odometría de vuelta a 46 mm; 55 de 56 viajes sin tocar
+  nada (con la llanta vieja de 22 mm, 53 de 56).
+- **Muelle:** la llanta pasaba a 3,7 mm de la guía (antes 6,5). Rodillos guía 86 → 88 mm (y con
+  ellos las guías, 2 mm más afuera por lado): vuelven los 7 mm entre llanta y rodillo del diseño y la
+  llanta queda a ≥ 5,6 mm de la guía. La V no cambió (no hizo falta). Revisado en el visor con una
+  copia del supervisor en otro puerto: sin errores y sin choque con la canaleta.
+- Pruebas: quitado el `xfail` de la llanta; `test_boca_del_muelle_coincide_con_la_simulacion` lee el
+  largo de boca con `medidas_muelle` (la constante dejó de existir). Las pruebas del carro no se
+  tocaron (siguen las mismas semillas y tolerancias).
+
+**Vaso entregado (13b).** `sim/mundo.py` (`geometria_canaleta`, `pose_vaso_en_canaleta`): la canaleta
+se calcula de la configuración (la misma cuenta que usa ahora `sim/geometria.py` para el visor) y el
+vaso queda con la boca 1,2 mm (la pestaña) sobre los rieles, inclinado 15° como en la prueba física
+(la pestaña se acuesta sobre los dos rieles: medido 14,9°), con monedas y tapa movidas con él.
+Colocado y no soltado: el vaso de la escena no tiene pestaña y un vaso suelto bajaría por el PTFE sin
+el escape. Quitado el `xfail`; prueba nueva de la inclinación. En `sim/ver/` se oculta la placa verde
+`marca_salida_entrega` del URDF (marca de la fase 2 que el vaso colgado atravesaba).
+
+**Videos.** `todo_junto`: cámara de la planta a 0,66 m (antes 0,95) y banda oscura detrás del texto
+del carro. Regrabados `embalaje_vasos` (0,3 MB mp4 / 0,5 MB gif), `carro_pista` (1,5 / 3,2 MB) y
+`todo_junto` (1,9 / 2,8 MB); `filtro_monedas` no cambió. Suite completa: 740 pruebas, sin xfail.
+
+## 2026-09-28 — Revisión lógica: 7 bugs de órdenes, serial y vasos (depurador)
+
+Una revisión lógica encontró 7 fallos; cada uno se reprodujo antes de tocar código y quedó con una
+prueba que fallaba antes y pasa ahora.
+
+- **Asistente: pedir información daba órdenes** (`app/asistente.py`). "Dime cuántos vasos llegaron a
+  la meta" → `ir_meta`; "Explícame el paro de emergencia" → `paro`; "Cuéntame cómo hace la media
+  vuelta el carro" → girar 180°. Causa: `es_pregunta` solo mira el "?" o la primera palabra y Whisper
+  no pone signos; el paro saltaba con solo nombrar "paro"; el candado de movimiento era solo para el
+  modelo local. Arreglo: `PIDE_INFORMACION`/`es_consulta` (explica, cuéntame, dime, háblame, resume,
+  muéstrame, describe, qué es, cómo funciona...) → ninguna orden con ningún proveedor; `PIDE_MOVIMIENTO`
+  para reglas, modelo local y DeepSeek; `pide_paro` exige un imperativo ("haz paro", "paro ya", "para
+  todo", "detén la línea" o la frase entera "¡paro!"). Batería real con 7 casos nuevos (6 trampas y un
+  paro de verdad): ver `docs/pruebas-asistente.md`.
+- **Puente serial perdía líneas partidas** (`app/puente_serial.py`). `readline()` con timeout 0 devuelve
+  media línea; se contaba como mala y se perdía. Arreglo: buffer propio (`read(in_waiting)`, partir por
+  `\n`, guardar el resto; tope de 4096 bytes sin fin de línea). Prueba con `loop://`.
+- **Una orden mal formada tumbaba el supervisor** (`{"cmd":"velocidad","valor":"rapido"}`, lote "10.5",
+  una lista). Arreglo en dos capas: el servidor revisa tipos y contesta 400 con el motivo
+  (`servidor.motivo_orden_invalida`); el supervisor aplica cada orden con `aplicar_orden_segura`
+  (ok:false registrado como `respuesta`, el bucle sigue).
+- **Cualquier página podía mandar órdenes a 127.0.0.1** (`Access-Control-Allow-Origin: *` también en
+  POST). Arreglo: POST y OPTIONS sin CORS y solo `Content-Type: application/json` (415 si no); las
+  lecturas GET siguen con CORS para el visor portable. El visor ya manda sus POST con ese header y
+  desde el mismo origen: no hubo que tocarlo.
+- **Lote sin tope real**: sin corrida abierta un lote de 40 quedaba tal cual (tubo de 25 → `tubo_lleno`
+  eterno) y el asistente tenía 25 escrito a mano. Ahora ambos leen `planta.capacidad_tubo`; un lote no
+  entero se rechaza.
+- **Modo real distinto del contrato**: con `sin_esp32` la línea seguía "corriendo" y "reanudar" sacaba
+  del PARO. Ahora pausa (`_pausar_si_no_oye_al_esp32`, con plazo desde el arranque) y reanudar solo
+  sale de la pausa y con la placa oyéndose; del paro se sale con Iniciar, igual que en la simulación.
+- **Vaso vacío desechado quedaba VALIDA** en la tabla `vasos` (`control/embalaje.py`). Queda RECHAZADA;
+  el dashboard lo muestra "vacío desechado" (por el destino `vacio` de su evento `descarga`) y el
+  asistente lo cuenta aparte (`vasos_vacios_desechados`). Las cifras del visor salen de los eventos y
+  no cambian.
+
+## 2026-09-28 — Revisión del protocolo y del firmware del carro (6 hallazgos)
+
+- **El carro que volvía de la meta con el vaso salía otra vez del muelle** (`control/vehiculo.py`).
+  Sin enlace, pasado `espera_meta_sin_enlace_s`, vuelve con el vaso; entraba al muelle con la cuna ya
+  en 3×ocupada, quedaba `esperando_carga` y en el mismo ciclo `cargar()` lo sacaba (vueltas meta↔muelle
+  con el vaso). Arreglo: al entrar a `esperando_carga` se vacía `_historia_cuna` y la carga se acepta por
+  FLANCO: la cuna tiene que verse vacía (3 lecturas) en el muelle antes de verse ocupada.
+- **`Receptor.vistos` crecía sin tope y no conocía reinicios** (`control/protocolo.py`). Si el PC (o el
+  carro) se reiniciaba y el ESP32 no, los ids volvían a 1 y se confirmaban SIN ejecutarse (ack ok, 0
+  pasos). Arreglo: número de sesión `"s"` (`nueva_sesion()`, 1..65535 al azar) en cada comando/evento y
+  en el latido; el receptor olvida los ids al ver una sesión nueva y guarda solo los últimos 64.
+  `Secuencia` se reinicia con la sesión del latido del fijo o cuando `n` retrocede. El latido del PC
+  ahora lleva `n` (último id) y `s`, como pide el contrato.
+- **Mensajes de más de 250 B por ESP-NOW quedaban en la cola para siempre**. `respuesta_orden` de un
+  `ir_a` rechazado medía 396 B. Arreglo: `Emisor.enviar(..., limite)` recorta `detalle` (con `"rec":
+  true` y "...") y lo que ni así cabe no se encola (`grandes`). También `linea()` era incompatible con
+  el `json.dumps` de MicroPython (no acepta `ensure_ascii`): ahora cae a `separators` solo.
+- **Un paquete ESP-NOW que no es UTF-8 mataba `main.py` del carro** con las ruedas en el último PWM.
+  Arreglo: `Radio.recibir` devuelve bytes y `parsear_linea` descarta la basura; el bucle del carro va en
+  try/except (motores a 0, imprime y sigue) con `machine.WDT` (`firmware.carro_wdt_ms`, 2000; 0 = sin
+  perro para depurar con Thonny).
+- **El ESP-NOW de otro grupo contaba como latido de la estación** (`firmware/carro/logica.py`). Ahora
+  solo cuenta `src == "estacion"` o `dst == "carro"`.
+- **El tiempo del evento del carro pisaba el tipo** (`sim/vehiculo_sim.py`): `{"t": "evt", **e}` con
+  `e["t"]` = segundos. Se renombró a `ts`.
+
+Pruebas nuevas en `tests/control/test_protocolo.py`, `tests/control/test_vehiculo.py` y
+`tests/firmware/test_firmware.py` (sesión de punta a punta con la estación emulada, tamaño de todos los
+mensajes del carro, basura por radio, latido ajeno, bucle de `main.py` con una excepción).
+
+## 2026-09-28 — El carrusel con su tiempo real: la moneda espera a que su tubo llegue (pedido 14)
+
+**Causa (reproducida en DIRECT):** `sim/planta.py` no modelaba el carrusel: `_almacenar` guardaba la
+moneda en su tubo en el mismo tick en que llegaba a E4, sin ningún giro, y `_intentar_embalar` soltaba
+el lote sin llevar el tubo al agujero. El visor giraba por su cuenta (`girarCarrusel` en una cola con
+`c.libre`) mientras animaba la caída sin esperarlo. Con un carrusel "sombra" de 4096 ms por media vuelta:
+en `prueba_completa` 21 de 24 monedas caían con el disco girando (faltaban hasta 3,3 s) y en `mixto_20`
+8 de 8; la cola del visor llegaba a ir 6,5 s atrasada.
+
+**Arreglo, por capa:**
+- `control/carrusel.py` (nuevo, puro, apto MicroPython): 6 posiciones, carga (90°) y agujero (300°),
+  camino corto, duración = `carrusel_giro` × ángulo / 180°; `pedir`, `listo`, `en`, `tubo_en`, `estado`.
+- `sim/planta.py`: reloj en ms (ticks × ciclo). El giro se pide cuando la visión ACEPTA; en E4 la moneda
+  solo cae con su tubo quieto bajo la carga, si no espera en la descarga (`e4 espera
+  motivo=carrusel_girando`, con `falta_ms`, sin alarma) y la cinta de monedas se detiene (espera
+  redondeada a ciclos). El lote: tubo al agujero, re-verificación con la cámara, obturador
+  (`compuerta_tubo`); la cinta de vasos no se mueve mientras. Un lote no le quita el carrusel a una
+  moneda que ya espera en la descarga. Eventos `carrusel gira` (con `en_ms`, `dur_ms`, ángulos) y
+  `estado()["carrusel"]`. La alarma `tubo_lleno` ya no salta por esperar al carrusel.
+- `app/visor3d/visor.js`: el disco sigue los eventos `carrusel/gira` (sin cola propia, arranca desde
+  donde esté), la moneda cae cuando la simulación la guarda y la pila crece al terminar la caída;
+  `animarEmbalado` abre el obturador en el `en_ms` de la simulación. Frases nuevas en `interfaz.js` y
+  `app/dashboard/textos.py`; el aviso grande "Tubo lleno" solo por tubo lleno.
+- Firmware: `carrusel ir` acepta `lugar` (carga/agujero), evento `carrusel/llego` con `giro_ms` y
+  `carrusel_mov` en la telemetría; `BackendReal.carrusel_en()` solo da el tubo por puesto tras ese aviso.
+  La estación emulada (`app/puente_serial.py`) tarda lo mismo que la placa.
+- `control/tiempos.py`: los dos chequeos siguen en NO CABE (decisión aceptada) y ahora dicen cuánto
+  baja el ritmo: 37,5 → 27,5 elem/min (tubo vecino) o 12,2 (peor caso). `docs/logica-interna.md` §1.7.
+
+**Resultado:** 0 monedas y 0 lotes a destiempo (revisado solo con los eventos, como el visor). La corrida
+`prueba_completa` pasa de 44 a 63 ciclos (70,4 → 100,8 s; 31,5 → 22,0 elem/min); `mixto_20`, de 27 a
+35. Video `filtro_monedas` regrabado (la escena ahora gasta el tiempo de cada espera), demo y portable
+regenerados. Pruebas: `tests/control/test_carrusel.py`, `tests/sim/test_carrusel_planta.py`,
+`tests/firmware/test_carrusel_firmware.py`; en `tests/sim/test_planta.py` el carro de reemplazo pasa
+cada 2 ciclos en las dos pruebas del muelle (el primer vaso llega a la canaleta cerca del final).
+- **Revisión visual (mismo día), asistente**: prometía movimientos sin mandar la orden ("se moverá a tres
+  posiciones aleatorias") → `quitar_promesas` saca esas oraciones si no salió ninguna orden al carro y
+  dice que no se mueve (más una regla en el prompt); "¿qué tanto se demora el carro?" → `viajes_del_carro`
+  (la misma cuenta que la pestaña Carro: carga → meta → en_muelle) en `ruta.tiempos_de_viaje` y en las
+  reglas; la respuesta se guarda sin markdown (`limpiar_markdown`: el visor mostraba `qwen2.5-proyecto`
+  con comillas invertidas). De paso: "cuántas monedas de mil hay en el almacén" la contestan las reglas
+  (el modelo chico repetía las aceptadas aunque el número del tubo iba como dato verificado) y el
+  extracto de documentación de las reglas ya no usa la sección que cita la batería.
+- **Batería real**: 50 casos (11 nuevos) → **50/50 con el modelo local** (mediana 4,9 s) y **50/50 con
+  reglas**.
+
+## 2026-09-28 — Revisión lógica del firmware del fijo: seguridad y canaleta (9 hallazgos, depurador)
+
+Cada punto con una prueba que fallaba antes y pasa ahora (`tests/firmware/test_firmware.py`, contra la
+estación con hardware falso; `tests/control/test_tiempos.py`; `tests/sim/test_planta.py`;
+`tests/app/test_supervisor.py`).
+
+- **El paro no quedaba enclavado** (`firmware/fijo/estacion.py`). `_parar` ponía `parada_segura`, pero
+  si el latido del PC se cortaba y volvía (cable USB flojo), el tick la borraba sola. Arreglo: la parada
+  guarda su **motivo** (`motivo_parada`: `sin_pc`, `paro`, `error`). Solo `sin_pc` se levanta sola al
+  volver el latido; `paro` y `error` quedan enclavados hasta `estado.reanudar` (que el PC manda con
+  Iniciar/Reanudar). Un motivo enclavado no se rebaja; el ack de un comando rechazado dice por qué.
+- **La cortina fallaba del lado inseguro** (`firmware/comun/distancia.py`, `fijo/hw.py`,
+  `estacion.py`). Con un OSError (I2C flojo) `Laser.actualizar` no medía y `ultima` quedaba congelada,
+  casi siempre en None = "libre". Arreglo: `hw.leer()` manda `cortina_medidas` (contador del VL53L0X);
+  si pasan más de `firmware.cortina_sin_lectura_ms` (150) sin una medición nueva, la cortina queda
+  **activa** con motivo `sin_lectura` y evento `cortina_sin_lectura`.
+- **La cortina no votaba**: reaccionaba a UNA lectura, aunque `control/tiempos.py` presupuesta
+  `lecturas_por_decision × cortina_lectura`; con el falso positivo de la config salía una cortina falsa
+  cada ~17 s. Arreglo: `planta.lecturas_por_decision` mediciones NUEVAS seguidas para activarla y otras
+  tantas para despejarla (no parpadea). El presupuesto queda igual al código.
+- **`firmware/fijo/main.py` sin try** dejaba cintas y servos andando si algo lanzaba una excepción.
+  Arreglo: mismo patrón que el carro (try/except por vuelta → parada segura con motivo `error`, evento con
+  el error, el bucle sigue) y `machine.WDT` con `firmware.fijo_wdt_ms` (2000; 0 = sin perro), que
+  `firmware/preparar.py` pasa a la placa.
+- **La canaleta soltaba sin condiciones** (`_soltar_vaso`; el PC en modo real tampoco revisaba). Arreglo:
+  la estación guarda lo último que dijo el carro (`estado_carro`: fresco, en_muelle, cuna; las mismas
+  reglas que `sim/planta.py`), lo invalida al perder el enlace y cuando el PC le manda una orden de
+  movimiento al carro, y aplica `protocolo.puede_soltar_vaso`. Si no, `ack ok:false` con el motivo
+  (`vaso retenido: cuna_ocupada`...) y alarma `cuna_ocupada`. Tras soltar, la cuna queda desconocida
+  hasta que el carro hable (no se suelta un segundo vaso encima).
+- **La parada segura no frenaba el carrusel** (lo gira un Timer de `fijo/hw.py`). Arreglo:
+  `Carrusel.detener()` (objetivo = posición actual) desde `aplicar_parada_segura`, evento
+  `carrusel/detenido` y el pedido en curso se descarta (no hay `llego` falso).
+- **El reintento de la tapa no estaba presupuestado** (`control/tiempos.py`). Dos intentos =
+  2 × (500 + 3 × 60) = 1360 ms en una pausa de 800: chequeo nuevo "Reintento de la tapa" en NO CABE,
+  con la explicación de qué pasa (la cinta de vasos espera una pausa más; la de monedas sigue). La
+  simulación NO se comporta así: `_estacion_tapa` hace los dos intentos en el mismo tick sin contar ese
+  tiempo (queda dicho en la explicación). De paso, los textos de los chequeos con tildes y E3 (decía E5).
+- **`sim/planta.py`**: (a) lo que ningún sensor registró (`sin_registro`) grababa causa NULL en
+  `elementos`; ahora sale con `no_reconocida` (sección 7) y el evento conserva `motivo: sin_registro`;
+  (b) `_mensaje_del_carro` ya no copia `ts` ni `s` del transporte al evento; (c) comentarios con
+  estaciones viejas (E5/E7 → E3/E4); (d) el evento `presencia` lleva `diametro_real_mm` (verdad de
+  terreno para la matriz de Calidad); (e) `almacen_precargado` se perdía (se emitía antes del primer
+  tick y el primer `paso()` vaciaba la lista): ahora va con `eventos_arranque`, que el supervisor ya
+  guarda.
+- **Configuración sin uso / doble fuente**: se quitaron `tiempos_ms.esp_now_latencia` y
+  `errores_sensores.camara_vasos.error_fondo` (nadie los leía; la confirmación del lote por cámara,
+  `lote_no_confirmado`, no está modelada todavía) con su comentario, y una prueba exige que todo tiempo y
+  error de la config lo lea alguien. La ventana de la cortina tiene una sola fuente:
+  `sim/sensores_sim.ventana_cortina_mm()` (140 mm) es el alcance del cono simulado y el umbral del
+  firmware (antes 150 en `firmware.cortina_umbral_mm`, que se quitó).
+
+## 2026-09-29 — Segunda revisión lógica: asistente (a quién le habla la frase) y cifras del dashboard (depurador)
+
+Todo reproducido primero con `asistente.atender(..., usar="reglas")` y con una copia de `datos/planta.db`.
+
+- **Asistente, la frase le habla a otra cosa y movía el carro** (`app/asistente.py`). "sigue la línea de
+  producción" daba `carro seguir_linea` (la regla de reanudar iba después y nunca se alcanzaba), y "la
+  moneda avanza por la cinta", `carro avanzar 0,2 m` ("avanz" pasaba el candado `PIDE_MOVIMIENTO` sin mirar el
+  sujeto). Arreglo: `pide_mover_carro()` exige nombrar al carro o empezar con el verbo (imperativo, tras el
+  relleno "por favor/que/oye..."), y nunca si una moneda/pieza/cinta/vaso/la planta es el sujeto o lo que se
+  mueve ("avanza la cinta"). Vale como candado para los tres proveedores. "línea de producción", "producción"
+  y "planta" van a la línea: reanudar (`_REANUDA_LINEA`) o pausar.
+- **"detén todo/la planta/la producción" detenían solo el carro, y "para todo"/"para la línea" no daban
+  nada.** Regla acordada con el usuario: `pide_pausa_linea()` → PAUSA; PARO solo con "paro", "paro de
+  emergencia" o la urgencia explícita ("para todo ya"). "para" cuenta como verbo al inicio o justo antes de
+  todo/la línea/la planta/la producción, no después de "sirve", "útil"... ("gira el carro para el lado
+  derecho" antes lo DETENÍA: la regla buscaba "para el" en cualquier parte).
+- **"que + subjuntivo" se tomaba como pregunta** ("que avance el carro 30 cm", "que el carro vaya a la meta",
+  "que vuelva al muelle" no daban orden). `es_pedido_con_que()`: sin tilde y seguido de un subjuntivo de
+  la lista es un pedido; "qué" con tilde o seguido de es/hay/tan... sigue siendo pregunta. Se agregaron las
+  formas en subjuntivo a las reglas y al candado ("avance" se escribe con c: el candado la quitaba).
+- **`quitar_promesas` borraba la descripción del recorrido automático** ("se moverá solo a la meta cuando
+  lo carguen") y pegaba "no se mueve". Ahora la primera persona ("lo muevo", "avanzaré") siempre se quita y
+  la impersonal ("se moverá") solo si no trae marca de automático/condición (solo, cuando, cada vez...).
+- **Evaluador** (`app/evaluar_asistente.py`): cada proveedor sacaba su PROPIA copia de la base con el
+  supervisor escribiendo, así que local y reglas se medían contra datos distintos ("¿qué tanto se demora el
+  carro?" falló en local porque su copia aún no tenía viajes). Ahora `copiar_base()` una sola vez para todos.
+  `_alguna_cifra` sin ninguna cifra en la base fallaba siempre: ahora acepta "no tengo ese dato / no ha hecho
+  viajes". 10 casos nuevos (trampas, pausa, pedidos con "que"): **60/60 local (mediana 5,7 s) y 60/60 reglas**.
+- **Dashboard, monedas "del turno anterior" inventadas** (`app/dashboard/datos.py`,
+  `monedas_del_turno_anterior`): sin el evento `almacen_precargado` se deducía por conservación, pero
+  `elementos` solo trae las aceptadas FINALIZADAS y la que iba de la cámara a la descarga (o esperaba en E4 al
+  carrusel) ya contaba del otro lado: en 49 ticks de `prueba_completa` salían monedas "de antes" en una
+  corrida que arrancó vacía. La planta ya guarda `almacen_precargado` (con `eventos_arranque`): es la única
+  fuente, y si no está, 0.
+- **Matriz de Calidad** (`matriz_aciertos`, `categoria_real`): usa `diametro_real_mm` del evento `presencia`
+  (verdad de terreno, contra la tolerancia de coherencia) en vez del diámetro que midió la cámara (lo que
+  se evalúa); y una pieza que el infrarrojo no vio (`ocupada: false`) y recuperó E2 (`presencia_recuperada`)
+  toma su `tipo_real` de ese primer evento (antes: "Pieza sin identificar").
+- Pruebas nuevas en `tests/app/test_asistente.py` (22 frases de a quién le habla, "qué" interrogativo,
+  candado con DeepSeek, recorrido automático) y `tests/app/test_dashboard.py` (turno anterior sin evento = 0,
+  matriz con diámetro real y pieza recuperada); fallaban con el código anterior. Dashboard revisado con
+  capturas (Resumen, Monedas y vasos, Calidad) en un puerto aparte: la conservación cuadra (24 + 23 = 30 + 17).
+
+## 2026-09-29 — Segunda revisión lógica: firmware, puente y supervisor (10 hallazgos, depurador)
+
+Cada punto se reprodujo con la estación emulada / el `main.py` real con módulos falsos o el
+supervisor en modo real; cada prueba nueva FALLABA antes del arreglo
+(`tests/firmware/test_revision_firmware_0929.py`, final de `tests/app/test_supervisor.py`).
+
+1. **Orden rechazada por el carro lo "sacaba" del muelle** (`firmware/fijo/estacion.py`). El fijo ponía
+   `en_muelle=False` al reenviar; si el carro la rechazaba (solo `respuesta_orden ok:false`) nunca volvía a
+   decir `en_muelle` y todo `canaleta.soltar` daba `no_esta_en_muelle`. Ahora se guarda el valor anterior y,
+   al llegar el rechazo, se restaura (salvo que el carro haya dicho algo más nuevo). Igual que la sim.
+2. **El WDT se armaba al arrancar `main.py`** (fijo y carro): mpremote (`firmware.subir`) interrumpe
+   `main.py` y el perro reiniciaba la placa a mitad de la copia (en el ESP32 no se desarma). Ahora el fijo
+   lo arma con el PRIMER latido del PC (`Estacion.pc_latidos`) y el carro con el primer mensaje de su
+   estación (`latido.ultimo_oido`). Nota: el carro conviene subirlo con la estación apagada.
+3. **Excepción a mitad de un comando = ack perdido y reenvío con "ok" falso.** Ahora `try` alrededor de
+   la ejecución: ack `ok:false` con el error, el id se des-marca (`protocolo.Receptor.olvidar`) y la
+   excepción sigue hacia `main.py` (parada segura "error"). También se des-marca un comando RECHAZADO (no
+   ejecutado): si su ack se pierde, el reenvío se vuelve a evaluar en vez de recibir "ok:true".
+4. **Error repetido = ~500 eventos/s** al USB y a SQLite. `protocolo.LimiteAvisos`: la primera vez y
+   después uno por `firmware.aviso_error_cada_ms` (1 s) con `repetidos`; la parada segura sigue en cada
+   vuelta. Igual en el carro (los tracebacks por `print`).
+5. **Parada por `error`/`paro` sin salida directa** (`app/supervisor.py`): con la línea CORRIENDO,
+   "reanudar" ahora saca a la placa de una parada `error`/`paro`/`pausa`; la telemetría publica
+   `motivo_parada`, el resumen del dashboard lo explica (`textos.MOTIVO_PARADA_TXT`, frase del evento
+   `parada_segura` y de `carro_sin_respuesta`) y el visor muestra el aviso (`interfaz.js`).
+6. **La pausa por `sin_esp32` no paraba la placa**: al volver el cable se levantaba sola ("sin_pc")
+   con el PC en PAUSADA. Motivo nuevo **`pausa`** (enclavado; prioridad sin_pc < pausa < paro < error):
+   Pausar y `_pausar_si_no_oye_al_esp32` mandan `estado.parar motivo:pausa`, y se repite al volver a oír
+   la placa (`esp32_ok`) con la línea en pausa o paro. En pausa/paro no pasan comandos `hardware` salvo
+   `"prueba": true`, ni órdenes al carro salvo `detener` (como en la sim).
+7. **Carrusel vs obturador** (`BLOQUEOS`): el obturador espera a que el disco pare y el disco espera a
+   que el obturador cierre (ack ok + `en_espera`, arranca solo; mismo patrón que `EXCLUYENTES`).
+   `carrusel.referencia` con el obturador abierto se rechaza. La cortina solo cancela esperas de su zona.
+8. **`llego` viejo** (`control/hal/backend_real.py`): el evento lleva `pedido` (id del comando) y
+   `carrusel_en` lo compara con el id de su último pedido.
+9. **Orden al carro perdida sin aviso**: el fijo la reenvía cada `carro_reintento_ms` hasta la
+   `respuesta_orden` (mismo id: el carro no la repite), como mucho `protocolo.carro_orden_intentos` (4);
+   si no llega, evento `carro_sin_respuesta`.
+10. `CLAUDE.md` §10.1: el ejemplo del carrusel decía `"tubo":500`; son índices 0-5. §15: WDT armado tarde
+    y límite de avisos.
+
+Pruebas: `python -m firmware.preparar` compila las dos placas; `pytest tests/firmware tests/control
+tests/app/test_supervisor.py tests/sim` → 647 pasan. `sim/planta.py` no se tocó.
+
+## 2026-09-29 — La caída ocupa el carrusel: el giro siguiente espera a que la moneda llegue (pedido 14, depurador)
+
+**Qué se vio (revisión visual en vivo, `?auditar` cuadro a cuadro):** de 15 llegadas, 8 caían a un tubo
+15-37 mm fuera de la boca con el disco girando 22-40° en el segundo previo; la pila de $500 crecía con el
+disco quieto en el tubo $200, y un lote de $500 caía a 9 mm del agujero con 15° de giro.
+
+**Causa:** en el MISMO instante la simulación guardaba la moneda que esperaba en la descarga
+(`e4/almacen en_ms=0`, al empezar el ciclo) y pedía el giro hacia el tubo de la siguiente
+(`carrusel/gira en_ms=0`, `_almacenar` → `_mover_carrusel(t_ms)`): el disco se iba mientras la moneda
+todavía bajaba por el embudo y el canal (demo grabada: ticks 6, 7, 9, 18, 26-28, 32-34). En el visor,
+`faltaCarrusel()` solo protegía de giros ya pedidos, la caída duraba 0,85 s con horario fijo y la pila de
+un lote bajaba en la siguiente consulta (en la demo, hasta 1,6 s tarde, con el disco ya volviendo).
+
+**Arreglo, por capa:**
+- `config/parametros.yaml`: `tiempos_ms.caida_moneda_tubo: 400` (PROVISIONAL): 180 mm de la cinta al
+  fondo de un tubo vacío; caída libre 0,19 s, por tramos (embudo, compuerta, canal a ~72° con roce 0,3,
+  fondo) 0,27 s, + ~0,1 s de rebote → 400 ms. Se mide con video a 240 fps (comentario en el yaml).
+- `control/carrusel.py`: `ocupar(hasta_ms)`; `pedir` arranca en `max(t, fin del giro anterior, ocupado)`.
+- `sim/planta.py`: `_almacenar` ocupa el carrusel `caida_moneda_tubo`; `_atender_carrusel` lo ocupa con el
+  obturador abierto (`compuerta_tubo`). El giro a la siguiente sale ahora con `en_ms = 400`.
+- `control/tiempos.py`: chequeo nuevo "la moneda termina de caer antes del giro a la siguiente" (400 ms
+  en los 820 ms de la visión: en régimen no cuesta nada; solo cuando la moneda esperó al carrusel).
+- `firmware/fijo/estacion.py`: la placa también lo cumple sola: con el desvío hacia el almacén, un avance
+  de la cinta de monedas ocupa el carrusel `avance + caida_moneda_tubo`; un `carrusel ir` en ese lapso
+  espera (ack ok + `en_espera` con `espera_a: moneda`) y arranca después (`arranca`). El backend real
+  no cambia: sigue esperando `llego`, que ahora llega después de la caída.
+- `app/visor3d/visor.js`: el orden es por ESTADO, no por reloj (con pocos cuadros por segundo los tramos
+  encadenados se estiraban y el horario fijo se adelantaba). Cada moneda al almacén y cada lote se anotan
+  "en el aire" con el giro que los deja en su lugar; la moneda no deja la cinta y el obturador no abre
+  hasta que ESE giro terminó; un giro pedido después no arranca mientras quede algo anterior cayendo
+  (`animar(..., {espera})`, que al soltarse arranca desde 0) ni antes que el giro anterior. La caída dura
+  `caida_moneda_tubo` (el último 0,1 s asentada, con el disco quieto). La pila crece solo cuando aterriza
+  una moneda de ESE tubo (o de una vez al arrancar / con el disco quieto si la cuenta sube sin caída), y
+  la de un lote baja justo al abrir el obturador.
+
+**Pruebas nuevas** (fallaban antes): `tests/sim/test_carrusel_planta.py` (ningún giro arranca durante la
+caída de una moneda ni con el obturador abierto, en `prueba_completa` lote 5 y 10 y `mixto_20`; el caso
+exacto de la demo; `caida_moneda_tubo` ≥ caída libre y < pausa) y `tests/firmware/test_carrusel_firmware.py`
+(el `carrusel ir` espera a la moneda con el desvío al almacén, y no espera con el desvío al rechazo).
+
+**Medición visual** (copia del supervisor en 8797, Chrome sin ventana a ~3 cuadros/s, lote 5): antes 8 de
+15 llegadas a 15-37 mm y 22-40°; después, en vivo 22 monedas y 4 lotes, y en la demo 22 monedas y 4
+lotes, todos a 0 mm de la boca/agujero y 0° de giro en el segundo previo, sin errores de consola.
+
+**Producción:** `prueba_completa` (lote 10) 63 → 71 ciclos (100,8 → 113,6 s; 22,0 → 19,5 elem/min);
+`mixto_20` igual (35). Demo, portable y video `filtro_monedas` regenerados.
+
+**Decisión del grupo (2026-09-29): pausa de la cinta de vasos 1400 ms (antes 800).** Si la cámara no ve la
+primera tapa se suelta otra: dos intentos = 2 × (500 + 3 × 60) = 1360 ms, que no cabían en 800. El grupo
+prefirió alargar la pausa en vez de hacer esperar a la cinta de vasos: los lotes llegan mucho más lento que
+un ciclo de vasos, así que no frena al almacén. El chequeo "Reintento de la tapa" pasa a OK (1360 de 1400).

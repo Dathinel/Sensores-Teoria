@@ -72,6 +72,17 @@ def _denominacion(d) -> str:
     return "otras denominaciones" if d == "otras" else _pesos(d)
 
 
+# Por qué está parada la placa del montaje real (telemetría `motivo_parada`, firmware/fijo/estacion.py)
+# y cómo se sale. Antes el tablero solo decía "parada segura" y no se sabía si hacía falta Reanudar o
+# Iniciar (revisión 2026-09-29).
+MOTIVO_PARADA_TXT = {
+    "sin_pc": "la placa no oye al PC (sale sola cuando vuelve el latido)",
+    "pausa": "pausa del PC (sale con Reanudar)",
+    "paro": "paro de emergencia (sale con Iniciar)",
+    "error": "error del firmware (revisar y salir con Reanudar)",
+}
+
+
 # Eventos del carro que son un problema (borde rojo) en vez de información (azul).
 _CARRO_PROBLEMA = {"sin_enlace", "camino_bloqueado", "bloqueado", "atascado", "vuelve_con_vaso", "punto_con_error"}
 
@@ -103,8 +114,28 @@ def frase_evento(ev: dict) -> tuple[str, str, str] | None:
         if d["activa"]:
             return "rojo", "🖐️", "<b>Mano en la zona de tapa y prensa</b>: la prensa sube y la cinta de vasos se detiene."
         return "verde", "🖐️", "La zona de tapa y prensa quedó libre: la línea sigue."
+    if t == "parada_segura" and ev["origen"] == "esp32":
+        motivo = d.get("motivo")
+        extra = f' ({html.escape(str(d["error"]))})' if d.get("error") else ""
+        return "rojo", "🛑", f'<b>Estación en parada segura</b>: {MOTIVO_PARADA_TXT.get(motivo, motivo)}{extra}.'
+    if t == "carro_sin_respuesta":
+        return "rojo", "📡", ("<b>El carro no contestó una orden</b> "
+                              f'({NOMBRE_ORDEN_CARRO.get(d.get("act"), d.get("act"))}): no le llegó por la radio.')
     if t == "alarma":
         return "rojo", "⚠️", f'Alarma: {d.get("tipo", "").replace("_", " ")}.'
+    # Almacen revolver con su tiempo real (2026-09-28): el carrusel tarda 1,4 s por
+    # tubo vecino y 4,1 s por media vuelta, y la moneda lo ESPERA en la descarga.
+    if t == "gira" and ev["origen"] == "carrusel":
+        lugar = "sobre el agujero (va a soltar un lote)" if d.get("lugar") == "agujero" else "bajo la carga"
+        return "gris", "⚙️", (f'El carrusel gira: el tubo de {_denominacion(d.get("tubo"))} queda {lugar} '
+                             f'en {d.get("dur_ms", 0) / 1000:.1f} s.')
+    if t == "espera" and ev["origen"] == "e4":
+        if d.get("motivo") == "carrusel_girando":
+            falta = f' (faltan {d["falta_ms"] / 1000:.1f} s)' if isinstance(d.get("falta_ms"), (int, float)) else ""
+            return "gris", "⏳", (f'La moneda espera en la descarga: el carrusel todavía trae el tubo de '
+                                 f'{_denominacion(d.get("tubo"))}{falta}. La cinta de monedas espera; no se bota nada.')
+        return "ambar", "⏳", (f'El tubo de {_denominacion(d.get("tubo", d.get("denominacion")))} está lleno: '
+                               "la moneda espera en la descarga hasta que un vaso reciba ese lote.")
     if ev["origen"] == "carro":
         textos = {
             "carga": f'El carro se lleva el vaso {d.get("vaso")}.',
@@ -146,6 +177,29 @@ def frase_evento(ev: dict) -> tuple[str, str, str] | None:
     return None
 
 
+def valor_legible(v) -> str:
+    """Un valor de un evento en palabras, no como estructura de Python: un conteo por tubo
+    {'50': 4, '100': 1} sale "$50: 4 · $100: 1"; otro diccionario "clave: valor · ..."; una lista,
+    sus elementos separados por comas."""
+    if isinstance(v, dict):
+        partes = []
+        for k, x in v.items():
+            k = str(k)
+            nombre = f"${int(k):,}".replace(",", ".") if k.isdigit() and int(k) in DENOMINACIONES else k.replace("_", " ")
+            partes.append(f"{nombre}: {valor_legible(x)}")
+        return " · ".join(partes) if partes else "nada"
+    if isinstance(v, (list, tuple)):
+        if v and all(isinstance(x, (list, tuple)) for x in v):
+            # Lista de pares (p. ej. las fotos: [clase, confianza]): "otro 0.4; otro 0.4".
+            return "; ".join(" ".join(valor_legible(y) for y in x) for x in v)
+        return ", ".join(valor_legible(x) for x in v) if v else "nada"
+    if isinstance(v, bool):
+        return "sí" if v else "no"
+    if v is None:
+        return "—"
+    return str(v)
+
+
 def describir_evento(ev: dict) -> str:
     """Bitácora técnica (Línea en vivo): la frase simple si la hay; si no, el evento tal cual."""
     r = frase_evento(ev)
@@ -153,6 +207,44 @@ def describir_evento(ev: dict) -> str:
     if r:
         return f'<span class="h">{hora}</span> {r[1]} {r[2]}'
     datos = json.loads(ev["payload"])
-    txt = ", ".join(f"{k}={v}" for k, v in datos.items() if k not in ("src", "ev", "tick"))
+    txt = ", ".join(f"{k}={valor_legible(v)}" for k, v in datos.items() if k not in ("src", "ev", "tick"))
     return (f'<span class="h">{hora}</span> <span class="o">{ev["origen"]}</span> {ev["tipo"]} '
             f'<span class="h">{html.escape(txt)[:140]}</span>')
+
+
+# ---------------------------------------------------------------------------
+# Textos que vienen de otros módulos escritos sin tildes (p. ej. control/tiempos.py, cuyo código
+# es ASCII a propósito): se muestran con tildes sin tocar el módulo de origen.
+# ---------------------------------------------------------------------------
+
+_TILDES = {
+    "vision": "visión", "camara": "cámara", "camaras": "cámaras", "posicion": "posición",
+    "estacion": "estación", "desvio": "desvío", "segmentacion": "segmentación",
+    "denominacion": "denominación", "produccion": "producción", "decision": "decisión", "reaccion": "reacción",
+    "direccion": "dirección", "mas": "más", "quedo": "quedó", "rapido": "rápido", "rapida": "rápida",
+    "minimo": "mínimo", "maximo": "máximo", "rotacion": "rotación", "medicion": "medición",
+    "numero": "número", "deteccion": "detección", "clasificacion": "clasificación", "transicion": "transición",
+    "pequeno": "pequeño", "tambien": "también", "despues": "después", "unica": "única", "unico": "único",
+    "via": "vía", "dias": "días", "segun": "según", "aun": "aún", "codigo": "código", "electrico": "eléctrico",
+}
+# La cámara de monedas hoy está en la estación E3 (Presencia, Material, Visión, Descarga); textos
+# viejos todavía dicen E5.
+_ESTACION_VIEJA = {"E5": "E3"}
+
+
+def con_tildes(texto: str) -> str:
+    """Pone las tildes a un texto escrito sin ellas (palabra completa, respeta la mayúscula
+    inicial), corrige la estación de la cámara (E5 → E3) y quita las comillas de código
+    (`monedas_por_vaso` → monedas por vaso)."""
+    import re
+
+    def palabra(m: re.Match) -> str:
+        p = m.group(0)
+        nueva = _TILDES.get(p.lower())
+        if nueva is None:
+            return p
+        return nueva[0].upper() + nueva[1:] if p[0].isupper() else nueva
+
+    texto = re.sub(r"`([^`]*)`", lambda m: m.group(1).replace("_", " "), str(texto))
+    texto = re.sub(r"\b[A-Za-z]+\b", palabra, texto)
+    return re.sub(r"\bE5\b", lambda m: _ESTACION_VIEJA[m.group(0)], texto)

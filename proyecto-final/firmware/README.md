@@ -25,9 +25,23 @@ flowchart LR
 Reglas que se cumplen en la placa, sin esperar al PC:
 
 - **Parada segura**: arranca parada y, si deja de oír el latido del PC 2 s, cintas quietas,
-  prensa arriba, desvío al rechazo y escapes cerrados.
-- **Cortina**: con una mano en la zona sube la prensa y detiene la cinta de vasos en el mismo
-  ciclo; la cinta de monedas sigue.
+  prensa arriba, desvío al rechazo, escapes cerrados y carrusel frenado. Guarda su motivo: la de
+  "sin PC" se levanta sola cuando vuelve el latido; el **paro** del dashboard (y una excepción en
+  el bucle) queda enclavado hasta `estado.reanudar` (Iniciar/Reanudar).
+- **Cortina**: con una mano en la zona sube la prensa y detiene la cinta de vasos (la cinta de
+  monedas sigue). Vota como las demás estaciones: `planta.lecturas_por_decision` mediciones
+  seguidas para activarla y otras tantas para despejarla. Si el VL53L0X deja de dar mediciones
+  nuevas `firmware.cortina_sin_lectura_ms` (cable I2C flojo), la cortina queda **activa**
+  (`cortina_sin_lectura`): falla del lado seguro.
+- **Canaleta**: el escape suelta un vaso solo con el enlace del carro vivo, su estado recibido
+  después de la última reconexión, el carro en el muelle y la cuna vacía
+  (`protocolo.puede_soltar_vaso`); si no, `ack ok:false` con el motivo (y alarma `cuna_ocupada`).
+- **Bucle que no se muere**: cada vuelta de `main.py` va en try/except (una excepción = parada
+  segura con motivo `error`, y el bucle sigue) y un perro guardián `machine.WDT`
+  (`firmware.fijo_wdt_ms`) reinicia la placa si se traba. El perro se arma recién con el primer
+  latido del PC (el carro: con el primer mensaje de su estación), para que `firmware.subir`
+  (mpremote) no reinicie la placa a mitad de la copia; el carro conviene subirlo con la estación
+  apagada.
 - **Comandos repetidos** (ack perdido): se vuelven a confirmar pero no se ejecutan dos veces.
 - **Carro sin radio**: termina la vuelta solo y guarda sus eventos hasta que vuelva el enlace.
 
@@ -127,5 +141,5 @@ Los dos buses I2C: G21/G22 (PCA9685 en el fijo, láser frontal en el carro) y G1
 ## Valores provisionales
 
 Todo lo de `firmware:` en `config/parametros.yaml` es PROVISIONAL hasta medirlo en el montaje:
-mm por vuelta del rodillo (40), ángulos de cada servo, umbral de la cortina (150 mm), polaridad
+mm por vuelta del rodillo (69,1: rodillo de Ø22 mm, π × 22), ángulos de cada servo, umbral de la cortina (140 mm: sale de la geometría de la zona, el mismo alcance que usa la simulación), polaridad
 de cada módulo y la velocidad máxima de las ruedas del carro (0,55 m/s).

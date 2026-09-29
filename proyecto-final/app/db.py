@@ -234,11 +234,18 @@ def tomar_ordenes_pendientes(conexion: sqlite3.Connection) -> list[dict]:
 
 
 def ultima_telemetria(conexion: sqlite3.Connection) -> dict | None:
-    fila = conexion.execute(
-        "SELECT ts, payload FROM eventos WHERE tipo = 'tel' ORDER BY id DESC LIMIT 1"
-    ).fetchone()
-    if fila is None:
-        return None
-    datos = json.loads(fila["payload"])
-    datos["ts"] = fila["ts"]
-    return datos
+    # Se toma la ultima fila VALIDA: el dashboard lee mientras el supervisor
+    # escribe, y una vez se vio una telemetria con payload vacio (TypeError al
+    # hacer datos["ts"]). Con eso el tablero se caia en vez de mostrar la anterior.
+    filas = conexion.execute(
+        "SELECT ts, payload FROM eventos WHERE tipo = 'tel' ORDER BY id DESC LIMIT 5"
+    ).fetchall()
+    for fila in filas:
+        try:
+            datos = json.loads(fila["payload"] or "null")
+        except (TypeError, ValueError):
+            continue
+        if isinstance(datos, dict):
+            datos["ts"] = fila["ts"]
+            return datos
+    return None

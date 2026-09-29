@@ -198,9 +198,10 @@ pasos:
       en su posición de reposo; el visor 3D lo gira.
     replicacion: >
       Motor 28BYJ-48 (5 V, con reducción) y driver ULN2003; al encender gira hasta que el sensor
-      Hall ve el imán del carrusel (homing) y desde ahí cuenta pasos. Giro de hasta 180° en ~500
-      ms: tiene un ciclo de la cinta (1,6 s) para poner el tubo antes de que llegue la moneda, y
-      soltar un lote y volver (2 × 500 + 600 ms) también cabe en un ciclo. Tubos de 29 mm interior
+      Hall ve el imán del carrusel (homing) y desde ahí cuenta pasos, un medio paso cada 2 ms
+      por temporizador (bajo el límite de arranque del motor). Media vuelta tarda ~4,1 s y un tubo
+      vecino ~1,37 s: NO cabe en el ciclo de la cinta (1,6 s), así que la cinta de monedas espera al
+      carrusel cuando la moneda va a un tubo lejano (decisión del grupo, 2026-09-28: se acepta). Tubos de 29 mm interior
       (entra la de $1.000, 26,7 mm). Placa fija de acrílico o impresión lisa; obturador SG90.
     revision: aprobado
     nota_revision: >
@@ -337,8 +338,8 @@ pasos:
       El tubo de tapas termina poco más de 1 cm por encima de la boca del vaso (la tapa cae poco y
       no se voltea) y cuelga del pórtico detrás de la cinta, fuera de la vista de la cámara.
     replicacion: >
-      Tapas de 74 mm (pestaña del vaso + 1 mm) con borde cónico de ~3 mm. Tubo de tapas de 78 mm
-      de diámetro interior con un escape de dos dedos movido por un servo (uno retiene la pila, el
+      Tapas de 78 mm (cubren la pestaña del vaso, 62 + 2 x 8 mm) con borde cónico de ~3 mm. Tubo de
+      tapas de 82 mm de diámetro interior (tapa + 4 mm, como en el 3D) con un escape de dos dedos movido por un servo (uno retiene la pila, el
       otro suelta la de abajo). Medir la caída real y el tiempo (tiempos_ms.tapa_caida, hoy
       500 ms) y que la cámara distinga la tapa (color que contraste con el panel de luz).
     revision: aprobado
@@ -365,10 +366,12 @@ pasos:
     sale: Tapa asentada.
     mensaje: '{"t":"cmd","id":45,"dst":"vasos","act":"prensar"}'
     como_esta_hoy: >
-      Fuerza: con 10 kg·cm y 6,5 mm de excentricidad la leva empuja con al menos ~150 N (más cerca
-      del punto muerto de abajo); una tapa a presión de vaso pide del orden de 30-50 N, así que el
-      servo alcanza con margen y no hace falta motorreductor, puente H ni sensor de posición (el
-      servo sabe en qué ángulo quedó y siempre vuelve arriba antes de que avance la cinta).
+      Fuerza: la tapa sella a presión (su reborde salta sobre el labio del vaso), lo que pide del
+      orden de 30-50 N (PROVISIONAL); apretar más solo deforma el vaso. La leva (6,5 mm de
+      excentricidad, MG996R) apunta a 60 N (la tapa más dura x 1,2) con un resorte limitador, y el
+      servo lo da con margen x2,8 (docs/peso.md): no hace falta motorreductor, puente H ni sensor de
+      posición (el servo sabe en qué ángulo quedó y siempre vuelve arriba antes de que avance la
+      cinta). La placa nunca mueve prensa y empujador a la vez.
     replicacion: >
       Medir la fuerza real para asentar una tapa (empujarla sobre una báscula de cocina: kg × 9,8
       = N) y confirmar que sobra margen con el MG996R. Resorte que empiece a ceder un poco por
@@ -596,7 +599,7 @@ pasos:
       vacía (prueba en tests/sim/test_planta.py). El firmware (fase 8) implementa el mismo contrato.
     revision: aprobado
   - numero: 16
-    titulo: Asistente (DeepSeek) y órdenes al carro
+    titulo: Asistente (DeepSeek → modelo local qwen2.5 → reglas) y órdenes al carro
     zona: pista
     sensores: [9, 10, 11, 13]
     que_pasa: >

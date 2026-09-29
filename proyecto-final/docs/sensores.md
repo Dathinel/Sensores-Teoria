@@ -8,7 +8,7 @@ Numerados igual que en el visor 3D (pestaña Sensores). Qué lo activa, qué rec
 | # | Sensor | Subsistema | Modelo propuesto |
 |---|---|---|---|
 | 1 | [Infrarrojo de presencia](#1-infrarrojo-de-presencia) | cinta de monedas | FC-51 (infrarrojo reflectivo, alcance ajustable) a 5 cm de la cinta |
-| 2 | [Sensor capacitivo](#2-sensor-capacitivo) | cinta de monedas | LJC18A3-H-Z/BX (NPN, 5-40 V) |
+| 2 | [Sensor capacitivo](#2-sensor-capacitivo) | cinta de monedas | LJC18A3-H-Z/BX (NPN, 6-36 V) |
 | 3 | [Sensor inductivo](#3-sensor-inductivo) | cinta de monedas | LJ18A3-8-Z/BX (NPN, M18, 8 mm) |
 | 4 | [Cámara cenital](#4-cámara-cenital) | cinta de monedas | Webcam USB 1080p + anillo de luz difusa |
 | 5 | [Sensor del interior del vaso](#5-sensor-del-interior-del-vaso) | cinta de vasos | VL53L0X (el mismo de la cortina; otra dirección I2C con su pin XSHUT) |
@@ -41,7 +41,7 @@ Numerados igual que en el visor 3D (pestaña Sensores). Qué lo activa, qué rec
 
 ## 2. Sensor capacitivo
 
-**Subsistema:** cinta de monedas · **Dónde:** E2 · Material (montado BAJO la cinta, en la casilla E1) · **Modelo propuesto:** LJC18A3-H-Z/BX (NPN, 5-40 V)
+**Subsistema:** cinta de monedas · **Dónde:** E2 · Material (montado BAJO la cinta, en la casilla E1) · **Modelo propuesto:** LJC18A3-H-Z/BX (NPN, 6-36 V)
 
 - **Qué lo activa:** Cualquier objeto cerca cambia la capacitancia de su placa (plástico, metal, madera...). Va debajo de la cinta, mirando hacia arriba, y lee la pieza a través de la banda (2 mm); la banda y los separadores siempre están iguales en cada pausa, así que se calibra con ellos puestos (quedan como fondo).
 - **Recibe:** Presencia de cualquier material a ~2 mm sobre su cara (a través de la banda).
@@ -177,7 +177,7 @@ Numerados igual que en el visor 3D (pestaña Sensores). Qué lo activa, qué rec
 - **Cómo mitigarlo:** Montar a 3-5 mm del piso con falda contra la luz; calibrar blanco y negro al arrancar.
 - **Conexión:** 5 entradas (digitales o ADC) del ESP32 del carro.
 - **Cómo se simula:** Distancia de cada sensor a la línea central de la pista (y a las franjas negras de meta y de giro), con lecturas cambiadas a veces (errores_sensores.carro.error_linea). El control decide cada bit por mayoría de 3 lecturas y, para volver a la línea, exige 4 seguidas.
-- **Pasos:** [14. Ruta del carro con tres obstáculos (ida y vuelta sola)](paso-a-paso.md#14-ruta-del-carro-con-tres-obstáculos-ida-y-vuelta-sola), [16. Asistente (DeepSeek) y órdenes al carro](paso-a-paso.md#16-asistente-deepseek-y-órdenes-al-carro), [17. Firmware de los dos ESP32 y hardware real](paso-a-paso.md#17-firmware-de-los-dos-esp32-y-hardware-real)
+- **Pasos:** [14. Ruta del carro con tres obstáculos (ida y vuelta sola)](paso-a-paso.md#14-ruta-del-carro-con-tres-obstáculos-ida-y-vuelta-sola), [16. Asistente (DeepSeek → modelo local qwen2.5 → reglas) y órdenes al carro](paso-a-paso.md#16-asistente-deepseek--modelo-local-qwen25--reglas-y-órdenes-al-carro), [17. Firmware de los dos ESP32 y hardware real](paso-a-paso.md#17-firmware-de-los-dos-esp32-y-hardware-real)
 
 ```json
 {"t":"evt","src":"carro","ev":"linea","bits":"00100"}
@@ -195,7 +195,7 @@ Numerados igual que en el visor 3D (pestaña Sensores). Qué lo activa, qué rec
 - **Cómo mitigarlo:** Respaldo del laser: 2 mediciones seguidas; disparos cada 60 ms para que no se mezclen ecos.
 - **Conexión:** TRIG a una salida; ECHO (5 V) por divisor a 3,3 V al ESP32 del carro.
 - **Cómo se simula:** Abanico de 5 rayTest en ±7,5° a la altura real, una medición cada 60 ms, con ruido.
-- **Pasos:** [14. Ruta del carro con tres obstáculos (ida y vuelta sola)](paso-a-paso.md#14-ruta-del-carro-con-tres-obstáculos-ida-y-vuelta-sola), [16. Asistente (DeepSeek) y órdenes al carro](paso-a-paso.md#16-asistente-deepseek-y-órdenes-al-carro), [17. Firmware de los dos ESP32 y hardware real](paso-a-paso.md#17-firmware-de-los-dos-esp32-y-hardware-real)
+- **Pasos:** [14. Ruta del carro con tres obstáculos (ida y vuelta sola)](paso-a-paso.md#14-ruta-del-carro-con-tres-obstáculos-ida-y-vuelta-sola), [16. Asistente (DeepSeek → modelo local qwen2.5 → reglas) y órdenes al carro](paso-a-paso.md#16-asistente-deepseek--modelo-local-qwen25--reglas-y-órdenes-al-carro), [17. Firmware de los dos ESP32 y hardware real](paso-a-paso.md#17-firmware-de-los-dos-esp32-y-hardware-real)
 
 ```json
 {"t":"evt","src":"carro","ev":"obstaculo","sensor":"ultrasonico","distancia_mm":182}
@@ -213,7 +213,7 @@ Numerados igual que en el visor 3D (pestaña Sensores). Qué lo activa, qué rec
 - **Cómo mitigarlo:** Interrupciones con antirrebote; corregir la odometria con la linea.
 - **Conexión:** 2 entradas con interrupcion del ESP32 del carro.
 - **Cómo se simula:** Pulsos enteros del giro REAL de cada rueda en PyBullet (20 por vuelta, ~10 mm): si la rueda patina, cuenta de más. Llegar al muelle = dejan de contar contra el tope (con PWM bajo).
-- **Pasos:** [14. Ruta del carro con tres obstáculos (ida y vuelta sola)](paso-a-paso.md#14-ruta-del-carro-con-tres-obstáculos-ida-y-vuelta-sola), [16. Asistente (DeepSeek) y órdenes al carro](paso-a-paso.md#16-asistente-deepseek-y-órdenes-al-carro), [17. Firmware de los dos ESP32 y hardware real](paso-a-paso.md#17-firmware-de-los-dos-esp32-y-hardware-real)
+- **Pasos:** [14. Ruta del carro con tres obstáculos (ida y vuelta sola)](paso-a-paso.md#14-ruta-del-carro-con-tres-obstáculos-ida-y-vuelta-sola), [16. Asistente (DeepSeek → modelo local qwen2.5 → reglas) y órdenes al carro](paso-a-paso.md#16-asistente-deepseek--modelo-local-qwen25--reglas-y-órdenes-al-carro), [17. Firmware de los dos ESP32 y hardware real](paso-a-paso.md#17-firmware-de-los-dos-esp32-y-hardware-real)
 
 ```json
 {"t":"tel","src":"carro","x":0.84,"y":-0.52,"rumbo":-1.57}
@@ -227,7 +227,7 @@ Numerados igual que en el visor 3D (pestaña Sensores). Qué lo activa, qué rec
 - **Recibe:** Luz IR reflejada por el vaso.
 - **Entrega:** Digital: 1 = vaso cargado.
 - **Rango:** TCRT5000: 2-15 mm · **Respuesta:** < 1 ms
-- **Error típico:** Igual que el de presencia: vasos transparentes reflejan poco.
+- **Error típico:** Un fondo muy oscuro o brillante refleja poco; luz ambiente fuerte.
 - **Cómo mitigarlo:** Apuntarlo al fondo opaco del vaso; voto de 3 lecturas.
 - **Conexión:** Entrada digital del ESP32 del carro.
 - **Cómo se simula:** La cuna tiene o no un vaso (lo pone el escape al soltar), más su error (errores_sensores.cuna). Se lee antes de soltar (tiene que estar vacía) y después (confirma la carga).
@@ -249,7 +249,7 @@ Numerados igual que en el visor 3D (pestaña Sensores). Qué lo activa, qué rec
 - **Cómo mitigarlo:** 3 mediciones seguidas para decidir; el ultrasonico de respaldo cubre lo que el laser no ve.
 - **Conexión:** I2C (SDA/SCL) al ESP32 del carro, 3,3 V.
 - **Cómo se simula:** Cono de 5 rayTest en ±12,5° a 7 cm del piso, una medición cada 33 ms, hasta 1,2 m, con ruido proporcional (errores_sensores.carro.ruido_tof).
-- **Pasos:** [14. Ruta del carro con tres obstáculos (ida y vuelta sola)](paso-a-paso.md#14-ruta-del-carro-con-tres-obstáculos-ida-y-vuelta-sola), [16. Asistente (DeepSeek) y órdenes al carro](paso-a-paso.md#16-asistente-deepseek-y-órdenes-al-carro), [17. Firmware de los dos ESP32 y hardware real](paso-a-paso.md#17-firmware-de-los-dos-esp32-y-hardware-real)
+- **Pasos:** [14. Ruta del carro con tres obstáculos (ida y vuelta sola)](paso-a-paso.md#14-ruta-del-carro-con-tres-obstáculos-ida-y-vuelta-sola), [16. Asistente (DeepSeek → modelo local qwen2.5 → reglas) y órdenes al carro](paso-a-paso.md#16-asistente-deepseek--modelo-local-qwen25--reglas-y-órdenes-al-carro), [17. Firmware de los dos ESP32 y hardware real](paso-a-paso.md#17-firmware-de-los-dos-esp32-y-hardware-real)
 
 ```json
 {"t":"evt","src":"carro","ev":"obstaculo","sensor":"laser","distancia_mm":191}

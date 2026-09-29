@@ -14,6 +14,7 @@
 
 import os
 import json
+import re
 import time
 
 import serial
@@ -148,18 +149,33 @@ def interpretar_por_reglas(texto):
         datos["show"] = True
         return datos
 
-    # Encender tiene prioridad solo si no aparece un verbo de apagar.
-    apagar = any(p in t for p in ("apaga", "desactiva", "quita"))
-    encender = any(p in t for p in ("enciend", "prend", "activa", "pon", "dale"))
-    if not (apagar or encender):
-        return datos
-    valor = not apagar
-
-    ambos = any(p in t for p in ("los dos", "ambos", "todos", "todas"))
-    if ambos or "roj" in t:
-        datos["led_rojo"] = valor
-    if ambos or "azul" in t:
-        datos["led_azul"] = valor
+    # La frase se lee POR PARTES, separadas por "y", comas, "pero", "luego"...
+    # Cada verbo manda sobre los colores que vienen despues de el, hasta el
+    # siguiente verbo. Antes se buscaba un solo verbo en toda la frase y
+    # "enciende el rojo y apaga el azul" apagaba LOS DOS (bastaba con que
+    # apareciera "apaga" en cualquier lado).
+    # Si una parte no trae verbo ("prende el rojo y el azul"), hereda el de la
+    # parte anterior.
+    partes = re.split(r",|\by\b|\be\b|\bpero\b|\bluego\b|\bdespues\b|\bdespués\b", t)
+    valor = None
+    for parte in partes:
+        # "deja el azul" / "manten el rojo": ese LED NO se toca (sin esto,
+        # "apaga el rojo pero deja el azul" heredaba el "apaga" y apagaba los dos).
+        if any(p in parte for p in ("deja", "manten", "mantén")):
+            valor = None
+            continue
+        # "apaga" se revisa ANTES que "activa", porque "desactiva" contiene "activa".
+        if any(p in parte for p in ("apaga", "desactiva", "quita")):
+            valor = False
+        elif any(p in parte for p in ("enciend", "prend", "activa", "pon", "dale")):
+            valor = True
+        if valor is None:
+            continue  # todavia no aparece ningun verbo
+        ambos = any(p in parte for p in ("los dos", "ambos", "todo", "todas"))
+        if ambos or "roj" in parte:
+            datos["led_rojo"] = valor
+        if ambos or "azul" in parte:
+            datos["led_azul"] = valor
     return datos
 
 

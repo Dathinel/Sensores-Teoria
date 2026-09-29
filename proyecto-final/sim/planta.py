@@ -42,17 +42,21 @@ from collections import deque
 
 from control import reglas
 from control.almacen import OTRAS, AlmacenDenominaciones, MonedaAlmacenada
+from control.carrusel import AGUJERO, CARGA, Carrusel
 from control.embalaje import EmbalajeVasos
 from control.hal.backend_sim import EstacionBackendSim
 from control.linea import Destino, LineaMonedas
 from control.monedas import buscar_por_clase
 
-# Cubeta de rechazo final en E7 (ver `_a_rechazo_final`).
+# Cubeta de rechazo final en la descarga, E4 (ver `_a_rechazo`).
 # Una sola bandeja de rechazo de monedas (grupo, 2026-09-25).
 RECHAZO_FINAL = Destino.RECHAZO
 from control.registro import EstadoVaso
 from sim.carga_escenarios import Escenario, EspecificacionElemento
 from sim.mundo import (
+    ANGULO_AGUJERO_CARRUSEL,
+    ANGULO_CARGA_CARRUSEL,
+    POSICIONES_CARRUSEL,
     ESTACION_DESCARGA_MONEDAS,
     ESTACION_DESCARGA_VASOS,
     ESTACION_LLENADO_VASOS,
@@ -163,7 +167,7 @@ class PlantaSimulada:
         # Con un error de p por lectura, fallar la decision exige fallar la
         # mayoria: con 3 lecturas, ~3p^2 (0,5 % -> 0,0075 %).
         self.lecturas_por_decision = max(1, lecturas_por_decision)
-        # Fotos por moneda en E5 (aprobado: 2), combinadas con
+        # Fotos por moneda en E3 (aprobado: 2), combinadas con
         # control.reglas.combinar_fotos.
         self.fotos_por_moneda = max(1, fotos_por_moneda)
         # Verdad del escenario (para contar errores de filtrado) y errores.
@@ -239,11 +243,59 @@ class PlantaSimulada:
         self._vaso_en_carro: int | None = None
         self._t_en_meta = 0.0
         self._carro_anunciado = False
+        if parametros is None:
+            from app.configuracion import cargar_parametros
+            parametros = cargar_parametros()
+
+        # Carrusel del almacen con su TIEMPO REAL (usuario, 2026-09-28: "la
+        # moneda pasa sin que se espere a que de la vuelta"). Antes la moneda
+        # se guardaba en su tubo en el mismo instante en que llegaba a E4, sin
+        # girar nada. Ahora la planta lleva un reloj en ms (cada tick es un
+        # ciclo de la cinta de monedas: avance + pausa) y el carrusel
+        # (control/carrusel.py) dice cuando llega cada tubo:
+        #  - el giro se pide en cuanto la vision ACEPTA una moneda (gira
+        #    mientras la moneda viaja de E3 a E4);
+        #  - en E4 la moneda solo cae si su tubo ya esta QUIETO bajo la carga;
+        #    si no, espera en la descarga y la cinta de monedas se detiene;
+        #  - un lote se suelta con el tubo quieto sobre el agujero, el
+        #    obturador abre y cierra (`compuerta_tubo`) y recien ahi el
+        #    carrusel queda libre para la siguiente moneda;
+        #  - una moneda guardada OCUPA el carrusel mientras cae por el canal
+        #    hasta el fondo de su tubo (`caida_moneda_tubo`): el giro hacia el
+        #    tubo de la siguiente sale recien cuando termino de caer (revision
+        #    visual 2026-09-29: salia en el mismo instante y la moneda caia
+        #    fuera de la boca). Lo mismo el obturador con un lote.
+        t = parametros["tiempos_ms"]
+        self._ciclo_ms = t["avance_casilla_monedas"] + t["pausa_casilla_monedas"]
+        self._t_avance_ms = t["avance_casilla_monedas"]
+        # La vision decide dentro de la pausa en E3: fotos + inferencia + el
+        # veredicto por serial. Desde ahi el PC ya sabe a que tubo ir.
+        self._t_acepta_ms = (t["avance_casilla_monedas"] + self.fotos_por_moneda * t["vision_captura_inferencia"]
+                             + t.get("serial_ida_vuelta", 0))
+        self._t_compuerta_ms = t["compuerta_tubo"]
+        self._t_caida_tubo_ms = t["caida_moneda_tubo"]
+        self._t_avance_vasos_ms = t["avance_casilla_vasos"]
+        self.carrusel = Carrusel(POSICIONES_CARRUSEL, t["carrusel_giro"], ANGULO_CARGA_CARRUSEL,
+                                 ANGULO_AGUJERO_CARRUSEL)
+        # Monedas aceptadas por la vision que todavia no cayeron a su tubo, en
+        # orden de llegada: el carrusel atiende siempre a la primera (nunca se
+        # va al tubo de la segunda mientras la primera espera en E4).
+        self._cola_carga: deque[int] = deque()
+        # Lote en camino al agujero: {"denominacion", "vaso", "llegada"}.
+        self._embalado: dict | None = None
+        # Hasta cuando el obturador esta abierto (el carrusel no se mueve y
+        # el vaso de llenado no avanza).
+        self._carrusel_ocupado_hasta = 0.0
+        # Instante en que la cinta de vasos queda quieta tras su ultimo avance
+        # (el obturador no se abre sobre un vaso que todavia viene llegando).
+        self._vasos_quietos_ms = 0.0
+        self._motivo_espera: str | None = None
+        # Para verificar (pruebas, docs): cada moneda guardada con el tubo que
+        # habia DE VERDAD bajo la carga en ese instante, y cada espera.
+        self.guardados: list[dict] = []
+        self.esperas_carrusel: list[dict] = []
         if carro_fisico:
             from sim.vehiculo_sim import SimCarro
-            if parametros is None:
-                from app.configuracion import cargar_parametros
-                parametros = cargar_parametros()
             self.carro = SimCarro(parametros, errores=errores_carro, semilla=semilla_carro)
             self._espera_meta = parametros["vehiculo"]["espera_descarga_meta_s"]
             # Punto 15: radio (ESP-NOW) entre el carro y la estacion, con
@@ -376,8 +428,12 @@ class PlantaSimulada:
     def _avanzar_vasos(self, *, forzado: bool = False) -> bool:
         """Un avance de la cinta de vasos con todas sus estaciones. Devuelve
         False si la cortina de seguridad lo impidio (la cinta de vasos se
-        queda quieta; quien llama reintenta en el siguiente tick)."""
+        queda quieta; quien llama reintenta en el siguiente tick). Tampoco
+        se mueve mientras el carrusel suelta un lote sobre el vaso de llenado
+        (tubo en camino al agujero u obturador abierto)."""
         if self._revisar_cortina():
+            return False
+        if not self._vasos_libres_del_carrusel():
             return False
         if self._vaso_esperando_canaleta is not None:
             # Un vaso tapado espera en la descarga: si ya hay lugar en la
@@ -414,6 +470,7 @@ class PlantaSimulada:
                              estacion="verificacion")
 
         self.escena.avanzar_casilla_vasos()
+        self._vasos_quietos_ms = self._t0() + self._t_avance_vasos_ms
         self._verificar_posicion("vasos")
         for datos in self._vasos.values():
             datos[1] += 1
@@ -624,29 +681,179 @@ class PlantaSimulada:
         if cargadas:
             self._evento("e4", "almacen_precargado", cantidad=cargadas, contenido=self.almacen.contenido(),
                          otras=self.almacen.cantidad_otras())
+            if self.ticks == 0:
+                # Se llama ANTES del primer tick (app/supervisor.py, iniciar): el
+                # primer `paso()` vacia `_eventos` y el aviso se perdia sin llegar
+                # a la base. Va con los eventos del arranque, que el supervisor
+                # guarda justo despues de precargar.
+                self.eventos_arranque.append(self._eventos[-1])
         return cargadas
 
-    def _almacenar(self, moneda: Elemento, id_registro: int) -> bool:
-        """El selector manda la moneda aceptada al tubo de su denominacion.
-        False si ese tubo esta lleno (la moneda no se descarta: espera en la
-        estacion 7 y la cinta de monedas se detiene)."""
+    # ------------------------------------------------------------------
+    # carrusel (tiempo real): reloj de la planta en ms
+    # ------------------------------------------------------------------
+
+    def _t0(self) -> float:
+        """Instante (ms) en que empezo el tick en curso: cada tick es un ciclo
+        de la cinta de monedas (avance + pausa)."""
+        return max(0, self.ticks - 1) * self._ciclo_ms
+
+    def _tubo_de(self, id_registro: int):
+        """Posicion del carrusel de una moneda aceptada: su tubo u OTRAS."""
+        return self.almacen.destino(self.linea.registro.obtener(id_registro).denominacion)
+
+    def _evento_giro(self, motivo: str, **extra) -> None:
+        """Evento para el visor: el carrusel empieza un giro. `en_ms` es cuanto
+        despues del comienzo de este tick arranca (el visor lo anima con ese
+        retraso y esa duracion, a su velocidad)."""
+        g = self.carrusel.ultimo_giro
+        self._evento("carrusel", "gira", tubo=g["tubo"], lugar=g["lugar"], desde_grados=g["desde_grados"],
+                     hasta_grados=g["hasta_grados"], dur_ms=g["dur_ms"],
+                     en_ms=int(round(g["t_inicio_ms"] - self._t0())), motivo=motivo, **extra)
+
+    def _mover_carrusel(self, t_ms: float) -> None:
+        """Lleva bajo la carga el tubo de la PRIMERA moneda aceptada que falta
+        guardar (si el carrusel no esta ocupado soltando un lote). Se llama al
+        aceptar una moneda (anticipacion: gira mientras ella viaja a E4), al
+        guardar una (va al tubo de la siguiente) y al terminar un lote."""
+        if self._embalado is not None or not self._cola_carga:
+            return
+        id_registro = self._cola_carga[0]
+        tubo = self._tubo_de(id_registro)
+        giros = self.carrusel.giros
+        self.carrusel.pedir(tubo, CARGA, max(t_ms, self._carrusel_ocupado_hasta))
+        if self.carrusel.giros != giros:
+            self._evento_giro("moneda", casilla=id_registro)
+
+    def _vasos_libres_del_carrusel(self) -> bool:
+        """La cinta de vasos no se mueve con un lote en camino o cayendo."""
+        return self._embalado is None and self._t0() >= self._carrusel_ocupado_hasta
+
+    def _guardar_o_esperar(self, moneda: Elemento, id_registro: int, t_ms: float) -> bool:
+        """Descarga (E4) de una moneda aceptada en el instante `t_ms`: cae a su
+        tubo SOLO si el tubo esta lleno de lugar Y quieto bajo la carga. Si
+        no, la moneda espera en la descarga (la cinta de monedas se detiene) y
+        se avisa por que: `tubo_lleno` o `carrusel_girando` (con cuanto falta).
+        Nunca se bota. Devuelve True si quedo guardada."""
+        r = self.linea.registro.obtener(id_registro)
+        tubo = self.almacen.destino(r.denominacion)
+        if id_registro not in self._cola_carga:
+            self._cola_carga.append(id_registro)   # por si no paso por la vision de esta planta
+        if not self.almacen.puede_recibir(r.denominacion):
+            motivo = "tubo_lleno"
+        elif not self.carrusel.en(tubo, CARGA, t_ms):
+            motivo = "carrusel_girando"
+            self._mover_carrusel(t_ms)
+        else:
+            self._almacenar(moneda, id_registro, t_ms)
+            return True
+        if self._moneda_en_espera is None or self._motivo_espera != motivo:
+            datos = {"casilla": id_registro, "motivo": motivo, "denominacion": r.denominacion, "tubo": tubo,
+                     "en_ms": int(round(t_ms - self._t0()))}
+            if motivo == "carrusel_girando":
+                datos["tubo_bajo_carga"] = self.carrusel.tubo_en(CARGA, t_ms)
+                datos["soltando_lote"] = self._embalado is not None or t_ms < self._carrusel_ocupado_hasta
+                if self.carrusel.va_a(tubo, CARGA):
+                    datos["falta_ms"] = int(round(self.carrusel.falta_ms(t_ms)))
+                self.esperas_carrusel.append(dict(datos, tick=self.ticks))
+            self._evento("e4", "espera", **datos)
+        self._moneda_en_espera = (moneda, id_registro)
+        self._motivo_espera = motivo
+        return False
+
+    def _almacenar(self, moneda: Elemento, id_registro: int, t_ms: float) -> None:
+        """La moneda aceptada cae por el canal corto a la boca del tubo de su
+        denominacion, que ya esta quieto bajo la carga (lo comprobo
+        `_guardar_o_esperar`)."""
         r = self.linea.registro.obtener(id_registro)
         d = r.denominacion
-        if not self.almacen.puede_recibir(d):
-            return False
         n = self.almacen.guardar(d, MonedaAlmacenada(id_registro, r.clase, r.valor, r.masa_estimada_g))
         lugar = self.almacen.destino(d)  # su tubo, o OTRAS si esa denominacion no tiene tubo
         self.escena.guardar_en_tubo(moneda, lugar, n - 1)
         self._cuerpos_en_tubo[lugar].append(moneda)
+        self.guardados.append({"tick": self.ticks, "casilla": id_registro, "tubo_pedido": lugar,
+                               "tubo_bajo_carga": self.carrusel.tubo_en(CARGA, t_ms),
+                               "girando": not self.carrusel.listo(t_ms)})
         self._finalizar_elemento(id_registro, Destino.VASO, almacen=d)
-        self._evento("e4", "almacen", casilla=id_registro, clase=r.clase, denominacion=d, tubo=lugar, en_tubo=n)
-        return True
+        self._evento("e4", "almacen", casilla=id_registro, clase=r.clase, denominacion=d, tubo=lugar, en_tubo=n,
+                     en_ms=int(round(t_ms - self._t0())))
+        if id_registro in self._cola_carga:
+            self._cola_carga.remove(id_registro)
+        # La moneda baja por el canal hasta el fondo del tubo: mientras tanto
+        # el disco no se mueve. Recien entonces el carrusel puede ir al tubo de
+        # la siguiente (`pedir` arranca despues de `ocupar`).
+        self.carrusel.ocupar(t_ms + self._t_caida_tubo_ms)
+        self._mover_carrusel(t_ms)
+
+    def _atender_carrusel(self) -> None:
+        """Lote en camino al agujero: si en este tick el tubo llega (y el vaso
+        de llenado ya esta quieto), justo antes se re-verifica con la camara
+        de vasos que abajo haya un vaso valido, se abre el obturador, cae el
+        lote y el obturador se cierra (`compuerta_tubo`). Con una mano en la
+        zona (cortina) el obturador no se abre: se reintenta el tick
+        siguiente."""
+        e = self._embalado
+        if e is None:
+            return
+        t_abrir = max(e["llegada"], self._vasos_quietos_ms, self._t0())
+        if t_abrir >= self._t0() + self._ciclo_ms or self.embalaje.cortina_activa:
+            return
+        d, id_vaso = e["denominacion"], e["vaso"]
+        self._embalado = None
+        reg = self.embalaje.registro.obtener(id_vaso) if id_vaso in self._vasos else None
+        _, media, borde = self._votar_zona(self.backend.zona_llenado)
+        marcador = self._leer_marcador(ESTACION_LLENADO_VASOS)
+        self._lecturas.update(llenado_media=media, llenado_borde=borde)
+        mismo = reg is not None and self.embalaje.es_el_mismo_vaso(reg, marcador)
+        if (reg is None or self._vaso_en(ESTACION_LLENADO_VASOS) != id_vaso or not (media and not borde and mismo)
+                or reg.estado != EstadoVaso.VALIDA):
+            # Lo cambiaron o retiraron mientras el tubo giraba: no se suelta
+            # nada, el lote sigue guardado y la cinta de vasos salta la casilla.
+            if reg is not None and reg.estado == EstadoVaso.VALIDA:
+                reg.degradar(EstadoVaso.INVALIDA)
+                motivo = ("vaso_cambiado" if not mismo else "figura_alta" if borde else "retirado_o_figura_baja")
+                self._evento("vasos", "sabotaje_detectado", vaso=id_vaso, motivo=motivo, estacion="llenado")
+            self._evento("vasos", "salto_casilla", vaso=id_vaso, motivo="no_hay_vaso_valido_en_llenado",
+                         denominacion_esperando=d)
+            self._carrusel_ocupado_hasta = t_abrir
+            self._vaso_pide_avance = True
+            self._mover_carrusel(t_abrir)
+            return
+
+        lote = self.almacen.sacar(d, self.monedas_por_vaso)
+        self.embalaje.llenar_lote(id_vaso, denominacion=d, monedas=[(m.valor, m.masa_g) for m in lote])
+        cuerpos, self._cuerpos_en_tubo[d] = self._cuerpos_en_tubo[d][:len(lote)], self._cuerpos_en_tubo[d][len(lote):]
+        elemento_vaso = self._vasos[id_vaso][0]
+        for cuerpo in cuerpos:
+            self.escena.depositar_en_vaso(cuerpo, elemento_vaso)
+        self.escena.reacomodar_tubo(self._cuerpos_en_tubo[d], d)
+        self._carrusel_ocupado_hasta = t_abrir + self._t_compuerta_ms
+        self.carrusel.ocupar(self._carrusel_ocupado_hasta)   # obturador abierto: el disco quieto
+        self._evento("vasos", "embalado", vaso=id_vaso, denominacion=d, cantidad=reg.cantidad_monedas,
+                     valor=reg.valor_total, masa_g=round(reg.masa_estimada_g, 2),
+                     monedas=[m.id_registro for m in lote], quedan_en_tubo=self.almacen.cantidad(d),
+                     tubo_sobre_agujero=self.carrusel.tubo_en(AGUJERO, t_abrir),
+                     en_ms=int(round(t_abrir - self._t0())), obturador_ms=self._t_compuerta_ms)
+        self._vaso_pide_avance = True
+        # Obturador cerrado: el carrusel vuelve a la carga si alguna moneda lo espera.
+        self._mover_carrusel(self._carrusel_ocupado_hasta)
 
     def _intentar_embalar(self) -> None:
         """Si algun tubo tiene un lote listo y en llenado hay un vaso VALIDO
-        y vacio, abre la compuerta y el lote cae al vaso. Justo antes se
-        re-verifica con la camara de vasos en llenado: una figura o un vaso
+        y vacio, el carrusel lleva ese tubo al agujero (tiempo real). El
+        obturador se abre recien cuando llega (`_atender_carrusel`), despues
+        de volver a mirar con la camara de vasos que abajo siga el vaso.
+        Aqui ya se mira una vez, para no girar por nada: una figura o un vaso
         retirado no reciben nada."""
+        if self._embalado is not None:
+            return  # ya hay un lote en camino
+        if self._moneda_en_espera is not None and self._motivo_espera == "carrusel_girando":
+            # Una moneda ya espera en la descarga a que su tubo llegue a la
+            # carga: no se le quita el carrusel (quedaria esperando la ida al
+            # agujero y la vuelta, ~8 s). El lote sale apenas ella caiga. Una
+            # moneda que todavia viene de la vision si espera al lote (el
+            # diseno de control/tiempos.py: la cinta espera una vez por lote).
+            return
         if self._vaso_pide_avance:
             return  # el vaso de llenado ya esta lleno, esperando salir
         if self.embalaje.cortina_activa:
@@ -680,17 +887,17 @@ class PlantaSimulada:
             self._vaso_pide_avance = True
             return
 
-        lote = self.almacen.sacar(d, self.monedas_por_vaso)
-        self.embalaje.llenar_lote(id_vaso, denominacion=d, monedas=[(m.valor, m.masa_g) for m in lote])
-        cuerpos, self._cuerpos_en_tubo[d] = self._cuerpos_en_tubo[d][:len(lote)], self._cuerpos_en_tubo[d][len(lote):]
-        elemento_vaso = self._vasos[id_vaso][0]
-        for cuerpo in cuerpos:
-            self.escena.depositar_en_vaso(cuerpo, elemento_vaso)
-        self.escena.reacomodar_tubo(self._cuerpos_en_tubo[d], d)
-        self._evento("vasos", "embalado", vaso=id_vaso, denominacion=d, cantidad=reg.cantidad_monedas,
-                     valor=reg.valor_total, masa_g=round(reg.masa_estimada_g, 2),
-                     monedas=[m.id_registro for m in lote], quedan_en_tubo=self.almacen.cantidad(d))
-        self._vaso_pide_avance = True
+        # El tubo del lote va al agujero. Arranca cuando termino lo de este
+        # tick en la cinta de monedas (la moneda que tocaba ya cayo) y nunca
+        # con el obturador todavia abierto. Si iba hacia una moneda, esa
+        # moneda espera: el lote tiene prioridad (libera el tubo).
+        t = max(self._t0() + self._t_avance_ms, self._carrusel_ocupado_hasta)
+        giros = self.carrusel.giros
+        llegada = self.carrusel.pedir(d, AGUJERO, t)
+        self._embalado = {"denominacion": d, "vaso": id_vaso, "llegada": llegada}
+        if self.carrusel.giros != giros:
+            self._evento_giro("lote", vaso=id_vaso)
+        self._atender_carrusel()
 
     # ------------------------------------------------------------------
     # cinta de monedas
@@ -762,8 +969,11 @@ class PlantaSimulada:
         self._esperado[id_registro] = especificacion.destino_esperado
         self._capacitivo_e1[id_registro] = capacitivo
         self.linea.estacion_1_presencia(id_registro, ocupada=ocupada)
+        # Verdad de terreno (seccion 11) para la matriz de Calidad del
+        # dashboard: el diametro REAL del cuerpo, no el que mide la camara.
         self._evento("e1", "presencia", casilla=id_registro, ocupada=ocupada,
                      tipo_real=especificacion.tipo, clase_real=especificacion.clase_real,
+                     diametro_real_mm=round(elemento.diametro_mm, 2) if elemento is not None else None,
                      apariencia=especificacion.apariencia)
         if not ocupada:
             self.destinos_finales[id_registro] = Destino.VACIA
@@ -792,7 +1002,8 @@ class PlantaSimulada:
         self._lecturas.update(presencia=ocupada, capacitivo=capacitivo)
         self._capacitivo_e1[id_registro] = capacitivo
         self.linea.estacion_1_presencia(id_registro, ocupada=ocupada)
-        self._evento("e1", "presencia", casilla=id_registro, ocupada=ocupada, tipo_real="mano", clase_real=None)
+        self._evento("e1", "presencia", casilla=id_registro, ocupada=ocupada, tipo_real="mano", clase_real=None,
+                     diametro_real_mm=None)
         if ocupada:
             self._fantasmas[id_registro] = 0
         else:
@@ -865,19 +1076,29 @@ class PlantaSimulada:
                                  fotos=[[v.clase, v.confianza] for v in fotos], combinacion=motivo,
                                  veredicto="aceptada" if registro.aceptada else "rechazada",
                                  causa=registro.causa)
+                    if registro.aceptada:
+                        # Anticipacion: con el veredicto en la mano (fin de la
+                        # vision, dentro de la pausa) el carrusel ya puede ir
+                        # al tubo de esta moneda mientras ella viaja a E4.
+                        self._cola_carga.append(id_registro)
+                        self._mover_carrusel(self._t0() + self._t_acepta_ms)
 
             elif casilla == ESTACION_DESCARGA_MONEDAS:
                 destino = self.linea.destino(id_registro)
                 if destino == Destino.VASO:
-                    if not self._almacenar(elemento, id_registro):
-                        self._moneda_en_espera = (elemento, id_registro)
-                        self._evento("e4", "espera", casilla=id_registro, motivo="tubo_lleno",
-                                     denominacion=registro.denominacion)
+                    # Cae al final del avance que la trajo a la descarga.
+                    self._guardar_o_esperar(elemento, id_registro, self._t0() + self._t_avance_ms)
                 elif destino == Destino.RECHAZO:
                     self._a_rechazo(elemento, id_registro, registro.causa or "rechazada")
                 else:
                     # Ningun sensor registro este cuerpo (fallaron E1 y E2 a
-                    # la vez): no se sabe que es, asi que se rechaza.
+                    # la vez): no se sabe que es, asi que se rechaza. Causa
+                    # `no_reconocida` (seccion 7: "rechazar lo que no reconoce"):
+                    # antes quedaba NULL en `elementos`, y el conteo por causa
+                    # del dashboard lo perdia. Las causas son SOLO las de la
+                    # seccion 7 (CLAUDE.md 10.2); el detalle de que fallaron
+                    # los sensores queda en el evento (`motivo: sin_registro`).
+                    registro.rechazar(reglas.CAUSA_NO_RECONOCIDA)
                     self._a_rechazo(elemento, id_registro, "sin_registro")
 
     def _hay_registrados_en_cinta(self) -> bool:
@@ -921,20 +1142,27 @@ class PlantaSimulada:
         else:
             self._carro_de_reemplazo()
 
-        # 1) Una moneda aceptada cuyo tubo esta lleno detiene la cinta de
-        #    monedas (no se descarta) hasta que se embale un lote de ese tubo.
+        # 1) Una moneda aceptada que espera en la descarga (su tubo esta lleno,
+        #    o el carrusel todavia no lo trajo a la carga) detiene la cinta de
+        #    monedas: no se descarta. Cae cuando la cinta vuelve a moverse, al
+        #    comienzo de un ciclo, si para entonces el tubo ya esta quieto en
+        #    la carga (la simulacion redondea la espera a ciclos enteros; en
+        #    el montaje la cinta arranca apenas llega el carrusel).
         if self._moneda_en_espera is not None:
             moneda, id_registro = self._moneda_en_espera
-            if self._almacenar(moneda, id_registro):
+            if self._guardar_o_esperar(moneda, id_registro, self._t0()):
                 self._moneda_en_espera = None
+                self._motivo_espera = None
             else:
                 if self._vaso_pide_avance and self._avanzar_vasos():
                     self._vaso_pide_avance = False
                 self._intentar_embalar()
+                self._atender_carrusel()
                 return self._eventos
 
         # 2) El vaso de llenado ya recibio su lote (o no era valido y hay que
-        #    saltarlo): la cinta de vasos avanza, si la cortina lo permite.
+        #    saltarlo): la cinta de vasos avanza, si la cortina lo permite (y
+        #    si el obturador ya se cerro).
         if self._vaso_pide_avance:
             hay_lotes = self.almacen.lote_listo(self.monedas_por_vaso, aceptar_parciales=self.embalar_parciales)
             sin_mas_produccion = not self._pendientes and not self._quedan_monedas_en_cinta() and hay_lotes is None
@@ -978,6 +1206,7 @@ class PlantaSimulada:
             return self._eventos
 
         self._intentar_embalar()
+        self._atender_carrusel()
         return self._eventos
 
     # ------------------------------------------------------------------
@@ -1236,7 +1465,10 @@ class PlantaSimulada:
     def _mensaje_del_carro(self, m: dict) -> None:
         """Un mensaje nuevo del carro, recibido por la radio."""
         ev = m["ev"]
-        datos = {k: v for k, v in m.items() if k not in ("t", "src", "ev", "id")}
+        # Fuera lo que es del transporte, no del evento: tipo, origen, nombre,
+        # numero, sesion y `ts` (la hora interna de la simulacion del carro,
+        # sim/vehiculo_sim.py: el evento ya lleva la de la planta).
+        datos = {k: v for k, v in m.items() if k not in ("t", "src", "ev", "id", "s", "ts")}
         vaso = {"vaso": self._vaso_en_carro} if self._vaso_en_carro else {}
         self._evento("carro", ev, msg=m["id"], **vaso, **datos)
         ec = self._estado_carro
@@ -1310,12 +1542,13 @@ class PlantaSimulada:
 
     def _revisar_alarmas(self) -> None:
         """Avisos para el operador. Un tubo lleno sin vaso donde soltarlo NO
-        bota monedas: la moneda espera en E7 y la cinta de monedas se detiene
+        bota monedas: la moneda espera en E4 y la cinta de monedas se detiene
         hasta que llegue un vaso (los vasos son genericos: la denominacion la
         decide el tubo que se abre sobre el). Aqui solo se avisa, para que el
         operador ponga vasos o despeje la cortina."""
         activas = set()
-        if self._moneda_en_espera is not None:
+        # Esperar al carrusel es normal (no es alarma): solo el tubo lleno lo es.
+        if self._moneda_en_espera is not None and self._motivo_espera == "tubo_lleno":
             activas.add("tubo_lleno")
         hay_lote = self.almacen.lote_listo(self.monedas_por_vaso, aceptar_parciales=self.embalar_parciales)
         id_llenado = self._vaso_en(ESTACION_LLENADO_VASOS)
@@ -1346,6 +1579,13 @@ class PlantaSimulada:
     # ------------------------------------------------------------------
     # estado para el dashboard (telemetria, `t: tel` en la seccion 10.1)
     # ------------------------------------------------------------------
+
+    def estado_carrusel(self) -> dict:
+        """Donde queda el carrusel al terminar este ciclo (`llega_en_ms`: lo que
+        le falta a su giro desde ese instante)."""
+        t = self.ticks * self._ciclo_ms
+        return dict(self.carrusel.estado(t), soltando_lote=self._embalado is not None
+                    or t < self._carrusel_ocupado_hasta, cola=len(self._cola_carga))
 
     def estado(self) -> dict:
         casillas_monedas = [None] * NUM_ESTACIONES_MONEDAS
@@ -1404,6 +1644,10 @@ class PlantaSimulada:
             "terminado": self.terminado,
             "pendientes": len(self._pendientes),
             "moneda_en_espera": self._moneda_en_espera is not None,
+            "motivo_espera": self._motivo_espera if self._moneda_en_espera is not None else None,
+            # Donde queda el carrusel al terminar este ciclo (llega_en_ms: lo
+            # que le falta a su giro desde ese instante).
+            "carrusel": self.estado_carrusel(),
             "cortina_activa": self.embalaje.cortina_activa,
             "intruso": self._intruso is not None,
             "mano_sacando": self._mano_temporal[2] if self._mano_temporal is not None else None,

@@ -96,8 +96,34 @@ def lcd_init():
 def lcd_texto(fila, texto):
     direccion_fila = 0x80 if fila == 0 else 0xC0
     lcd_comando(direccion_fila)
-    for caracter in texto.ljust(16)[:16]:
+    # Se rellena con espacios hasta 16 (el ancho de la LCD) para borrar
+    # lo que hubiera antes en esa fila. Se hace sumando espacios y
+    # cortando, porque MicroPython NO tiene str.ljust() (Python normal
+    # si): usarlo tiraba AttributeError y el programa moria antes de
+    # llegar al teclado.
+    for caracter in (texto + " " * 16)[:16]:
         lcd_dato(ord(caracter))
+
+
+# La LCD es opcional para que el teclado funcione: si no contesta por
+# I2C (direccion distinta, cable flojo, sin alimentacion), cada escritura
+# lanza OSError. Sin este try, ese error mataba el programa ANTES de
+# llegar al bucle del teclado y no salia nada por el USB, aunque el
+# teclado estuviera perfecto. Asi, si la LCD falla se avisa una vez y el
+# teclado sigue mandando los digitos al PC igual.
+lcd_ok = True
+
+
+def lcd_mostrar(linea0, linea1):
+    global lcd_ok
+    if not lcd_ok:
+        return
+    try:
+        lcd_texto(0, linea0)
+        lcd_texto(1, linea1)
+    except Exception as error:
+        lcd_ok = False
+        print("OJO: la LCD no responde ({}); sigo sin LCD".format(error))
 
 
 # ------------------------------------------------------------------
@@ -161,9 +187,16 @@ def leer_tecla():
 # ------------------------------------------------------------------
 # Programa principal
 # ------------------------------------------------------------------
-lcd_init()
-lcd_texto(0, "Marca un digito")
-lcd_texto(1, "para dibujar")
+try:
+    lcd_init()
+except Exception as error:
+    lcd_ok = False
+    print("OJO: la LCD no responde ({}); sigo sin LCD".format(error))
+lcd_mostrar("Marca un digito", "para dibujar")
+
+# Linea de arranque: si en Thonny (o en el monitor del HTML) no aparece
+# esto, el main.py no es este archivo o se cayo antes de llegar aca.
+print("ESP32 listo: esperando teclas")
 
 tecla_anterior = None
 
@@ -172,12 +205,17 @@ while True:
     # tecla != tecla_anterior: mientras se mantiene apretada, el barrido
     # la sigue viendo cada 30 ms; sin esta condicion se mandaria el mismo
     # digito decenas de veces. Solo cuenta cuando CAMBIA (se apreto una
-    # nueva). isdigit(): A-D, * y # no son digitos que el brazo sepa dibujar.
-    if tecla is not None and tecla != tecla_anterior and tecla.isdigit():
-        lcd_texto(0, "Dibujando:")
-        lcd_texto(1, tecla)
-        # print sale por el USB (el mismo puerto que abre pyserial en el
-        # PC): "DIGIT:n" es todo el protocolo, una linea por tecla.
-        print("DIGIT:{}".format(tecla))
+    # nueva).
+    if tecla is not None and tecla != tecla_anterior:
+        if tecla.isdigit():
+            lcd_mostrar("Dibujando:", tecla)
+            # print sale por el USB (el mismo puerto que abre pyserial en
+            # el PC): "DIGIT:n" es todo el protocolo, una linea por tecla.
+            print("DIGIT:{}".format(tecla))
+        else:
+            # A-D, * y # no son digitos que el brazo sepa dibujar, pero se
+            # avisan igual: asi se ve que el teclado SI se esta leyendo
+            # (el PC ignora esta linea porque no empieza con "DIGIT:").
+            print("tecla ignorada:", tecla)
     tecla_anterior = tecla
     time.sleep_ms(30)  # anti-rebote simple

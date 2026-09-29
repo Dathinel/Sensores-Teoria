@@ -260,7 +260,7 @@ def conectar_esp32(puerto):
 
 def leer_teclas(ser, buffer):
     """Drena TODO lo que llego (no una linea por vuelta: se quedaria atras) sin bloquear nunca la
-    simulacion (un readline() con timeout frenaba todo el bucle a ~20 Hz, ver CLAUDE.md). Devuelve
+    simulacion (un readline() con timeout frenaba todo el bucle a ~20 Hz: se vio en el brazo del punto B). Devuelve
     (teclas, ultima linea cruda) -- la linea cruda es el mejor diagnostico si "no llega nada"."""
     teclas, cruda = [], None
     if ser is None or not ser.in_waiting:

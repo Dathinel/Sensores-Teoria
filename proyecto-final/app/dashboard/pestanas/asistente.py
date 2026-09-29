@@ -100,9 +100,10 @@ def pestana() -> None:
                 st.caption(f"Última frase oída con: {st.session_state['oido_por']}")
             st.toggle("🔊 Responder en voz alta", key="hablar")
             st.selectbox("Quién responde", list(PROVEEDORES), key="proveedor", format_func=PROVEEDORES.get,
-                         help="Automático: DeepSeek; si no hay, el modelo local (Ollama); si tampoco, las reglas. "
-                              "Las órdenes claras (avanza 20 cm, gira...) siempre las decide el intérprete de reglas "
-                              "cuando no responde DeepSeek.")
+                         help="Automático: DeepSeek (en la nube, con internet); si no hay, el modelo local "
+                              f"{asistente.MODELO_LOCAL} (Ollama, en este PC, sin internet); si tampoco, las reglas. "
+                              "Venga de quien venga, una orden solo sale si está en la lista de órdenes permitidas, "
+                              "y una pregunta nunca mueve nada.")
         seccion("Ejemplos", "clic para preguntar")
         for i, ej in enumerate(EJEMPLOS):
             if st.button(ej, key=f"ej{i}", width="stretch"):

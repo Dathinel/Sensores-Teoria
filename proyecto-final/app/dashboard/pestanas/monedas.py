@@ -9,7 +9,7 @@ import streamlit as st
 
 from .. import datos
 from ..datos import nombre_denominacion, pesos
-from ..estilo import AMBAR, TEXTO, VERDE, figura, figura_vacia, mostrar, seccion, tabla
+from ..estilo import AMBAR, TEXTO, VERDE, figura, figura_vacia, mostrar, nota, seccion, tabla
 from ..textos import DENOMINACIONES, ESTADO_VASO_TXT, TUBOS
 
 
@@ -45,8 +45,11 @@ def pestana() -> None:
         mostrar(fig)
 
     lote = tel.get("monedas_por_vaso")
+    # Mismas cuentas que el Resumen (datos.cuentas_de_monedas): de esta corrida vs. del turno anterior.
+    cuentas = datos.cuentas_de_monedas(d, tel)
     seccion("Almacén: cuánto hay en cada tubo",
-            f"la línea punteada es el lote ({lote or '—'} monedas): al llegar, el tubo suelta las monedas a un vaso")
+            f"ahora: {cuentas['en_tubos']} monedas, {pesos(cuentas['valor_en_tubos'])} · la línea punteada es el lote "
+            f"({lote or '—'} monedas): al llegar, el tubo suelta las monedas a un vaso")
     guardado = tel.get("almacen") or {}
     n = [int(guardado.get(c, 0)) for c in TUBOS]
     fig = figura(230)
@@ -60,13 +63,19 @@ def pestana() -> None:
     mostrar(fig)
 
     if len(vasos):
-        seccion("Vasos de esta corrida", f"{len(vasos)} vasos")
+        hoy = cuentas["en_vasos"] - cuentas["en_vasos_anteriores"]
+        seccion("Vasos de esta corrida",
+                f"{len(vasos)} vasos · {cuentas['en_vasos']} monedas en vasos ({pesos(cuentas['valor_en_vasos'])}): "
+                f"{hoy} de esta corrida"
+                + (f" y {cuentas['en_vasos_anteriores']} del turno anterior" if cuentas["en_vasos_anteriores"] else ""))
         tabla(pd.DataFrame({
             "Vaso": vasos["id"],
-            "Estado": [ESTADO_VASO_TXT.get(e, e) for e in vasos["estado"]],
+            "Estado": ["vacío desechado" if vacio else ESTADO_VASO_TXT.get(e, e)
+                       for e, vacio in zip(vasos["estado"], vasos.get("vacio_desechado", [False] * len(vasos)))],
             "De": [nombre_denominacion(x) if pd.notna(x) else "—" for x in vasos["denominacion"]],
             "Monedas": vasos["cantidad_monedas"],
             "Valor": [pesos(x) for x in vasos["valor_total"]],
             "Llenado": vasos["ts_llenado"].str.slice(11, 19).fillna("—"),
             "Entregado": vasos["ts_entrega"].str.slice(11, 19).fillna("—"),
         }))
+        nota(datos.explicar_cuentas(cuentas))

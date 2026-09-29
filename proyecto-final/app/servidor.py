@@ -20,7 +20,11 @@ Rutas:
                             paso con sus ordenes, para mostrarla en el visor
                             (solo lectura: se le escribe desde el dashboard)
     POST /api/orden         deja una orden en la tabla `ordenes` (mismo
-                            camino que los botones del dashboard)
+                            camino que los botones del dashboard). Solo con
+                            `Content-Type: application/json` y sin CORS: una
+                            pagina de otro sitio abierta en el mismo PC no puede
+                            mandarle ordenes a la linea. Los tipos se revisan
+                            aqui (400 con el motivo) antes de llegar al supervisor.
 
 Por que un servidor y no solo SQLite: el visor 3D es JavaScript en el
 navegador y no puede abrir un archivo SQLite; necesita una URL. Y este es el
@@ -87,19 +91,59 @@ def _asistente_json(ruta_bd: Path) -> bytes:
                       ensure_ascii=False).encode("utf-8")
 
 
+# Campos de una orden que tienen que ser numeros (si vienen). "lote" ademas entero.
+CAMPOS_NUMERICOS = ("valor", "distancia_m", "grados", "x", "y", "confianza_minima", "probabilidad_error")
+CAMPOS_TEXTO = ("cmd", "accion", "escenario", "pieza", "tipo", "dst", "act", "origen")
+
+
+def _es_numero(v) -> bool:
+    # bool es subclase de int en Python: true no es un numero de monedas.
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and v == v and abs(v) != float("inf")
+
+
+def motivo_orden_invalida(orden) -> str:
+    """"" si la orden tiene la forma correcta; si no, el motivo (se contesta 400). Solo revisa
+    FORMA y tipos: si la orden se puede cumplir ahora lo decide el supervisor. Antes cualquier JSON
+    pasaba a la tabla `ordenes` y uno mal formado ({"cmd":"velocidad","valor":"rapido"}, un lote
+    "10.5", una lista) tumbaba el supervisor al aplicarlo."""
+    if not isinstance(orden, dict):
+        return "la orden tiene que ser un objeto JSON ({...})"
+    if not isinstance(orden.get("cmd"), str) or not orden["cmd"]:
+        return "falta 'cmd' (texto)"
+    for campo in CAMPOS_TEXTO:
+        if campo in orden and not isinstance(orden[campo], str):
+            return f"'{campo}' tiene que ser texto"
+    for campo in CAMPOS_NUMERICOS:
+        if campo in orden and not _es_numero(orden[campo]):
+            return f"'{campo}' tiene que ser un número (llegó {orden[campo]!r})"
+    if orden["cmd"] == "lote" and "valor" in orden and orden["valor"] != int(orden["valor"]):
+        return f"el lote es un número entero de monedas (llegó {orden['valor']!r})"
+    if "conservar_almacen" in orden and not isinstance(orden["conservar_almacen"], bool):
+        return "'conservar_almacen' tiene que ser true o false"
+    return ""
+
+
 def _crear_manejador(compartido: EstadoCompartido):
     class Manejador(BaseHTTPRequestHandler):
         def log_message(self, *args):  # sin una linea de log por cada consulta
             pass
 
-        def _responder(self, codigo: int, cuerpo: bytes, tipo: str) -> None:
+        def _responder(self, codigo: int, cuerpo: bytes, tipo: str, *, cors: bool = True) -> None:
             self.send_response(codigo)
             self.send_header("Content-Type", tipo)
             self.send_header("Content-Length", str(len(cuerpo)))
             self.send_header("Cache-Control", "no-store")
-            self.send_header("Access-Control-Allow-Origin", "*")
+            if cors:
+                # Solo en las LECTURAS (GET): el visor portable (file://, otro origen) lee el
+                # estado de aqui. Las ordenes (POST) no llevan este permiso.
+                self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
-            self.wfile.write(cuerpo)
+            try:
+                self.wfile.write(cuerpo)
+            except (ConnectionAbortedError, ConnectionResetError, BrokenPipeError):
+                # El navegador cerro la pestaña (o una captura sin ventana corto) a mitad de la
+                # respuesta: no es un error del supervisor, solo se deja de escribir.
+                pass
 
         def do_GET(self):
             ruta = self.path.split("?", 1)[0]
@@ -130,24 +174,40 @@ def _crear_manejador(compartido: EstadoCompartido):
             return self._responder(200, archivo.read_bytes(), tipo)
 
         def do_POST(self):
+            # Sin "Access-Control-Allow-Origin" en las respuestas de POST (cors=False). Antes iba
+            # "*" tambien aqui: cualquier pagina abierta en el navegador del PC (otro sitio) podia
+            # mandarle ordenes a 127.0.0.1 (paro, carro...). El visor manda sus ordenes desde el
+            # mismo origen (http://127.0.0.1:8765/ o localhost; en la demo por file:// no manda).
             if self.path != "/api/orden":
-                return self._responder(404, b"no encontrado", "text/plain")
-            largo = int(self.headers.get("Content-Length", 0))
+                return self._responder(404, b"no encontrado", "text/plain", cors=False)
+            # Exigir JSON: un <form> de otro sitio solo puede mandar text/plain o formularios sin
+            # pedir permiso antes (preflight), y ese permiso aqui no se da (do_OPTIONS sin CORS).
+            tipo = self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+            if tipo != "application/json":
+                return self._responder(415, b"la orden va con Content-Type: application/json", "text/plain", cors=False)
             try:
+                largo = int(self.headers.get("Content-Length", 0))
                 orden = json.loads(self.rfile.read(largo))
+            except (ValueError, OSError) as error:
+                return self._responder(400, f"JSON invalido: {error}".encode(), "text/plain", cors=False)
+            motivo = motivo_orden_invalida(orden)
+            if motivo:
+                return self._responder(400, json.dumps({"ok": False, "error": motivo}, ensure_ascii=False).encode("utf-8"),
+                                       "application/json", cors=False)
+            try:
                 conexion = db.conectar_lectura(compartido.ruta_bd)
                 try:
                     db.insertar_orden(conexion, orden)
                 finally:
                     conexion.close()
             except (ValueError, OSError) as error:
-                return self._responder(400, str(error).encode(), "text/plain")
-            return self._responder(200, b'{"ok":true}', "application/json")
+                return self._responder(400, str(error).encode(), "text/plain", cors=False)
+            return self._responder(200, b'{"ok":true}', "application/json", cors=False)
 
         def do_OPTIONS(self):
+            # Pedido de permiso (preflight) de otro origen para un POST con JSON: se contesta SIN
+            # permisos de CORS, asi que el navegador no manda la orden.
             self.send_response(204)
-            self.send_header("Access-Control-Allow-Origin", "*")
-            self.send_header("Access-Control-Allow-Headers", "Content-Type")
             self.end_headers()
 
     return Manejador

@@ -54,3 +54,10 @@ def test_el_puesto_del_pc_tambien_esta_prohibido(x, y, que):
     mapa y una orden podía mandar el carro encima de ellos."""
     motivo = asistente.destino_imposible(x, y)
     assert que in motivo
+
+
+def test_negar_el_movimiento_no_es_una_promesa():
+    """El filtro de promesas (revisión visual 2026-09-28) no puede borrar "No lo muevo: ..."."""
+    assert asistente.quitar_promesas("No lo muevo: ese punto está dentro de la planta.") == \
+        ("No lo muevo: ese punto está dentro de la planta.", False)
+    assert asistente.quitar_promesas("Listo. Lo muevo al muelle.")[1] is True
