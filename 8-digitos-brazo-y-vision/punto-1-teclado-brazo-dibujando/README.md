@@ -289,3 +289,9 @@ Y los diez dígitos como los traza el brazo, un cuadro final por tecla:
 Como `getCameraImage` no incluye las líneas de depuración (ver "La lógica del código"), el trazo amarillo de estas imágenes se dibujó aparte: se guardaron los puntos 3D del lápiz mientras el brazo se movía y se proyectaron sobre cada cuadro con las mismas matrices de la cámara. Se comprobó poniendo una esfera en la punta del lápiz: el último punto proyectado cae justo encima.
 
 Estas imágenes sirvieron además para encontrar un error: con el signo de `v` al revés en `angulos_articulaciones()`, cada dígito salía reflejado de arriba a abajo, y con la cámara vieja (`cameraYaw=0`) se veía de canto y no se notaba. Ya está corregido (ver "Por qué el brazo se maneja por ángulos").
+
+**La previsualización en el navegador** (`preview.html`, se abre con doble clic en Chrome o Edge). Tiene el mismo teclado 4x4, la LCD 16x2 simulada con los mismos textos del firmware y un lienzo con el trazo del dígito (no dibuja el brazo, solo el resultado). En "Modo prueba" funciona sola; en "Conectado" recibe los `DIGIT:n` del ESP32 real por Web Serial:
+
+| Recién abierta | Después de apretar `7` |
+|---|---|
+| ![La LCD simulada dice Marca un digito / para dibujar y el lienzo está vacío](img/interfaz-web.png) | ![La LCD simulada dice Dibujando: 7 y el lienzo muestra el trazo del 7](img/interfaz-web-dibujo.png) |

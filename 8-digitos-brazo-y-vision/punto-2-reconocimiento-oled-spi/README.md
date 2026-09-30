@@ -318,3 +318,9 @@ Todos los comandos se corren desde la carpeta `punto-2-reconocimiento-oled-spi`.
 **La demo completa.** Dígitos escritos a mano (tomados del set de prueba de MNIST, sobre una hoja simulada) pasan por el preprocesamiento y el modelo reales de `reconocer_digito.py`. La ventana de 15 votos confirma cada dígito cuando pasa el 80 %, y ahí se manda `DIGIT:n`, el ESP-A contesta `REENVIADO:n` y la OLED del ESP-B lo pinta (dibujada píxel a píxel como lo hace `mostrarDigito()` del `.ino`). En los 85 cuadros de la animación la red acertó todos:
 
 ![Animación: hoja, entrada 28x28, probabilidades y ventana de votos, y la OLED mostrando el dígito](img/demo-reconocimiento.gif)
+
+**La previsualización en el navegador** (`preview.html`, se abre con doble clic en Chrome o Edge). Simula el lado de los ESP32 sin correr la cámara ni la CNN: en "Modo prueba" los botones del 0 al 9 hacen de "la red reconoció este dígito" y la OLED simulada lo pinta igual que el ESP-B; en "Conectado" manda `DIGIT:n` al ESP-A real por Web Serial y muestra lo que conteste:
+
+| Recién abierta | Después de pulsar `7` |
+|---|---|
+| ![La OLED simulada con Digito reconocido: 0 al cargar](img/interfaz-web.png) | ![La OLED simulada con Digito reconocido: 7](img/interfaz-web-oled.png) |

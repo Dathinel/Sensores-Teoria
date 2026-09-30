@@ -37,3 +37,6 @@ venv/
 
 # --- Secretos / variables de entorno ---
 .env
+
+# --- Documentos de entrega para la uni (Word con el enlace al README): solo locales ---
+Enlace README - *.docx

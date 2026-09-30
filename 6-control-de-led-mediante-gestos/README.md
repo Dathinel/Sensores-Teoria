@@ -313,3 +313,11 @@ Lo que pasa en cada gesto, con el comando que manda la página y el duty que pon
 Y la secuencia completa, incluidas las dos "interrupciones" por Timer: sin gesto (`NONE`, todo apagado), puño, victoria, dos manos, pulgar abajo (`THUMB_DOWN`, Modo 1: barrido amarillo → azul → rojo, 200 ms cada uno) y pulgar arriba (`THUMB_UP`, Modo 2: los tres parpadean juntos, 200 ms prendidos y 200 ms apagados). Los tiempos y los duty salen tal cual de `esp32_gestos.py`:
 
 ![Animación de los LEDs recorriendo los cinco gestos y los dos modos](img/demo-leds.gif)
+
+**La página en el navegador** (`gesture_control.html`). Sin cámara ni ESP32 la página igual arranca: avisa que los botones manuales siguen funcionando, y el panel "LEDs (espejo del firmware)" replica la misma lógica de `esp32_gestos.py` para ver qué haría cada LED:
+
+![La página recién abierta, sin cámara ni ESP32, con MediaPipe cargado](img/interfaz-web.png)
+
+| Victoria (manual): LED azul al 70 % | Modo 1 corriendo: el barrido va por el LED azul |
+|---|---|
+| ![Victoria pulsada: el LED azul del espejo del firmware al 70 % y VICTORY en el registro](img/interfaz-web-victoria.png) | ![Modo 1 corriendo: THUMB_DOWN en el registro y el LED azul al 100 %](img/interfaz-web-modo1.png) |

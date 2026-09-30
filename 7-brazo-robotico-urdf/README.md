@@ -278,3 +278,9 @@ Tres poses en el camino:
 |---|---|---|
 | ![Base a +1,10 rad y codo a +1,20 rad](img/pose-codo-doblado.png) | ![Pinza extendida 0,10 m con los dedos abiertos](img/pose-pinza-abierta.png) | ![Base a -0,60 rad y codo a -0,50 rad](img/pose-codo-atras.png) |
 | `J1:1.100,J2:1.200,G:0.000` | la pinza sube 0,10 m y los dedos se abren `g / 3` | `J1:-0.600,J2:-0.500`, pinza todavía abierta |
+
+**La previsualización en el navegador** (`preview.html`, se abre con doble clic en Chrome o Edge). Es una vista 3D simplificada del mismo brazo (cinemática directa de `brazo.urdf`, sin física) con el mismo teclado 4x4 clicable y el mismo jog del firmware. En "Modo prueba" la página se comporta como el ESP32 y manda 10 líneas por segundo al monitor; en "Conectado" lee las líneas reales del ESP32 por Web Serial:
+
+| Recién abierta: brazo en home | Jog con `8`, `9` y `6` sostenido |
+|---|---|
+| ![Modo prueba recién abierto, brazo en home y el monitor con J1:0.000,J2:0.000,G:0.000](img/interfaz-web.png) | ![Después del jog: el brazo girado con el codo doblado y el monitor mostrando J2 subiendo](img/interfaz-web-jog.png) |
