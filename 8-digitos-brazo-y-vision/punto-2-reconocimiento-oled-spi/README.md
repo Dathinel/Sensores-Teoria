@@ -144,6 +144,7 @@ Un cuidado con los pines del ESP-B: `GPIO12` (MISO) y `GPIO15` (SS) son pines de
 - **`esp-b-esclavo/esp_b_esclavo.ino`**: sketch de Arduino del ESP-B. Se compila y sube con el Arduino IDE (es el único ESP32 del repositorio que no se programa con Thonny). Escucha SPI esclavo y UART2 sin bloquear y dibuja el dígito en la OLED.
 - **`probar_esp_a.py`**: prueba aislada del ESP-A desde el PC, sin cámara ni CNN. Abre el puerto, le manda `DIGIT:5` y muestra todo lo que responda.
 - **`enunciado-actividad.png`** y **`enunciado-actividad-2.png`**: las capturas del enunciado.
+- **`img/`**: las fotos del montaje real, el montaje en 3D y las animaciones de la sección "El montaje y la demo".
 - **`entorno/`**: entorno virtual de Python **3.12** (TensorFlow todavía no tiene versión para 3.13/3.14) con `tensorflow`, `opencv-python`, `numpy` y `pyserial`. No se sube a GitHub (su `.gitignore` tiene `*`). Para crearlo en otro PC, dentro de esta carpeta:
 
   ```
@@ -297,9 +298,23 @@ Todos los comandos se corren desde la carpeta `punto-2-reconocimiento-oled-spi`.
 6. `entorno\Scripts\python reconocer_digito.py` y mostrar un dígito. Cada dígito confirmado se manda una vez, aparece en la OLED, y abajo de la ventana sale `ESP-A confirmo el reenvio de: n` con el led en verde. En la consola se ve `[SERIAL] mandado: DIGIT:n` y `[SERIAL] recibido: 'REENVIADO:n'`.
 7. Para ver el lado del ESP-B: conectarlo por USB y abrir el Monitor Serie del Arduino IDE a 115200. Cada dígito imprime `OLED:n (UART2)` y/o `OLED:n (SPI)` según el camino que esté cableado. Si nunca aparece `OLED:n`, el problema está en los cables entre las placas (TX/RX cruzados, SPI sin cruzar, GND común); si aparece pero la pantalla no cambia, es la dirección de la OLED (probar `0x3D` en lugar de `0x3C`).
 
-## Pendiente
+## El montaje y la demo
 
-- Fotos del montaje físico (los dos ESP32 unidos por SPI y UART2, con la OLED en el ESP-B).
-- Video de la demo: dígito en papel frente a la cámara y el mismo número apareciendo en la OLED.
-- Compilar `esp_b_esclavo.ino` en el Arduino IDE y probar el camino SPI con las dos placas físicas.
-- Se hicieron pruebas adicionales de la comunicación serial antes del montaje físico.
+**El montaje real.** Los dos ESP32, cada uno en su base, unidos por la cinta de colores (SPI + UART2 + GND); el ESP-A va al PC por USB y la OLED de 0,96" cuelga del ESP-B con sus 4 cables:
+
+| Las dos placas unidas | La OLED en el ESP-B |
+|---|---|
+| ![Los dos ESP32 unidos por la cinta de SPI y UART2](img/foto-dos-esp32.jpg) | ![La OLED del ESP-B encendida](img/foto-oled-digito.jpg) |
+| ![El ESP-B con la cinta que viene del ESP-A y los cables de la OLED](img/foto-esp-b-cableado.jpg) | ![La OLED encendida junto al PC que corre el reconocimiento](img/foto-oled-junto-al-pc.jpg) |
+
+**El mismo montaje en 3D**, con el nombre de cada conexión (SPI sin cruzar, UART2 cruzado, GND común, y la OLED por I2C en el ESP-B):
+
+![Montaje 3D de los dos ESP32 con la OLED, con las conexiones rotuladas](img/montaje-3d.png)
+
+**El preprocesamiento, paso a paso.** Cada paso de `preprocesar_digito()` sobre un dígito, desde la foto de la hoja hasta la imagen de 28×28 centrada por centro de masa que recibe la CNN (el último cuadro es idéntico a la salida de la función real):
+
+![Los pasos del preprocesamiento de un dígito, de la foto a la entrada de la CNN](img/pipeline-preprocesamiento.png)
+
+**La demo completa.** Dígitos escritos a mano (tomados del set de prueba de MNIST, sobre una hoja simulada) pasan por el preprocesamiento y el modelo reales de `reconocer_digito.py`. La ventana de 15 votos confirma cada dígito cuando pasa el 80 %, y ahí se manda `DIGIT:n`, el ESP-A contesta `REENVIADO:n` y la OLED del ESP-B lo pinta (dibujada píxel a píxel como lo hace `mostrarDigito()` del `.ino`). En los 85 cuadros de la animación la red acertó todos:
+
+![Animación: hoja, entrada 28x28, probabilidades y ventana de votos, y la OLED mostrando el dígito](img/demo-reconocimiento.gif)

@@ -65,11 +65,13 @@ La conversión es lineal y muy corta:
 ```python
 def angulos_articulaciones(u, v):
     j1 = CENTRO_J1 + (u - 0.5) * 2 * RANGO_J1   # u: 0 = izquierda, 1 = derecha
-    j2 = CENTRO_J2 + (v - 0.5) * 2 * RANGO_J2   # v: 0 = abajo,     1 = arriba
+    j2 = CENTRO_J2 - (v - 0.5) * 2 * RANGO_J2   # v: 0 = abajo,     1 = arriba
     return j1, j2
 ```
 
-La cámara de la ventana arranca mirando de frente la zona del dibujo (`resetDebugVisualizerCamera` con `cameraYaw=0, cameraPitch=-10`), porque desde arriba, que fue lo primero que probamos, los dígitos también se veían deformados por la perspectiva.
+El signo de `v` va restando a propósito: doblar **más** el codo baja la punta, así que para que `v = 1` quede arriba hay que doblarlo **menos**. Con el signo al revés (como lo teníamos al principio) cada dígito salía reflejado de arriba a abajo: el 7 parecía una L invertida y el 2 una S.
+
+La cámara de la ventana arranca mirando de frente la zona del dibujo (`resetDebugVisualizerCamera` con `cameraYaw=90, cameraPitch=-15`), del lado desde el que el giro de la base queda de izquierda a derecha en pantalla. Desde arriba, que fue lo primero que probamos, los dígitos se veían deformados por la perspectiva, y con `cameraYaw=0` la cámara los veía de canto.
 
 ## La idea general
 
@@ -143,16 +145,22 @@ El teclado va directo a 8 GPIO del ESP32 y la LCD por el bus I2C. No hace falta 
 
 Por qué esos pines: son GPIO de uso general que no tienen función especial al arrancar. Evitamos los GPIO 34 a 39 para las columnas porque son solo de entrada y **no tienen pull-up interna** (el barrido no funcionaría sin resistencias externas), los GPIO 6 a 11 porque están conectados a la memoria flash, y los pines de *strapping* (0, 2, 12, 15), que deciden cómo arranca la placa. GPIO 18 y 19 están libres porque en este punto no se usa SPI.
 
-**LCD 16x2 con backpack PCF8574** (dirección `0x27`):
+**LCD 16x2 I2C** (la pantalla con su adaptador I2C soldado atrás, dirección `0x27`; son solo 4 cables):
 
-| Backpack de la LCD | ESP32 | Por qué |
+| Pin del adaptador I2C de la LCD | ESP32 | Por qué |
 |---|---|---|
 | `SDA` | `GPIO21` | pin I2C por defecto del ESP32 (`I2C_SDA = 21`) |
 | `SCL` | `GPIO22` | pin I2C por defecto del ESP32 (`I2C_SCL = 22`) |
 | `VCC` | `3V3` (o `5V` si el módulo lo pide, revisar la serigrafía) | alimentación de la LCD y su luz de fondo |
 | `GND` | `GND` | referencia común |
 
-Si la pantalla enciende pero no se ve texto, o solo salen cuadros negros, casi siempre es el potenciómetro de contraste que trae el propio backpack, no el código. Si se alimenta a 5 V, las pull-up del backpack suben SDA/SCL a 5 V; en la práctica suele funcionar, pero si hay algo raro vale la pena probar primero a 3.3 V.
+Si la pantalla enciende pero no se ve texto, o solo salen cuadros negros, casi siempre es el potenciómetro de contraste que trae el propio backpack, no el código. Nos pasó al armarla: con el contraste muy alto se ven las dos filas llenas de cuadros; girando el potenciómetro con un destornillador queda solo una fila de cuadros tenues, que es lo normal de una LCD con alimentación que todavía no recibió la inicialización del ESP32 (en las fotos la pantalla está al revés, por eso la fila aparece abajo). Con el contraste así, al arrancar `main.py` ya se lee el texto.
+
+| Contraste muy alto: las dos filas en cuadros | Contraste ajustado: una fila tenue, lista para el texto |
+|---|---|
+| ![LCD con las dos filas de cuadros por contraste muy alto](img/foto-lcd-contraste-antes.jpg) | ![LCD con el contraste ajustado con el potenciómetro](img/foto-lcd-contraste-despues.jpg) |
+
+Si se alimenta a 5 V, las pull-up del backpack suben SDA/SCL a 5 V; en la práctica suele funcionar, pero si hay algo raro vale la pena probar primero a 3.3 V.
 
 **ESP32 → PC**: un solo cable USB. En el Administrador de dispositivos se ve qué `COM` le asigna Windows; ese va en `PUERTO_SERIAL` dentro de `brazo_dibuja.py`.
 
@@ -163,6 +171,7 @@ Si la pantalla enciende pero no se ve texto, o solo salen cuadros negros, casi s
 - **`brazo_dibuja.py`**: el programa del PC. Abre el serial si puede, carga el brazo en PyBullet, crea los 10 botones y dibuja cada dígito que llega (por serial o por botón).
 - **`brazo.urdf`**: el brazo del profesor, idéntico al del tema 7.
 - **`enunciado-actividad.png`**: la captura del enunciado.
+- **`img/`**: las fotos del montaje real, el montaje en 3D y las animaciones de la sección "El montaje y la demo".
 - **`entorno/`**: entorno virtual de Python del punto, con `pybullet`, `pyserial` y `numpy`. No se sube a GitHub (su `.gitignore` tiene `*`).
   Para crearlo en otro PC (Python 3.14), dentro de esta carpeta: `py -3.14 -m venv entorno` y `entorno\Scripts\python -m pip install pybullet pyserial numpy`.
 
@@ -236,7 +245,7 @@ punto_mundo, _ = p.multiplyTransforms(pos_link, orn_link, OFFSET_PLUMA, [0, 0, 0
 
 **6. Salida limpia.** El bucle es `while p.isConnected()`; si se cierra la ventana a mitad de un dibujo, PyBullet lanza `p.error`, que se atrapa junto con `Ctrl+C` para salir sin traza de error, y el `finally` cierra el puerto.
 
-Un límite de PyBullet que encontramos: `p.getCameraImage()` **no incluye** las líneas de depuración (`addUserDebugLine`) en la imagen que devuelve, ni en modo `DIRECT` ni en `GUI`. Esas líneas son una capa que solo se ve en la ventana en vivo, así que el trazo no se puede capturar automáticamente: para ver (o fotografiar) un dígito dibujado hay que abrir la ventana.
+Un límite de PyBullet que encontramos: `p.getCameraImage()` **no incluye** las líneas de depuración (`addUserDebugLine`) en la imagen que devuelve, ni en modo `DIRECT` ni en `GUI`. Esas líneas son una capa que solo se ve en la ventana en vivo, así que el trazo no sale en una captura directa de la cámara: en la ventana se ve en vivo, y para las imágenes de la demo (al final) se proyectó aparte.
 
 ## Cómo probarlo
 
@@ -257,8 +266,26 @@ Todos los comandos se corren desde la carpeta `punto-1-teclado-brazo-dibujando`.
 6. Apretar un dígito: la LCD muestra `Dibujando:` y el número, en la ventana aparece `Ultima linea del ESP32: DIGIT:n` y el brazo lo dibuja. Los botones de la ventana siguen funcionando.
 7. Si no pasa nada: mirar la línea gris de la ventana. Si nunca cambia, el ESP32 no está mandando (ver con Thonny, con el script cerrado, que al reiniciar salgan `I2C encontrados: ['0x27']` y `ESP32 listo: esperando teclas`). Si la LCD responde pero una tecla no hace nada, revisar el cable de su fila o su columna en la tabla.
 
-## Pendiente
+## El montaje y la demo
 
-- Fotos del montaje físico (ESP32, teclado y LCD).
-- Video del teclado real haciendo dibujar al brazo, y capturas de la ventana con algunos dígitos dibujados (hay que tomarlas a mano de la ventana, por lo de `getCameraImage` explicado arriba).
-- Se hicieron pruebas adicionales de la comunicación serial antes del montaje físico.
+**El montaje real.** El mismo teclado del tema 7, con su cinta directo a los 8 GPIO, y la LCD con sus 4 cables del bus I2C (las fotos del ajuste de contraste están en "Conexiones"):
+
+| ESP32 con el teclado y la LCD | El teclado 4x4 | Su cinta directo al ESP32 |
+|---|---|---|
+| ![ESP32 con la cinta del teclado y la LCD por I2C](img/foto-montaje-teclado-lcd.jpg) | ![El teclado matricial 4x4](img/foto-teclado.jpg) | ![Los 8 cables del teclado en el ESP32](img/foto-teclado-esp32.jpg) |
+
+**El mismo montaje en 3D**, con el nombre de cada conexión (filas R1-R4 a `GPIO14/27/26/25`, columnas C1-C4 a `GPIO33/32/18/19`, y la LCD con `SDA` a `GPIO21`, `SCL` a `GPIO22`, `VCC` a `3V3` y `GND`):
+
+![Montaje 3D del teclado y la LCD I2C en el ESP32, con cada cable rotulado](img/montaje-3d.png)
+
+**La demo.** El brazo dibujando 3, 7 y 0 seguidos, con la lógica real de `brazo_dibuja.py` (los mismos trazos, el mismo mapeo a ángulos y la misma punta de lápiz). Cada tecla manda `DIGIT:n` y la LCD muestra `Dibujando:` con el dígito:
+
+![Animación del brazo dibujando 3, 7 y 0, con la LCD y la tecla apretada](img/demo-dibujo.gif)
+
+Y los diez dígitos como los traza el brazo, un cuadro final por tecla:
+
+![Los 10 dígitos del 0 al 9 dibujados por el brazo](img/digitos-dibujados.png)
+
+Como `getCameraImage` no incluye las líneas de depuración (ver "La lógica del código"), el trazo amarillo de estas imágenes se dibujó aparte: se guardaron los puntos 3D del lápiz mientras el brazo se movía y se proyectaron sobre cada cuadro con las mismas matrices de la cámara. Se comprobó poniendo una esfera en la punta del lápiz: el último punto proyectado cae justo encima.
+
+Estas imágenes sirvieron además para encontrar un error: con el signo de `v` al revés en `angulos_articulaciones()`, cada dígito salía reflejado de arriba a abajo, y con la cámara vieja (`cameraYaw=0`) se veía de canto y no se notaba. Ya está corregido (ver "Por qué el brazo se maneja por ángulos").

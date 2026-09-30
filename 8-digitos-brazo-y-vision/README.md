@@ -66,6 +66,10 @@ Los pasos detallados, con los mensajes que tienen que aparecer en cada paso, est
 - Punto 1: un ESP32 con el teclado en 8 GPIO y la LCD por I2C, con `esp32_teclado_lcd.py` guardado como `main.py`.
 - Punto 2: el ESP-A por USB con `esp_a_maestro.py` como `main.py`, el ESP-B con el sketch de Arduino y la OLED, unidos por SPI y/o UART2 con tierra común. `probar_esp_a.py` prueba el ESP-A solo, sin cámara.
 
-## Pendiente
+## El montaje y la demo
 
-Fotos del montaje y video de cada punto: se agregan en el README de cada uno cuando estén.
+Cada punto tiene sus fotos del montaje real, el montaje en 3D con las conexiones rotuladas y una animación de la demo en su propio README. Una muestra de cada uno:
+
+| Punto 1: los 10 dígitos que dibuja el brazo | Punto 2: el reconocimiento hasta la OLED |
+|---|---|
+| ![Los 10 dígitos dibujados por el brazo](punto-1-teclado-brazo-dibujando/img/digitos-dibujados.png) | ![Demo del reconocimiento hasta la OLED](punto-2-reconocimiento-oled-spi/img/demo-reconocimiento.gif) |

@@ -310,7 +310,7 @@ Tactil GPIO4 (tocar el pin y volver a correr): <valor>
 | UART por USB | [3](../3-deteccion-objetos), [4](../4-chatbot-asistente-voz), [6](../6-control-de-led-mediante-gestos), [7](../7-brazo-robotico-urdf), [8](../8-digitos-brazo-y-vision), [9](../9-taller-segundo-corte) | PC ↔ ESP32 con líneas de texto |
 | DAC ×2 | [5](../5-parcial-figuras-lissauer) | Dibujar peces en un osciloscopio en modo XY |
 | PWM (LEDC) | [6](../6-control-de-led-mediante-gestos), [proyecto final](../proyecto-final) | Brillo de LEDs, pasos de los motores, motores del carro |
-| I2C | [7](../7-brazo-robotico-urdf), [8](../8-digitos-brazo-y-vision), [proyecto final](../proyecto-final) | Teclado, LCD, OLED, PCA9685, láser VL53L0X |
+| I2C | [8](../8-digitos-brazo-y-vision), [proyecto final](../proyecto-final) | LCD, OLED, PCA9685, láser VL53L0X |
 | UART2 + SPI | [8](../8-digitos-brazo-y-vision/punto-2-reconocimiento-oled-spi) | Dos ESP32 hablando entre sí |
 | ESP-NOW | [proyecto final](../proyecto-final/firmware) | Radio entre la estación y el carro, sin router |
 

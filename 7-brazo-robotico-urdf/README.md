@@ -6,7 +6,7 @@ Basado en el archivo compartido por la cátedra [brazo.urdf](https://github.com/
 
 La actividad pedía cinco cosas: programar el ESP32 para leer sensores y enviar datos, hacer un script de Python que reciba esos datos por UART y controle el robot, probar el movimiento de las articulaciones y la apertura/cierre de la pinza, validar la comunicación en tiempo real, y documentarlo. Lo que quedó:
 
-- El ESP32 lee un **teclado matricial 4x4** (por I2C, con un expansor PCF8574) y lo usa como un mando de *jog*: mientras se mantiene una tecla, la articulación correspondiente se mueve un paso fijo cada 100 ms. Diez veces por segundo manda la posición de las tres articulaciones al PC en una línea de texto (`J1:0.150,J2:-0.300,G:0.020`).
+- El ESP32 lee un **teclado matricial 4x4**, conectado directo a 8 de sus GPIO con la cinta de 8 cables del propio teclado, y lo usa como un mando de *jog*: mientras se mantiene una tecla, la articulación correspondiente se mueve un paso fijo cada 100 ms. Diez veces por segundo manda la posición de las tres articulaciones al PC en una línea de texto (`J1:0.150,J2:-0.300,G:0.020`).
 - `brazo_pybullet.py` carga el mismo `brazo.urdf` del profesor en PyBullet, lee esas líneas sin frenar la simulación y mueve los motores de cada articulación hacia la posición recibida. La pinza sube a lo largo del segundo tramo y sus dos dedos se abren a la vez.
 - Si no hay ESP32 conectado, la ventana de PyBullet trae 7 botones con el mismo esquema de jog, así que la simulación se puede mostrar sin nada de hardware.
 
@@ -57,35 +57,35 @@ En modo `POSITION_CONTROL`, PyBullet calcula en cada paso de la simulación la f
 
 Otra cosa de PyBullet que usamos: los controles de la ventana (`addUserDebugParameter`) pueden ser sliders o botones. Si se crea con el mínimo mayor que el máximo (`addUserDebugParameter("pinza +", 1, 0, 0)`), PyBullet lo dibuja como **botón**, y su "valor" es un contador que sube en 1 con cada click.
 
-## Qué es I2C y el expansor PCF8574
-
-El teclado 4x4 tiene 8 cables (4 filas y 4 columnas). Conectarlo directo al ESP32 gasta 8 pines. **I2C** es un bus de solo 2 cables compartidos: `SDA` (datos) y `SCL` (reloj). El ESP32 hace de *maestro*: genera el reloj y habla con cada dispositivo del bus por su **dirección** de 7 bits, como un número de casa en la misma calle. Varios chips pueden colgar de los mismos dos cables siempre que tengan direcciones distintas. En reposo las dos líneas quedan en alto gracias a resistencias *pull-up* (los módulos suelen traerlas soldadas), y los dispositivos solo las bajan a 0 para comunicar.
-
-El **PCF8574** es un expansor de pines que vive en ese bus, en la dirección `0x20` (con sus tres pines de dirección A0-A2 a GND). Tiene 8 pines digitales, P0 a P7, y funciona con un solo byte:
-
-- Si el ESP32 le **escribe** un byte, cada bit pone un pin en 0 o en 1.
-- Si el ESP32 le **lee** un byte, cada bit dice cómo está cada pin.
-
-Un pin del PCF8574 escrito en 1 no queda en alto "a la fuerza": queda con una pull-up débil interna, así que algo externo lo puede bajar a 0. Así es como este chip hace de entrada: se escribe un 1 en el pin y después se lee si alguien lo bajó.
-
 ## Qué es un teclado matricial y cómo se barre
 
-Cada tecla del 4x4 es solo un contacto que, al apretarse, une una fila con una columna. Por eso no se pueden leer 16 teclas "una por una": hay que **barrer** la matriz.
+El teclado 4x4 trae 16 teclas pero solo 8 cables: 4 **filas** (R1-R4) y 4 **columnas** (C1-C4). Cada tecla es solo un contacto que, al apretarse, une una fila con una columna; no pone ningún voltaje por sí misma. Por eso no se pueden leer 16 teclas "una por una": hay que **barrer** la matriz.
 
-En este tema las filas van a los pines P4-P7 del PCF8574 y las columnas a P0-P3. `leer_tecla()` hace esto cuatro veces, una por fila:
+Los 8 cables van directo a 8 GPIO del ESP32 (los mismos pines que el tema 8 punto 1 y el taller, así el mismo montaje sirve para los tres):
 
-1. Escribe un byte donde solo **una fila** está en 0 y las otras tres en 1, y las 4 columnas en 1 (para que queden como entradas con pull-up).
-2. Lee el byte de vuelta y mira los 4 bits bajos (las columnas).
-3. Si alguna columna volvió en 0, es porque hay una tecla apretada uniendo esa columna con la fila que está en 0: el cruce fila/columna dice cuál es (`MAPA_TECLAS[fila][col]`).
+- Las 4 filas son **salidas** y en reposo quedan en 1.
+- Las 4 columnas son **entradas con pull-up interna**: la resistencia interna del ESP32 las mantiene en 1 mientras nadie las baje. Sin ella, una columna sin tecla apretada quedaría "flotando" y leería ruido.
+
+`leer_tecla()` hace esto cuatro veces, una por fila:
+
+1. Baja a 0 **una sola fila** (las otras tres quedan en 1) y espera unos microsegundos a que la señal se asiente.
+2. Lee las 4 columnas.
+3. Si alguna columna está en 0, es porque hay una tecla apretada uniendo esa columna con la fila que está en 0: el cruce fila/columna dice cuál es (`MAPA_TECLAS[i][j]`). Antes de salir vuelve a subir la fila.
 
 ```python
-for fila in range(4):
-    filas = 0x0F & ~(1 << fila)          # p. ej. fila 1 -> 0b1101
-    byte_salida = (filas << 4) | 0x0F     # filas arriba, columnas en 1 abajo
-    i2c.writeto(DIR_TECLADO, bytes([byte_salida]))
-    columnas = i2c.readfrom(DIR_TECLADO, 1)[0] & 0x0F
-    if columnas != 0x0F:                  # alguna columna bajó a 0
-        ...
+ROW_PINS = [14, 27, 26, 25]   # R1..R4
+COL_PINS = [33, 32, 18, 19]   # C1..C4
+filas = [Pin(p, Pin.OUT, value=1) for p in ROW_PINS]
+columnas = [Pin(p, Pin.IN, Pin.PULL_UP) for p in COL_PINS]
+
+for i, fila in enumerate(filas):
+    fila.value(0)                     # solo esta fila en bajo
+    time.sleep_us(10)
+    for j, col in enumerate(columnas):
+        if col.value() == 0:          # esta columna bajó con la fila i
+            fila.value(1)
+            return MAPA_TECLAS[i][j]
+    fila.value(1)
 ```
 
 Si se bajaran las cuatro filas a la vez se sabría la columna pero no cuál de las cuatro filas la bajó: por eso va de una en una. Las cuatro vueltas toman muy poco, así que para quien aprieta es instantáneo.
@@ -107,12 +107,12 @@ El control es solo con teclado, tipo mando de jog (como el *teach pendant* con e
 
 Con esos pasos, sostener una tecla de articulación mueve unos 29° por segundo y la pinza recorre su carrera completa (15 cm) en 3 segundos: rápido, pero todavía se puede parar donde uno quiere. Las demás teclas (`1`, `3`, `0`, `A`-`D`, `*`, `#`) no hacen nada.
 
-Antes de llegar a esto probamos con 3 potenciómetros fijos (uno por articulación) y después con teclado más un potenciómetro compartido. Terminamos quitando el potenciómetro del todo: el teclado solo ya alcanza para mover todo, y reutiliza el mismo módulo I2C que se usa en otros temas, sin ningún componente analógico.
+Antes de llegar a esto probamos con 3 potenciómetros fijos (uno por articulación) y después con teclado más un potenciómetro compartido. Terminamos quitando el potenciómetro del todo: el teclado solo ya alcanza para mover todo, y es el mismo teclado (con los mismos pines) que se usa en el tema 8 y en el taller, sin ningún componente analógico.
 
 ```mermaid
 flowchart TD
     subgraph ESP["En el ESP32 — esp32_brazo.py (main.py)"]
-        Teclado["Teclado 4x4<br/>(I2C 0x20, PCF8574)"] --> Barre["leer_tecla()<br/>barre las 4 filas"]
+        Teclado["Teclado 4x4<br/>filas GPIO14/27/26/25<br/>columnas GPIO33/32/18/19"] --> Barre["leer_tecla()<br/>barre las 4 filas"]
         Barre --> Actualiza["Suma o resta un paso fijo<br/>a j1, j2 o g (limitado al URDF)"]
         Actualiza --> Envia["print 'J1:..,J2:..,G:..'<br/>(las 3, siempre, cada 100 ms)"]
     end
@@ -140,7 +140,7 @@ sequenceDiagram
     participant S as PyBullet (brazo.urdf)
 
     loop cada 100 ms
-        E->>T: barrido de filas por I2C
+        E->>T: barrido: baja una fila a la vez y lee las 4 columnas
         T-->>E: tecla sostenida (8/2/6/4/9/7) o 5
         E->>E: suma o resta un paso, limita al rango del URDF
         E-->>P: "J1:0.150,J2:-0.300,G:0.020"
@@ -156,41 +156,32 @@ La simulación da unos 24 pasos por cada línea que manda el ESP32 (240 pasos po
 
 ## Conexiones
 
-Solo va el teclado al ESP32; no hace falta ningún otro sensor ni fuente, el ESP32 alimenta el módulo con su propio `3V3`.
+Solo va el teclado al ESP32, con los 8 cables de su cinta directo a 8 GPIO; no hace falta ningún otro sensor, fuente ni resistencia. Mirando el teclado de frente, los 8 pines de la cinta van, de izquierda a derecha, R1 R2 R3 R4 C1 C2 C3 C4.
 
-**Del módulo PCF8574 al ESP32** (4 cables):
+| Cable del teclado | Qué teclas une | ESP32 | En el firmware | Modo |
+|---|---|---|---|---|
+| Fila R1 | `1 2 3 A` | `GPIO14` | `ROW_PINS[0]` | salida, reposo en 1 |
+| Fila R2 | `4 5 6 B` | `GPIO27` | `ROW_PINS[1]` | salida, reposo en 1 |
+| Fila R3 | `7 8 9 C` | `GPIO26` | `ROW_PINS[2]` | salida, reposo en 1 |
+| Fila R4 | `* 0 # D` | `GPIO25` | `ROW_PINS[3]` | salida, reposo en 1 |
+| Columna C1 | `1 4 7 *` | `GPIO33` | `COL_PINS[0]` | entrada con pull-up interna |
+| Columna C2 | `2 5 8 0` | `GPIO32` | `COL_PINS[1]` | entrada con pull-up interna |
+| Columna C3 | `3 6 9 #` | `GPIO18` | `COL_PINS[2]` | entrada con pull-up interna |
+| Columna C4 | `A B C D` | `GPIO19` | `COL_PINS[3]` | entrada con pull-up interna |
 
-| Módulo PCF8574 | ESP32 | Voltaje | Por qué ese pin |
-|---|---|---|---|
-| `VCC` | `3V3` | 3.3 V | el PCF8574 funciona de 2.5 a 6 V; a 3.3 V los niveles de SDA/SCL quedan iguales a los del ESP32 |
-| `GND` | `GND` | 0 V | referencia común |
-| `SDA` | `GPIO21` | 3.3 V lógico | pin I2C por defecto del ESP32 (`I2C_SDA = 21` en el código) |
-| `SCL` | `GPIO22` | 3.3 V lógico | pin I2C por defecto del ESP32 (`I2C_SCL = 22`) |
-| `A0`, `A1`, `A2` | a GND (jumpers del módulo) | — | dejan la dirección en `0x20` (`DIR_TECLADO` en el código) |
+Por qué esos pines: son GPIO de uso general que no tienen función especial al arrancar. Se evitan los GPIO 34 a 39 para las columnas porque son solo de entrada y **no tienen pull-up interna** (el barrido no funcionaría sin resistencias externas), los GPIO 6 a 11 porque están conectados a la memoria flash, y los pines de *strapping* (0, 2, 12, 15), que deciden cómo arranca la placa. Son exactamente los mismos del tema 8 punto 1 y del taller, así que el teclado se arma una vez y sirve para todo.
 
-**Del teclado al PCF8574** (8 cables; en muchos módulos ya viene en un conector de 8 pines en este mismo orden):
-
-| Teclado | PCF8574 | Rol en `leer_tecla()` |
-|---|---|---|
-| Columna C1 (`1 4 7 *`) | `P0` | entrada (bit 0) |
-| Columna C2 (`2 5 8 0`) | `P1` | entrada (bit 1) |
-| Columna C3 (`3 6 9 #`) | `P2` | entrada (bit 2) |
-| Columna C4 (`A B C D`) | `P3` | entrada (bit 3) |
-| Fila R1 (`1 2 3 A`) | `P4` | salida (bit 4) |
-| Fila R2 (`4 5 6 B`) | `P5` | salida (bit 5) |
-| Fila R3 (`7 8 9 C`) | `P6` | salida (bit 6) |
-| Fila R4 (`* 0 # D`) | `P7` | salida (bit 7) |
-
-No hace falta ninguna resistencia externa para el teclado: las pull-up de las columnas las pone el propio PCF8574. Si al apretar una tecla sale otra distinta, el teclado tiene sus pines en otro orden y basta con intercambiar cables (o filas/columnas en `MAPA_TECLAS`).
+Si al apretar una tecla sale otra distinta, el teclado tiene sus pines en otro orden: basta con intercambiar cables (o las listas `ROW_PINS`/`COL_PINS` en el código).
 
 **ESP32 → PC**: un cable USB, el mismo que se usa para programarlo. En el Administrador de dispositivos de Windows se ve qué `COM` le asignó (por ejemplo `COM7`); ese va en `PUERTO_SERIAL` dentro de `brazo_pybullet.py`.
 
 ## Qué hace cada archivo
 
 - **`brazo.urdf`**: el brazo del profesor, tal cual viene en U_Militar (5 links y 5 joints, ver el árbol de arriba). No lo modificamos; `brazo_pybullet.py` lee de él los nombres, índices y límites de cada articulación.
-- **`esp32_brazo.py`**: el firmware del ESP32 en MicroPython. Se guarda en la placa como `main.py`. Barre el teclado por I2C, actualiza las tres posiciones con los pasos de jog y las imprime cada 100 ms.
+- **`esp32_brazo.py`**: el firmware del ESP32 en MicroPython. Se guarda en la placa como `main.py`. Barre el teclado (8 GPIO), actualiza las tres posiciones con los pasos de jog y las imprime cada 100 ms.
 - **`brazo_pybullet.py`**: el programa del PC. Abre el puerto serial si puede, carga el URDF en PyBullet, crea los botones de jog y en un bucle lee el serial, aplica los botones, mueve los motores y avanza la simulación.
 - **`enunciado-actividad.png`**: la captura del enunciado de la actividad.
+- **`img/`**: las fotos del montaje real, el montaje en 3D y las animaciones de la sección "El montaje y la demo".
 - **`entorno/`**: el entorno virtual de Python del tema, con `pybullet` y `pyserial` ya instalados. No se sube a GitHub (tiene su propio `.gitignore` con `*`).
   Para crearlo en otro PC (Python 3.14), dentro de esta carpeta: `py -3.14 -m venv entorno` y `entorno\Scripts\python -m pip install pybullet pyserial`.
 
@@ -200,14 +191,7 @@ No hace falta ninguna resistencia externa para el teclado: las pull-up de las co
 
 Arranca con `j1 = j2 = g = 0` y entra a un bucle infinito que en cada vuelta:
 
-1. Llama a `leer_tecla()` (el barrido de arriba) dentro de un `try`. Si el PCF8574 no contesta (cable suelto, otra dirección, sin alimentación), `writeto`/`readfrom` lanzan `OSError`. En vez de dejar que `main.py` se caiga, se imprime **una sola vez** un aviso que empieza con `#`, se sigue mandando la última posición, y si el teclado vuelve a responder se avisa también:
-
-   ```
-   # ERROR: el teclado I2C (0x20) no responde, revisar SDA=21/SCL=22
-   # teclado I2C de nuevo respondiendo
-   ```
-
-   Empieza con `#` para que no se confunda con una línea de datos: el PC la muestra como "última línea cruda" y así se sabe que el problema es el teclado, no el cable USB.
+1. Llama a `leer_tecla()` (el barrido de arriba). Como el teclado va directo a los GPIO, no hay nada que "no conteste": con un cable suelto la tecla simplemente no se detecta y el ESP32 sigue mandando la última posición, sin que `main.py` se caiga.
 2. Según la tecla, suma o resta el paso a la variable que toca y la pasa por `limitar()`, que la deja dentro de los mismos `<limit>` del URDF (`LIM_J1 = (-2.5, 2.5)`, `LIM_J2 = (-2.0, 2.0)`, `LIM_G = (0.0, 0.15)`). La tecla `5` pone las tres en 0.
 3. Imprime siempre las tres posiciones, con 3 decimales, y duerme 100 ms:
 
@@ -243,7 +227,7 @@ PATRON_LINEA = re.compile(r"J1:(-?[\d.]+),J2:(-?[\d.]+),G:(-?[\d.]+)")
 
 Si solo se leyera una línea por vuelta, las líneas se irían apilando y el brazo reaccionaría con cada vez más retraso respecto al teclado.
 
-**4. Diagnóstico en la ventana.** La última línea **cruda** que llegó (sea o no válida) se muestra arriba en la ventana, en verde, como `Serial: ...`. Es la herramienta más útil cuando "no pasa nada": si nunca cambia de `(sin datos todavia)`, el ESP32 no está mandando nada; si cambia pero no es `J1:..`, el problema es de formato o del teclado (por ejemplo el aviso `# ERROR: ...`). El texto solo se reescribe cuando cambia (`replaceItemUniqueId`), porque recrearlo 240 veces por segundo lo haría parpadear.
+**4. Diagnóstico en la ventana.** La última línea **cruda** que llegó (sea o no válida) se muestra arriba en la ventana, en verde, como `Serial: ...`. Es la herramienta más útil cuando "no pasa nada": si nunca cambia de `(sin datos todavia)`, el ESP32 no está mandando nada; si cambia pero no es `J1:..`, el problema es de formato (por ejemplo, otro programa en la placa en vez de `esp32_brazo.py`). El texto solo se reescribe cuando cambia (`replaceItemUniqueId`), porque recrearlo 240 veces por segundo lo haría parpadear.
 
 **5. Botones de jog.** Siete botones fijos (`joint_1 (base) +`, `joint_1 (base) -`, `joint_2 (codo) +`, `joint_2 (codo) -`, `pinza +`, `pinza -`, `Home (0, 0, 0)`) con los mismos pasos que el ESP32 (`PASO_LOCAL = {"j1": 0.05, "j2": 0.05, "g": 0.005}`). Como un botón de PyBullet es un contador, `leer_botones()` compara cada contador con el de la vuelta anterior y aplica la diferencia (si hubo dos clicks entre dos vueltas, se aplican los dos). Funcionan también con el ESP32 conectado.
 
@@ -270,10 +254,27 @@ Todos los comandos se corren desde la carpeta `7-brazo-robotico-urdf`, con el en
 3. Poner en `PUERTO_SERIAL` (arriba de `brazo_pybullet.py`) el COM que se ve en el Administrador de dispositivos.
 4. `entorno\Scripts\python brazo_pybullet.py`. En la consola debe salir `ESP32 conectado en COM7: usando los datos reales del teclado.`
 5. Mantener presionadas las teclas `8/2/6/4/9/7` y el brazo simulado se mueve en tiempo real; `5` lo lleva a home. Arriba de la ventana, `Serial: J1:..,J2:..,G:..` tiene que ir cambiando mientras se sostiene la tecla.
-6. Si algo no anda: si la línea `Serial:` se queda en `(sin datos todavia)`, el ESP32 no está mandando (revisar que el archivo se llame `main.py` en la placa y que Thonny no tenga el puerto); si muestra `# ERROR: el teclado I2C (0x20) no responde...`, el USB está bien y el problema es el cableado del PCF8574 o su dirección.
+6. Si algo no anda: si la línea `Serial:` se queda en `(sin datos todavia)`, el ESP32 no está mandando (revisar que el archivo se llame `main.py` en la placa y que Thonny no tenga el puerto); si las líneas `J1:..` llegan pero no cambian al apretar, el USB está bien y el problema es el cableado del teclado (revisar la tabla de conexiones: una fila o columna suelta deja sin respuesta a sus 4 teclas).
 
-## Pendiente
+## El montaje y la demo
 
-- Fotos del montaje físico (ESP32 + teclado con su módulo PCF8574).
-- Video de la demo con el teclado real moviendo el brazo simulado.
-- Se hicieron pruebas adicionales de la comunicación serial antes del montaje físico.
+**El montaje real.** El teclado de membrana con su cinta de 8 cables va directo a los pines del ESP32, sin ningún módulo en el medio:
+
+| El teclado 4x4 | Su cinta directo al ESP32 |
+|---|---|
+| ![El teclado matricial 4x4 con su cinta de 8 pines](img/foto-teclado.jpg) | ![Los 8 cables del teclado conectados directo al ESP32](img/foto-teclado-esp32.jpg) |
+
+**El mismo montaje en 3D**, con el nombre de cada conexión (las filas R1-R4 a `GPIO14/27/26/25` y las columnas C1-C4 a `GPIO33/32/18/19`):
+
+![Montaje 3D del teclado conectado directo al ESP32, con cada cable rotulado](img/montaje-3d.png)
+
+**La demo.** El jog con el teclado, sobre la simulación real (`brazo.urdf` en PyBullet, los mismos motores y pasos de física que `brazo_pybullet.py`): se sostiene `8` (base), `6` (codo), `9` (abre la pinza), `4`, `2` y `7`, y el `5` lo vuelve a home. A la izquierda se resalta la tecla sostenida y abajo va la línea que el ESP32 manda por serial cada 100 ms:
+
+![Animación del brazo moviéndose con el jog del teclado, con la línea serial J1/J2/G](img/demo-jog.gif)
+
+Tres poses en el camino:
+
+| Base y codo (`8` y `6`) | Pinza extendida y abierta (`9`) | Al otro lado (`4` y `2`) |
+|---|---|---|
+| ![Base a +1,10 rad y codo a +1,20 rad](img/pose-codo-doblado.png) | ![Pinza extendida 0,10 m con los dedos abiertos](img/pose-pinza-abierta.png) | ![Base a -0,60 rad y codo a -0,50 rad](img/pose-codo-atras.png) |
+| `J1:1.100,J2:1.200,G:0.000` | la pinza sube 0,10 m y los dedos se abren `g / 3` | `J1:-0.600,J2:-0.500`, pinza todavía abierta |

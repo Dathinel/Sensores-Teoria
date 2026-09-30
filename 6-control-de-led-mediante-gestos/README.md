@@ -184,6 +184,7 @@ Por qué esos pines: GPIO25, 26 y 27 están uno al lado del otro en el mismo cos
 - **`gesture_control.html`**: la interfaz real del tema. Una sola página, HTML y JavaScript puro, que carga MediaPipe desde internet (jsdelivr y el modelo desde Google). Tiene la cámara con los landmarks y la vista 3D, el botón **Conectar ESP32**, el selector de modo de apagado (persistente o automático), los botones de **Control manual**, el panel **LEDs (espejo del firmware)**, el estado de la conexión con MediaPipe, la **Lectura en vivo** con los filtros y el **Registro de comandos enviados**. Se abre con doble clic en Chrome o Edge; no necesita servidor.
 - **`esp32_gestos.py`**: el firmware del ESP32 en MicroPython. Configura los tres PWM y el Timer, espera palabras por `sys.stdin` y contesta `OK <comando>` o `? <comando>`. Se guarda en el ESP32 como `main.py` para que arranque solo al conectarlo.
 - **`enunciado-actividad.png`**: la captura del enunciado de la Actividad 4, incrustada arriba.
+- **`img/`**: el montaje en 3D, los tres estados de los LEDs y la animación de la sección "El circuito funcionando".
 
 ## La lógica del código, paso a paso
 
@@ -294,6 +295,21 @@ Esa respuesta es la herramienta de diagnóstico más útil: si en "Última líne
 4. Abrir `gesture_control.html`, presionar **Conectar ESP32** y elegir el puerto de la placa en el diálogo del navegador. El panel "Puerto serial ESP32" debe pasar a "conectado" y mostrar el Vendor/Product ID y 115200 baudios.
 5. Hacer los gestos frente a la cámara (o usar los botones manuales) y ver los LEDs responder en tiempo real. En "Última línea recibida" debe aparecer `OK FIST`, `OK VICTORY`, etc.; los LEDs reales deben coincidir con el espejo de la página.
 
-## Pendiente
+## El circuito funcionando
 
-Fotos del montaje físico (los tres LEDs en la protoboard con el ESP32) y el video de la demo funcionando que pide el enunciado: se agregan aquí cuando estén.
+El montaje está representado en 3D con los modelos de nuestra biblioteca de componentes de Blender (el mismo ESP32 DevKit, protoboard, LEDs de 5 mm y resistencias de 330 Ω de la tabla de conexiones), con cada cable en el pin que usa `esp32_gestos.py`. Los LEDs encendidos tienen el brillo proporcional al duty de cada gesto.
+
+![Montaje 3D: ESP32 en la protoboard, GPIO25/26/27 a través de 330 Ω a los LEDs amarillo, azul y rojo, cátodos al riel de GND](img/montaje-3d.png)
+
+El ESP32 DevKit va clavado en la protoboard. De `GPIO25`, `GPIO26` y `GPIO27` sale un cable a una resistencia de 330 Ω cada uno, y de ahí al ánodo del LED amarillo, azul y rojo; los tres cátodos van al riel azul (−), que está unido al `GND` del ESP32. El cable USB va al PC y da a la vez la alimentación y el Web Serial.
+
+Lo que pasa en cada gesto, con el comando que manda la página y el duty que pone el ESP32:
+
+| Puño cerrado → `FIST` | Victoria → `VICTORY` | Dos manos abiertas → `OPEN2` |
+|---|---|---|
+| ![LED amarillo al 30 %](img/estado-puno.png) | ![LED azul al 70 %](img/estado-victoria.png) | ![LED rojo al 100 %](img/estado-dos-manos.png) |
+| `GPIO25`, duty 306 de 1023 (30 %) | `GPIO26`, duty 716 (70 %) | `GPIO27`, duty 1023 (100 %) |
+
+Y la secuencia completa, incluidas las dos "interrupciones" por Timer: sin gesto (`NONE`, todo apagado), puño, victoria, dos manos, pulgar abajo (`THUMB_DOWN`, Modo 1: barrido amarillo → azul → rojo, 200 ms cada uno) y pulgar arriba (`THUMB_UP`, Modo 2: los tres parpadean juntos, 200 ms prendidos y 200 ms apagados). Los tiempos y los duty salen tal cual de `esp32_gestos.py`:
+
+![Animación de los LEDs recorriendo los cinco gestos y los dos modos](img/demo-leds.gif)

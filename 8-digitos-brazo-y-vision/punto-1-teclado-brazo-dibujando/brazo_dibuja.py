@@ -97,10 +97,13 @@ def angulos_articulaciones(u, v):
     """Pasa un punto (u, v) del cuadrado unitario a los dos angulos del
     brazo. (u - 0.5) va de -0.5 a 0.5; por 2 * RANGO queda de -RANGO a
     +RANGO alrededor del centro: u = 0 es el borde izquierdo del dibujo
-    (base girada -RANGO_J1), u = 1 el derecho; v = 0 abajo, v = 1 arriba
-    (codo mas o menos doblado)."""
+    (base girada -RANGO_J1), u = 1 el derecho; v = 0 abajo, v = 1 arriba.
+    Ojo con el signo de v: doblar MAS el codo (j2 mayor) BAJA la punta, asi
+    que para que v = 1 quede arriba hay que RESTAR. Con el signo al reves
+    (lo que teniamos antes) cada digito salia reflejado de arriba a abajo:
+    el 7 parecia una L invertida y el 2 una S."""
     j1 = CENTRO_J1 + (u - 0.5) * 2 * RANGO_J1
-    j2 = CENTRO_J2 + (v - 0.5) * 2 * RANGO_J2
+    j2 = CENTRO_J2 - (v - 0.5) * 2 * RANGO_J2
     return j1, j2
 
 
@@ -130,8 +133,11 @@ EFECTOR = indices["joint_gripper"]  # extremo del segundo brazo, ahi "esta" el l
 
 # la camara arranca mirando de frente la zona donde se dibuja (no desde
 # arriba): con joint_2 doblado, ahi es donde se ve el digito sin
-# deformarse por la perspectiva
-p.resetDebugVisualizerCamera(cameraDistance=0.6, cameraYaw=0, cameraPitch=-10, cameraTargetPosition=[0.25, 0, 0.8])
+# deformarse por la perspectiva. yaw=90 la pone del lado +X mirando hacia
+# el brazo: el ancho del digito (el giro de la base) queda de izquierda a
+# derecha en pantalla. Con yaw=0 la camara miraba a lo largo de ese ancho
+# y veia el digito de canto, como un garabato.
+p.resetDebugVisualizerCamera(cameraDistance=0.95, cameraYaw=90, cameraPitch=-15, cameraTargetPosition=[0.28, 0, 0.8])
 
 p.addUserDebugText("Presiona un boton 0-9 (o el teclado fisico) para dibujar ese digito",
                     [0.0, 0.0, 1.15], textColorRGB=[1, 1, 1], textSize=1.3)

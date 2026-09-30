@@ -182,7 +182,7 @@ let modoConectado = false;
 function agregarAlMonitor(texto) {
   const item = document.createElement("li");
   item.textContent = texto;
-  if (texto.startsWith("#")) item.className = "aviso";  // avisos del ESP32 (p.ej. teclado I2C sin respuesta)
+  if (texto.startsWith("#")) item.className = "aviso";  // lineas del ESP32 que empiezan con "#" (avisos, no datos)
   monitor.insertBefore(item, monitor.firstChild);
   while (monitor.children.length > 60) monitor.removeChild(monitor.lastChild);
 }
