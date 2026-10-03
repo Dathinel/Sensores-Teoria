@@ -40,3 +40,9 @@ venv/
 
 # --- Documentos de entrega para la uni (Word con el enlace al README): solo locales ---
 Enlace README - *.docx
+Enlace README - *.pdf
+
+# Taller segundo corte: mallas de Baxter y Atlas (se bajan con descargar_modelos.py)
+9-taller-segundo-corte/modelos/
+# Recibo de entrega de Moodle (trae el ID de Turnitin)
+9-taller-segundo-corte/*Taller Segundo Corte*UMNG.pdf

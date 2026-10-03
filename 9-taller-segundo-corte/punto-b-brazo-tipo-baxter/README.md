@@ -1,97 +1,204 @@
-# Punto b) Brazo robótico tipo Baxter: mover, posicionar y coger un objeto
+# Punto b) Baxter: mover los dos brazos, posicionar y coger un objeto
 
-Basado en [baxter_ik_demo.py](https://github.com/erwincoumans/pybullet_robots/blob/master/baxter_ik_demo.py), del repositorio [pybullet_robots](https://github.com/erwincoumans/pybullet_robots) que compartió el profesor. El enunciado pide una consola de mandos con el ESP32 para un movimiento fluido del robot Baxter, con movilidad real de brazos y posicionamiento, y que el robot pueda coger y mover un objeto:
+Basado en [baxter_ik_demo.py](https://github.com/erwincoumans/pybullet_robots/blob/master/baxter_ik_demo.py), del repositorio [pybullet_robots](https://github.com/erwincoumans/pybullet_robots) que compartió el profesor. De ese script tomamos el robot (el mismo `toms_baxter.urdf`, con la base fija) y la técnica: mover la pinza con `p.calculateInverseKinematics` y repartir la respuesta entre las articulaciones según su `qIndex`.
 
-![Enunciado del punto b)](enunciado-actividad.png)
+## Qué pedía el enunciado
 
-## Qué pedía y qué hicimos
+![Enunciado](enunciado-actividad.png)
 
-Hicimos una consola de mando con el teclado del ESP32 para un brazo robótico de 7 articulaciones con pinza, en una escena con una bandeja de origen, un cubo y una plataforma de destino. Con el teclado:
+Una consola de mandos con el ESP32 para mover a Baxter con fluidez, con movilidad real de los brazos y posicionamiento, y que pueda coger y mover un objeto. Lo que hicimos, con el teclado 4x4 del ESP32:
 
-- **Movimiento fluido**: sosteniendo `8 2 4 6 9 7` la pinza se mueve de corrido en X, Y y Z (unos 30 cm/s), y el brazo acomoda sus 7 articulaciones solo para seguirla.
-- **Posicionamiento real**: el control es por cinemática inversa: uno decide *dónde* va la pinza (una coordenada XYZ) y el script calcula los ángulos. La pinza siempre queda mirando hacia abajo, lista para agarrar.
-- **Coger y mover un objeto**: `A` abre la pinza, `C` la cierra y agarra el cubo si está cerca, y `D` corre una demo que hace todo sola (bajar, agarrar, levantar, llevar el cubo a la plataforma y soltarlo). `0` repone el cubo en la bandeja para volver a empezar.
-- Además, `B` corre una demo que pasea la pinza por los tres ejes para mostrar el rango de movimiento, y `5` vuelve a la pose inicial.
+- **Los dos brazos**: `*` cambia el brazo activo (izquierdo o derecho). El otro se queda quieto donde estaba, sostenido por sus motores.
+- **Movimiento fluido y posicionamiento**: sosteniendo `8 2 4 6 9 7`, la pinza del brazo activo se mueve de corrido en X, Y y Z (30 cm/s), siempre mirando hacia abajo. Uno decide *dónde* va la pinza y la cinemática inversa calcula los ángulos de las 7 articulaciones.
+- **Coger y mover un objeto**: `C` cierra la pinza y agarra el cubo si está entre los dedos, `A` la abre y lo suelta, y `D` hace todo sola: va al cubo, lo agarra, lo levanta, lo lleva al destino y lo deja.
 
-El brazo no es Baxter sino un **KUKA IIWA con pinza WSG50**. El porqué está resumido abajo y completo en el [README del taller](../README.md#por-qué-baxter-se-reemplazó-por-un-brazo-kuka--pinza). El punto c) del enunciado (que interpretamos como locomoción con patas) es otro robot y otro problema de control, y está resuelto aparte en [`punto-c-locomocion-laikago`](../punto-c-locomocion-laikago).
+Quedó funcionando en el montaje real: el teclado conectado al ESP32 maneja los dos brazos de Baxter en la simulación, tecla por tecla. (Al principio, como Baxter no viene con PyBullet, este punto usaba otro brazo de reemplazo; ahora es el modelo real de Baxter.)
 
-## Qué es Baxter y por qué usamos un KUKA
+## Así se ve
 
-**Baxter** es un robot de Rethink Robotics pensado para trabajar al lado de personas: un torso fijo sobre un pedestal, una pantalla como cara y **dos brazos de 7 articulaciones** cada uno. `baxter_ik_demo.py` carga su modelo desde `baxter_common/baxter_description/urdf/toms_baxter.urdf`, pero esas mallas 3D (unos 50 MB, del repositorio RethinkRobotics/baxter_common) no vienen ni en `pybullet_robots` ni en el paquete `pybullet_data` que se instala con pip; lo revisamos en el `pybullet_data` de nuestro `entorno/`.
+La demo `D` con el brazo izquierdo, después `*` para pasar al derecho, el derecho movido a mano con el jog y `0` para reponer el cubo:
 
-El **KUKA LBR IIWA** es un brazo industrial colaborativo, también de **7 articulaciones**, y sí viene en `pybullet_data` junto con una pinza de dos dedos (WSG50), en `kuka_iiwa/kuka_with_gripper2.sdf`. El problema de control es el mismo que con un brazo de Baxter (7 articulaciones, llevar la pinza a un punto), así que usamos exactamente la técnica de `baxter_ik_demo.py` (`calculateInverseKinematics` hacia una posición XYZ) y los índices de articulación, límites y pose de reposo del ejemplo oficial de PyBullet para este modelo (`pybullet_envs/bullet/kuka.py`).
+![Demo de Baxter: coger y mover el cubo, cambiar de brazo y jog](video/baxter-demo.gif)
 
-## Qué es la cinemática inversa (IK)
+Video completo: [baxter-demo.mp4](video/baxter-demo.mp4)
+
+El modelo 3D real de Baxter, en su pose inicial y en el momento en que agarra el cubo (capturas de la simulación con `getCameraImage`):
+
+| Pose inicial (home) | Agarrando el cubo |
+|---|---|
+| ![Baxter en su pose inicial](img/baxter-home.png) | ![Baxter agarrando el cubo](img/baxter-agarra-cubo.png) |
+
+## Cómo se maneja: comportamientos y modos
+
+### El teclado, tecla por tecla
+
+Así queda repartido el teclado 4x4 (la misma disposición que el teclado físico):
+
+| | | | |
+|---|---|---|---|
+| `1` sin uso | `2` pinza a −Y (derecha de Baxter) | `3` sin uso | `A` abrir pinza / soltar |
+| `4` pinza a −X (hacia Baxter) | `5` home del brazo activo | `6` pinza a +X (hacia el fondo) | `B` demo: recorrer los 3 ejes |
+| `7` bajar (Z−) | `8` pinza a +Y (izquierda de Baxter) | `9` subir (Z+) | `C` cerrar pinza / agarrar |
+| `*` cambiar de brazo | `0` reponer el cubo | `#` sin uso | `D` demo: coger y mover |
+
+"Izquierda" y "derecha" son siempre las de Baxter (+Y es su izquierda), no las de quien lo mira de frente.
+
+### Un brazo activo a la vez, y la tecla `*`
+
+Todas las teclas actúan sobre el **brazo activo**, que arranca siendo el izquierdo. `*` lo cambia (izquierdo ↔ derecho) y el cambio se ve arriba en la ventana: `Brazo activo: IZQUIERDO | tecla: * | ESP32: TECLA:*`.
+
+Mientras tanto, **el otro brazo no se suelta ni se cae**: sus motores siguen con el último objetivo que recibieron y lo sostienen quieto contra la gravedad, aunque esté en medio de la mesa o con la pinza cerrada. Por eso se puede, por ejemplo, dejar el brazo izquierdo esperando encima del destino, pasar al derecho y moverlo, y al volver con `*` el izquierdo sigue exactamente donde quedó. Cada brazo recuerda su propio objetivo.
+
+### Jog: sostener la tecla es moverse
+
+Las teclas `8 2 4 6 9 7` mueven el **objetivo** de la pinza del brazo activo un paso fijo de **1,5 cm** (`PASO_JOG`) por cada línea `TECLA:x` que llega del ESP32. El firmware repite la tecla sostenida cada 50 ms, así que:
+
+- **un toque corto** mueve la pinza unos pocos pasos (de a 1,5 cm, para afinar la posición encima del cubo);
+- **sostener la tecla** la mueve de corrido a 1,5 cm × 20 líneas por segundo = **30 cm/s**, y para en cuanto se suelta.
+
+Cada paso de jog pasa por la cinemática inversa: la pinza siempre baja mirando hacia la mesa, y el brazo se acomoda solo (hombro, codo y muñeca) con motores de velocidad limitada, sin teletransportarse. En la prueba, 10 líneas `TECLA:8` movieron el objetivo 15,0 cm y la pinza real también 15,0 cm, desviándose apenas 0,01 cm en X.
+
+### Los límites: qué pasa al llegar al borde
+
+Cada brazo tiene su **caja de trabajo** (`LIMITES_JOG`): X de 0,50 a 0,72 m, Z desde la altura de agarre (z = −0,19) hasta 0,20, e Y de −0,20 a 0,50 para el izquierdo (de −0,50 a 0,20 para el derecho). Es decir, cada brazo puede cruzar hasta 20 cm al lado del otro, lo justo para alcanzar el origen y el destino del cubo.
+
+Al llegar al borde, **la tecla simplemente deja de mover la pinza en esa dirección**: el objetivo se recorta a la caja y se queda ahí, sin error ni aviso. Dos consecuencias prácticas:
+
+- **Sostener `7` baja la pinza hasta rodear el cubo y ahí se detiene**: el piso de la caja es justo la altura de agarre, así que no atraviesa la mesa (en la prueba, 60 líneas `TECLA:7` dejaron el objetivo quieto en z = −0,1905). Es la forma cómoda de bajar a agarrar: sostener `7` y soltar cuando ya no baja.
+- **La tecla contraria responde al instante.** Si el objetivo pudiera seguir saliéndose de la caja hacia un punto que el brazo ya no alcanza, el brazo quedaría estirado "persiguiéndolo" y, al pulsar la contraria, el objetivo tardaría lo mismo en volver: se sentiría como que la tecla no responde. Recortando, eso no pasa.
+
+### Acciones de un golpe: por qué van por flanco
+
+Las demás teclas (`5 A B C D 0 *`) **actúan una sola vez por pulsación**, aunque se dejen sostenidas. El motivo es el mismo firmware: un toque normal de un dedo dura lo suficiente para que lleguen unas 4 líneas iguales. Si `*` actuara con cada una, un toque cambiaría de brazo cuatro veces y uno terminaría en el mismo brazo; si `D` actuara con cada una, la demo (8,6 s) correría cuatro veces seguidas.
+
+Por eso `procesar_tecla` separa:
+
+- **Teclas de jog** (`8 2 4 6 9 7`): actúan con cada línea que llega.
+- **Todas las demás**: actúan solo en el **flanco**, el instante en que la tecla recibida es distinta de la anterior. Para volver a usarla hay que soltarla (llega `TECLA:-`) y pulsarla de nuevo.
+
+En la prueba, `TECLA:*` repetida 10 veces cambió de brazo **una sola vez**, y otro toque lo devolvió.
+
+### La pinza: `C` cierra, `A` abre, y cuándo agarra
+
+- **`C`** cierra los dos dedos del brazo activo (de verdad: son motores con 20 N de fuerza). Si en ese momento el cubo está **entre los dedos** (su centro a menos de 4 cm del punto de la pinza), además lo agarra: queda unido a la pinza (ver "Qué es un constraint") y viaja con ella. Si no hay cubo cerca, la pinza simplemente se cierra en el aire.
+- **`A`** abre los dedos y, si **esa** pinza tenía el cubo, lo suelta: primero abre, espera 1/8 de segundo y después lo suelta, para que caiga derecho.
+- El cubo lo puede tener **un solo brazo a la vez**: `C` con el otro brazo no se lo quita, y `A` en un brazo que no lo tiene no suelta el del otro.
+
+Para agarrar a mano: jog hasta quedar encima del cuadro azul, sostener `7` hasta que se detenga, `C`, subir con `9`, jog hasta el cuadro verde, bajar con `7` y `A`.
+
+### Las demos: `D` y `B`
+
+- **`D` (coger y mover)**: con el brazo activo, va a **donde esté** el cubo (no necesariamente el origen: si uno lo movió a mano, lo busca ahí), abre la pinza, se pone encima a 20 cm de la mesa, baja en dos tramos, cierra, agarra, sube, viaja sobre el destino, baja, abre, suelta y se aleja hacia arriba. Funciona con los dos brazos: en la prueba dejó el cubo a 0,19 cm del destino con el izquierdo y a 0,57 cm con el derecho, después de levantarlo 19 cm. Dura 8,6 s.
+- **`B` (recorrer los 3 ejes)**: pasea la pinza del brazo activo por los extremos de **su** caja de trabajo, un eje a la vez (X, Y y Z) y volviendo al centro entre cada uno. Sirve para ver de una vez todo el rango que alcanza el brazo.
+
+Las dos demos se mueven en **línea recta**, en tramos de 1 cm, y son bloqueantes: mientras corren, el teclado no hace nada. Las líneas que el ESP32 manda durante la demo se descartan al terminar (`reset_input_buffer`), para que no se ejecuten todas juntas después.
+
+### Home `5` y reponer `0`
+
+- **`5`** manda el brazo activo a su pose inicial: abierto hacia su lado, por encima de la mesa (0,60; ±0,40; 0,05). Va directo a esos ángulos, no en línea recta, así que conviene subir antes si la pinza está pegada a la mesa. Si tenía el cubo agarrado, lo sigue teniendo.
+- **`0`** suelta el cubo (lo tenga quien lo tenga) y lo devuelve al cuadro azul del origen. Sirve para repetir la demo o para recuperarlo si quedó mal apoyado.
+
+### Tres formas de controlarlo
+
+**1. El teclado físico (ESP32 por USB).** Es la forma principal: el ESP32 con `esp32_teclado.py` barre el teclado y manda `TECLA:x` cada 50 ms; `brazo_pybullet.py` lo lee por el puerto serial. Arriba en la ventana se ve la última línea **cruda** que llegó: si nunca cambia, el ESP32 no está mandando nada; si cambia pero no dice `TECLA:x`, el problema es de formato y no de cable. Si el ESP32 se desconecta a mitad de camino, el script lo avisa y sigue con los botones.
+
+**2. Los botones de la ventana de PyBullet (sin ESP32).** Si el script no encuentra el ESP32, abre la ventana igual y lo dice arriba: `ESP32: no conectado (usa los botones)`. A la derecha hay 13 botones, uno por tecla, con la tecla entre corchetes (`Cerrar pinza [C]`, `Demo: coger y mover [D]`, `Cambiar de brazo [*]`...). Pasan por la misma función que el teclado (`ejecutar_tecla`), así que hacen exactamente lo mismo, con una diferencia: **cada click es un solo paso de jog** (1,5 cm), porque un botón no se puede "sostener". Los botones funcionan también con el ESP32 conectado, a la par.
+
+**3. El simulador web `preview.html`.** En la carpeta del taller está [`../preview.html`](../preview.html), una página suelta (se abre con doble click, sin instalar nada) con la configuración "Baxter (dos brazos)": un teclado 4x4 clicable y una vista desde arriba de Baxter, la mesa, el cubo y los dos brazos, con la altura Z en una barra al lado. Usa las mismas constantes que el script (paso, cajas de trabajo, home, umbral de agarre) y la misma regla de flancos. Tiene dos modos:
+
+- **Modo prueba**: se juega con el mouse, sin hardware. Sostener una tecla de jog la repite como el ESP32. Las demos corren con la misma secuencia que en PyBullet, un poco más rápidas.
+- **Conectado (Web Serial)**: en Chrome o Edge, se conecta al ESP32 por USB y lo maneja el teclado físico, mostrando las líneas crudas que llegan. Sirve para comprobar el teclado y el cableado sin abrir PyBullet. El puerto lo puede tener abierto un solo programa a la vez: cerrar antes Thonny y `brazo_pybullet.py`.
+
+![Preview: consola de Baxter](../img/preview-baxter.png)
+
+El preview es un esquema 2D para probar el **control**: ahí la pinza va derecho hacia el objetivo, sin cinemática inversa ni física. Lo que de verdad mueve los brazos es el script de PyBullet.
+
+## Qué es Baxter
+
+**Baxter** es un robot de Rethink Robotics pensado para trabajar al lado de personas en tareas repetitivas (empacar, cargar máquinas). Tiene un torso fijo sobre un pedestal, una **pantalla que hace de cara** (muestra unos ojos que miran hacia donde se va a mover el brazo, para que la gente a su alrededor lo anticipe) y **dos brazos de 7 articulaciones** cada uno, que terminan en una **pinza eléctrica** de dos dedos paralelos.
+
+Las 7 articulaciones de cada brazo tienen nombre propio en el URDF, y así se ven en el código:
+
+| Articulación | Qué mueve |
+|---|---|
+| `s0`, `s1` | hombro: girar a los lados y subir o bajar el brazo |
+| `e0`, `e1` | codo: girar el brazo superior y doblar el codo |
+| `w0`, `w1`, `w2` | muñeca: girar el antebrazo, doblar la muñeca y girar la pinza |
+
+Los dedos (`l_gripper_l_finger_joint` y `l_gripper_r_finger_joint` en el brazo izquierdo, `r_gripper_...` en el derecho) son **prismáticos**: no giran, se deslizan, cada uno entre 0 y 2 cm. Medimos la separación entre las puntas: 5,6 cm con la pinza abierta y 1,6 cm cerrada. El punto que se posiciona es `left_endpoint` / `right_endpoint`, un punto fijo de la pinza a la altura de las puntas de los dedos.
+
+## Los modelos 3D reales
+
+El URDF de Baxter no está en el paquete `pybullet_data` que se instala con pip (trae el piso y el cubo, pero no Baxter). En el repositorio del profesor está en la carpeta `data/baxter_common/`, junto con sus mallas 3D: 17 mallas `.DAE` que suman unos **22 MB** (medido en nuestra carpeta `modelos/`). No los subimos a este repositorio, que es de apuntes de clase. En cambio, el script [`../descargar_modelos.py`](../descargar_modelos.py) lee el URDF, ve qué mallas pide y las baja una sola vez del repositorio del profesor a la carpeta `modelos/` del taller, que git ignora:
+
+```
+entorno\Scripts\python descargar_modelos.py
+```
+
+Si se corre `brazo_pybullet.py` sin haberlas bajado, avisa `Faltan los modelos: corra ...descargar_modelos.py en la carpeta del taller` y termina.
+
+Un detalle de carga que costó encontrar: el URDF nombra sus mallas como `package://baxter_description/meshes/...`. PyBullet quita el `package://` y busca el resto en su **ruta de búsqueda adicional**, que es **una sola** (cada `setAdditionalSearchPath` pisa la anterior). Por eso esa ruta apunta a `modelos/baxter_common/`, y el piso y el cubo de `pybullet_data` se cargan con su ruta completa.
+
+## Qué es la cinemática inversa
 
 Un brazo robótico es una cadena de eslabones unidos por articulaciones. Hay dos preguntas posibles:
 
 - **Cinemática directa**: "si cada articulación tiene tal ángulo, ¿dónde queda la pinza?". Es fácil: se van encadenando las rotaciones de cada eslabón.
-- **Cinemática inversa**: "quiero la pinza en (0,55; 0,20; 0,08), ¿qué ángulo necesita cada articulación?". Es la pregunta que de verdad sirve para agarrar algo, y es la difícil: puede no tener solución (el punto está fuera de alcance) o tener muchas.
+- **Cinemática inversa (IK)**: "quiero la pinza en (0,65; 0,15; −0,19) mirando hacia abajo, ¿qué ángulo necesita cada articulación?". Es la pregunta que sirve para agarrar algo, y es la difícil: puede no tener solución (el punto está fuera de alcance) o tener infinitas.
 
-El extremo del brazo que uno quiere posicionar se llama **efector** (acá, la muñeca del KUKA, el link 6, justo encima de la pinza). Cada articulación que se puede mover es un **grado de libertad** (GDL). Para fijar la posición (3 números) y la orientación (3 más) de la pinza hacen falta 6 GDL; el KUKA tiene 7, así que es un brazo **redundante**: para un mismo punto hay infinitas combinaciones de ángulos válidas, como uno puede tocar la misma taza con el codo más arriba o más abajo. `p.calculateInverseKinematics` resuelve esto numéricamente y, para elegir entre tantas soluciones, recibe los límites de cada articulación (`LIM_INF`, `LIM_SUP`, `RANGO_JUNTAS`) y una pose de referencia (`POSE_REPOSO`): entre las soluciones válidas, prefiere la más parecida a esa. Así el brazo no se retuerce en posturas raras.
+Para fijar la posición (3 números) y la orientación (3 más) de la pinza hacen falta 6 articulaciones. Cada brazo de Baxter tiene 7, así que es **redundante**: para un mismo punto hay infinitas posturas válidas, como uno puede tocar la misma taza con el codo más arriba o más abajo. `p.calculateInverseKinematics` resuelve esto numéricamente, por aproximaciones sucesivas. Para elegir entre tantas soluciones recibe los **límites de cada articulación** y una **pose de descanso**: entre las soluciones válidas prefiere la más parecida a esa pose (a esto se le llama usar el *espacio nulo*). Así el brazo no se retuerce.
 
-En los temas 7 y 8 el brazo tenía solo 2 GDL y lo movíamos ángulo por ángulo, porque con 2 articulaciones la punta solo recorre una esfera y casi ningún punto XYZ es alcanzable. Con 7 GDL sí tiene sentido pedirle un punto, y por eso acá la IK es el centro de todo.
+Tres cosas que cambiamos respecto al demo del profesor, todas medidas:
 
-## Qué es una restricción (constraint) al agarrar el cubo
+1. **Límites reales**. El demo le pasa −2 a 2 radianes a todas las articulaciones. Nosotros leemos los del URDF (`getJointInfo`): el hombro `s1`, por ejemplo, va de −2,15 a 1,05, y el codo `e1` de −0,05 a 2,62.
+2. **Iterar sin teletransportar el robot**. El `accurateIK` del demo repite la IK y, entre vuelta y vuelta, pone el robot en la pose calculada con `resetJointState` para medir el error. Eso rompe la física si se hace mientras el robot se mueve. Nosotros repetimos la IK hasta 10 veces arrancando cada vuelta desde la solución anterior (`currentPositions`), sin tocar el robot, y paramos cuando la solución deja de cambiar (medido en el jog: de 1 a 4 vueltas, unos 6 ms por cálculo).
+3. **El hombro apunta al objetivo**. La pose de descanso del hombro (`s0`) se calcula para cada objetivo: el ángulo de la recta hombro → objetivo vista desde arriba (`s0_hacia`). Probamos en una grilla de puntos sobre la mesa: con un `s0` fijo, aun iterando, la IK fallaba hasta por 22 cm cuando un brazo cruzaba al lado del otro; con `s0_hacia` el error quedó por debajo de 1 cm hasta x = 0,70 m y cruzando hasta 15 cm al otro lado.
 
-En la vida real, una pinza sostiene un objeto por fricción: aprieta y el objeto no se resbala. `baxter_ik_demo.py` hace eso literalmente, pero en nuestras pruebas resultó poco confiable: la pinza es liviana, el cubo es chico y el motor de física resuelve mal ese contacto, así que el cubo se escapaba o quedaba torcido apenas el brazo empezaba a moverse.
+Y una más, de la orientación: "pinza hacia abajo" se puede pedir de dos maneras equivalentes para agarrar (girada 0° o 180°, porque la pinza es simétrica). Con la primera, la muñeca `w2` tenía que quedar en −3,06 rad, justo en su límite, y al cruzar al otro lado la IK fallaba por 7 cm. Con la segunda, `w2` queda cerca de 0 y todo funciona.
 
-La solución, la misma de muchos tutoriales de *pick-and-place* en PyBullet, es una **restricción fija** (`p.createConstraint(..., jointType=p.JOINT_FIXED)`): en el momento de cerrar la pinza cerca del cubo, se crea una unión rígida entre el efector y el cubo, como una soldadura temporal, que lo mantiene pegado mientras viaja. Al abrir la pinza se elimina (`p.removeConstraint`) y el cubo vuelve a quedar suelto, con gravedad. La posición relativa entre efector y cubo se calcula en el instante del agarre (`invertTransform` + `multiplyTransforms`), así que el cubo queda exactamente como estaba respecto a la pinza, sin saltar a una posición supuesta de antemano.
+Un detalle de PyBullet: `calculateInverseKinematics` devuelve un ángulo por cada articulación **móvil** del robot, no solo las 7 del brazo: en Baxter son 19 (la cabeza, los 7 de cada brazo y los 4 dedos), en el orden de su `qIndex`. Por eso el código arma la lista `moviles` ordenada por `qIndex` y busca ahí cada valor, igual que el demo con su `qIndex - 7`.
 
-## Qué es un jog, y teclas sostenidas contra teclas de un golpe
+## Qué es un constraint
 
-El movimiento manual es de tipo **jog**: cada línea `TECLA:8` que llega del ESP32 corre el objetivo de la pinza un paso fijo de 1,5 cm (`PASO_JOG`). Como el ESP32 repite la tecla sostenida cada 50 ms, sostenerla es moverse de corrido a 1,5 cm × 20 = 30 cm/s. Cada click en el botón equivalente de la ventana es un solo paso.
+En la vida real una pinza sostiene un objeto por fricción: aprieta y el objeto no se resbala. En PyBullet los dedos de Baxter sí se cierran de verdad (son motores de posición con la fuerza del URDF, 20 N) y aprietan el cubo: cada dedo se queda en 0,93 cm de su recorrido de 0 a 2 cm, contra las caras del cubo. Pero el contacto de dos dedos chicos con un cubo liviano es lo más frágil de toda la simulación, así que además usamos un **constraint**.
 
-Pero no todas las teclas deben repetirse. Si `D` (la demo, unos 10 s) se ejecutara con cada repetición, un toque normal (unas 4 líneas `TECLA:D`) la corría cuatro veces seguidas: nos pasó. Por eso el script separa:
+Un constraint (`p.createConstraint`) es una regla extra que el motor de física respeta en cada paso. El de tipo `JOINT_FIXED` une dos cuerpos como una soldadura: al cerrar la pinza con el cubo entre los dedos (a menos de 4 cm del `endpoint`), se crea uno entre la pinza y el cubo, y el cubo viaja pegado a ella. La posición relativa se mide en ese instante (`invertTransform` + `multiplyTransforms`), así que el cubo queda exactamente como estaba, sin saltar. Al soltar se borra con `p.removeConstraint` y el cubo vuelve a tener solo gravedad.
 
-- **Teclas de jog** (`8 2 4 6 9 7`, en `TECLAS_JOG`): actúan con cada línea que llega.
-- **Todas las demás** (`5 A B C D 0`): actúan solo en el **flanco**, el instante en que la tecla recibida es distinta de la anterior.
+El orden al soltar importa: **primero se abren los dedos y después se borra el constraint** (`abrir_y_soltar`). Al revés, los dedos todavía apretando empujaban el cubo apenas quedaba suelto y caía 2,7 cm corrido del destino.
+
+Lo medimos también sin constraint (sección 5 de la prueba): en esta escena los dedos solos levantaron el cubo los 19 cm y lo llevaron al destino. Dejamos el constraint igual, como seguro para el control manual, donde uno puede mover el brazo de golpe.
 
 ## La idea general
 
-Un solo teclado matricial controla todo (el firmware común está explicado en el [README del taller](../README.md)); esta es la **configuración de brazo**:
-
-| Tecla | Efecto | Tipo |
-|---|---|---|
-| `8` / `2` | Pinza adelante / atrás (Y+ / Y−) | jog, se repite |
-| `4` / `6` | Pinza izquierda / derecha (X− / X+) | jog, se repite |
-| `9` / `7` | Pinza sube / baja (Z+ / Z−) | jog, se repite |
-| `5` | Home: vuelve a la pose inicial | un golpe |
-| `A` | Abrir pinza (y soltar el cubo si lo tenía) | un golpe |
-| `C` | Cerrar pinza (agarra el cubo si está a menos de 32 cm del efector) | un golpe |
-| `D` | Demo: coge el cubo y lo lleva a la plataforma | un golpe |
-| `B` | Demo: recorre los ejes X, Y y Z | un golpe |
-| `0` | Suelta el cubo y lo repone en la bandeja | un golpe |
-| `1`, `3`, `*`, `#` | Sin uso en esta configuración | — |
+El teclado va conectado directo a pines GPIO del ESP32: filas en los GPIO 14, 27, 26 y 25 y columnas en los 33, 32, 18 y 19, con la resistencia de pull-up interna. El firmware común del taller ([`../esp32_teclado.py`](../esp32_teclado.py)) barre las filas y manda la tecla pulsada por USB cada 50 ms:
 
 ```mermaid
 flowchart TD
     subgraph ESP["ESP32 — esp32_teclado.py"]
-        Teclado["Teclado 4x4<br/>(I2C 0x20, PCF8574)"] --> Envia["print('TECLA:x')<br/>cada ~50 ms"]
+        Teclado["Teclado 4x4<br/>(GPIO directo, pull-up interno)"] --> Envia["print('TECLA:x')<br/>cada 50 ms"]
     end
 
-    Envia -->|"puerto serial USB<br/>115200 baudios"| Recibe
+    Envia -->|"USB serial<br/>115200 baudios"| Recibe
 
     subgraph PC["PC — brazo_pybullet.py"]
-        Recibe["pyserial: solo si in_waiting,<br/>drena todo el buffer"] --> Procesa{"procesar_tecla():<br/>¿jog o flanco?"}
+        Recibe["leer_serial():<br/>solo si in_waiting, drena todo"] --> Linea["procesar_linea():<br/>muestra la línea cruda"]
+        Linea --> Procesa{"procesar_tecla():<br/>¿jog o flanco?"}
         Procesa --> Ejecuta["ejecutar_tecla()"]
-        Botones["12 botones de la ventana<br/>(sin ESP32)"] --> Ejecuta
-        Ejecuta -->|"jog XYZ"| Objetivo["posicion_objetivo ± 1,5 cm<br/>(recortada a la caja de trabajo)"]
-        Ejecuta -->|"A / C"| Pinza["angulo_pinza abierta o cerrada<br/>+ soltar() / intentar_agarrar()"]
-        Ejecuta -->|"D"| Demo["ejecutar_demo():<br/>baja, agarra, viaja, suelta"]
-        Ejecuta -->|"B"| Recorrido["ejecutar_demo_recorrido():<br/>X, Y y Z"]
-        Objetivo --> IK["mover_brazo():<br/>calculateInverseKinematics"]
-        Pinza --> Constraint["createConstraint<br/>(cubo pegado al efector)"]
+        Botones["13 botones de la ventana<br/>(sin ESP32)"] --> Ejecuta
+        Ejecuta -->|"8 2 4 6 9 7"| Objetivo["objetivo ± 1,5 cm<br/>(recortado a la caja de trabajo)"]
+        Ejecuta -->|"*"| Activo["cambia el brazo activo"]
+        Ejecuta -->|"A / C"| Pinza["dedos + constraint"]
+        Ejecuta -->|"D / B"| Demo["demos con mover_a():<br/>tramos rectos de 1 cm"]
+        Objetivo --> IK["resolver_ik():<br/>calculateInverseKinematics"]
         Demo --> IK
-        Demo --> Constraint
-        Recorrido --> IK
+        IK --> Motores["setJointMotorControl2<br/>POSITION_CONTROL"]
     end
 
-    IK --> Sim["PyBullet: KUKA + pinza + cubo<br/>+ bandeja de origen + plataforma de destino"]
-    Constraint --> Sim
+    Motores --> Sim["PyBullet: Baxter + mesa + cubo"]
+    Pinza --> Sim
 ```
 
-Así se ve la demo `D` en el tiempo. Mientras corre, el bucle principal está detenido, así que las líneas que el ESP32 sigue mandando se acumulan y al final se descartan:
+Así se ve la demo `D` en el tiempo. Mientras corre, el bucle principal no lee el puerto, así que las líneas que el ESP32 sigue mandando se acumulan y al final se descartan:
 
 ```mermaid
 sequenceDiagram
@@ -100,146 +207,117 @@ sequenceDiagram
     participant P as brazo_pybullet.py
     participant S as PyBullet
     U->>E: toca D
-    E->>P: TECLA:D (flanco, se ejecuta una vez)
-    P->>S: abre la pinza
-    P->>S: IK encima del cubo, luego baja hasta él
-    P->>S: cierra la pinza
-    P->>S: createConstraint (cubo pegado al efector)
-    P->>S: sube, viaja sobre la plataforma y baja
-    P->>S: removeConstraint y abre la pinza
-    P->>S: se aleja hacia arriba
+    E->>P: TECLA:D (flanco: se ejecuta una vez)
+    P->>S: abre la pinza del brazo activo
+    P->>S: tramos rectos: encima del cubo y baja
+    P->>S: cierra los dedos
+    P->>S: createConstraint (cubo pegado a la pinza)
+    P->>S: sube, viaja sobre el destino y baja
+    P->>S: abre los dedos y removeConstraint
+    P->>S: sube en línea recta
     E-->>P: TECLA:D, TECLA:-, ... (llegaron durante la demo)
-    P->>P: reset_input_buffer() descarta esas líneas viejas
+    P->>P: reset_input_buffer() descarta esas líneas
 ```
 
 ## La escena
 
-Todas las posiciones están en constantes al principio del script. El brazo tiene la base en (−0,1; 0; 0,07) y el piso está más abajo, en z = −0,65, para que la bandeja quede a una altura cómoda.
+Las coordenadas son las de Baxter: origen en el torso, +X hacia su frente, +Y hacia **su** izquierda, +Z arriba. Todas están en constantes al principio del script.
 
-| Elemento | Posición (m) | Detalle |
+| Elemento | Dónde | Detalle |
 |---|---|---|
-| Bandeja de origen (`tray/tray.urdf`) | (0,55; 0,20; −0,19) | fija; el cubo empieza encima de ella |
-| Cubo (`cube_small.urdf`) | (0,55; 0,20; 0,05) al crearse | cae y se asienta en la bandeja, en z ≈ −0,159; mide 5 cm |
-| Plataforma de destino | (0,55; −0,30; −0,17) | caja gris de 16 × 16 × 2 cm, fija |
-| Home del efector (`HOME_EFECTOR`) | (0,537; 0; 0,35) | la pose de reposo del ejemplo oficial |
-| Altura de viaje (`ALTURA_VIAJE`) | z = 0,35 | a esa altura se traslada el cubo sin chocar con nada |
-| Caja de trabajo del jog (`LIMITES_JOG`) | X 0,30 a 0,68 · Y −0,40 a 0,40 · Z 0,07 a 0,60 | el jog no deja salir el objetivo de ahí |
+| Baxter (`toms_baxter.urdf`) | origen, mirando a +X | base fija, como en el demo |
+| Piso (`plane.urdf`) | z = −0,926 | donde termina el pedestal (medido con `getAABB`) |
+| Mesa | x de 0,47 a 1,0; y de −0,5 a 0,5; superficie en z = −0,20 | bloque fijo; empieza por delante del pedestal, que llega a x = 0,42 |
+| Cubo (`cube_small.urdf` a escala 0,7) | empieza en el origen | 3,5 cm de lado (ver abajo) |
+| Origen (cuadro azul) | (0,65; 0,15) | del lado izquierdo de Baxter |
+| Destino (cuadro verde) | (0,65; −0,15) | del lado derecho |
+| Home de cada brazo | (0,60; ±0,40; 0,05) | abiertos a los costados, sobre la mesa |
+| Caja del jog, brazo izquierdo | X 0,50 a 0,72 · Y −0,20 a 0,50 · Z −0,19 a 0,20 | el derecho, igual con Y de −0,50 a 0,20 |
 
-Dos medidas que costó encontrar y que están comentadas en el código:
+- **El cubo va a escala 0,7.** `cube_small.urdf` mide 5 cm y la pinza abierta deja 5,6 cm entre las puntas: 3 mm de holgura por lado. A 3,5 cm entra holgado y la pinza cerrada (1,6 cm) lo aprieta de verdad.
+- **Origen y destino los alcanzan los dos brazos.** Cada brazo puede cruzar hasta 20 cm al lado del otro; más allá, o más lejos que x = 0,72, la pinza vertical ya no llega bien.
+- **El piso de la caja del jog es la altura de agarre** (z = −0,19): sostener `7` baja la pinza hasta rodear el cubo y ahí se detiene; no atraviesa la mesa.
 
-- **La muñeca queda unos 24 cm por encima de las puntas de los dedos** (`OFFSET_PINZA_SOBRE_CUBO`). Lo medimos probando alturas y comparando con la posición real de los dedos (`getLinkState`). Por eso la altura de agarre es la del cubo más 0,24: sobre la bandeja, −0,159 + 0,24 = 0,081; sobre la plataforma, que es más alta, −0,135 + 0,24 = 0,105.
-- **Ángulos de la pinza**: en 0,0 los dedos quedan a unos 4 cm uno del otro, menos que los 5 cm del cubo (ahí es donde lo aprietan); en 0,15 quedan a unos 8 cm, con espacio de sobra para bajar sin rozarlo.
+## Lógica paso a paso
 
-## Qué hace cada archivo
+Todo está en [`brazo_pybullet.py`](brazo_pybullet.py), separado en funciones para que otro script lo pueda importar (la prueba y las capturas lo usan en modo `DIRECT`, sin ventana).
 
-- **`brazo_pybullet.py`**: todo el punto b). Abre el serial (o sigue sin él), arma la escena, tiene las funciones de movimiento (`mover_brazo`, `mover_pinza`), de agarre (`intentar_agarrar`, `soltar`), las dos demos, la interpretación de teclas (`ejecutar_tecla`, `procesar_tecla`) y el bucle principal. Se corre con `python brazo_pybullet.py`; el puerto se cambia en la constante `PUERTO_SERIAL`.
-- **`../esp32_teclado.py`**: el firmware común del ESP32 (ver el README del taller).
-- **`enunciado-actividad.png`**: la captura del enunciado de este punto.
-
-El brazo, la pinza, la bandeja y el cubo salen de `pybullet_data`; este punto no trae modelos propios.
-
-## La lógica del código paso a paso
-
-### 1. Arranque
-
-Primero intenta abrir el puerto con `serial.Serial(PUERTO_SERIAL, 115200)` dentro de un `try/except serial.SerialException`: si falla, `ser` queda en `None` y todo sigue igual pero solo con botones. Después abre PyBullet en `GUI`, carga el KUKA con `loadSDF` y pone cada articulación en la pose inicial del ejemplo oficial (`POSE_INICIAL`, 14 valores: las 7 del brazo, la muñeca y los dedos), para no arrancar en una postura rara. Los índices que importan:
-
-| Índice | Qué es |
-|---|---|
-| 0 a 6 | las 7 articulaciones del brazo; el 6 es el efector para la IK |
-| 7 | giro de la pinza (queda fijo en 0) |
-| 8 y 11 | los dos dedos (se mueven con signos opuestos) |
-| 10 y 13 | las puntas de los dedos (siempre en 0) |
-
-### 2. Mover el brazo (`mover_brazo`)
-
-Calcula la IK hacia el punto pedido, con la pinza siempre mirando hacia abajo (orientación de Euler `[0, −π, 0]`), y le manda a cada una de las 7 articulaciones su ángulo con `POSITION_CONTROL`:
-
-```python
-orientacion = p.getQuaternionFromEuler([0, -math.pi, 0])
-poses_juntas = p.calculateInverseKinematics(brazo_id, INDICE_EFECTOR, pos_xyz, orientacion,
-                                            LIM_INF, LIM_SUP, RANGO_JUNTAS, POSE_REPOSO)
-for i in range(INDICE_EFECTOR + 1):
-    p.setJointMotorControl2(brazo_id, i, p.POSITION_CONTROL, targetPosition=poses_juntas[i],
-                            force=200, maxVelocity=1.2, positionGain=0.5, velocityGain=1)
-```
-
-`POSITION_CONTROL` no teletransporta la articulación: le pone un motor que la lleva al ángulo pedido con una fuerza máxima (200) y una velocidad máxima (1,2 rad/s). Esa velocidad máxima es la que hace que el movimiento se vea suave aunque el objetivo salte.
-
-### 3. Mover la pinza (`mover_pinza`)
-
-Abre o cierra solo los dedos, sin tocar el brazo. Esto es a propósito: volver a llamar `mover_brazo` con el mismo punto resuelve la IK de nuevo desde el estado actual y, al ser un brazo redundante, a veces converge a otra postura válida pero distinta, así que el brazo "saltaba" mientras solo queríamos cerrar la pinza.
-
-### 4. Agarrar y soltar (`intentar_agarrar`, `soltar`)
-
-`intentar_agarrar` mide la distancia entre el efector y el cubo. Como el efector es la muñeca y queda 24 cm por encima del cubo aun cuando la pinza está perfecta, el umbral (`UMBRAL_AGARRE`) es de 32 cm. Si está dentro, calcula la transformación relativa exacta entre los dos y crea la restricción:
-
-```python
-inv_pos, inv_orn = p.invertTransform(pos_efector, orn_efector)
-pos_relativa, orn_relativa = p.multiplyTransforms(inv_pos, inv_orn, pos_cubo, orn_cubo)
-restriccion_agarre = p.createConstraint(
-    parentBodyUniqueId=brazo_id, parentLinkIndex=INDICE_EFECTOR,
-    childBodyUniqueId=cubo_id, childLinkIndex=-1,
-    jointType=p.JOINT_FIXED, jointAxis=[0, 0, 0],
-    parentFramePosition=pos_relativa, parentFrameOrientation=orn_relativa,
-    childFramePosition=[0, 0, 0])
-```
-
-`soltar` borra la restricción si existe. `A` y `0` siempre sueltan; `C` siempre intenta agarrar.
-
-### 5. Las dos demos
-
-`ejecutar_demo()` (tecla `D`) es una secuencia fija de movimientos, cada uno seguido de `esperar()`, que corre la física unos segundos para que el brazo alcance a llegar: abrir la pinza, ir encima del cubo a la altura de viaje, bajar a la altura de agarre, cerrar, agarrar, subir, viajar encima de la plataforma, bajar, soltar, abrir y alejarse. Toma la posición real del cubo en ese momento, así que funciona aunque se haya movido. Al terminar deja el objetivo del jog donde quedó el brazo, para que el control manual siga desde ahí y no salte.
-
-`ejecutar_demo_recorrido()` (tecla `B`) pasea el efector desde home por X (+0,13 y −0,19 m), Y (±0,3 m) y Z (arriba a 0,55 y abajo a 0,08), volviendo a home entre cada eje. No toca el cubo ni la pinza.
-
-Las dos son **bloqueantes**: mientras corren, el bucle principal no lee teclas.
-
-### 6. Interpretar las teclas (`ejecutar_tecla`, `procesar_tecla`)
-
-`ejecutar_tecla(tecla)` es la única función que decide qué hace cada tecla, y la usan tanto el ESP32 como los botones: así los dos nunca se desincronizan. Al final siempre recorta el objetivo a la caja de trabajo:
-
-```python
-posicion_objetivo = [limitar(posicion_objetivo[eje], *LIMITES_JOG[eje]) for eje in range(3)]
-```
-
-`procesar_tecla(tecla)` es el filtro para lo que llega del ESP32: deja pasar el jog siempre y el resto solo en el flanco. Y si la tecla fue una demo, vacía el buffer del puerto al terminar, porque lo que llegó durante esos 10 s son líneas viejas (si se ejecutaran todas juntas, el brazo daría 200 pasos de jog de golpe):
-
-```python
-anterior, tecla_anterior = tecla_anterior, tecla
-if tecla in TECLAS_JOG or tecla != anterior:
-    ejecutar_tecla(tecla)
-if tecla in ("D", "B") and ser is not None:
-    ser.reset_input_buffer()
-```
-
-### 7. El bucle principal
-
-En cada vuelta (240 por segundo): si no hay una demo corriendo, lee **todo** lo que haya en el puerto, solo si `ser.in_waiting` es mayor que cero; actualiza en la ventana la última línea cruda si cambió; lee los contadores de los 12 botones; y manda el brazo al objetivo y la pinza a su ángulo. Después avanza la física un paso y duerme 1/240 s. Si el ESP32 se desconecta a mitad de camino, la `SerialException` se atrapa, `ser` pasa a `None` y se sigue con los botones.
-
-## Lo que probamos y descartamos
-
-- **Agarrar solo por fricción**, como `baxter_ik_demo.py`: el cubo se escapaba al mover el brazo. Lo reemplazamos por la restricción fija.
-- **Un offset fijo entre pinza y cubo** para la restricción: según cómo convergía la IK, la muñeca llegaba un poco girada y el cubo "saltaba" al pegarse. Ahora se usa la transformación real del momento.
-- **Dos bandejas iguales** (origen y destino): la malla de `tray.urdf` es mucho más ancha de lo que parece (unos 0,6 m), y dos bandejas a menos de esa distancia quedaban encimadas; el choque entre ellas lanzaba el cubo a cualquier parte apenas arrancaba la simulación. Por eso el destino es una plataforma chica.
-- **Jog sin límites**: sostener una tecla unos segundos sacaba el objetivo del alcance del brazo; la IK devuelve igual su mejor aproximación, el brazo quedaba estirado a tope y al volver el objetivo tardaba lo mismo en regresar (se sentía como que la tecla no respondía). Medimos llegando por jog a las 8 esquinas de la caja actual: el efector queda a 2-4 cm del objetivo en todas; con X hasta 0,75 m ya quedaba a 8-12 cm.
-- **`ser.readline()` a secas en el bucle**: bloqueaba hasta 50 ms cuando no había línea y dejaba toda la simulación a unos 20 cuadros por segundo. Ahora solo se lee si ya hay datos.
-- **Todas las teclas repitiéndose**: la demo se ejecutaba cuatro veces con un solo toque. Ahora las acciones son de flanco.
+- **`crear_mundo(modo)`**: revisa que estén los modelos, conecta PyBullet (`p.GUI` o `p.DIRECT`), carga el piso, Baxter, la mesa, las marcas y el cubo, y busca todo **por nombre** con `indice_por_nombre` (ningún índice de articulación está escrito a mano). Pone a Baxter en su pose inicial: resuelve la IK hacia el home de cada brazo y lo coloca ahí con `resetJointState`, la **única** vez que se usa (antes de empezar a simular). Después deja los motores sosteniendo esa pose. Devuelve `estado`, un objeto con todos los ids y variables.
+- **`resolver_ik(estado, brazo, xyz)`**: la cinemática inversa explicada arriba. Devuelve el ángulo de las 7 articulaciones del brazo pedido. Las demás (cabeza, otro brazo, dedos) tienen como pose de descanso su posición actual, para que la IK no "quiera" moverlas, y de todos modos no se tocan.
+- **`fijar_objetivo(estado, brazo, xyz)`**: llama a `resolver_ik` y le manda a cada motor su ángulo con `POSITION_CONTROL`. Ese modo no teletransporta la articulación: es un motor con fuerza máxima (120 N·m en hombro y codo, 40 N·m en la muñeca) y velocidad máxima (1,2 rad/s), que empuja contra la gravedad. La fuerza es más alta que la del URDF (50 y 15) porque varios links de `toms_baxter.urdf` no traen inercia y PyBullet les asigna 1 kg a cada uno: el brazo simulado pesa más que el real.
+- **`mover_a(estado, brazo, xyz, pasos)`**: lleva la pinza hasta `xyz` **en línea recta**, en tramos de 1 cm (una IK por tramo), y simula. Al principio le dábamos a los motores directamente el ángulo final: cada articulación giraba a su ritmo y la pinza hacía una curva. Al subir después de soltar el cubo, se corría 3 cm de lado todavía abajo, golpeaba el cubo y lo giraba 57°.
+- **`mover_pinza(estado, brazo, abierta)`**: abre o cierra los dos dedos. Lee de los límites del URDF hacia qué lado abre cada uno (uno va de 0 a 0,02 y el otro de −0,02 a 0).
+- **`intentar_agarrar`, `soltar`, `abrir_y_soltar`**: el constraint explicado arriba.
+- **`reponer_cubo`**: suelta el cubo y lo devuelve al origen moviendo **el mismo** cuerpo (`resetBasePositionAndOrientation`), sin borrarlo ni crear otro: PyBullet reutiliza los ids de cuerpos borrados.
+- **`ejecutar_demo(estado)`** (`D`): con el brazo activo, toma la posición real del cubo, abre la pinza, va encima a 20 cm de la mesa, baja en dos tramos, cierra, agarra, sube, viaja sobre el destino, baja, abre, suelta y sube. Dura 8,6 s de simulación.
+- **`ejecutar_demo_recorrido(estado)`** (`B`): pasea la pinza del brazo activo por los extremos de su caja de trabajo en X, Y y Z, volviendo al centro entre cada eje.
+- **`ejecutar_tecla(estado, tecla)`**: la única función que decide qué hace cada tecla; la usan el ESP32 y los botones, así nunca se desincronizan. El jog suma el paso y recorta el objetivo a la caja del brazo activo (`LIMITES_JOG`).
+- **`procesar_tecla` y `procesar_linea`**: el filtro jog/flanco y la lectura de una línea `TECLA:x`. Tras una demo vacían el buffer del puerto (`reset_input_buffer`).
+- **`leer_serial(estado)`**: lee solo si `ser.in_waiting` es mayor que cero y drena **todo** el buffer. Un `readline()` a secas esperaría hasta 50 ms cuando no hay línea y frenaría toda la simulación a unos 20 cuadros por segundo. Si el ESP32 se desconecta, la `SerialException` se atrapa, `ser` pasa a `None` y se sigue con los botones.
+- **`actualizar_texto(estado)`**: escribe arriba en la ventana el brazo activo, la última tecla y la última línea **cruda** del ESP32.
+- **Bucle principal** (solo en `if __name__ == "__main__":`): abre el serial en un `try/except` (sin ESP32 sigue con botones), crea los 13 botones **una sola vez** y, en cada vuelta, lee el serial, lee los botones y avanza un paso de física (1/240 s).
 
 ## Cómo probarlo
 
-Los comandos van desde la carpeta del taller (`9-taller-segundo-corte\`), usando su entorno.
+Los comandos van desde la carpeta del taller (`9-taller-segundo-corte\`), usando su entorno. La primera vez hay que bajar los modelos: `entorno\Scripts\python descargar_modelos.py`.
 
 **Sin ESP32 conectado:**
-1. `entorno\Scripts\python punto-b-brazo-tipo-baxter\brazo_pybullet.py`. En consola sale `No se encontro el ESP32 en COM7: usa los botones de la ventana.` y la ventana abre igual; arriba se lee `ESP32: no conectado (usa los botones)`.
-2. A la derecha hay 12 botones, uno por tecla, con la tecla entre corchetes (`Adelante (Y+) [8]`, `Cerrar pinza [C]`, `Demo: coger y mover [D]`...). Para ver el punto completo: "Demo: coger y mover [D]". Para hacerlo a mano: jog hasta quedar encima del cubo, bajar, "Cerrar pinza [C]", subir, jog hasta la plataforma, bajar y "Abrir pinza [A]". "Reset cubo [0]" lo devuelve a la bandeja.
+1. `entorno\Scripts\python punto-b-brazo-tipo-baxter\brazo_pybullet.py`. En consola sale `No se encontro el ESP32 en COM7: usa los botones de la ventana.` y la ventana abre igual; arriba se lee `Brazo activo: IZQUIERDO | tecla: - | ESP32: no conectado (usa los botones)`.
+2. Con los 13 botones de la derecha: `Demo: coger y mover [D]` para ver el punto completo, o hacerlo a mano como se explica en "La pinza". `Cambiar de brazo [*]` y repetir con el otro brazo; `Reponer cubo [0]` devuelve el cubo al origen.
+3. Para probar solo el control, sin Python: abrir [`../preview.html`](../preview.html), elegir "Configuración: Baxter (dos brazos)" y usar el modo prueba.
 
 **Con ESP32 conectado:**
-1. Guardar `esp32_teclado.py` (en la carpeta del taller) como `main.py` en el ESP32, armar las conexiones del [README del taller](../README.md#conexiones) y cerrar Thonny.
+1. Guardar `esp32_teclado.py` (en la carpeta del taller) como `main.py` en el ESP32, conectar el teclado (filas a los GPIO 14, 27, 26 y 25; columnas a los 33, 32, 18 y 19) y cerrar Thonny para liberar el puerto.
 2. Cambiar `PUERTO_SERIAL = "COM7"` al principio de `brazo_pybullet.py` por el COM que muestre el Administrador de dispositivos.
-3. `entorno\Scripts\python punto-b-brazo-tipo-baxter\brazo_pybullet.py`. Sosteniendo `8 2 4 6 9 7` la pinza se mueve de corrido; `C` cerca del cubo lo agarra, `A` lo suelta, `D` corre la demo de coger y mover y `B` la de los tres ejes. Los botones siguen funcionando a la par.
-4. En la ventana aparece la última línea cruda (`ESP32: TECLA:-`, `ESP32: TECLA:8`...): si nunca cambia, el ESP32 no está mandando nada; si cambia pero no dice `TECLA:x`, el problema es de formato, no de cable.
+3. `entorno\Scripts\python punto-b-brazo-tipo-baxter\brazo_pybullet.py`. En consola sale `ESP32 conectado en COM7: el teclado mueve a Baxter.`; sosteniendo `8 2 4 6 9 7` la pinza se mueve de corrido, y los botones siguen funcionando a la par.
 
-## Pendiente
+**Prueba automática** (sin ventana, unos 10 s): `entorno\Scripts\python punto-b-brazo-tipo-baxter\probar_baxter.py`. Imprime cada cifra y termina con `Todas las pruebas pasaron.` (o con código 1 si algo falla).
 
-Se hicieron pruebas adicionales de la comunicación serial antes del montaje físico. Faltan las fotos del montaje y un video del brazo cogiendo y moviendo el cubo desde el teclado; se agregan aquí cuando estén.
+| Tecla | Efecto | Tipo |
+|---|---|---|
+| `8` / `2` | Pinza hacia +Y / −Y (izquierda / derecha de Baxter) | jog, se repite |
+| `4` / `6` | Pinza hacia −X / +X (hacia Baxter / hacia el fondo de la mesa) | jog, se repite |
+| `9` / `7` | Pinza sube / baja (Z+ / Z−) | jog, se repite |
+| `5` | Home del brazo activo | un golpe |
+| `A` | Abrir la pinza (y soltar el cubo si esa pinza lo tenía) | un golpe |
+| `C` | Cerrar la pinza (y agarrar el cubo si está entre los dedos) | un golpe |
+| `D` | Demo: coge el cubo y lo lleva al destino con el brazo activo | un golpe |
+| `B` | Demo: recorre los ejes X, Y y Z con el brazo activo | un golpe |
+| `0` | Suelta el cubo y lo repone en el origen | un golpe |
+| `*` | Cambia de brazo activo (izquierdo ↔ derecho) | un golpe |
+| `1`, `3`, `#` | Sin uso en este punto | — |
+
+## El montaje y la demo
+
+El montaje real: el teclado de membrana 4x4 va con sus 8 cables directo a los pines del ESP32 (filas en los GPIO 14, 27, 26 y 25; columnas en los 33, 32, 18 y 19), y el ESP32 va al portátil por el cable USB, que es a la vez la alimentación y el canal serial. No hay más componentes: las resistencias de pull-up son las internas del ESP32. Con este montaje quedó funcionando: el teclado responde en todas sus teclas y maneja a Baxter en la simulación.
+
+| El ESP32 con el teclado conectado | El teclado 4x4 |
+|---|---|
+| ![El ESP32 con el teclado 4x4 conectado por USB al portátil](../img/montaje-esp32-teclado.jpg) | ![El teclado 4x4 de membrana](../img/montaje-teclado.jpg) |
+
+En la simulación, la secuencia del video es la demo `D` con el brazo izquierdo (coge el cubo del cuadro azul y lo deja en el verde), `*` para pasar al brazo derecho, un jog del derecho con las teclas de movimiento y `0` para reponer el cubo en el origen:
+
+![Demo de Baxter](video/baxter-demo.gif)
+
+Video completo: [baxter-demo.mp4](video/baxter-demo.mp4)
+
+## Resultados de la prueba
+
+Salida de `probar_baxter.py` (modo `DIRECT`):
+
+| Qué se probó | Resultado |
+|---|---|
+| IK + motores, brazo izquierdo, 3 objetivos (uno cruzando 15 cm al lado derecho) | error final de 0,12 / 0,03 / 0,13 cm |
+| IK + motores, brazo derecho, los mismos 3 en espejo | 0,12 / 0,03 / 0,13 cm |
+| Demo `D` con el brazo izquierdo | cubo a **0,19 cm** del destino; subió 19,0 cm; quedó apoyado en la mesa |
+| Demo `D` con el brazo derecho | cubo a **0,57 cm** del destino; subió 19,0 cm; quedó apoyado en la mesa |
+| Duración de la demo `D` | 8,6 s de simulación |
+| `TECLA:*` repetida 10 veces | cambió de brazo **una** vez (izquierdo → derecho); otro toque lo devolvió |
+| `TECLA:8` repetida 10 veces, una cada 50 ms | el objetivo avanzó 15,0 cm en Y (10 pasos) y la pinza real también 15,0 cm, con 0,01 cm de desvío en X |
+| `TECLA:7` repetida 60 veces | el objetivo se detuvo en z = −0,1905, el piso de la caja |
+| Antebrazos, muñecas y pinzas contra torso y pedestal (`getClosestPoints`, durante las demos) | nunca a menos de 5 cm |
+| Los dos brazos entre sí (antebrazo a pinza) | nunca a menos de 5 cm |
+| Brazo, mesa: contactos al final | 0 |
+| Dedos solos, sin constraint (dato) | levantaron el cubo 19,0 cm y lo llevaron hasta (0,650; −0,158) |
+
+Un dato que hay que leer con cuidado: el **brazo superior** (los links del hombro y `upper_elbow`, atornillados junto al torso) contra la forma de colisión del torso da −1,0 cm ya en la pose de home y llega a −7,0 cm cuando un brazo cruza al otro lado. No es que se meta en el pecho: PyBullet usa como forma de colisión del torso la **envolvente convexa** de su malla, un "globo" que rodea el pecho y los hombros, y el brazo superior sale de adentro de ese globo. En las imágenes renderizadas de esas poses no se ve ningún cruce. Como en el demo del profesor, la autocolisión del robot está apagada (es lo que trae `loadURDF` por defecto); por eso estas distancias se miden con `getClosestPoints`, que mide la geometría aunque la colisión esté apagada.

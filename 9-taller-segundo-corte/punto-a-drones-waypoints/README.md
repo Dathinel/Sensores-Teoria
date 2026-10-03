@@ -113,7 +113,7 @@ El líder va al objetivo; los cuatro azules persiguen **el objetivo del líder m
 ```mermaid
 flowchart TD
     subgraph ESP["ESP32 — esp32_teclado.py"]
-        Teclado["Teclado 4x4<br/>(I2C 0x20, PCF8574)"] --> Envia["print('TECLA:x')<br/>cada ~50 ms"]
+        Teclado["Teclado 4x4<br/>(GPIO directo)"] --> Envia["print('TECLA:x')<br/>cada ~50 ms"]
     end
 
     Envia -->|"puerto serial USB<br/>115200 baudios"| Recibe
@@ -157,7 +157,7 @@ sequenceDiagram
 
 ## Conexiones
 
-Solo el teclado matricial va al ESP32, a través del módulo PCF8574 por I2C (`SDA`→`GPIO21`, `SCL`→`GPIO22`, `VCC`→`3V3`, `GND`→`GND`, dirección `0x20`). La tabla pin a pin (qué fila y qué columna del teclado va a qué pin del PCF8574, y por qué) está en el [README del taller](../README.md#conexiones), porque es la misma para los tres puntos. El ESP32 va al PC por un solo cable USB; el puerto COM se pasa con `--puerto` (por defecto `COM7`).
+Solo el teclado matricial va al ESP32, conectado directo a 8 GPIO: filas en `GPIO14`, `GPIO27`, `GPIO26` y `GPIO25`; columnas en `GPIO33`, `GPIO32`, `GPIO18` y `GPIO19`, con la pull-up interna del ESP32. La tabla pin a pin (qué fila y qué columna del teclado va a qué pin) está en el [README del taller](../README.md#conexiones), porque es la misma para los tres puntos. El ESP32 va al PC por un solo cable USB; el puerto COM se pasa con `--puerto` (por defecto `COM7`).
 
 ## Qué hace cada archivo
 
@@ -165,6 +165,7 @@ Solo el teclado matricial va al ESP32, a través del módulo PCF8574 por I2C (`S
 - **`dron.urdf`**: la descripción del dron. Es un solo link (no tiene articulaciones: las hélices no giran de verdad en la simulación, su efecto está en las fuerzas que aplica el script). Tiene la parte visual (cuerpo rojo de 10 cm, 4 brazos en X, motores y discos de hélice semitransparentes), una caja de colisión chata de 56 × 56 × 4 cm para que se apoye en el piso y los drones no se atraviesen entre sí, y la parte inercial: 0,35 kg e inercias `ixx = iyy = 0,0045`, `izz = 0,0085` kg·m² (aproximadas como un cuerpo central más 4 masas en las puntas).
 - **`../esp32_teclado.py`**: el firmware común del ESP32 (ver el README del taller).
 - **`enunciado-actividad.png`**: la captura del enunciado de este punto.
+- **`video/`**: la misión A → B → C grabada (`drones-mision.gif` para verla en GitHub y `drones-mision.mp4` completo).
 
 ## La lógica del código paso a paso
 
@@ -225,7 +226,7 @@ Las de actitud no salieron de probar al azar: con la inercia del dron y la frecu
 
 `Mando.avanzar_mision(pos, vel)` se revisa en cada paso: cuando el líder está a menos de 12 cm del punto y se mueve a menos de 0,3 m/s, lo da por alcanzado, lo saca de la lista y pone el siguiente como objetivo. Exigir "casi quieto" además de "cerca" evita que cuente como llegada un paso rápido por encima del punto.
 
-En este punto no hace falta separar teclas de jog y de un solo golpe (como sí en el brazo y el Laikago): todas las que no son jog fijan un objetivo, y recibir `TECLA:A` cuatro veces seguidas deja el mismo objetivo que recibirla una.
+En este punto no hace falta separar teclas de jog y de un solo golpe (como sí en Baxter y Atlas): todas las que no son jog fijan un objetivo, y recibir `TECLA:A` cuatro veces seguidas deja el mismo objetivo que recibirla una.
 
 ### 4. Leer el serial sin frenar la simulación (`leer_teclas`)
 
@@ -255,6 +256,18 @@ En cada vuelta: lee las teclas del serial y los clicks de los botones (cada bot�
 - **Dejar los motores prendidos al aterrizar**: el dron quedaba flotando a un par de centímetros del piso. Ahora se apagan al tocarlo.
 - **Leer con `readline()` con timeout** dentro del bucle: frenaba toda la simulación a la velocidad de llegada de líneas. Ahora se lee solo lo que ya llegó.
 
+## El montaje y la demo
+
+El montaje es el mismo de los tres puntos: el ESP32 en su placa de expansión, el teclado 4x4 conectado directo a 8 GPIO y un solo cable USB al portátil. Con él se manejaron los drones desde el teclado: `*` para despegar, `0` para la misión y el jog para moverlos a mano.
+
+![ESP32 en su placa de expansión con el teclado 4x4 conectado por 8 cables de colores y el cable USB al portátil](../img/montaje-esp32-teclado.jpg)
+
+Así se ve la misión A → B → C: el líder rojo va de punto en punto inclinándose hacia donde va, dejando su trazo amarillo, y los cuatro azules lo siguen en V.
+
+![Los cinco drones volando la misión A → B → C en PyBullet](video/drones-mision.gif)
+
+Video completo: [drones-mision.mp4](video/drones-mision.mp4)
+
 ## Cómo probarlo
 
 Los comandos van desde la carpeta del taller (`9-taller-segundo-corte\`), usando su entorno.
@@ -269,7 +282,3 @@ Los comandos van desde la carpeta del taller (`9-taller-segundo-corte\`), usando
 2. `entorno\Scripts\python punto-a-drones-waypoints\drones_pybullet.py --puerto COM7`, con el COM que muestre el Administrador de dispositivos.
 3. `*` para despegar, `0` para la misión, o mover el líder con `8 2 4 6 9 7` (sosteniendo, se mueve a unos 2 m/s de objetivo: 10 cm por cada línea, 20 líneas por segundo). El líder va hacia donde se le pide, inclinándose, y los otros cuatro lo siguen en formación. Los botones de la ventana siguen funcionando a la par.
 4. Si no responde, mirar al final del texto de arriba (`serial: ...`): si se queda en `(nada todavia)`, el ESP32 no está mandando (puerto equivocado o Thonny todavía abierto).
-
-## Pendiente
-
-Se hicieron pruebas adicionales de la comunicación serial antes del montaje físico. Faltan las fotos del montaje y un video de la misión A → B → C manejada desde el teclado; se agregan aquí cuando estén.

@@ -1,313 +1,169 @@
-# Punto b) del taller: consola de mandos con el ESP32 para mover con
-# fluidez el brazo de un robot y que pueda coger y mover un objeto. El
-# punto c) (locomocion con las 4 patas) es otro robot y otro problema
-# de control -- ver ../punto-c-locomocion-laikago/.
-#
-# El enunciado pide el robot Baxter (ver enunciado-actividad.png), usando
-# como base
-# github.com/erwincoumans/pybullet_robots/blob/master/baxter_ik_demo.py.
-# Ese script carga "baxter_common/baxter_description/urdf/toms_baxter.urdf",
-# que NO viene en ese repo ni en el paquete pip de pybullet_data: son los
-# mesh/URDF de RethinkRobotics/baxter_common (~50 MB de mallas), fuera de
-# lugar en un repo de apuntes de clase liviano como este.
-#
-# Se usa en su lugar el brazo KUKA IIWA + pinza WSG50 que SI trae
-# pybullet_data (kuka_iiwa/kuka_with_gripper2.sdf), con exactamente la
-# misma tecnica de baxter_ik_demo.py (calculateInverseKinematics hacia
-# una posicion XYZ del efector final) y los mismos indices de
-# articulacion/pinza que usa el propio ejemplo oficial de pybullet para
-# este modelo (pybullet_envs/bullet/kuka.py): un solo brazo alcanza para
-# demostrar lo que pide el punto b) -- movimiento fluido, posicionamiento
-# real y coger/mover un objeto -- sin descargar mallas pesadas.
-#
-# Un solo teclado matricial 4x4 controla todo (ver esp32_teclado.py, el
-# mismo firmware que usa punto-a-drones-waypoints): esta es la
-# "configuracion" de brazo, con este mapeo de teclas:
-#
-#   8/2 = adelante/atras (Y+/Y-)      4/6 = izquierda/derecha (X-/X+)
-#   9/7 = subir/bajar (Z+/Z-)         5   = home (postura neutra)
-#   A = Abrir pinza                   C = Cerrar pinza
-#   D = Demo: coger el cubo y moverlo solo al destino
-#   B = Demo: recorrer los 3 ejes (solo para mostrar el rango de movimiento)
-#   0 = reset del cubo (lo suelta y lo vuelve a poner en la bandeja)
-#   (1, 3, *, # no se usan en esta configuracion)
-#
-# Si no hay ESP32 conectado, la ventana de PyBullet trae los mismos
-# botones (jog de paso fijo + abrir/cerrar/home/demo/reset), igual que en
-# los temas 7 y 8.
+"""Punto b) del taller: consola de mandos con el ESP32 para mover el robot
+Baxter (el modelo 3D real, toms_baxter.urdf) con movilidad real de los dos
+brazos y posicionamiento, y que pueda coger y mover un objeto.
+
+Base: github.com/erwincoumans/pybullet_robots/blob/master/baxter_ik_demo.py
+(el ejemplo que compartio el profesor). De ese script se conserva la idea
+central: cargar toms_baxter.urdf con la base fija y mover el efector final
+con p.calculateInverseKinematics, mapeando la respuesta por qIndex. Lo que
+se cambia (y por que) esta comentado en cada funcion.
+
+Los modelos 3D NO vienen en pybullet_data: los baja una sola vez
+../descargar_modelos.py a la carpeta ../modelos/ (que git ignora).
+
+Teclado (el mismo firmware de todo el taller, ../esp32_teclado.py, que
+manda "TECLA:x" cada 50 ms, o "TECLA:-" si no hay nada pulsado):
+
+    8/2 = Y+/Y- (jog)        4/6 = X-/X+ (jog)        9/7 = Z+/Z- (jog)
+    5   = home del brazo activo
+    A   = abrir la pinza (y soltar el cubo si esa pinza lo tenia)
+    C   = cerrar la pinza (y agarrar el cubo si esta entre los dedos)
+    D   = demo: coger el cubo del ORIGEN y dejarlo en el DESTINO
+    B   = demo: recorrer los 3 ejes con el brazo activo
+    0   = reponer el cubo en el origen
+    *   = cambiar de brazo activo (izquierdo <-> derecho)
+    (1, 3, # no se usan)
+
+Sin ESP32 conectado, la ventana de PyBullet trae un boton por tecla.
+
+Funciones publicas (para importar el modulo, por ejemplo para sacar
+capturas con getCameraImage en modo DIRECT, sin ventana):
+
+    estado = crear_mundo(p.DIRECT)        # conecta, arma la escena, Baxter en home
+    mover_a(estado, "izquierdo", (x, y, z), pasos=240)
+                                          # la pinza va EN LINEA RECTA a (x, y, z)
+                                          # (IK + motores), simulando `pasos`
+                                          # pasos; devuelve el error final (m)
+    mover_pinza(estado, "izquierdo", abierta=True/False)
+    intentar_agarrar(estado, "izquierdo"); soltar(estado)
+    ejecutar_demo(estado)                 # D completa con el brazo activo; deja el
+                                          # cubo en el destino y el brazo encima
+    ejecutar_demo_recorrido(estado)       # B
+    procesar_linea(estado, "TECLA:8")     # lo mismo que hace una linea del ESP32
+    avanzar(estado, pasos)                # solo simular
+
+`estado.activo` es el nombre del brazo activo ("izquierdo" o "derecho");
+`estado.cubo` el id del cubo; `estado.brazos[nombre]` trae los indices.
+"""
 
 import math
+import os
+import sys
 import time
+from pathlib import Path
+from types import SimpleNamespace
 
 import pybullet as p
 import pybullet_data
-import serial
 
 PUERTO_SERIAL = "COM7"
 BAUDIOS = 115200
 
-try:
-    ser = serial.Serial(PUERTO_SERIAL, BAUDIOS, timeout=0.05)
-    time.sleep(2)  # da tiempo a que el ESP32 termine de reiniciar tras abrir el puerto
-    print(f"ESP32 conectado en {PUERTO_SERIAL}: el teclado mueve el brazo.")
-except serial.SerialException:
-    ser = None
-    print(f"No se encontro el ESP32 en {PUERTO_SERIAL}: usa los botones de la ventana.")
+# Carpeta donde descargar_modelos.py dejo las mallas de Baxter.
+CARPETA_MODELOS = Path(__file__).resolve().parent.parent / "modelos"
+URDF_BAXTER = CARPETA_MODELOS / "baxter_common" / "baxter_description" / "urdf" / "toms_baxter.urdf"
 
-physics_client = p.connect(p.GUI)
-p.setAdditionalSearchPath(pybullet_data.getDataPath())
-p.setGravity(0, 0, -10)
-p.loadURDF("plane.urdf", [0, 0, -0.65], useFixedBase=True)
-p.resetDebugVisualizerCamera(cameraDistance=1.3, cameraYaw=50, cameraPitch=-35, cameraTargetPosition=[0.5, 0, -0.2])
+PASOS_POR_SEGUNDO = 240   # PyBullet simula por defecto a 240 Hz
 
-# ------------------------------------------------------------------
-# Brazo KUKA IIWA + pinza WSG50 (kuka_with_gripper2.sdf), con la misma
-# pose inicial "de reposo" que usa pybullet_envs/bullet/kuka.py -- ya
-# probada y alcanzable, evita empezar en una postura rara.
-# ------------------------------------------------------------------
-brazo_id = p.loadSDF("kuka_iiwa/kuka_with_gripper2.sdf")[0]
-p.resetBasePositionAndOrientation(brazo_id, [-0.1, 0.0, 0.07], [0, 0, 0, 1])
+# ----------------------------------------------------------------------
+# Geometria de la escena (metros, en el sistema de Baxter: origen en el
+# torso, +X hacia el frente del robot, +Y hacia su IZQUIERDA, +Z arriba).
+# ----------------------------------------------------------------------
+# El pedestal de Baxter llega hasta z = -0.926 (medido con getAABB del
+# link "pedestal"): ahi va el piso.
+Z_PISO = -0.926
+# Mesa: un bloque fijo delante del robot, de x = 0.47 a x = 1.0. Empieza
+# por delante del pedestal (que llega hasta x = 0.42), asi el brazo nunca
+# tiene que pasar por encima del pedestal para trabajar sobre ella. La
+# altura (20 cm por debajo del origen del torso) es la de una mesa de
+# trabajo frente a Baxter: le llega mas o menos a la cintura.
+Z_MESA = -0.20
+MESA_CENTRO_XY = (0.735, 0.0)
+MESA_MEDIAS = (0.265, 0.50)   # medio largo en X y medio ancho en Y
 
-POSE_INICIAL = [0.006418, 0.413184, -0.011401, -1.589317, 0.005379, 1.137684, -0.006539,
-                0.000048, -0.299912, 0.0, -0.000043, 0.29996, 0.0, -0.0002]
-for indice_junta, valor in enumerate(POSE_INICIAL):
-    p.resetJointState(brazo_id, indice_junta, valor)
+# cube_small.urdf mide 5 cm, pero la pinza paralela de Baxter (dedos
+# prismaticos de 0 a 2 cm cada uno) solo abre 5.6 cm entre las puntas
+# (medido con getClosestPoints entre los links de las puntas): con 5 cm
+# quedaria 3 mm de holgura por lado y cualquier error de la IK lo
+# empujaria. Se carga a escala 0.7 (3.5 cm): entra holgado con la pinza
+# abierta y la pinza cerrada (1.6 cm entre puntas) lo aprieta de verdad.
+ESCALA_CUBO = 0.7
+LADO_CUBO = 0.05 * ESCALA_CUBO
+Z_CUBO = Z_MESA + LADO_CUBO / 2          # centro del cubo apoyado en la mesa
 
-INDICE_EFECTOR = 6   # muñeca (posicion XYZ para la IK)
-INDICE_MUNECA = 7    # giro de la pinza (no se usa en esta actividad, queda fijo en 0)
-DEDO_A, DEDO_B = 8, 11        # las 2 pinzas principales (signos opuestos)
-PUNTA_A, PUNTA_B = 10, 13     # puntas de los dedos, siempre en 0
+# Origen y destino del cubo: a los dos lados del centro de la mesa, en
+# una zona que alcanzan LOS DOS brazos (cada brazo puede cruzar un poco
+# hacia el lado del otro). Se eligieron probando la IK en una grilla de
+# puntos con la pinza vertical: hasta x = 0.70 y cruzando hasta 15-20 cm
+# al lado del otro brazo, la IK queda a menos de 1 cm; mas lejos (x = 0.8)
+# la pinza vertical ya no llega (errores de 5 a 12 cm).
+POS_ORIGEN = (0.65, 0.15)    # lado izquierdo de Baxter (+Y)
+POS_DESTINO = (0.65, -0.15)  # lado derecho de Baxter (-Y)
 
-# limites de nulo espacio para la IK, iguales a los del ejemplo oficial
-LIM_INF = [-.967, -2, -2.96, 0.19, -2.96, -2.09, -3.05]
-LIM_SUP = [.967, 2, 2.96, 2.29, 2.96, 2.09, 3.05]
-RANGO_JUNTAS = [5.8, 4, 5.8, 4, 5.8, 4, 6]
-POSE_REPOSO = [0, 0, 0, 0.5 * math.pi, 0, -math.pi * 0.5 * 0.66, 0]
+# El link "endpoint" de la pinza (el que usa la IK) queda a la altura de
+# las puntas de los dedos: las cajas de colision de las puntas van de
+# 3.5 mm por debajo a 3.35 cm por encima de el (medido en el marco de la
+# pinza). Bajandolo 8 mm por debajo del centro del cubo, las puntas
+# abrazan el cubo por los costados sin tocar la mesa (quedan ~1 cm arriba).
+BAJADA_AGARRE = 0.008
+Z_AGARRE = Z_CUBO - BAJADA_AGARRE
+Z_VIAJE = Z_MESA + 0.20    # altura para trasladar el cubo sin arrastrarlo
 
-# ------------------------------------------------------------------
-# Bandeja de origen (con el cubo a agarrar, tray/tray.urdf del ejemplo
-# oficial) y una plataforma chica de destino. El destino NO es otra
-# bandeja igual: la malla de tray.urdf es mucho mas ancha de lo que
-# parece por su posicion (~0.6 m) y dos bandejas completas a menos de
-# esa distancia terminan con las mallas encimadas -- se probo primero
-# asi y el choque entre las dos hacia que el cubo saliera disparado a un
-# punto aleatorio de la escena apenas arrancaba la simulacion. La
-# plataforma de destino es chica a proposito para no repetir el problema.
-# ------------------------------------------------------------------
-POS_ORIGEN = (0.55, 0.20, -0.19)
-POS_DESTINO = (0.55, -0.30, -0.17)
-p.loadURDF("tray/tray.urdf", POS_ORIGEN, useFixedBase=True)
-_col_destino = p.createCollisionShape(p.GEOM_BOX, halfExtents=[0.08, 0.08, 0.01])
-_vis_destino = p.createVisualShape(p.GEOM_BOX, halfExtents=[0.08, 0.08, 0.01], rgbaColor=[0.5, 0.5, 0.55, 1])
-p.createMultiBody(baseMass=0, baseCollisionShapeIndex=_col_destino, baseVisualShapeIndex=_vis_destino, basePosition=POS_DESTINO)
-p.addUserDebugText("ORIGEN", [POS_ORIGEN[0], POS_ORIGEN[1], 0.05], textColorRGB=[0.3, 0.8, 1], textSize=1.2)
-p.addUserDebugText("DESTINO", [POS_DESTINO[0], POS_DESTINO[1], 0.05], textColorRGB=[0.4, 1, 0.4], textSize=1.2)
+# Home de cada brazo: abiertos a los costados, por encima de la mesa.
+HOME = {"izquierdo": (0.60, 0.40, 0.05), "derecho": (0.60, -0.40, 0.05)}
 
-POS_INICIAL_CUBO = (POS_ORIGEN[0], POS_ORIGEN[1], 0.05)
+# Caja de trabajo del jog, POR BRAZO. Cada brazo puede cruzar 20 cm al
+# lado del otro (lo justo para alcanzar origen y destino), no mas: mas
+# alla la IK ya no llega con la pinza vertical y el brazo quedaria
+# estirado "persiguiendo" un objetivo imposible (y al volver, el objetivo
+# tardaria lo mismo en regresar: se siente como que la tecla no responde).
+# El piso de la caja es la altura de agarre (la pinza no puede bajar a
+# atravesar la mesa) y X empieza en 0.50, por delante del pedestal.
+LIMITES_JOG = {
+    "izquierdo": ((0.50, 0.72), (-0.20, 0.50), (Z_AGARRE, 0.20)),
+    "derecho": ((0.50, 0.72), (-0.50, 0.20), (Z_AGARRE, 0.20)),
+}
+PASO_JOG = 0.015   # metros por linea "TECLA:x" (20 lineas/s sostenida = 30 cm/s) o por click
 
+# Motores: fuerza maxima y velocidad maxima de cada junta. La fuerza es
+# la del propio URDF (campo effort: 50 N*m hombro/codo, 15 N*m muneca)
+# con margen, porque varios links de toms_baxter.urdf no traen inercia y
+# PyBullet les pone 1 kg a cada uno: el brazo simulado pesa mas que el
+# real. La velocidad maxima es la que hace que el movimiento sea SUAVE
+# aunque el objetivo salte de golpe (el motor no "teletransporta").
+FUERZA_HOMBRO_CODO = 120.0
+FUERZA_MUNECA = 40.0
+VELOCIDAD_MAX = 1.2   # rad/s
+FUERZA_DEDOS = 20.0   # N (effort del URDF para los dedos)
 
-def reset_cubo():
-    global cubo_id
-    try:
-        p.removeBody(cubo_id)
-    except NameError:
-        pass
-    cubo_id = p.loadURDF("cube_small.urdf", POS_INICIAL_CUBO)
-    return cubo_id
+# Distancia maxima entre el endpoint de la pinza y el centro del cubo
+# para considerar que el cubo esta ENTRE los dedos al cerrar.
+UMBRAL_AGARRE = 0.04
 
+# Pose "de descanso" para el espacio nulo de la IK (ver resolver_ik):
+# hombro un poco hacia abajo, codo doblado, muneca doblada. Con 7 juntas
+# hay infinitas soluciones para un mismo punto; la IK elige la mas
+# parecida a esta, y asi el brazo no se retuerce. El giro del hombro (s0)
+# NO es fijo: se calcula para cada objetivo (ver s0_hacia), porque con un
+# s0 fijo la IK fallaba por 5-20 cm al cruzar al lado del otro brazo.
+POSE_DESCANSO = {"s0": 0.0, "s1": -0.6, "e0": 0.0, "e1": 1.6, "w0": 0.0, "w1": 0.6, "w2": 0.0}
+ITERACIONES_IK = 10      # vueltas de afuera (ver resolver_ik)
+ITERACIONES_INTERNAS = 20   # maxNumIterations de cada llamada
 
-cubo_id = reset_cubo()
+# Pinza mirando hacia abajo: el eje Z local del endpoint es la direccion
+# en la que apunta la pinza (medido: con todas las juntas en 0 apunta
+# horizontal, hacia afuera). Girar pi alrededor de X lo deja apuntando a
+# -Z del mundo, y los dedos (que se mueven sobre el Y local) cierran a lo
+# largo del eje Y del mundo, alineados con las caras del cubo.
+# El segundo pi (giro alrededor de Z) no cambia nada para agarrar (la
+# pinza es simetrica), pero si para la IK: sin el, la muneca (w2) tenia
+# que quedar en -3.06 rad, justo en su limite, y al cruzar al lado del
+# otro brazo la IK fallaba por 7 cm; con el, w2 queda cerca de 0, en el
+# medio de su rango.
+ORIENTACION_ABAJO = p.getQuaternionFromEuler([math.pi, 0, math.pi])
 
-# El efector (INDICE_EFECTOR=6, la muneca) queda ~0.24 por encima de las
-# puntas de la pinza una vez que la IK converge con la pinza mirando hacia
-# abajo -- medido probando distintos valores de z contra la posicion real
-# de los dedos (getLinkState). El cubo se asienta en z=-0.159 sobre la
-# bandeja y en z=-0.135 sobre la plataforma de destino (mas alta, por eso
-# cada apoyo tiene su propia altura de agarre).
-OFFSET_PINZA_SOBRE_CUBO = 0.24
-ALTURA_AGARRE_ORIGEN = -0.159 + OFFSET_PINZA_SOBRE_CUBO
-ALTURA_AGARRE_DESTINO = -0.135 + OFFSET_PINZA_SOBRE_CUBO
-ALTURA_VIAJE = 0.35    # z del efector al trasladarse entre bandeja y plataforma, sin chocar contra ninguna
+TECLAS_JOG = {"8", "2", "4", "6", "9", "7"}
 
-# Midiendo la separacion real entre las puntas de los dedos (getLinkState)
-# para cada angulo: en 0.0 los dedos casi se tocan (separacion ~0.04 m,
-# MENOS que el cubo de 0.05 m -> ahi es donde agarran) y al subir el
-# angulo se van abriendo (en 0.15, separacion ~0.08 m, ya con espacio de
-# sobra para pasar por encima del cubo sin rozarlo).
-ANGULO_PINZA_ABIERTA = 0.15
-ANGULO_PINZA_CERRADA = 0.0
-
-HOME_EFECTOR = (0.537, 0.0, ALTURA_VIAJE)  # XYZ de la pose de reposo (misma que usa pybullet_envs/bullet/kuka.py)
-posicion_objetivo = list(HOME_EFECTOR)
-angulo_pinza = ANGULO_PINZA_ABIERTA
-demo_en_curso = False
-
-PASO_JOG = 0.015   # metros por linea "TECLA:x" (20 lineas/s sostenida -> 0.3 m/s) o por click
-
-# Caja de trabajo del efector para el jog manual. Sin limite, sostener
-# una tecla unos segundos llevaba el objetivo fuera del alcance del
-# brazo: la IK devuelve igual "la mejor aproximacion", el brazo queda
-# estirado a tope y, al volver, el objetivo tarda lo mismo en regresar
-# de ese punto inalcanzable (se siente como que la tecla "no responde").
-# Los limites cubren las dos alturas de agarre (0.081 y 0.105), la altura
-# de viaje (0.35), la bandeja, la plataforma y el recorrido de la demo B.
-# Medido en modo DIRECT llegando a cada esquina de la caja por jog: el
-# efector queda a 2-4 cm del objetivo en las 8. Con x=0.75 (la pinza
-# mirando hacia abajo) ya quedaba a 8-12 cm: fuera de alcance real.
-LIMITES_JOG = ((0.30, 0.68), (-0.40, 0.40), (0.07, 0.60))   # (x, y, z) min/max en metros
-
-
-def mover_brazo(pos_xyz):
-    """Mueve SOLO las 7 articulaciones del brazo (IK hacia pos_xyz). No
-    toca la pinza -- llamarla de nuevo con el mismo pos_xyz vuelve a
-    resolver la IK desde el estado actual y, al ser un brazo redundante
-    (7 GDL), a veces converge a otra postura valida pero distinta de la
-    anterior. Por eso, para abrir/cerrar la pinza SIN mover el brazo, se
-    usa mover_pinza() en vez de llamar esta funcion de nuevo."""
-    orientacion = p.getQuaternionFromEuler([0, -math.pi, 0])  # pinza siempre mirando hacia abajo
-    poses_juntas = p.calculateInverseKinematics(brazo_id, INDICE_EFECTOR, pos_xyz, orientacion,
-                                                 LIM_INF, LIM_SUP, RANGO_JUNTAS, POSE_REPOSO)
-    for i in range(INDICE_EFECTOR + 1):
-        p.setJointMotorControl2(brazo_id, i, p.POSITION_CONTROL, targetPosition=poses_juntas[i],
-                                 force=200, maxVelocity=1.2, positionGain=0.5, velocityGain=1)
-    p.setJointMotorControl2(brazo_id, INDICE_MUNECA, p.POSITION_CONTROL, targetPosition=0, force=200)
-
-
-def mover_pinza(pinza):
-    """Abre/cierra la pinza sin tocar las articulaciones del brazo."""
-    p.setJointMotorControl2(brazo_id, DEDO_A, p.POSITION_CONTROL, targetPosition=-pinza, force=15)
-    p.setJointMotorControl2(brazo_id, DEDO_B, p.POSITION_CONTROL, targetPosition=pinza, force=15)
-    p.setJointMotorControl2(brazo_id, PUNTA_A, p.POSITION_CONTROL, targetPosition=0, force=10)
-    p.setJointMotorControl2(brazo_id, PUNTA_B, p.POSITION_CONTROL, targetPosition=0, force=10)
-
-
-def esperar(segundos=1.0):
-    for _ in range(int(segundos * 240)):
-        p.stepSimulation()
-        time.sleep(1 / 240)
-
-
-# ------------------------------------------------------------------
-# Agarrar solo por friccion/contacto de la pinza (como en baxter_ik_demo.py)
-# resulto poco confiable en las pruebas: la pinza es liviana y el cubo se
-# escapaba o quedaba mal sujeto en cuanto el brazo empezaba a moverse en
-# vez de quedarse quieto sosteniendolo. La solucion es la misma que usan
-# muchos tutoriales de pick-and-place en PyBullet: al cerrar la pinza
-# CERCA del cubo, se crea un p.JOINT_FIXED entre el efector y el cubo
-# (una "soldadura" temporal) que lo mantiene pegado a la pinza mientras
-# viaja, y se elimina al abrir la pinza para soltarlo.
-# ------------------------------------------------------------------
-# el efector queda a ~OFFSET_PINZA_SOBRE_CUBO (0.24) del cubo incluso
-# bien posicionado para agarrarlo (la pinza cuelga por debajo de la
-# muneca), asi que el umbral tiene que ser mayor a eso
-UMBRAL_AGARRE = 0.32  # distancia maxima efector-cubo para poder "agarrarlo"
-restriccion_agarre = None
-
-
-def intentar_agarrar():
-    """En vez de asumir un offset fijo pinza-cubo (la orientacion real de
-    la muneca varia un poco segun como convergio la IK), se calcula la
-    transformacion relativa EXACTA entre el efector y el cubo en el
-    instante del agarre (invertTransform + multiplyTransforms) y esa es
-    la que se fija en la restriccion -- el cubo queda exactamente donde
-    estaba respecto a la pinza, sin importar el angulo con el que llego."""
-    global restriccion_agarre
-    if restriccion_agarre is not None:
-        return
-    pos_efector, orn_efector = p.getLinkState(brazo_id, INDICE_EFECTOR)[:2]
-    pos_cubo, orn_cubo = p.getBasePositionAndOrientation(cubo_id)
-    distancia = sum((pos_efector[i] - pos_cubo[i]) ** 2 for i in range(3)) ** 0.5
-    if distancia <= UMBRAL_AGARRE:
-        inv_pos, inv_orn = p.invertTransform(pos_efector, orn_efector)
-        pos_relativa, orn_relativa = p.multiplyTransforms(inv_pos, inv_orn, pos_cubo, orn_cubo)
-        restriccion_agarre = p.createConstraint(
-            parentBodyUniqueId=brazo_id, parentLinkIndex=INDICE_EFECTOR,
-            childBodyUniqueId=cubo_id, childLinkIndex=-1,
-            jointType=p.JOINT_FIXED, jointAxis=[0, 0, 0],
-            parentFramePosition=pos_relativa, parentFrameOrientation=orn_relativa,
-            childFramePosition=[0, 0, 0])
-
-
-def soltar():
-    global restriccion_agarre
-    if restriccion_agarre is not None:
-        p.removeConstraint(restriccion_agarre)
-        restriccion_agarre = None
-
-
-def ejecutar_demo():
-    """Secuencia automatica: baja al cubo, cierra la pinza, lo levanta,
-    lo lleva a la bandeja de destino y lo suelta. Bloquea el programa
-    mientras corre (igual que dibujar_digito() en el tema 8)."""
-    global posicion_objetivo, angulo_pinza, demo_en_curso
-    demo_en_curso = True
-    print("Demo: cogiendo el cubo...")
-
-    x_cubo, y_cubo, _ = p.getBasePositionAndOrientation(cubo_id)[0]
-    encima_origen = (x_cubo, y_cubo, ALTURA_VIAJE)
-    sobre_cubo = (x_cubo, y_cubo, ALTURA_AGARRE_ORIGEN)
-    encima_destino = (POS_DESTINO[0], POS_DESTINO[1], ALTURA_VIAJE)
-    sobre_destino = (POS_DESTINO[0], POS_DESTINO[1], ALTURA_AGARRE_DESTINO)
-
-    # cada mover_brazo() es un movimiento real del brazo; mover_pinza() por
-    # su lado solo abre/cierra sin recalcular la IK, para no arriesgarse a
-    # que el brazo "salte" a otra postura valida por las suyas mientras
-    # solo se queria abrir o cerrar la pinza en el mismo lugar
-    mover_pinza(ANGULO_PINZA_ABIERTA); esperar(0.4)
-    mover_brazo(encima_origen); esperar(1.1)              # encima del cubo
-    mover_brazo(sobre_cubo); esperar(1.1)                  # baja hasta el cubo
-    mover_pinza(ANGULO_PINZA_CERRADA); esperar(0.6)        # cierra la pinza
-    intentar_agarrar()                                     # lo "suelda" al efector
-    mover_brazo(encima_origen); esperar(1.1)               # lo levanta
-    mover_brazo(encima_destino); esperar(1.4)              # viaja al destino
-    mover_brazo(sobre_destino); esperar(1.1)               # baja
-    soltar()                                                # lo desengancha del efector
-    mover_pinza(ANGULO_PINZA_ABIERTA); esperar(0.6)        # suelta el cubo
-    mover_brazo(encima_destino); esperar(1.1)              # se aleja
-
-    posicion_objetivo = list(encima_destino)
-    angulo_pinza = ANGULO_PINZA_ABIERTA
-    print("Demo: listo, el cubo quedo en el destino.")
-    demo_en_curso = False
-
-
-def ejecutar_demo_recorrido():
-    """Demo separada de la de coger el cubo: solo pasea el efector por los
-    3 ejes (X, Y y Z, cada uno a su turno) para mostrar el rango de
-    movimiento del brazo, sin tocar el cubo ni la pinza."""
-    global posicion_objetivo, demo_en_curso
-    demo_en_curso = True
-    print("Demo: recorriendo los 3 ejes...")
-
-    x0, y0, z0 = HOME_EFECTOR
-    recorrido = [
-        HOME_EFECTOR,
-        (x0 + 0.13, y0, z0),   # X+
-        (x0 - 0.19, y0, z0),   # X-
-        HOME_EFECTOR,
-        (x0, y0 + 0.3, z0),    # Y+
-        (x0, y0 - 0.3, z0),    # Y-
-        HOME_EFECTOR,
-        (x0, y0, 0.55),        # Z+ (arriba)
-        (x0, y0, 0.08),        # Z- (abajo, casi tocando la bandeja)
-        HOME_EFECTOR,
-    ]
-    for punto in recorrido:
-        mover_brazo(punto)
-        esperar(0.9)
-
-    posicion_objetivo = list(HOME_EFECTOR)
-    print("Demo: recorrido listo.")
-    demo_en_curso = False
-
-
-# ------------------------------------------------------------------
-# Botones de la ventana (fijos, sin ESP32), mismo patron que en los
-# temas 7 y 8: jog + abrir/cerrar/home/demo/reset.
-# ------------------------------------------------------------------
-# Cada boton equivale EXACTAMENTE a una tecla del teclado fisico: asi
-# hay una sola funcion (ejecutar_tecla) que decide que hace cada cosa, y
-# la ventana y el ESP32 no se pueden "desincronizar" con el tiempo.
 BOTON_A_TECLA = {
     "Adelante (Y+) [8]": "8",
     "Atras (Y-) [2]": "2",
@@ -320,115 +176,548 @@ BOTON_A_TECLA = {
     "Cerrar pinza [C]": "C",
     "Demo: coger y mover [D]": "D",
     "Demo: recorrer los 3 ejes [B]": "B",
-    "Reset cubo [0]": "0",
+    "Reponer cubo [0]": "0",
+    "Cambiar de brazo [*]": "*",
 }
-botones = {etiqueta: p.addUserDebugParameter(etiqueta, 1, 0, 0) for etiqueta in BOTON_A_TECLA}
-contadores_anteriores = {etiqueta: 0 for etiqueta in botones}
-
-# Teclas de JOG: se repiten mientras se sostienen (cada "TECLA:8" que
-# llega suma un paso). Todas las demas son de UN SOLO GOLPE: se ejecutan
-# solo en el flanco (cuando la tecla recibida cambia). El ESP32 manda la
-# tecla sostenida cada ~50 ms, asi que sin esto un toque normal de la D
-# (~0.2 s = 4 lineas "TECLA:D") corria la demo de 10 s CUATRO veces
-# seguidas: la demo bloquea el bucle, las otras 3 lineas quedaban
-# esperando en el buffer y cada una la disparaba de nuevo al terminar.
-TECLAS_JOG = {"8", "2", "4", "6", "9", "7"}
-tecla_anterior = "-"
 
 
+# ======================================================================
+# Construccion del mundo
+# ======================================================================
+def indice_por_nombre(robot):
+    """Diccionario nombre de junta -> indice. Los indices de Baxter (12,
+    48, 49...) no se escriben a mano en ningun lado: si el URDF cambia,
+    el script sigue funcionando porque todo se busca por NOMBRE."""
+    return {p.getJointInfo(robot, i)[1].decode(): i for i in range(p.getNumJoints(robot))}
+
+
+def _datos_brazo(robot, nombres, lado):
+    """Junta los indices de un brazo. `lado` es el prefijo del URDF
+    ("left"/"right"); los dedos se llaman l_gripper_... / r_gripper_..."""
+    letra = lado[0]
+    juntas = [nombres[f"{lado}_{k}"] for k in ("s0", "s1", "e0", "e1", "w0", "w1", "w2")]
+    dedo_l = nombres[f"{letra}_gripper_l_finger_joint"]   # limites 0 .. 0.02
+    dedo_r = nombres[f"{letra}_gripper_r_finger_joint"]   # limites -0.02 .. 0
+    return SimpleNamespace(
+        juntas=juntas,
+        efector=nombres[f"{lado}_endpoint"],
+        # (indice, posicion abierta) de cada dedo: se leen los limites
+        # del URDF para saber hacia que lado abre cada uno.
+        dedos=[(dedo_l, p.getJointInfo(robot, dedo_l)[9]), (dedo_r, p.getJointInfo(robot, dedo_r)[8])],
+    )
+
+
+def crear_mundo(modo=p.GUI):
+    """Conecta PyBullet en `modo` (p.GUI o p.DIRECT), arma la escena y
+    deja a Baxter en su pose inicial. Devuelve el `estado` (un
+    SimpleNamespace con todos los ids, indices y variables del control).
+    Si faltan los modelos, avisa y termina con codigo 1."""
+    if not URDF_BAXTER.exists():
+        print("Faltan los modelos: corra `entorno\\Scripts\\python descargar_modelos.py` en la carpeta del taller")
+        sys.exit(1)
+
+    cliente = p.connect(modo)
+    if modo == p.GUI:
+        # sin los paneles laterales de PyBullet (sombras, rgb, depth...):
+        # solo la escena y los botones
+        p.configureDebugVisualizer(p.COV_ENABLE_RGB_BUFFER_PREVIEW, 0)
+        p.configureDebugVisualizer(p.COV_ENABLE_DEPTH_BUFFER_PREVIEW, 0)
+        p.configureDebugVisualizer(p.COV_ENABLE_SEGMENTATION_MARK_PREVIEW, 0)
+        p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 0)   # no dibujar mientras carga (va mas rapido)
+    p.setGravity(0, 0, -10)
+
+    # PyBullet guarda UNA sola ruta de busqueda adicional (cada llamada
+    # pisa la anterior). Las mallas de Baxter se nombran en el URDF como
+    # "package://baxter_description/meshes/...": PyBullet quita el
+    # "package://" y busca el resto en esa ruta, asi que la ruta tiene
+    # que ser modelos/baxter_common. Por eso el piso y el cubo (de
+    # pybullet_data) se cargan con su ruta ABSOLUTA, sin search path.
+    p.setAdditionalSearchPath(str(CARPETA_MODELOS / "baxter_common"))
+    datos = pybullet_data.getDataPath()
+    p.loadURDF(os.path.join(datos, "plane.urdf"), [0, 0, Z_PISO], useFixedBase=True)
+
+    # Baxter con la base fija (igual que baxter_ik_demo.py): es un robot
+    # de pedestal, no se tiene que caer ni deslizar. Se deja en el origen
+    # mirando a +X (el demo del profesor lo gira y lo corre; aca no hace
+    # falta y las coordenadas quedan mas faciles de leer). PyBullet avisa
+    # "No inertial data" por varios links: con la base fija no importa.
+    robot = p.loadURDF(str(URDF_BAXTER), useFixedBase=True)
+    nombres = indice_por_nombre(robot)
+
+    # Juntas MOVILES en el orden de qIndex (jointInfo[3]). calculateInverse
+    # Kinematics devuelve UN valor por cada junta movil en ese orden
+    # (incluye head_pan y los 4 dedos, no solo los 7 del brazo), asi que
+    # para saber que valor va en que junta hay que mapear por qIndex, como
+    # hace el demo (alli con "qIndex - 7"; aca con la posicion en la lista).
+    moviles = sorted((i for i in range(p.getNumJoints(robot)) if p.getJointInfo(robot, i)[3] > -1),
+                     key=lambda i: p.getJointInfo(robot, i)[3])
+    # Limites REALES de cada junta, leidos del URDF (el demo usa -2..2
+    # para todas, que deja afuera parte del rango del codo y la muneca y
+    # permite posturas imposibles en el hombro s1, que va de -2.15 a 1.05).
+    limite_inf = [p.getJointInfo(robot, i)[8] for i in moviles]
+    limite_sup = [p.getJointInfo(robot, i)[9] for i in moviles]
+    rangos = [s - i for i, s in zip(limite_inf, limite_sup)]
+
+    brazos = {"izquierdo": _datos_brazo(robot, nombres, "left"),
+              "derecho": _datos_brazo(robot, nombres, "right")}
+    for nombre, brazo in brazos.items():
+        brazo.nombre = nombre
+        brazo.descanso = {j: POSE_DESCANSO[k] for j, k in zip(brazo.juntas, POSE_DESCANSO)}
+        # Donde esta el hombro y hacia donde apunta el brazo con s0 = 0:
+        # el soporte del brazo (link "left_arm_mount"/"right_arm_mount")
+        # esta girado +-45 grados respecto del frente del robot.
+        lado = "left" if nombre == "izquierdo" else "right"
+        soporte = [i for i in range(p.getNumJoints(robot))
+                   if p.getJointInfo(robot, i)[12].decode() == f"{lado}_arm_mount"][0]
+        pos_soporte, orn_soporte = p.getLinkState(robot, soporte)[4:6]
+        brazo.hombro_xy = pos_soporte[:2]
+        brazo.giro_soporte = p.getEulerFromQuaternion(orn_soporte)[2]
+
+    # Mesa: un bloque fijo desde el piso hasta Z_MESA.
+    alto = (Z_MESA - Z_PISO) / 2
+    medias = [MESA_MEDIAS[0], MESA_MEDIAS[1], alto]
+    mesa = p.createMultiBody(
+        baseMass=0,
+        baseCollisionShapeIndex=p.createCollisionShape(p.GEOM_BOX, halfExtents=medias),
+        baseVisualShapeIndex=p.createVisualShape(p.GEOM_BOX, halfExtents=medias, rgbaColor=[0.55, 0.42, 0.30, 1]),
+        basePosition=[MESA_CENTRO_XY[0], MESA_CENTRO_XY[1], Z_MESA - alto])
+
+    # Marcas de origen (azul) y destino (verde): cuadrados finos SOLO
+    # visuales (sin colision), apoyados sobre la mesa. Se ven tambien en
+    # getCameraImage, a diferencia de los addUserDebugText.
+    for (x, y), color in ((POS_ORIGEN, [0.2, 0.5, 1.0, 1]), (POS_DESTINO, [0.2, 0.85, 0.3, 1])):
+        p.createMultiBody(baseMass=0,
+                          baseVisualShapeIndex=p.createVisualShape(p.GEOM_BOX, halfExtents=[0.05, 0.05, 0.001],
+                                                                   rgbaColor=color),
+                          basePosition=[x, y, Z_MESA + 0.001])
+    p.addUserDebugText("ORIGEN", [POS_ORIGEN[0], POS_ORIGEN[1], Z_MESA + 0.08], textColorRGB=[0.3, 0.6, 1], textSize=1.2)
+    p.addUserDebugText("DESTINO", [POS_DESTINO[0], POS_DESTINO[1], Z_MESA + 0.08], textColorRGB=[0.3, 0.9, 0.4], textSize=1.2)
+
+    cubo = p.loadURDF(os.path.join(datos, "cube_small.urdf"), [POS_ORIGEN[0], POS_ORIGEN[1], Z_CUBO],
+                      globalScaling=ESCALA_CUBO)
+    # friccion alta en el cubo para que los dedos lo sujeten mejor
+    p.changeDynamics(cubo, -1, lateralFriction=1.0)
+
+    estado = SimpleNamespace(
+        cliente=cliente, tiempo_real=(modo == p.GUI), robot=robot, nombres=nombres, moviles=moviles,
+        limite_inf=limite_inf, limite_sup=limite_sup, rangos=rangos, brazos=brazos, mesa=mesa, cubo=cubo,
+        activo="izquierdo", objetivo={}, agarre=None, tecla_anterior="-", ser=None,
+        ultima_linea="", ultima_tecla="-", id_texto=None, botones={}, demo_en_curso=False)
+
+    # Pose inicial: aca SI se usa resetJointState (una sola vez, antes de
+    # simular): se resuelve la IK hacia el home de cada brazo y se coloca
+    # el robot ahi directamente, para no arrancar con los brazos estirados
+    # a los costados (la pose con todas las juntas en 0).
+    for j in moviles:
+        p.resetJointState(robot, j, 0.0)
+    for nombre, brazo in brazos.items():
+        for j, v in brazo.descanso.items():
+            p.resetJointState(robot, j, v)
+        for _ in range(5):   # varias pasadas: cada una arranca desde la anterior
+            angulos = resolver_ik(estado, nombre, HOME[nombre])
+            for j, v in angulos.items():
+                p.resetJointState(robot, j, v)
+        for indice, abierta in brazo.dedos:
+            p.resetJointState(robot, indice, abierta)
+    # Motores en esa misma pose (sin esto, los brazos caerian por gravedad).
+    p.setJointMotorControl2(robot, nombres["head_pan"], p.POSITION_CONTROL, targetPosition=0, force=50)
+    for nombre in brazos:
+        fijar_objetivo(estado, nombre, HOME[nombre])
+        mover_pinza(estado, nombre, abierta=True)
+
+    if modo == p.GUI:
+        p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 1)
+        # camara en diagonal por delante de Baxter, un poco desde arriba
+        p.resetDebugVisualizerCamera(cameraDistance=2.2, cameraYaw=120, cameraPitch=-28,
+                                     cameraTargetPosition=[0.45, 0, -0.05])
+    estado.id_texto = p.addUserDebugText("", [0.2, 0, 0.95], textColorRGB=[1, 1, 0.4], textSize=1.3)
+    actualizar_texto(estado)
+    avanzar(estado, 60)   # que el cubo se asiente en la mesa
+    return estado
+
+
+# ======================================================================
+# Movimiento: IK, motores y pinza
+# ======================================================================
+def resolver_ik(estado, nombre_brazo, xyz):
+    """Angulos de las 7 juntas del brazo para llevar su endpoint a `xyz`
+    con la pinza mirando hacia abajo. Devuelve {indice_junta: angulo}.
+
+    Diferencias con accurateIK() del demo del profesor:
+    - el demo itera llamando a resetJointState (teletransporta el robot
+      en cada iteracion para medir el error): eso rompe la fisica si se
+      hace en el bucle. Aca se usa maxNumIterations/residualThreshold,
+      que hacen esas mismas iteraciones DENTRO de PyBullet, sobre una
+      copia interna del robot, sin tocar la simulacion;
+    - se pasan los limites reales de cada junta y una pose de descanso
+      (restPoses): eso activa el "espacio nulo" (null space) de la IK,
+      que entre las infinitas soluciones elige la mas parecida a esa pose;
+    - para las juntas que NO son de este brazo, la pose de descanso es su
+      posicion actual: asi la IK no "quiere" mover el otro brazo (y de
+      todos modos solo se aplican las 7 juntas del brazo pedido)."""
+    robot = estado.robot
+    brazo = estado.brazos[nombre_brazo]
+    actuales = [p.getJointState(robot, j)[0] for j in estado.moviles]
+    descanso_brazo = dict(brazo.descanso)
+    descanso_brazo[brazo.juntas[0]] = s0_hacia(estado, nombre_brazo, xyz)
+    descanso = [descanso_brazo.get(j, actual) for j, actual in zip(estado.moviles, actuales)]
+
+    # Iteraciones "a lo accurateIK" pero sin tocar el robot: cada vuelta
+    # arranca la IK desde la solucion anterior (currentPositions) en vez
+    # de desde la pose real. Con una sola llamada, lejos de la pose actual
+    # la IK se queda a varios cm; con 10 vueltas converge (medido).
+    posiciones = list(actuales)
+    for _ in range(ITERACIONES_IK):
+        resultado = p.calculateInverseKinematics(
+            robot, brazo.efector, xyz, ORIENTACION_ABAJO,
+            lowerLimits=estado.limite_inf, upperLimits=estado.limite_sup,
+            jointRanges=estado.rangos, restPoses=descanso, currentPositions=posiciones,
+            maxNumIterations=ITERACIONES_INTERNAS, residualThreshold=1e-4)
+        # resultado[k] es el angulo de la k-esima junta movil (orden
+        # qIndex). Solo se actualizan las 7 juntas de este brazo: el resto
+        # (cabeza, el otro brazo, los dedos) queda donde esta.
+        cambio = 0.0
+        for k, j in enumerate(estado.moviles):
+            if j in brazo.juntas:
+                cambio = max(cambio, abs(resultado[k] - posiciones[k]))
+                posiciones[k] = resultado[k]
+        if cambio < 1e-3:   # ya no cambia: convergio (en el jog pasa en 1-4 vueltas, medido)
+            break
+    return {j: posiciones[estado.moviles.index(j)] for j in brazo.juntas}
+
+
+def s0_hacia(estado, nombre_brazo, xyz):
+    """Angulo del hombro (s0) que apunta el brazo hacia el objetivo, visto
+    desde arriba: el angulo de la recta hombro -> objetivo menos el giro
+    del soporte del brazo (+-45 grados). Se usa como pose de descanso del
+    hombro: la IK sigue libre de elegir otro, pero arranca 'mirando' al
+    objetivo, sobre todo cuando cruza al lado del otro brazo."""
+    brazo = estado.brazos[nombre_brazo]
+    angulo = math.atan2(xyz[1] - brazo.hombro_xy[1], xyz[0] - brazo.hombro_xy[0]) - brazo.giro_soporte
+    k = estado.moviles.index(brazo.juntas[0])
+    return limitar(angulo, estado.limite_inf[k], estado.limite_sup[k])
+
+
+def fijar_objetivo(estado, nombre_brazo, xyz):
+    """Resuelve la IK hacia `xyz` y le manda a cada motor del brazo su
+    angulo. NO simula: los motores llevan el brazo hacia ahi en los
+    siguientes stepSimulation(). POSITION_CONTROL es un motor con fuerza
+    y velocidad maximas, no un teletransporte: el brazo empuja contra la
+    gravedad y contra lo que toque (mesa, cubo), con fisica real."""
+    estado.objetivo[nombre_brazo] = tuple(xyz)
+    brazo = estado.brazos[nombre_brazo]
+    for k, (junta, angulo) in enumerate(resolver_ik(estado, nombre_brazo, xyz).items()):
+        fuerza = FUERZA_HOMBRO_CODO if k < 4 else FUERZA_MUNECA   # s0 s1 e0 e1 | w0 w1 w2
+        p.setJointMotorControl2(estado.robot, junta, p.POSITION_CONTROL, targetPosition=angulo,
+                                force=fuerza, maxVelocity=VELOCIDAD_MAX)
+
+
+def mover_pinza(estado, nombre_brazo, abierta):
+    """Abre o cierra los dos dedos prismaticos de verdad (motor de
+    posicion con la fuerza del URDF), sin tocar el resto del brazo."""
+    for indice, posicion_abierta in estado.brazos[nombre_brazo].dedos:
+        p.setJointMotorControl2(estado.robot, indice, p.POSITION_CONTROL,
+                                targetPosition=posicion_abierta if abierta else 0.0, force=FUERZA_DEDOS)
+
+
+def avanzar(estado, pasos):
+    """Simula `pasos` pasos de fisica. En la ventana (GUI) duerme 1/240 s
+    por paso para verlo a velocidad real; en DIRECT corre a toda maquina."""
+    for _ in range(pasos):
+        p.stepSimulation()
+        if estado.tiempo_real:
+            time.sleep(1 / PASOS_POR_SEGUNDO)
+
+
+def posicion_efector(estado, nombre_brazo):
+    return p.getLinkState(estado.robot, estado.brazos[nombre_brazo].efector, computeForwardKinematics=True)[4]
+
+
+def mover_a(estado, nombre_brazo, xyz, pasos=PASOS_POR_SEGUNDO):
+    """Lleva el endpoint del brazo a `xyz` EN LINEA RECTA y simula `pasos`
+    pasos en total. Devuelve el error final en metros.
+
+    Por que en linea recta: si se le da a los motores directamente el
+    angulo final, cada junta gira a su velocidad maxima por su cuenta y
+    la pinza describe una CURVA, no una recta. Medido: al subir despues
+    de soltar el cubo, la pinza se corria 3 cm de lado todavia abajo,
+    golpeaba el cubo y lo giraba 57 grados. Por eso el tramo se parte en
+    pedacitos de 1 cm (IK para cada uno, igual que el jog con el
+    teclado), repartidos en el 70 % de los pasos; el 30 % restante es
+    para que el brazo termine de asentarse en el punto final."""
+    inicio = estado.objetivo.get(nombre_brazo, posicion_efector(estado, nombre_brazo))
+    tramos = max(1, math.ceil(math.dist(inicio, xyz) / 0.01))
+    pasos_tramo = max(1, int(pasos * 0.7) // tramos)
+    for k in range(1, tramos + 1):
+        intermedio = [a + (b - a) * k / tramos for a, b in zip(inicio, xyz)]
+        fijar_objetivo(estado, nombre_brazo, intermedio)
+        avanzar(estado, pasos_tramo)
+    avanzar(estado, max(0, pasos - pasos_tramo * tramos))
+    return math.dist(posicion_efector(estado, nombre_brazo), xyz)
+
+
+# ======================================================================
+# Agarre con constraint
+# ======================================================================
+def intentar_agarrar(estado, nombre_brazo):
+    """Si el cubo esta entre los dedos, lo "suelda" a la pinza con un
+    constraint JOINT_FIXED (ver README: los dedos de verdad tambien se
+    cierran, pero el contacto de dos dedos chicos contra un cubo liviano
+    es inestable en la simulacion y el cubo se resbala al acelerar).
+
+    La transformacion relativa entre pinza y cubo se mide en el instante
+    del agarre (invertTransform + multiplyTransforms), en vez de suponer
+    un offset fijo: asi el cubo queda exactamente como estaba respecto a
+    la pinza y no "salta" al pegarse. Devuelve True si agarro."""
+    if estado.agarre is not None:
+        return False
+    efector = estado.brazos[nombre_brazo].efector
+    pos_ef, orn_ef = p.getLinkState(estado.robot, efector, computeForwardKinematics=True)[4:6]
+    pos_cubo, orn_cubo = p.getBasePositionAndOrientation(estado.cubo)
+    if math.dist(pos_ef, pos_cubo) > UMBRAL_AGARRE:
+        return False
+    inv_pos, inv_orn = p.invertTransform(pos_ef, orn_ef)
+    pos_rel, orn_rel = p.multiplyTransforms(inv_pos, inv_orn, pos_cubo, orn_cubo)
+    # OJO: el marco del link en createConstraint es el del centro de masa
+    # del link (getLinkState[0:2]) y no el del link (getLinkState[4:6]);
+    # el endpoint no tiene inercia propia, asi que coinciden. Se usa el
+    # mismo marco (4:6) que para medir, por claridad.
+    restriccion = p.createConstraint(
+        parentBodyUniqueId=estado.robot, parentLinkIndex=efector,
+        childBodyUniqueId=estado.cubo, childLinkIndex=-1,
+        jointType=p.JOINT_FIXED, jointAxis=[0, 0, 0],
+        parentFramePosition=pos_rel, parentFrameOrientation=orn_rel,
+        childFramePosition=[0, 0, 0])
+    estado.agarre = (restriccion, nombre_brazo)
+    return True
+
+
+def soltar(estado, nombre_brazo=None):
+    """Borra el constraint (el cubo vuelve a quedar suelto, con gravedad).
+    Con `nombre_brazo`, solo suelta si es ESE brazo el que lo tiene."""
+    if estado.agarre is not None and nombre_brazo in (None, estado.agarre[1]):
+        p.removeConstraint(estado.agarre[0])
+        estado.agarre = None
+
+
+def abrir_y_soltar(estado, nombre_brazo):
+    """Abre los dedos y DESPUES borra el constraint. En ese orden a
+    proposito: con la pinza cerrada los dedos estan apretando el cubo (se
+    quedan en ~0.009 de 0.02, contra sus caras); si se borra el constraint
+    con los dedos todavia apretando, el motor de fisica resuelve de golpe
+    esa interpenetracion y el cubo sale despedido (medido: caia 2.7 cm
+    corrido del destino). Abriendo primero, cae derecho (0.2 cm)."""
+    mover_pinza(estado, nombre_brazo, abierta=True)
+    if estado.agarre is not None and estado.agarre[1] == nombre_brazo:
+        avanzar(estado, 30)   # 1/8 s: los dedos ya se separaron del cubo
+    soltar(estado, nombre_brazo)
+
+
+def reponer_cubo(estado):
+    """Suelta el cubo y lo vuelve a poner en el origen. Se mueve el MISMO
+    cuerpo (resetBasePositionAndOrientation) en vez de borrarlo y crear
+    otro: PyBullet reutiliza los ids de cuerpos borrados y es mas facil
+    equivocarse con ids viejos."""
+    soltar(estado)
+    p.resetBasePositionAndOrientation(estado.cubo, [POS_ORIGEN[0], POS_ORIGEN[1], Z_CUBO], [0, 0, 0, 1])
+    p.resetBaseVelocity(estado.cubo, [0, 0, 0], [0, 0, 0])
+
+
+# ======================================================================
+# Demos (bloqueantes, como en los temas 7 y 8)
+# ======================================================================
+def ejecutar_demo(estado):
+    """D: con el brazo activo, coge el cubo donde este y lo deja en el
+    destino. Cada tramo es un mover_a() (IK + motores + simular): el
+    brazo se mueve con fisica real, no se teletransporta."""
+    brazo = estado.activo
+    estado.demo_en_curso = True
+    print(f"Demo D con el brazo {brazo}: cogiendo el cubo...")
+    x, y, _ = p.getBasePositionAndOrientation(estado.cubo)[0]
+    xd, yd = POS_DESTINO
+
+    mover_pinza(estado, brazo, abierta=True)
+    mover_a(estado, brazo, (x, y, Z_VIAJE), 360)          # encima del cubo
+    mover_a(estado, brazo, (x, y, Z_AGARRE + 0.05), 180)   # se acerca
+    mover_a(estado, brazo, (x, y, Z_AGARRE), 180)          # baja despacio hasta el cubo
+    mover_pinza(estado, brazo, abierta=False)              # cierra los dedos
+    avanzar(estado, 120)
+    if not intentar_agarrar(estado, brazo):                 # y lo "suelda" a la pinza
+        print("Demo: el cubo no quedo entre los dedos (se movio?). Pulsa 0 para reponerlo.")
+    mover_a(estado, brazo, (x, y, Z_VIAJE), 240)          # lo levanta
+    mover_a(estado, brazo, (xd, yd, Z_VIAJE), 360)        # viaja hasta encima del destino
+    mover_a(estado, brazo, (xd, yd, Z_AGARRE + 0.003), 300)   # baja (3 mm de aire: no lo aplasta)
+    abrir_y_soltar(estado, brazo)                           # abre los dedos y borra el constraint
+    avanzar(estado, 60)
+    mover_a(estado, brazo, (xd, yd, Z_VIAJE), 240)        # se aleja hacia arriba
+    print("Demo D: listo, el cubo quedo en el destino.")
+    estado.demo_en_curso = False
+
+
+def ejecutar_demo_recorrido(estado):
+    """B: pasea el endpoint del brazo activo por X, Y y Z (cada eje a su
+    turno, volviendo al centro), para mostrar el rango de movimiento."""
+    brazo = estado.activo
+    estado.demo_en_curso = True
+    print(f"Demo B con el brazo {brazo}: recorriendo los 3 ejes...")
+    (x0, x1), (y0, y1), (z0, z1) = LIMITES_JOG[brazo]
+    centro = ((x0 + x1) / 2, (y0 + y1) / 2, Z_VIAJE)
+    cx, cy, cz = centro
+    recorrido = [centro, (x1, cy, cz), (x0, cy, cz), centro,
+                 (cx, y1, cz), (cx, y0, cz), centro,
+                 (cx, cy, z1), (cx, cy, Z_AGARRE + 0.05), centro]
+    for punto in recorrido:
+        mover_a(estado, brazo, punto, 300)
+    print("Demo B: recorrido listo.")
+    estado.demo_en_curso = False
+
+
+# ======================================================================
+# Teclas: que hace cada una, y el filtro jog / flanco
+# ======================================================================
 def limitar(valor, minimo, maximo):
     return max(minimo, min(maximo, valor))
 
 
-def ejecutar_tecla(tecla):
-    global posicion_objetivo, angulo_pinza
-    if tecla == "8":
-        posicion_objetivo[1] += PASO_JOG
-    elif tecla == "2":
-        posicion_objetivo[1] -= PASO_JOG
-    elif tecla == "4":
-        posicion_objetivo[0] -= PASO_JOG
-    elif tecla == "6":
-        posicion_objetivo[0] += PASO_JOG
-    elif tecla == "9":
-        posicion_objetivo[2] += PASO_JOG
-    elif tecla == "7":
-        posicion_objetivo[2] -= PASO_JOG
+def ejecutar_tecla(estado, tecla):
+    """La UNICA funcion que decide que hace cada tecla. La usan el ESP32
+    y los botones de la ventana: asi nunca se desincronizan."""
+    brazo = estado.activo
+    objetivo = list(estado.objetivo.get(brazo, HOME[brazo]))
+    jog = {"8": (1, +1), "2": (1, -1), "4": (0, -1), "6": (0, +1), "9": (2, +1), "7": (2, -1)}
+    if tecla in jog:
+        eje, signo = jog[tecla]
+        objetivo[eje] += signo * PASO_JOG
+        # el jog nunca deja el objetivo fuera de la caja de trabajo
+        objetivo = [limitar(objetivo[e], *LIMITES_JOG[brazo][e]) for e in range(3)]
+        fijar_objetivo(estado, brazo, objetivo)
     elif tecla == "5":
-        posicion_objetivo = list(HOME_EFECTOR)
+        fijar_objetivo(estado, brazo, HOME[brazo])
     elif tecla == "A":
-        angulo_pinza = ANGULO_PINZA_ABIERTA
-        soltar()
+        abrir_y_soltar(estado, brazo)
     elif tecla == "C":
-        angulo_pinza = ANGULO_PINZA_CERRADA
-        intentar_agarrar()
+        mover_pinza(estado, brazo, abierta=False)
+        intentar_agarrar(estado, brazo)
     elif tecla == "D":
-        ejecutar_demo()
+        ejecutar_demo(estado)
     elif tecla == "B":
-        ejecutar_demo_recorrido()
+        ejecutar_demo_recorrido(estado)
     elif tecla == "0":
-        soltar()
-        reset_cubo()
-    # el jog nunca deja el objetivo fuera de la caja de trabajo
-    posicion_objetivo = [limitar(posicion_objetivo[eje], *LIMITES_JOG[eje]) for eje in range(3)]
+        reponer_cubo(estado)
+    elif tecla == "*":
+        # El otro brazo NO necesita nada: sus motores siguen con el ultimo
+        # objetivo que recibieron y lo sostienen quieto contra la gravedad.
+        estado.activo = "derecho" if brazo == "izquierdo" else "izquierdo"
+        print(f"Brazo activo: {estado.activo}")
+    estado.ultima_tecla = tecla
+    actualizar_texto(estado)
 
 
-def procesar_tecla(tecla):
-    """Tecla recibida del ESP32: el jog se aplica en cada repeticion, el
-    resto solo en el flanco (ver TECLAS_JOG)."""
-    global tecla_anterior
-    anterior, tecla_anterior = tecla_anterior, tecla
+def procesar_tecla(estado, tecla):
+    """Filtro para lo que llega del ESP32. El firmware repite la tecla
+    sostenida cada 50 ms: las de JOG actuan en cada repeticion (sostener
+    = moverse de corrido); todas las demas actuan solo en el FLANCO (la
+    tecla recibida es distinta de la anterior). Sin esto, un toque de *
+    (unas 4 lineas) cambiaria de brazo 4 veces, y uno de D correria la
+    demo 4 veces seguidas."""
+    anterior, estado.tecla_anterior = estado.tecla_anterior, tecla
+    if tecla == "-":
+        return
     if tecla in TECLAS_JOG or tecla != anterior:
-        ejecutar_tecla(tecla)
-    if tecla in ("D", "B") and ser is not None:
-        # lo que llego MIENTRAS corria la demo (bloqueante, ~10 s) son
-        # lineas viejas: se descartan en vez de ejecutarlas todas juntas
-        # al terminar (el brazo "saltaria" con 200 pasos de jog de golpe)
-        ser.reset_input_buffer()
+        ejecutar_tecla(estado, tecla)
+    if tecla in ("D", "B") and estado.ser is not None:
+        # lo que llego MIENTRAS corria la demo (bloqueante) son lineas
+        # viejas: se descartan en vez de ejecutarlas todas juntas al final
+        estado.ser.reset_input_buffer()
 
 
-# Ultima linea CRUDA recibida del ESP32, escrita en la propia ventana:
-# si nunca cambia, el ESP32 no esta mandando nada; si cambia pero no es
-# "TECLA:x", el problema es de formato/parseo, no de cable.
-ultima_linea_cruda = None
-POS_TEXTO_SERIAL = [0.2, 0.55, 0.55]
-id_texto_serial = p.addUserDebugText("ESP32: " + ("esperando datos..." if ser else "no conectado (usa los botones)"),
-                                     POS_TEXTO_SERIAL, textColorRGB=[1, 1, 0.4], textSize=1.2)
+def procesar_linea(estado, linea):
+    """Una linea cruda del ESP32 (o simulada en la prueba)."""
+    linea = linea.strip()
+    if linea != estado.ultima_linea:
+        estado.ultima_linea = linea
+        actualizar_texto(estado)
+    if linea.startswith("TECLA:"):
+        procesar_tecla(estado, linea.split(":", 1)[1])
 
-print("Ventana de PyBullet abierta. Cierra la ventana o Ctrl+C en la terminal para salir.")
 
-while True:
-    if not demo_en_curso:
-        # teclado fisico (ESP32): llega "TECLA:x" sin parar. OJO: leer con
-        # ser.readline() a secas (con timeout) bloqueaba hasta 50ms cuando
-        # no habia linea todavia, capando TODO el bucle -- incluida la
-        # simulacion -- a ~20 cuadros/seg en vez de 240. Por eso se lee
-        # solo si YA hay datos esperando (in_waiting): la simulacion nunca
-        # se frena esperando al ESP32, y el movimiento manual se ve fluido.
-        # Y se drena TODO el buffer (while, no if) para no quedar atrasado.
-        try:
-            while ser is not None and ser.in_waiting:
-                linea = ser.readline().decode(errors="ignore").strip()
-                if linea != ultima_linea_cruda:
-                    ultima_linea_cruda = linea
-                    p.addUserDebugText("ESP32: " + linea, POS_TEXTO_SERIAL, textColorRGB=[1, 1, 0.4],
-                                       textSize=1.2, replaceItemUniqueId=id_texto_serial)
-                if linea.startswith("TECLA:"):
-                    procesar_tecla(linea.split(":", 1)[1])
-        except serial.SerialException:
-            print("Se perdio la conexion con el ESP32: sigue con los botones de la ventana.")
-            ser = None
+def actualizar_texto(estado):
+    """Linea de estado arriba en la ventana: brazo activo, ultima tecla y
+    ultima linea CRUDA del ESP32 (si nunca cambia, el ESP32 no manda nada;
+    si cambia pero no dice TECLA:x, el problema es de formato, no de cable)."""
+    if estado.id_texto is None:
+        return
+    serial_txt = estado.ultima_linea or ("esperando datos..." if estado.ser else "no conectado (usa los botones)")
+    texto = f"Brazo activo: {estado.activo.upper()}  |  tecla: {estado.ultima_tecla}  |  ESP32: {serial_txt}"
+    estado.id_texto = p.addUserDebugText(texto, [0.2, 0, 0.95], textColorRGB=[1, 1, 0.4], textSize=1.3,
+                                         replaceItemUniqueId=estado.id_texto)
 
-        # botones de la ventana (sin ESP32): un click = una pulsacion de
-        # la tecla equivalente (un paso fijo de jog, o una accion)
-        for etiqueta, boton in botones.items():
-            contador = p.readUserDebugParameter(boton)
-            if contador != contadores_anteriores[etiqueta]:
-                contadores_anteriores[etiqueta] = contador
-                ejecutar_tecla(BOTON_A_TECLA[etiqueta])
 
-        mover_brazo(posicion_objetivo)
-        mover_pinza(angulo_pinza)
+# ======================================================================
+# Entrada: serial y botones
+# ======================================================================
+def abrir_serial():
+    """Intenta abrir el puerto; sin ESP32 devuelve None y todo sigue con
+    los botones de la ventana."""
+    import serial
+    try:
+        ser = serial.Serial(PUERTO_SERIAL, BAUDIOS, timeout=0.05)
+        time.sleep(2)   # el ESP32 se reinicia al abrir el puerto: darle tiempo
+        print(f"ESP32 conectado en {PUERTO_SERIAL}: el teclado mueve a Baxter.")
+        return ser
+    except serial.SerialException:
+        print(f"No se encontro el ESP32 en {PUERTO_SERIAL}: usa los botones de la ventana.")
+        return None
 
-    p.stepSimulation()
-    time.sleep(1 / 240)
+
+def leer_serial(estado):
+    """Lee SOLO si ya hay datos esperando (in_waiting) y drena TODO el
+    buffer (while, no if). Un readline() a secas con timeout bloquearia
+    el bucle hasta 50 ms cuando no hay linea, y con el toda la simulacion
+    (quedaria a ~20 cuadros/s en vez de 240)."""
+    import serial
+    try:
+        while estado.ser is not None and estado.ser.in_waiting:
+            procesar_linea(estado, estado.ser.readline().decode(errors="ignore"))
+    except serial.SerialException:
+        print("Se perdio la conexion con el ESP32: sigue con los botones de la ventana.")
+        estado.ser = None
+        actualizar_texto(estado)
+
+
+def crear_botones(estado):
+    """Un boton por tecla, creados UNA sola vez (PyBullet no borra bien
+    los botones/sliders: recrearlos los deja duplicados en el panel)."""
+    estado.botones = {etiqueta: [p.addUserDebugParameter(etiqueta, 1, 0, 0), 0] for etiqueta in BOTON_A_TECLA}
+
+
+def leer_botones(estado):
+    """Un boton de PyBullet es un contador que sube con cada click: si
+    cambio, es una pulsacion (un paso de jog o una accion)."""
+    for etiqueta, datos in estado.botones.items():
+        contador = p.readUserDebugParameter(datos[0])
+        if contador != datos[1]:
+            datos[1] = contador
+            ejecutar_tecla(estado, BOTON_A_TECLA[etiqueta])
+
+
+def bucle_principal(estado):
+    print("Ventana de PyBullet abierta. Cierra la ventana o Ctrl+C en la terminal para salir.")
+    while p.isConnected(estado.cliente):
+        leer_serial(estado)
+        leer_botones(estado)
+        avanzar(estado, 1)
+
+
+if __name__ == "__main__":
+    estado = crear_mundo(p.GUI)
+    estado.ser = abrir_serial()
+    actualizar_texto(estado)
+    crear_botones(estado)
+    try:
+        bucle_principal(estado)
+    except (KeyboardInterrupt, p.error):
+        pass
+    finally:
+        if estado.ser is not None:
+            estado.ser.close()

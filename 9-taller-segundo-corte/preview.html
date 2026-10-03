@@ -50,7 +50,8 @@
     border-radius: 6px; padding: 0.4rem 0.5rem; font-family: "IBM Plex Mono", monospace; font-size: 0.65rem; color: var(--text-muted);
   }
   #monitor div:last-child { color: var(--text); }
-  svg { width: 100%; max-height: 46vh; height: auto; background: #0a0d10; border: 1px solid var(--panel-border); border-radius: 8px; }
+  /* lienzo cuadrado (viewBox 320x320): tan ancho como quepa sin pasar del 56 % del alto de la ventana */
+  svg { display: block; width: min(100%, 56vh); height: auto; margin: 0 auto; background: #0a0d10; border: 1px solid var(--panel-border); border-radius: 8px; }
   .lectura { display: flex; gap: 1rem; margin-top: 0.8rem; font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; color: var(--text-muted); flex-wrap: wrap; }
   .teclado { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; }
   .teclado button {
@@ -60,17 +61,22 @@
   .teclado button.activa { border-color: var(--accent); color: var(--accent); }
   .teclado button.deshabilitada { color: #3a3f45; cursor: default; }
   #leyenda { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--amarillo); margin-top: 0.6rem; line-height: 1.5; }
+  .insignias { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.6rem; font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; }
+  .insignias span { border: 1px solid var(--panel-border); border-radius: 999px; padding: 0.15rem 0.55rem; color: var(--text-muted); }
+  .insignias span.ok { border-color: var(--verde-ok); color: var(--verde-ok); }
+  .insignias span.mal { border-color: var(--rojo); color: var(--rojo); }
+  .insignias span.aviso { border-color: var(--amarillo); color: var(--amarillo); }
 </style>
 </head>
 <body>
 
 <h1>Previsualización — taller segundo corte</h1>
-<p class="sub">Un solo teclado matricial 4x4 (esp32_teclado.py) controla las tres simulaciones del taller, cada una con su propia configuración de teclas. Este panel no reemplaza PyBullet: es un esquema 2D simplificado para probar el control rápido.</p>
+<p class="sub">Un solo teclado matricial 4x4, conectado directo a 8 pines GPIO del ESP32 (esp32_teclado.py), controla las tres simulaciones del taller, cada una con su propia configuración de teclas: drones, Baxter (dos brazos) y Atlas (humanoide). Este panel no reemplaza PyBullet: es un esquema 2D simplificado para probar el control rápido, con las mismas teclas y la misma regla de flancos que los scripts de Python.</p>
 
 <div class="config-tabs">
   <button id="btnConfigDrones" class="activo">Configuración: drones</button>
-  <button id="btnConfigBrazo">Configuración: brazo (tipo Baxter)</button>
-  <button id="btnConfigPatas">Configuración: locomoción (patas)</button>
+  <button id="btnConfigBaxter">Configuración: Baxter (dos brazos)</button>
+  <button id="btnConfigAtlas">Configuración: Atlas (humanoide)</button>
 </div>
 
 <div class="rejilla">
@@ -94,24 +100,20 @@
       <g id="capaMarcadores"></g>
       <g id="capaMoviles"></g>
     </svg>
+    <div class="insignias" id="insignias"></div>
     <div class="lectura" id="lectura"></div>
   </div>
 </div>
 
 <script>
 // ---------------------------------------------------------------
-// Vista 2D "desde arriba" (X a la derecha, Y hacia arriba en pantalla).
-// Cada configuracion tiene su propia escala y centro: los drones se
-// mueven varios metros, el brazo apenas medio metro (con la escala de
-// los drones el efector se movia 1 px por paso y no se veia nada).
+// Vista 2D de los drones "desde arriba" (X a la derecha, Y hacia arriba
+// en pantalla). Baxter y Atlas tienen su propia transformacion (ver mas
+// abajo): el brazo se mueve medio metro y Atlas se dibuja de lado.
 // ---------------------------------------------------------------
-const VISTAS = {
-  drones: { escala: 48, cx: 0.0, cy: -0.3 },   // px por metro, centro del lienzo en metros
-  brazo: { escala: 300, cx: 0.5, cy: -0.05 },
-  patas: { escala: 120, cx: 0.0, cy: 0.6 },
-};
+const VISTA_DRONES = { escala: 48, cx: 0.0, cy: -0.3 };   // px por metro, centro del lienzo en metros
 function mundoAPantalla(x, y) {
-  const v = VISTAS[configActiva];
+  const v = VISTA_DRONES;
   return [160 + (x - v.cx) * v.escala, 160 - (y - v.cy) * v.escala];
 }
 
@@ -119,6 +121,7 @@ const SVG = "http://www.w3.org/2000/svg";
 const capaMarcadores = document.getElementById("capaMarcadores");
 const capaMoviles = document.getElementById("capaMoviles");
 const lectura = document.getElementById("lectura");
+const insignias = document.getElementById("insignias");
 const leyenda = document.getElementById("leyenda");
 const teclado = document.getElementById("teclado");
 const TECLAS = [["1","2","3","A"],["4","5","6","B"],["7","8","9","C"],["*","0","#","D"]];
@@ -129,6 +132,12 @@ function elemento(tipo, attrs, capa) {
   for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
   capa.appendChild(e);
   return e;
+}
+function texto(x, y, contenido, color, tam, capa, ancla = "start", peso = 400) {
+  const t = elemento("text", { x, y, fill: color, "font-size": tam, "text-anchor": ancla, "font-weight": peso,
+                               "font-family": "IBM Plex Mono, monospace" }, capa);
+  t.textContent = contenido;
+  return t;
 }
 function ejes() {
   const [ox, oy] = mundoAPantalla(0, 0);
@@ -150,6 +159,8 @@ function punto(x, y, color, radio) {
 }
 const limitar = (v, a, b) => Math.max(a, Math.min(b, v));
 const dist3 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+function insignia(textoInsignia, clase = "") { return `<span class="${clase}">${textoInsignia}</span>`; }
 
 // ---------------------------------------------------------------
 // Configuracion A: drones (mismas constantes que drones_pybullet.py)
@@ -208,162 +219,590 @@ function dibujarDrones() {
 }
 
 // ---------------------------------------------------------------
-// Configuracion B: brazo tipo Baxter (mismas constantes que brazo_pybullet.py)
-//   8/2 = Y+/Y-, 4/6 = X-/X+, 9/7 = Z+/Z-, 5 = home
-//   A = abrir pinza (suelta), C = cerrar pinza (agarra si el cubo esta cerca)
-//   D = demo coger y mover, B = demo recorrer los 3 ejes, 0 = reset del cubo
-// La vista es desde arriba; la altura Z del efector se ve en la barra
-// de la derecha (y en la lectura de abajo).
+// Configuracion B: Baxter, dos brazos (mismas constantes que
+// punto-b-brazo-tipo-baxter/brazo_pybullet.py)
+//   8/2 = Y+/Y-, 4/6 = X-/X+, 9/7 = Z+/Z- (jog: en CADA repeticion, 1,5 cm)
+//   5 = home del brazo activo, A = abrir pinza y soltar, C = cerrar y agarrar
+//   D = demo coger y llevar al destino, B = demo recorrer los 3 ejes
+//   0 = reponer el cubo, * = cambiar de brazo activo
+// Coordenadas del robot: origen en el torso, +X al frente, +Y a SU
+// izquierda, +Z arriba. Vista desde arriba con Baxter mirando hacia arriba
+// del lienzo: +X sube en pantalla y +Y va a la IZQUIERDA (como verlo desde
+// el techo parado detras de el). La altura Z se ve en la barra de la derecha.
+// En PyBullet el brazo se mueve con IK + motores; aca el efector va hacia
+// el objetivo a velocidad limitada (sirve para probar el CONTROL).
 // ---------------------------------------------------------------
-const POS_ORIGEN = [0.55, 0.20], POS_DESTINO = [0.55, -0.30];
-const HOME_EFECTOR = [0.537, 0.0, 0.35];
-const PASO_BRAZO = 0.015;
-const LIMITES_JOG = [[0.30, 0.68], [-0.40, 0.40], [0.07, 0.60]];
-const OFFSET_PINZA_SOBRE_CUBO = 0.24;   // la muneca (el "efector" de la IK) queda 0.24 m sobre el cubo agarrado
-const UMBRAL_AGARRE = 0.32;             // distancia 3D muneca-cubo maxima para agarrar
-const Z_CUBO_BANDEJA = -0.159, Z_CUBO_DESTINO = -0.135, Z_CUBO_PISO = -0.625;
-let efector = [...HOME_EFECTOR];
-let pinzaAbierta = true;
-let cubo = [POS_ORIGEN[0], POS_ORIGEN[1], Z_CUBO_BANDEJA];
-let cuboSostenido = false;
-let demoEnCurso = false;
+const Z_PISO = -0.926, Z_MESA = -0.20;
+const MESA_X = [0.47, 1.0], MESA_Y = [-0.5, 0.5];
+const LADO_CUBO = 0.05 * 0.7;                       // cube_small a escala 0,7 = 3,5 cm
+const Z_CUBO = Z_MESA + LADO_CUBO / 2;              // centro del cubo apoyado en la mesa
+const BAJADA_AGARRE = 0.008;
+const Z_AGARRE = Z_CUBO - BAJADA_AGARRE;            // -0,1905: el endpoint abraza el cubo
+const Z_VIAJE = Z_MESA + 0.20;                      // altura para trasladar el cubo
+const POS_ORIGEN = [0.65, 0.15], POS_DESTINO = [0.65, -0.15];
+const HOME = { izquierdo: [0.60, 0.40, 0.05], derecho: [0.60, -0.40, 0.05] };
+const LIMITES_JOG = {                               // caja de trabajo del jog, por brazo
+  izquierdo: [[0.50, 0.72], [-0.20, 0.50], [Z_AGARRE, 0.20]],
+  derecho: [[0.50, 0.72], [-0.50, 0.20], [Z_AGARRE, 0.20]],
+};
+const PASO_JOG = 0.015;              // m por linea "TECLA:x" (sostenida: 20 lineas/s = 30 cm/s)
+const UMBRAL_AGARRE = 0.04;          // distancia endpoint-centro del cubo para que C lo agarre
+const VELOCIDAD_EFECTOR = 0.5;       // m/s: el motor no "teletransporta" el brazo
+const HOMBRO = { izquierdo: [0.025, 0.22], derecho: [0.025, -0.22] };   // soportes de los brazos (URDF)
+const COLOR_BRAZO = { izquierdo: "#b58cf0", derecho: "#e0904f" };
+const ESCALA_DEMO = 2.5;             // ms por paso de fisica en las demos (240 pasos = 0,6 s; el script: 1 s)
 
-function alturaApoyo(x, y) {
-  // donde cae el cubo al soltarlo: plataforma de destino (16x16 cm),
-  // bandeja de origen (ancha, ~50 cm) o, fuera de las dos, el piso
-  if (Math.abs(x - POS_DESTINO[0]) <= 0.08 && Math.abs(y - POS_DESTINO[1]) <= 0.08) return Z_CUBO_DESTINO;
-  if (Math.abs(x - POS_ORIGEN[0]) <= 0.25 && Math.abs(y - POS_ORIGEN[1]) <= 0.25) return Z_CUBO_BANDEJA;
-  return Z_CUBO_PISO;
+const bx = {
+  activo: "izquierdo",
+  objetivo: { izquierdo: [...HOME.izquierdo], derecho: [...HOME.derecho] },   // lo que pide la IK
+  pos: { izquierdo: [...HOME.izquierdo], derecho: [...HOME.derecho] },        // donde esta el efector
+  pinzaAbierta: { izquierdo: true, derecho: true },
+  cubo: [POS_ORIGEN[0], POS_ORIGEN[1], Z_CUBO],
+  agarre: null,                      // nombre del brazo que tiene el cubo ("constraint")
+  demo: false,
+  mensaje: "",
+};
+const otroBrazo = (b) => (b === "izquierdo" ? "derecho" : "izquierdo");
+
+function sobreLaMesa(x, y) { return x >= MESA_X[0] && x <= MESA_X[1] && y >= MESA_Y[0] && y <= MESA_Y[1]; }
+function soltarBx(brazo = null) {
+  // borra el "constraint": el cubo cae a la mesa (o al piso si esta fuera)
+  if (bx.agarre === null || (brazo !== null && bx.agarre !== brazo)) return;
+  bx.agarre = null;
+  bx.cubo[2] = sobreLaMesa(bx.cubo[0], bx.cubo[1]) ? Z_CUBO : Z_PISO + LADO_CUBO / 2;
 }
-function soltarCubo() {
-  if (!cuboSostenido) return;
-  cuboSostenido = false;
-  cubo[2] = alturaApoyo(cubo[0], cubo[1]);
+function intentarAgarrarBx(brazo) {
+  if (bx.agarre !== null) return false;
+  if (dist3(bx.pos[brazo], bx.cubo) > UMBRAL_AGARRE) return false;
+  bx.agarre = brazo;
+  return true;
 }
-function intentarAgarrar() {
-  if (!cuboSostenido && dist3(efector, cubo) <= UMBRAL_AGARRE) cuboSostenido = true;
-}
+function reponerCuboBx() { soltarBx(); bx.cubo = [POS_ORIGEN[0], POS_ORIGEN[1], Z_CUBO]; }
 
-function teclaBrazo(t) {
-  if (demoEnCurso) return;   // igual que el script: la demo bloquea todo mientras corre
-  if (t === "8") efector[1] += PASO_BRAZO;
-  else if (t === "2") efector[1] -= PASO_BRAZO;
-  else if (t === "4") efector[0] -= PASO_BRAZO;
-  else if (t === "6") efector[0] += PASO_BRAZO;
-  else if (t === "9") efector[2] += PASO_BRAZO;
-  else if (t === "7") efector[2] -= PASO_BRAZO;
-  else if (t === "5") efector = [...HOME_EFECTOR];
-  else if (t === "A") { pinzaAbierta = true; soltarCubo(); }
-  else if (t === "C") { pinzaAbierta = false; intentarAgarrar(); }
-  else if (t === "D") ejecutarDemoBrazo();
-  else if (t === "B") ejecutarDemoRecorrido();
-  else if (t === "0") { cuboSostenido = false; cubo = [POS_ORIGEN[0], POS_ORIGEN[1], Z_CUBO_BANDEJA]; }
-  efector = efector.map((v, i) => limitar(v, ...LIMITES_JOG[i]));
-}
-
-const espera = (ms) => new Promise((r) => setTimeout(r, ms));
-async function moverA(xyz, ms) { efector = [...xyz]; await espera(ms); }
-
-async function ejecutarDemoBrazo() {
-  // misma secuencia que ejecutar_demo(): va a donde ESTE el cubo, lo
-  // agarra, lo lleva a la plataforma y lo suelta (tiempos acortados)
-  demoEnCurso = true;
-  const [xc, yc] = cubo;
-  const viaje = HOME_EFECTOR[2];
-  pinzaAbierta = true; await espera(200);
-  await moverA([xc, yc, viaje], 450);
-  await moverA([xc, yc, Z_CUBO_BANDEJA + OFFSET_PINZA_SOBRE_CUBO], 450);
-  pinzaAbierta = false; intentarAgarrar(); await espera(250);
-  await moverA([xc, yc, viaje], 450);
-  await moverA([POS_DESTINO[0], POS_DESTINO[1], viaje], 600);
-  await moverA([POS_DESTINO[0], POS_DESTINO[1], Z_CUBO_DESTINO + OFFSET_PINZA_SOBRE_CUBO], 450);
-  soltarCubo(); pinzaAbierta = true; await espera(250);
-  await moverA([POS_DESTINO[0], POS_DESTINO[1], viaje], 450);
-  demoEnCurso = false;
-}
-
-async function ejecutarDemoRecorrido() {
-  demoEnCurso = true;
-  const [x0, y0, z0] = HOME_EFECTOR;
-  const recorrido = [HOME_EFECTOR, [x0 + 0.13, y0, z0], [x0 - 0.19, y0, z0], HOME_EFECTOR,
-                     [x0, y0 + 0.3, z0], [x0, y0 - 0.3, z0], HOME_EFECTOR,
-                     [x0, y0, 0.55], [x0, y0, 0.08], HOME_EFECTOR];
-  for (const p of recorrido) await moverA(p, 380);
-  demoEnCurso = false;
-}
-
-function dibujarBrazo() {
-  limpiarSvg();
-  // caja de trabajo del jog
-  const [x1, y1] = mundoAPantalla(LIMITES_JOG[0][0], LIMITES_JOG[1][1]);
-  const [x2, y2] = mundoAPantalla(LIMITES_JOG[0][1], LIMITES_JOG[1][0]);
-  elemento("rect", { x: x1, y: y1, width: x2 - x1, height: y2 - y1, fill: "none", stroke: "#262b31",
-                     "stroke-dasharray": "4 4" }, capaMarcadores);
-  marcador(...POS_ORIGEN, "#4f8fce", "ORIGEN (bandeja)", 24);
-  marcador(...POS_DESTINO, "#4caf7d", "DESTINO", 24);
-  if (cuboSostenido) cubo = [efector[0], efector[1], efector[2] - OFFSET_PINZA_SOBRE_CUBO];
-  punto(cubo[0], cubo[1], cubo[2] < -0.5 ? "#7a6420" : "#e8b930", 7);
-  const [ex, ey] = mundoAPantalla(efector[0], efector[1]);
-  elemento("circle", { cx: ex, cy: ey, r: 10, fill: "none", "stroke-width": 3,
-                       stroke: pinzaAbierta ? "#4f8fce" : "#d9534f" }, capaMoviles);
-  // barra de altura (Z) a la derecha: 0.07 abajo, 0.60 arriba
-  const frac = (efector[2] - LIMITES_JOG[2][0]) / (LIMITES_JOG[2][1] - LIMITES_JOG[2][0]);
-  elemento("rect", { x: 300, y: 20, width: 8, height: 280, fill: "#15191d", stroke: "#262b31" }, capaMoviles);
-  elemento("rect", { x: 300, y: 300 - frac * 280 - 3, width: 8, height: 6, fill: "#e7e9ec" }, capaMoviles);
-  const distancia = dist3(efector, cubo);
-  lectura.innerHTML = `<span>X: ${efector[0].toFixed(3)}</span><span>Y: ${efector[1].toFixed(3)}</span>` +
-    `<span>Z: ${efector[2].toFixed(3)} m</span><span>Pinza: ${pinzaAbierta ? "abierta" : "cerrada"}</span>` +
-    `<span>Cubo: ${cuboSostenido ? "agarrado" : (cubo[2] < -0.5 ? "en el piso (0 = reponer)" : "apoyado")}</span>` +
-    `<span>dist. muneca-cubo: ${distancia.toFixed(2)} m ${!cuboSostenido && distancia <= UMBRAL_AGARRE ? "(C lo agarra)" : ""}</span>`;
-}
-
-// ---------------------------------------------------------------
-// Configuracion C: locomocion (mismas reglas que laikago_pybullet.py)
-//   8 (sostenida) = trotar; al soltar frena con rampa de 0.6 s
-//   4 / 6 (sostenidas) = girar izquierda/derecha (frena el trote antes)
-//   5 = reset
-// La velocidad (~6 cm/s) y el giro (0.015 rad por linea, ~17 grados/s)
-// son los medidos en el script con fisica real.
-// ---------------------------------------------------------------
-const VELOCIDAD_TROTE = 0.06;   // m/s con el trote a intensidad completa
-const RAMPA_TROTE = 0.6;        // s para pasar de parado a trote completo (y al reves)
-const PASO_GIRO = 0.015;        // rad por linea recibida
-let posPatas = [0, 0];
-let rumbo = 0;                  // rad, 0 = hacia +Y ("arriba" en el lienzo), positivo = a la izquierda
-let caminando = false;
-let intensidad = 0;
-let rastro = [];
-
-function frenarDelTodo() { caminando = false; intensidad = 0; }
-
-function teclaPatas(t) {
-  // se llama SOLO con los flancos/repeticiones que correspondan (ver procesarTeclaRecibida)
-  if (t === "8") caminando = true;
-  else if (t === "suelta8") caminando = false;
-  else if (t === "4") { frenarDelTodo(); rumbo += PASO_GIRO; }
-  else if (t === "6") { frenarDelTodo(); rumbo -= PASO_GIRO; }
-  else if (t === "5") { posPatas = [0, 0]; rumbo = 0; frenarDelTodo(); rastro = []; }
-}
-
-function dibujarPatas() {
-  limpiarSvg(); ejes();
-  const dt = 0.05;
-  intensidad = limitar(intensidad + (caminando ? 1 : -1) * dt / RAMPA_TROTE, 0, 1);
-  if (intensidad > 0) {
-    posPatas[0] += -Math.sin(rumbo) * VELOCIDAD_TROTE * intensidad * dt;
-    posPatas[1] += Math.cos(rumbo) * VELOCIDAD_TROTE * intensidad * dt;
-    if (!rastro.length || Math.hypot(posPatas[0] - rastro.at(-1)[0], posPatas[1] - rastro.at(-1)[1]) > 0.02) {
-      rastro.push([...posPatas]);
-      if (rastro.length > 300) rastro.shift();
-    }
+function teclaBaxter(t) {
+  // la UNICA funcion que decide que hace cada tecla (como ejecutar_tecla())
+  if (bx.demo) return;   // igual que el script: la demo bloquea todo mientras corre
+  const brazo = bx.activo;
+  const jog = { "8": [1, +1], "2": [1, -1], "4": [0, -1], "6": [0, +1], "9": [2, +1], "7": [2, -1] };
+  if (t in jog) {
+    const [eje, signo] = jog[t];
+    const o = [...bx.objetivo[brazo]];
+    o[eje] += signo * PASO_JOG;
+    bx.objetivo[brazo] = o.map((v, i) => limitar(v, ...LIMITES_JOG[brazo][i]));   // nunca fuera de la caja
+  } else if (t === "5") bx.objetivo[brazo] = [...HOME[brazo]];
+  else if (t === "A") { bx.pinzaAbierta[brazo] = true; soltarBx(brazo); }
+  else if (t === "C") {
+    bx.pinzaAbierta[brazo] = false;
+    bx.mensaje = intentarAgarrarBx(brazo) ? "agarro el cubo" : (bx.agarre ? "" : "cerro la pinza (sin cubo entre los dedos)");
   }
-  rastro.forEach(([x, y]) => punto(x, y, "#2f5f45", 1.5));
-  const [px, py] = mundoAPantalla(posPatas[0], posPatas[1]);
-  const cuerpo = elemento("g", { transform: `translate(${px} ${py}) rotate(${(-rumbo * 180 / Math.PI).toFixed(1)})` }, capaMoviles);
-  elemento("polygon", { points: "0,-13 9,10 -9,10", fill: intensidad > 0 ? "#4caf7d" : "#8b929b" }, cuerpo);
-  const estado = intensidad === 0 ? "parado" : (caminando ? (intensidad < 1 ? "arrancando" : "trotando") : "frenando");
-  lectura.innerHTML = `<span>X: ${posPatas[0].toFixed(2)} m</span><span>Y: ${posPatas[1].toFixed(2)} m</span>` +
-    `<span>Rumbo: ${(rumbo * 180 / Math.PI).toFixed(0)}&deg; (+ = izquierda)</span><span>${estado} (${Math.round(intensidad * 100)}%)</span>`;
+  else if (t === "D") demoCogerYMover();
+  else if (t === "B") demoRecorrido();
+  else if (t === "0") reponerCuboBx();
+  else if (t === "*") { bx.activo = otroBrazo(brazo); bx.mensaje = "brazo activo: " + bx.activo; }
+}
+
+async function moverABx(brazo, xyz, pasos) {
+  // como mover_a(): EN LINEA RECTA, el 70 % del tiempo avanzando y el 30 %
+  // asentandose en el punto final
+  const inicio = [...bx.objetivo[brazo]];
+  const ms = pasos * ESCALA_DEMO;
+  const n = Math.max(1, Math.round(ms * 0.7 / 50));
+  for (let k = 1; k <= n; k++) {
+    bx.objetivo[brazo] = inicio.map((a, i) => a + (xyz[i] - a) * k / n);
+    await espera(50);
+  }
+  await espera(ms * 0.3);
+}
+
+async function demoCogerYMover() {
+  // misma secuencia que ejecutar_demo(): va a donde ESTE el cubo, lo agarra,
+  // lo lleva al DESTINO y lo suelta (tiempos del script x 0,6)
+  const brazo = bx.activo;
+  bx.demo = true; bx.mensaje = `demo D con el brazo ${brazo}...`;
+  const [x, y] = bx.cubo;
+  const [xd, yd] = POS_DESTINO;
+  bx.pinzaAbierta[brazo] = true;
+  await moverABx(brazo, [x, y, Z_VIAJE], 360);          // encima del cubo
+  await moverABx(brazo, [x, y, Z_AGARRE + 0.05], 180);  // se acerca
+  await moverABx(brazo, [x, y, Z_AGARRE], 180);         // baja despacio
+  bx.pinzaAbierta[brazo] = false;                       // cierra los dedos
+  await espera(120 * ESCALA_DEMO);
+  if (!intentarAgarrarBx(brazo)) bx.mensaje = "demo: el cubo no quedo entre los dedos (0 = reponer)";
+  await moverABx(brazo, [x, y, Z_VIAJE], 240);          // lo levanta
+  await moverABx(brazo, [xd, yd, Z_VIAJE], 360);        // viaja hasta encima del destino
+  await moverABx(brazo, [xd, yd, Z_AGARRE + 0.003], 300);
+  bx.pinzaAbierta[brazo] = true;                        // abre y DESPUES suelta
+  await espera(30 * ESCALA_DEMO);
+  soltarBx(brazo);
+  await espera(60 * ESCALA_DEMO);
+  await moverABx(brazo, [xd, yd, Z_VIAJE], 240);        // se aleja hacia arriba
+  bx.demo = false; bx.mensaje = "demo D: listo, el cubo quedo en el destino";
+}
+
+async function demoRecorrido() {
+  // como ejecutar_demo_recorrido(): pasea el efector por X, Y y Z de SU caja
+  const brazo = bx.activo;
+  bx.demo = true; bx.mensaje = `demo B con el brazo ${brazo}...`;
+  const [[x0, x1], [y0, y1], [, z1]] = LIMITES_JOG[brazo];
+  const c = [(x0 + x1) / 2, (y0 + y1) / 2, Z_VIAJE];
+  const recorrido = [c, [x1, c[1], c[2]], [x0, c[1], c[2]], c, [c[0], y1, c[2]], [c[0], y0, c[2]], c,
+                     [c[0], c[1], z1], [c[0], c[1], Z_AGARRE + 0.05], c];
+  for (const punto3 of recorrido) await moverABx(brazo, punto3, 300);
+  bx.demo = false; bx.mensaje = "demo B: recorrido listo";
+}
+
+// --- dibujo de Baxter (vista desde arriba) ---
+const ESCALA_BX = 230;
+function bxP(x, y) { return [150 - y * ESCALA_BX, 160 - (x - 0.35) * ESCALA_BX]; }
+function rectMundo(xa, xb, ya, yb, attrs, capa) {
+  const [p1x, p1y] = bxP(xb, yb), [p2x, p2y] = bxP(xa, ya);
+  return elemento("rect", { x: p1x, y: p1y, width: p2x - p1x, height: p2y - p1y, ...attrs }, capa);
+}
+
+function moverEfectores(dt) {
+  for (const b of ["izquierdo", "derecho"]) {
+    const p = bx.pos[b], o = bx.objetivo[b];
+    const d = dist3(p, o), maximo = VELOCIDAD_EFECTOR * dt;
+    if (d > 1e-6) bx.pos[b] = p.map((v, i) => v + (o[i] - v) * Math.min(1, maximo / d));
+  }
+  if (bx.agarre) bx.cubo = [bx.pos[bx.agarre][0], bx.pos[bx.agarre][1], bx.pos[bx.agarre][2] + BAJADA_AGARRE];
+}
+
+function dibujarBaxter() {
+  moverEfectores(0.05);
+  limpiarSvg();
+  const M = capaMarcadores, V = capaMoviles;
+  // mesa
+  rectMundo(MESA_X[0], MESA_X[1], MESA_Y[0], MESA_Y[1], { fill: "#2b231b", stroke: "#4a3b2c" }, M);
+  texto(...bxP(0.93, -0.47), "MESA", "#6d5a45", 9, M, "end");
+  // caja de trabajo de cada brazo (la del activo resaltada)
+  for (const b of ["izquierdo", "derecho"]) {
+    const [[x0, x1], [y0, y1]] = LIMITES_JOG[b];
+    rectMundo(x0, x1, y0, y1, { fill: "none", stroke: COLOR_BRAZO[b], "stroke-dasharray": "4 4",
+                                "stroke-opacity": b === bx.activo ? 0.9 : 0.25 }, M);
+  }
+  // origen (azul) y destino (verde): cuadrados de 10 cm
+  for (const [[x, y], color, nombre] of [[POS_ORIGEN, "#4f8fce", "ORIGEN"], [POS_DESTINO, "#4caf7d", "DESTINO"]]) {
+    rectMundo(x - 0.05, x + 0.05, y - 0.05, y + 0.05, { fill: color, "fill-opacity": 0.35, stroke: color }, M);
+    const [tx, ty] = bxP(x + 0.065, y);
+    texto(tx, ty, nombre, color, 8, M, "middle");
+  }
+  // Baxter: pedestal, torso y pantalla (la cara mira a +X)
+  const [ox, oy] = bxP(0, 0);
+  elemento("circle", { cx: ox, cy: oy + 6, r: 0.16 * ESCALA_BX, fill: "#15191d", stroke: "#262b31" }, M);
+  rectMundo(-0.11, 0.11, -0.17, 0.17, { fill: "#2a2f35", stroke: "#4a525c", rx: 8 }, M);
+  rectMundo(0.11, 0.14, -0.08, 0.08, { fill: "#d9534f", "fill-opacity": 0.8, rx: 2 }, M);
+  texto(ox, oy + 4, "BAXTER", "#8b929b", 9, M, "middle", 600);
+  // cubo apoyado (se dibuja antes que los brazos) o en el piso
+  const enPiso = bx.cubo[2] < Z_MESA - 0.1;
+  const dibujarCubo = () => {
+    const l = LADO_CUBO / 2;
+    rectMundo(bx.cubo[0] - l, bx.cubo[0] + l, bx.cubo[1] - l, bx.cubo[1] + l,
+              { fill: enPiso ? "#6b6f75" : "#e7e9ec", stroke: "#0a0d10" }, V);
+  };
+  if (!bx.agarre) dibujarCubo();
+  // brazos: hombro -> codo (abierto hacia afuera) -> efector; el inactivo atenuado
+  for (const b of [otroBrazo(bx.activo), bx.activo]) {
+    const activo = b === bx.activo, lado = b === "izquierdo" ? 1 : -1;
+    const [hx, hy] = HOMBRO[b], [ex, ey, ez] = bx.pos[b];
+    const codo = [(hx + ex) / 2 - 0.05, (hy + ey) / 2 + lado * 0.12];
+    const pts = [bxP(hx, hy), bxP(...codo), bxP(ex, ey)].map((q) => q.join(",")).join(" ");
+    elemento("polyline", { points: pts, fill: "none", stroke: COLOR_BRAZO[b], "stroke-width": activo ? 9 : 6,
+                           "stroke-linecap": "round", "stroke-linejoin": "round", opacity: activo ? 0.95 : 0.35 }, V);
+    // pinza: dos dedos separados en Y (cierran a lo largo del eje Y del mundo)
+    const [px, py] = bxP(ex, ey);
+    const abertura = (bx.pinzaAbierta[b] ? 0.028 : 0.009) * ESCALA_BX;
+    elemento("circle", { cx: px, cy: py, r: 9, fill: "#0a0d10", stroke: COLOR_BRAZO[b], "stroke-width": activo ? 2.5 : 1.5,
+                         opacity: activo ? 1 : 0.5 }, V);
+    for (const s of [-1, 1]) {
+      elemento("line", { x1: px + s * abertura, y1: py - 6, x2: px + s * abertura, y2: py + 6,
+                         stroke: bx.pinzaAbierta[b] ? "#e7e9ec" : "#d9534f", "stroke-width": 2.5, opacity: activo ? 1 : 0.5 }, V);
+    }
+    if (activo) elemento("circle", { cx: px, cy: py, r: 14, fill: "none", stroke: COLOR_BRAZO[b], "stroke-opacity": 0.4 }, V);
+    texto(px, py + 24, b === "izquierdo" ? "izq" : "der", COLOR_BRAZO[b], 8, V, "middle");
+  }
+  if (bx.agarre) dibujarCubo();
+  // ejes de referencia (abajo a la izquierda)
+  elemento("line", { x1: 20, y1: 300, x2: 20, y2: 282, stroke: "#8b929b" }, M);
+  elemento("line", { x1: 20, y1: 300, x2: 2, y2: 300, stroke: "#8b929b" }, M);
+  texto(22, 284, "+X", "#8b929b", 8, M);
+  texto(4, 296, "+Y", "#8b929b", 8, M);
+  // barra de altura Z del brazo activo (de la mesa a +0,22 m)
+  const zA = Z_MESA, zB = 0.22, y0 = 300, y1 = 26;
+  const zAPantalla = (z) => y0 - (z - zA) / (zB - zA) * (y0 - y1);
+  elemento("rect", { x: 300, y: y1, width: 10, height: y0 - y1, fill: "#15191d", stroke: "#262b31" }, V);
+  elemento("line", { x1: 296, x2: 314, y1: zAPantalla(Z_AGARRE), y2: zAPantalla(Z_AGARRE), stroke: "#4f8fce" }, V);
+  elemento("line", { x1: 296, x2: 314, y1: zAPantalla(Z_VIAJE), y2: zAPantalla(Z_VIAJE), stroke: "#262b31", "stroke-dasharray": "2 2" }, V);
+  const otro = otroBrazo(bx.activo);
+  elemento("rect", { x: 302, y: zAPantalla(bx.pos[otro][2]) - 2, width: 6, height: 4, fill: COLOR_BRAZO[otro], opacity: 0.4 }, V);
+  elemento("rect", { x: 298, y: zAPantalla(bx.pos[bx.activo][2]) - 3, width: 14, height: 6, fill: COLOR_BRAZO[bx.activo] }, V);
+  texto(305, 20, "Z", "#8b929b", 9, V, "middle");
+  texto(296, zAPantalla(Z_AGARRE) + 3, "agarre", "#4f8fce", 7, V, "end");
+  // texto de estado arriba a la izquierda (como el de la ventana de PyBullet)
+  texto(6, 14, `BRAZO ACTIVO: ${bx.activo.toUpperCase()}`, COLOR_BRAZO[bx.activo], 10, V, "start", 600);
+  if (bx.demo) texto(6, 28, bx.mensaje, "#e8b930", 9, V);
+
+  const [ex, ey, ez] = bx.pos[bx.activo];
+  const d = dist3(bx.pos[bx.activo], bx.cubo);
+  const estadoCubo = bx.agarre ? `agarrado (brazo ${bx.agarre})` : (enPiso ? "en el piso (0 = reponer)" : "sobre la mesa");
+  insignias.innerHTML = insignia("brazo " + bx.activo, "aviso") +
+    insignia("pinza " + (bx.pinzaAbierta[bx.activo] ? "abierta" : "cerrada"), bx.pinzaAbierta[bx.activo] ? "" : "mal") +
+    insignia("cubo " + estadoCubo, bx.agarre ? "ok" : "") + (bx.demo ? insignia("demo en curso", "aviso") : "");
+  lectura.innerHTML = `<span>X: ${ex.toFixed(3)}</span><span>Y: ${ey.toFixed(3)}</span><span>Z: ${ez.toFixed(3)} m</span>` +
+    `<span>efector-cubo: ${(d * 100).toFixed(1)} cm ${!bx.agarre && d <= UMBRAL_AGARRE ? "(C lo agarra)" : ""}</span>` +
+    (bx.mensaje && !bx.demo ? `<span>${bx.mensaje}</span>` : "");
+}
+
+// ---------------------------------------------------------------
+// Configuracion C: Atlas (mismas reglas que punto-c-atlas/atlas_pybullet.py)
+//   A = asistente ON/OFF, B = ponerlo de pie, C = saludar, D = agacharse,
+//   # = brazos arriba, 5 = pose de pie y detener, * = siguiente grupo,
+//   0 = reiniciar todo                                  (todas en el FLANCO)
+//   1/3 = junta A del grupo -/+, 7/9 = junta B -/+     (en CADA repeticion)
+//   8/2 = caminar adelante/atras, 4/6 = girar          (flanco al sostener y al soltar)
+// En PyBullet camina con fisica real (motores + friccion de los pies). Aca
+// el avance y las caidas siguen un modelo SIMPLE ajustado a lo medido en
+// el script (tabla del README del punto c):
+//   - con el asistente nunca se cae; ~12 cm/s adelante, ~19 grados/s girando;
+//   - sin asistente: de pie aguanta; caminando adelante (~11 cm/s) esta al borde
+//     en PyBullet (a veces aguanta, a veces cae a los ~5 s; aqui se simplifica: aguanta), pero
+//     girar mas de ~2,5 s, caminar atras mas de ~2,4 s o arrancar y frenar
+//     varias veces seguidas lo tiran -> "caido" hasta B (de pie) o 0.
+// ---------------------------------------------------------------
+const RAMPA = 0.6;                 // s: arrancar/frenar la marcha y pasar de una pose a otra
+const PASO_JOG_ATLAS = 0.03;       // rad por repeticion de tecla
+const FRECUENCIA_PASO = 0.8, AMPLITUD_LEVANTAR = 0.4, AMPLITUD_LATERAL = 0.05;
+const AMPLITUD_ZANCADA_DIBUJO = 0.2;   // el script usa 0,05 rad; en el dibujo se exagera para que se vea el paso
+const INCLINACION_MAX = 0.6;       // rad: mas que esto = caido (igual que el script)
+const VELOCIDAD = { adelante: { true: 0.125, false: 0.11 }, atras: { true: 0.12, false: 0.11 } };   // m/s (medido)
+const GIRO = { true: 19, false: 10 };   // grados/s (medido: 151 grados en 8 s; sin asistente 23 grados en 2,5 s)
+// Disparadores de caida sin asistente (la caida misma tarda ~0,4 s mas en llegar al piso)
+const T_GIRO_CAE = 2.1, T_ATRAS_CAE = 2.0, INESTABILIDAD_CAE = 4.2;
+const LIMITES_ATLAS = {            // del URDF (atlas_v4_with_multisense.urdf)
+  l_arm_shx: [-1.5708, 1.5708], r_arm_shx: [-1.5708, 1.5708], l_arm_elx: [0, 2.35619], r_arm_elx: [-2.35619, 0],
+  back_bkz: [-0.663, 0.663], back_bky: [-0.219, 0.539], neck_ry: [-0.602, 1.143],
+  l_leg_hpy: [-1.612, 0.658], r_leg_hpy: [-1.612, 0.658], l_leg_kny: [0, 2.356], r_leg_kny: [0, 2.356],
+  l_leg_aky: [-1, 0.7], r_leg_aky: [-1, 0.7], l_leg_hpx: [-0.524, 0.524], r_leg_hpx: [-0.524, 0.524],
+  l_leg_akx: [-0.8, 0.8], r_leg_akx: [-0.8, 0.8],
+};
+const GRUPOS = [   // [nombre, [junta A, [[junta real, coef]...]], [junta B, [...]]]  (igual que el script)
+  ["brazo izquierdo", ["hombro", [["l_arm_shx", 1]]], ["codo", [["l_arm_elx", 1]]]],
+  ["brazo derecho", ["hombro", [["r_arm_shx", -1]]], ["codo", [["r_arm_elx", -1]]]],
+  ["torso y cabeza", ["giro del torso", [["back_bkz", 1]]], ["cabeza", [["neck_ry", 1]]]],
+  ["piernas", ["agachar", [["l_leg_hpy", -1], ["l_leg_kny", 2], ["l_leg_aky", -1], ["r_leg_hpy", -1], ["r_leg_kny", 2], ["r_leg_aky", -1]]],
+              ["peso a la derecha", [["l_leg_hpx", 1], ["l_leg_akx", -1], ["r_leg_hpx", 1], ["r_leg_akx", -1]]]],
+];
+function poseDePie(flexion = 0.25) {
+  const pose = { l_arm_shx: -1.3, r_arm_shx: 1.3 };
+  for (const l of "lr") { pose[l + "_leg_hpy"] = -flexion; pose[l + "_leg_kny"] = 2 * flexion; pose[l + "_leg_aky"] = -flexion; }
+  return pose;
+}
+const POSES = {
+  "de pie": () => poseDePie(),
+  "saludar": () => ({ ...poseDePie(), r_arm_shx: -1.2, r_arm_elx: -0.6 }),
+  "brazos arriba": () => ({ ...poseDePie(), l_arm_shx: 1.3, r_arm_shx: -1.3 }),
+  "agachado": () => ({ ...poseDePie(0.75), back_bky: 0.15, l_arm_shx: -0.9, r_arm_shx: 0.9 }),
+};
+const TECLAS_MARCHA = { "8": "adelante", "2": "atras", "4": "izquierda", "6": "derecha" };
+
+function atlasNuevo() {
+  return {
+    asistente: true, grupo: 0, t: 0,
+    nombrePose: "de pie", desde: POSES["de pie"](), hacia: POSES["de pie"](), avancePose: 1, ajustes: {},
+    marcha: null, intensidad: 0, avance: 0, giro: 0, tMarcha: 0,
+    x: 0, y: 0, yaw: 0, odometria: 0, rastro: [[0, 0]],
+    inclinacion: 0, omega: 0, cayendo: false, caido: false, dirCaida: 1,
+    tGiro: 0, tAtras: 0, inestabilidad: 0, mensaje: "",
+  };
+}
+let at = atlasNuevo();
+
+const suave = (s) => s * s * (3 - 2 * s);
+function poseActual() {
+  // rampa entre dos poses + lo movido a mano (jog), sin la marcha encima
+  const s = suave(at.avancePose), pose = {};
+  for (const n of new Set([...Object.keys(at.desde), ...Object.keys(at.hacia), ...Object.keys(at.ajustes)])) {
+    const a = at.desde[n] || 0, b = at.hacia[n] || 0;
+    pose[n] = a + (b - a) * s + (at.ajustes[n] || 0);
+  }
+  return pose;
+}
+function pedirPose(nombre) {
+  at.desde = poseActual(); at.hacia = POSES[nombre](); at.ajustes = {}; at.avancePose = 0;
+  at.nombrePose = nombre; at.mensaje = "pose: " + nombre;
+}
+function jogAtlas(cual, signo) {
+  const [, ...juntasJog] = GRUPOS[at.grupo];
+  const [nombreJog, lista] = juntasJog[cual];
+  const pose = poseActual();
+  for (const [n, coef] of lista) {
+    const base = (pose[n] || 0) - (at.ajustes[n] || 0);
+    const [inf, sup] = LIMITES_ATLAS[n];
+    at.ajustes[n] = limitar((at.ajustes[n] || 0) + signo * coef * PASO_JOG_ATLAS, inf - base, sup - base);
+  }
+  at.mensaje = `${GRUPOS[at.grupo][0]}: ${nombreJog} ${signo > 0 ? "+" : "-"}`;
+}
+function pedirMarcha(marcha) {
+  if (marcha !== null) {
+    if (at.caido || at.cayendo) { at.mensaje = "esta en el piso: B para ponerlo de pie"; return; }
+    const piernasMovidas = Object.keys(at.ajustes).some((n) => n.includes("_leg_") || n.startsWith("back_"));
+    if (!["de pie", "saludar", "brazos arriba"].includes(at.nombrePose) || piernasMovidas) pedirPose("de pie");
+    at.mensaje = "marcha: " + marcha;
+  }
+  // sin asistente, cada arranque y cada frenada desestabiliza (se va olvidando con el tiempo)
+  if (!at.asistente && marcha !== at.marcha) at.inestabilidad += 1;
+  at.marcha = marcha;
+}
+function resetControl() {
+  at.marcha = null; at.intensidad = at.avance = at.giro = at.tMarcha = 0;
+  at.nombrePose = "de pie"; at.desde = POSES["de pie"](); at.hacia = POSES["de pie"](); at.avancePose = 1; at.ajustes = {};
+  at.inclinacion = at.omega = 0; at.cayendo = at.caido = false; at.tGiro = at.tAtras = at.inestabilidad = 0;
+}
+function ponerDePie() { resetControl(); at.mensaje = "de pie (asentado)"; }       // "grua": en el mismo lugar y rumbo
+function reiniciarTodo() { at = atlasNuevo(); at.mensaje = "reiniciado"; }        // origen, asistente ON, grupo 0
+
+function teclaAtlas(t, anterior) {
+  // como procesar_tecla() del script
+  const flanco = t !== anterior;
+  if (flanco && anterior in TECLAS_MARCHA && at.marcha === TECLAS_MARCHA[anterior]) pedirMarcha(null);
+  if (flanco && t in TECLAS_MARCHA) pedirMarcha(TECLAS_MARCHA[t]);
+  if ("1379".includes(t) && t !== "-") jogAtlas("13".includes(t) ? 0 : 1, "17".includes(t) ? -1 : 1);
+  if (!flanco) return;
+  if (t === "A") { at.asistente = !at.asistente; at.mensaje = "asistente " + (at.asistente ? "ON" : "OFF"); }
+  else if (t === "B") ponerDePie();
+  else if (t === "C") pedirPose("saludar");
+  else if (t === "D") { at.marcha = null; pedirPose("agachado"); }
+  else if (t === "#") pedirPose("brazos arriba");
+  else if (t === "5") { at.marcha = null; pedirPose("de pie"); }
+  else if (t === "*") { at.grupo = (at.grupo + 1) % GRUPOS.length; at.mensaje = "grupo: " + GRUPOS[at.grupo][0]; }
+  else if (t === "0") reiniciarTodo();
+}
+
+function empezarCaida(dir, motivo) {
+  at.cayendo = true; at.omega = 0.3; at.dirCaida = dir; at.mensaje = motivo;
+}
+
+function pasoAtlas(dt) {
+  at.t += dt;
+  at.avancePose = Math.min(1, at.avancePose + dt / RAMPA);
+  // rampas de la marcha (como avanzar_marcha())
+  const d = dt / RAMPA;
+  const objAvance = { adelante: 1, atras: -1 }[at.marcha] || 0;
+  const objGiro = { izquierda: 1, derecha: -1 }[at.marcha] || 0;
+  at.intensidad = limitar(at.intensidad + (at.marcha ? d : -d), 0, 1);
+  at.avance += limitar(objAvance - at.avance, -d, d);
+  at.giro += limitar(objGiro - at.giro, -d, d);
+  if (at.intensidad > 0) at.tMarcha += dt;
+  const enPie = !at.caido && !at.cayendo;
+  if (enPie) {
+    const v = (at.avance >= 0 ? VELOCIDAD.adelante : VELOCIDAD.atras)[at.asistente] * at.avance * at.intensidad;
+    const yawRad = at.yaw * Math.PI / 180;
+    at.x += v * Math.cos(yawRad) * dt; at.y += v * Math.sin(yawRad) * dt; at.odometria += v * dt;
+    at.yaw += GIRO[at.asistente] * at.giro * at.intensidad * dt;
+    const ultimo = at.rastro.at(-1);
+    if (Math.hypot(at.x - ultimo[0], at.y - ultimo[1]) > 0.05) { at.rastro.push([at.x, at.y]); if (at.rastro.length > 400) at.rastro.shift(); }
+  }
+  // modelo de caida (solo sin asistente)
+  at.inestabilidad = Math.max(0, at.inestabilidad - 0.1 * dt);
+  at.tGiro = (at.marcha === "izquierda" || at.marcha === "derecha") ? at.tGiro + dt : (at.intensidad === 0 ? 0 : at.tGiro);
+  at.tAtras = at.marcha === "atras" ? at.tAtras + dt : (at.intensidad === 0 ? 0 : at.tAtras);
+  if (!at.asistente && enPie) {
+    if (at.tGiro > T_GIRO_CAE) empezarCaida(1, "sin asistente, girando: se cae");
+    else if (at.tAtras > T_ATRAS_CAE) empezarCaida(-1, "sin asistente, caminando atras: se cae");
+    else if (at.inestabilidad >= INESTABILIDAD_CAE && at.intensidad > 0) empezarCaida(1, "sin asistente, tantos arranques y frenadas: se cae");
+  }
+  if (at.cayendo) {
+    if (at.asistente && at.inclinacion < INCLINACION_MAX) {   // el arnes lo alcanza a enderezar
+      at.cayendo = false; at.omega = 0; at.mensaje = "el asistente lo enderezo";
+    } else {
+      at.omega += 7 * dt; at.inclinacion += at.omega * dt;
+      if (at.inclinacion >= 1.45) { at.inclinacion = 1.45; at.cayendo = false; at.caido = true; }
+    }
+  } else if (!at.caido && at.inclinacion > 0) at.inclinacion = Math.max(0, at.inclinacion - 1.5 * dt);
+  if (at.inclinacion > INCLINACION_MAX) at.caido = true;
+  if (at.caido && at.marcha) { at.marcha = null; at.mensaje = "se cayo: B para ponerlo de pie"; }   // como paso()
+}
+
+function poseConMarcha() {
+  // pose base + patron de pasos (como sumar_marcha(); la zancada se exagera en el dibujo)
+  const pose = poseActual();
+  if (at.nombrePose === "saludar" && at.avancePose >= 1)
+    pose.r_arm_elx = (pose.r_arm_elx || 0) + 0.35 * Math.sin(2 * Math.PI * 1.5 * at.t);   // vaiven del saludo
+  const i = at.intensidad;
+  if (i <= 0) return pose;
+  const fase = 2 * Math.PI * FRECUENCIA_PASO * at.tMarcha;
+  const lateral = i * AMPLITUD_LATERAL * Math.sin(fase);
+  const zancada = Math.abs(at.avance) > 0.05 ? at.avance : 0.3 * Math.abs(at.giro);   // girando da pasos en el lugar
+  for (const [l, signo] of [["l", 1], ["r", -1]]) {
+    const vuelo = Math.max(0, Math.sin(fase) * signo);
+    const dCadera = i * (zancada * AMPLITUD_ZANCADA_DIBUJO * Math.cos(fase) * signo - 0.5 * AMPLITUD_LEVANTAR * vuelo);
+    const dRodilla = i * AMPLITUD_LEVANTAR * vuelo;
+    pose[l + "_leg_hpy"] = (pose[l + "_leg_hpy"] || 0) + dCadera;
+    pose[l + "_leg_kny"] = (pose[l + "_leg_kny"] || 0) + dRodilla;
+    pose[l + "_leg_aky"] = (pose[l + "_leg_aky"] || 0) - (dCadera + dRodilla);
+    pose[l + "_leg_hpx"] = (pose[l + "_leg_hpx"] || 0) + lateral;
+  }
+  return pose;
+}
+
+// --- dibujo de Atlas: de LADO (proyeccion oblicua para que se vea el lado
+// izquierdo un poco "atras") + mini vista desde arriba ---
+const K_ATLAS = 100, X0_ATLAS = 100, SUELO = 296;
+function proy([fwd, lat, up]) {
+  // el robot mira a la derecha del lienzo; su lado izquierdo (+lat) queda al fondo
+  return [X0_ATLAS + (fwd + 0.33 * lat) * K_ATLAS, SUELO - (up + 0.2 * lat) * K_ATLAS];
+}
+const suma = (a, b) => a.map((v, k) => v + b[k]);
+const escalar = (a, s) => a.map((v) => v * s);
+function rotZ([x, y, z], ang) { const c = Math.cos(ang), s = Math.sin(ang); return [x * c - y * s, x * s + y * c, z]; }
+
+function esqueletoAtlas(p) {
+  const L1 = 0.42, L2 = 0.42, TOBILLO = 0.08;
+  const piernas = {};
+  for (const [l, lado] of [["l", 1], ["r", -1]]) {
+    const tm = -(p[l + "_leg_hpy"] || 0);                 // muslo: angulo hacia adelante desde la vertical
+    const tc = tm - (p[l + "_leg_kny"] || 0);             // canilla
+    const lat = Math.sin(p[l + "_leg_hpx"] || 0);
+    const cadera = [0, lado * 0.11, 0];
+    const rodilla = suma(cadera, [L1 * Math.sin(tm), L1 * lat, -L1 * Math.cos(tm)]);
+    const tobillo = suma(rodilla, [L2 * Math.sin(tc), L2 * lat, -L2 * Math.cos(tc)]);
+    const pie = tc - (p[l + "_leg_aky"] || 0);            // 0 = suela plana
+    piernas[l] = { cadera, rodilla, tobillo, pie };
+  }
+  // la pierna mas baja es la de apoyo: fija la altura de la pelvis
+  const h = Math.max(-piernas.l.tobillo[2], -piernas.r.tobillo[2]) + TOBILLO;
+  const subir = (q) => [q[0], q[1], q[2] + h];
+  for (const l of "lr") {
+    const g = piernas[l];
+    g.cadera = subir(g.cadera); g.rodilla = subir(g.rodilla); g.tobillo = subir(g.tobillo);
+    g.talon = suma(g.tobillo, [-0.07 * Math.cos(g.pie), 0, -TOBILLO + 0.07 * Math.sin(g.pie)]);
+    g.punta = suma(g.tobillo, [0.17 * Math.cos(g.pie), 0, -TOBILLO - 0.17 * Math.sin(g.pie)]);
+  }
+  const bky = p.back_bky || 0, bkz = p.back_bkz || 0;
+  const pelvis = [0, 0, h];
+  const cuello = suma(pelvis, [0.6 * Math.sin(bky), 0, 0.6 * Math.cos(bky)]);
+  const cabeza = suma(cuello, [0.17 * Math.sin(bky), 0, 0.17 * Math.cos(bky)]);
+  const ry = p.neck_ry || 0;
+  const mirada = suma(cabeza, escalar(rotZ([Math.cos(ry + bky), 0, -Math.sin(ry + bky)], bkz), 0.16));
+  const brazos = {};
+  for (const [l, lado] of [["l", 1], ["r", -1]]) {
+    const hombro = suma(suma(cuello, [0, 0, -0.06]), rotZ([0, lado * 0.25, 0], bkz));
+    // shx sube el brazo de costado (izq: -1,3 abajo, +1,3 arriba; der al reves)
+    const alfa = lado * (p[l + "_arm_shx"] || 0) + Math.PI / 2;
+    const dir = rotZ([0, lado * Math.sin(alfa), -Math.cos(alfa)], bkz);
+    const codo = suma(hombro, escalar(dir, 0.32));
+    const doblez = lado * (p[l + "_arm_elx"] || 0);      // + dobla el codo: el antebrazo va hacia adelante
+    const adelante = rotZ([1, 0, 0], bkz);
+    const mano = suma(codo, escalar(suma(escalar(dir, Math.cos(doblez)), escalar(adelante, Math.sin(doblez))), 0.3));
+    brazos[l] = { hombro, codo, mano };
+  }
+  return { piernas, brazos, pelvis, cuello, cabeza, mirada };
+}
+
+function dibujarAtlas() {
+  pasoAtlas(0.05);
+  limpiarSvg();
+  const M = capaMarcadores, V = capaMoviles;
+  // suelo con marcas cada 25 cm que se desplazan con lo caminado
+  elemento("rect", { x: 0, y: SUELO, width: 320, height: 24, fill: "#11161b" }, M);
+  elemento("line", { x1: 0, y1: SUELO, x2: 320, y2: SUELO, stroke: "#3a414a" }, M);
+  const corrido = ((at.odometria % 0.25) + 0.25) % 0.25;
+  for (let k = -5; k < 10; k++) {
+    const sx = X0_ATLAS + (k * 0.25 - corrido) * K_ATLAS;
+    elemento("line", { x1: sx, y1: SUELO, x2: sx - 8, y2: SUELO + 10, stroke: "#262b31" }, M);
+  }
+  const p = poseConMarcha();
+  const sk = esqueletoAtlas(p);
+  const grupoActivo = GRUPOS[at.grupo][0];
+  const colorParte = (parte, lejos) => {
+    const resaltada = (parte === "brazo izquierdo" && grupoActivo === "brazo izquierdo") ||
+                      (parte === "brazo derecho" && grupoActivo === "brazo derecho") ||
+                      (parte === "torso" && grupoActivo === "torso y cabeza") || (parte === "pierna" && grupoActivo === "piernas");
+    if (resaltada) return lejos ? "#a8862a" : "#e8b930";
+    return lejos ? "#5d6670" : "#c9ced6";
+  };
+  // arnes del asistente (fuerza vertical sobre la pelvis): se ve si esta ON
+  const [pxPelvis, pyPelvis] = proy(sk.pelvis);
+  if (at.asistente && !at.caido) {
+    const [cx, cy] = proy(sk.cuello);
+    elemento("line", { x1: cx, y1: 0, x2: cx, y2: cy, stroke: "#4caf7d", "stroke-dasharray": "5 4", "stroke-width": 1.5 }, M);
+    elemento("line", { x1: cx, y1: cy, x2: pxPelvis, y2: pyPelvis, stroke: "#4caf7d", "stroke-dasharray": "2 3" }, M);
+    texto(cx + 4, 46, "arnés", "#4caf7d", 8, M);
+  }
+  // todo el cuerpo va en un grupo: al caerse se gira alrededor del pie de apoyo
+  const apoyo = sk.piernas.l.tobillo[2] < sk.piernas.r.tobillo[2] ? sk.piernas.l : sk.piernas.r;
+  const [ax, ay] = proy([apoyo.tobillo[0], 0, 0]);
+  const cuerpo = elemento("g", { transform: `rotate(${(at.dirCaida * at.inclinacion * 180 / Math.PI).toFixed(1)} ${ax} ${ay})` }, V);
+  const seg = (a, b, color, ancho) => {
+    const [x1, y1] = proy(a), [x2, y2] = proy(b);
+    elemento("line", { x1, y1, x2, y2, stroke: color, "stroke-width": ancho, "stroke-linecap": "round" }, cuerpo);
+  };
+  const articulacion = (a, r = 2.6) => { const [x, y] = proy(a); elemento("circle", { cx: x, cy: y, r, fill: "#0a0d10", stroke: "#8b929b" }, cuerpo); };
+  const pierna = (g, lejos) => {
+    const c = colorParte("pierna", lejos);
+    seg(g.cadera, g.rodilla, c, lejos ? 6 : 8); seg(g.rodilla, g.tobillo, c, lejos ? 5 : 7);
+    seg(g.talon, g.punta, c, lejos ? 4 : 5); articulacion(g.rodilla);
+  };
+  const brazo = (b, parte, lejos) => {
+    const c = colorParte(parte, lejos);
+    seg(b.hombro, b.codo, c, lejos ? 5 : 6); seg(b.codo, b.mano, c, lejos ? 4 : 5);
+    articulacion(b.codo, 2.2);
+    const [mx, my] = proy(b.mano); elemento("circle", { cx: mx, cy: my, r: lejos ? 3 : 4, fill: c }, cuerpo);
+  };
+  // de atras hacia adelante: lado izquierdo (al fondo), torso, lado derecho
+  brazo(sk.brazos.l, "brazo izquierdo", true);
+  pierna(sk.piernas.l, true);
+  const cT = colorParte("torso", false);
+  seg(sk.pelvis, sk.cuello, cT, 16);
+  seg(sk.brazos.l.hombro, sk.brazos.r.hombro, cT, 7);
+  const [hx, hy] = proy(sk.cabeza);
+  elemento("circle", { cx: hx, cy: hy, r: 11, fill: "#15191d", stroke: cT, "stroke-width": 3 }, cuerpo);
+  const [gx, gy] = proy(sk.mirada);
+  elemento("line", { x1: hx, y1: hy, x2: gx, y2: gy, stroke: "#4f8fce", "stroke-width": 3, "stroke-linecap": "round" }, cuerpo);
+  pierna(sk.piernas.r, false);
+  articulacion(sk.pelvis, 4);
+  brazo(sk.brazos.r, "brazo derecho", false);
+
+  // insignias dentro del lienzo (como el texto de la ventana de PyBullet)
+  const etiquetaAsistente = at.asistente ? "ASISTENTE ON" : "ASISTENTE OFF";
+  elemento("rect", { x: 6, y: 6, width: 92, height: 16, rx: 8, fill: "none", stroke: at.asistente ? "#4caf7d" : "#d9534f" }, V);
+  texto(52, 17.5, etiquetaAsistente, at.asistente ? "#4caf7d" : "#d9534f", 9, V, "middle", 600);
+  const est = at.caido ? ["CAIDO", "#d9534f"] : (at.cayendo ? ["CAYENDO", "#e8b930"] : ["DE PIE", "#4caf7d"]);
+  elemento("rect", { x: 6, y: 26, width: 92, height: 16, rx: 8, fill: "none", stroke: est[1] }, V);
+  texto(52, 37.5, est[0], est[1], 9, V, "middle", 600);
+  texto(6, 56, "grupo: " + grupoActivo, "#e8b930", 8.5, V);
+  texto(6, 68, "pose: " + at.nombrePose, "#8b929b", 8.5, V);
+  if (at.caido) texto(6, 80, "B = ponerlo de pie", "#d9534f", 8.5, V);
+
+  // mini vista desde arriba (arriba a la derecha): sigue al robot, la grilla
+  // queda fija al mundo (cada 0,5 m) y el rastro muestra por donde camino
+  const MX = 210, MY = 6, MT = 104, ESC = 60;   // 60 px por metro: se ven ~1,7 m alrededor del robot
+  const cxM = MX + MT / 2, cyM = MY + MT / 2;
+  const aMini = (x, y) => [cxM + (x - at.x) * ESC, cyM - (y - at.y) * ESC];
+  const recorte = elemento("clipPath", { id: "recorteMini" }, V);
+  elemento("rect", { x: MX, y: MY, width: MT, height: MT }, recorte);
+  elemento("rect", { x: MX, y: MY, width: MT, height: MT, fill: "#0d1013", stroke: "#262b31", rx: 4 }, V);
+  const mini = elemento("g", { "clip-path": "url(#recorteMini)" }, V);
+  for (let k = Math.floor((at.x - 2) / 0.5); k <= Math.ceil((at.x + 2) / 0.5); k++) {
+    const [sx] = aMini(k * 0.5, 0);
+    elemento("line", { x1: sx, y1: MY, x2: sx, y2: MY + MT, stroke: k === 0 ? "#3a414a" : "#1c2126" }, mini);
+  }
+  for (let k = Math.floor((at.y - 2) / 0.5); k <= Math.ceil((at.y + 2) / 0.5); k++) {
+    const [, sy] = aMini(0, k * 0.5);
+    elemento("line", { x1: MX, y1: sy, x2: MX + MT, y2: sy, stroke: k === 0 ? "#3a414a" : "#1c2126" }, mini);
+  }
+  at.rastro.forEach(([x, y]) => { const [sx, sy] = aMini(x, y); elemento("circle", { cx: sx, cy: sy, r: 1.8, fill: "#4caf7d", "fill-opacity": 0.7 }, mini); });
+  const robotMini = elemento("g", { transform: `translate(${cxM} ${cyM}) rotate(${(-at.yaw).toFixed(1)})` }, mini);
+  elemento("polygon", { points: "9,0 -6,6 -6,-6", fill: at.caido ? "#d9534f" : (at.intensidad > 0 ? "#4caf7d" : "#c9ced6") }, robotMini);
+  texto(MX + 4, MY + MT - 4, "desde arriba", "#5d6670", 7.5, V);
+
+  const nombre = GRUPOS[at.grupo];
+  insignias.innerHTML = insignia(etiquetaAsistente, at.asistente ? "ok" : "mal") + insignia(est[0].toLowerCase(), at.caido ? "mal" : (at.cayendo ? "aviso" : "ok")) +
+    insignia(`grupo: ${nombre[0]} (1/3 ${nombre[1][0]}, 7/9 ${nombre[2][0]})`, "aviso") + insignia("pose: " + at.nombrePose) +
+    insignia("marcha: " + (at.marcha || (at.intensidad > 0 ? "frenando" : "quieto")));
+  lectura.innerHTML = `<span>X: ${at.x.toFixed(2)} m</span><span>Y: ${at.y.toFixed(2)} m</span>` +
+    `<span>rumbo: ${at.yaw.toFixed(0)}&deg;</span><span>inclinación: ${at.inclinacion.toFixed(2)} rad</span>` +
+    (at.mensaje ? `<span>${at.mensaje}</span>` : "");
 }
 
 // ---------------------------------------------------------------
@@ -374,26 +813,26 @@ let configActiva = "drones";
 
 const LEYENDAS = {
   drones: "8/2 = adelante/atras &middot; 4/6 = izq/der &middot; 9/7 = subir/bajar &middot; 5 = detener<br>A/B/C = ir al punto &middot; D = home &middot; * = despegar &middot; # = aterrizar &middot; 0 = mision A&rarr;B&rarr;C",
-  brazo: "8/2 = Y+/Y- &middot; 4/6 = X-/X+ &middot; 9/7 = subir/bajar (mantener) &middot; 5 = home<br>A = abrir pinza &middot; C = cerrar/agarrar &middot; D = demo coger y mover &middot; B = demo 3 ejes &middot; 0 = reponer cubo",
-  patas: "8 (mantener) = trotar, al soltar frena<br>4 / 6 (mantener) = girar izquierda/derecha &middot; 5 = reset",
+  baxter: "8/2 = Y+/Y- &middot; 4/6 = X-/X+ &middot; 9/7 = Z+/Z- (mantener) &middot; 5 = home del brazo<br>A = abrir y soltar &middot; C = cerrar y agarrar &middot; D = demo coger y llevar &middot; B = demo 3 ejes &middot; 0 = reponer cubo &middot; * = cambiar de brazo",
+  atlas: "A = asistente ON/OFF &middot; B = ponerlo de pie &middot; C = saludar &middot; D = agacharse &middot; # = brazos arriba &middot; 5 = de pie y detener<br>* = siguiente grupo &middot; 1/3 = junta A &minus;/+ &middot; 7/9 = junta B &minus;/+ (mantener) &middot; 8/2 = caminar adelante/atras (mantener) &middot; 4/6 = girar (mantener) &middot; 0 = reiniciar todo",
 };
 const TECLAS_ACTIVAS = {
   drones: new Set(["8","2","4","6","9","7","5","A","B","C","D","*","#","0"]),
-  brazo: new Set(["8","2","4","6","9","7","5","A","B","C","D","0"]),
-  patas: new Set(["8","4","6","5"]),
+  baxter: new Set(["8","2","4","6","9","7","5","A","B","C","D","0","*"]),
+  atlas: new Set(["1","2","3","A","4","5","6","B","7","8","9","C","*","0","#","D"]),
 };
 // teclas que se REPITEN mientras se sostienen (como el ESP32, que reenvia
-// la tecla sostenida cada ~50 ms). En el brazo y el Laikago, las demas
-// son "de un solo golpe": solo cuentan en el flanco, igual que en sus scripts.
+// la tecla sostenida cada ~50 ms). En Baxter las demas son "de un solo
+// golpe": solo cuentan en el flanco, igual que en su script. Atlas tiene
+// su propia regla (teclaAtlas, como procesar_tecla() de atlas_pybullet.py).
 const TECLAS_REPETIDAS = {
   drones: null,                                   // drones_pybullet.py procesa cada linea tal cual
-  brazo: new Set(["8","2","4","6","9","7"]),
-  patas: new Set(["4","6"]),
+  baxter: new Set(["8","2","4","6","9","7"]),
 };
 const TECLAS_SOSTENIBLES = {
   drones: new Set(["8","2","4","6","9","7"]),
-  brazo: new Set(["8","2","4","6","9","7"]),
-  patas: new Set(["8","4","6"]),
+  baxter: new Set(["8","2","4","6","9","7"]),
+  atlas: new Set(["8","2","4","6","1","3","7","9"]),
 };
 let teclaAnterior = "-";
 
@@ -403,17 +842,11 @@ let teclaAnterior = "-";
 function procesarTeclaRecibida(t) {
   const anterior = teclaAnterior;
   teclaAnterior = t;
-  const repetidas = TECLAS_REPETIDAS[configActiva];
-  if (configActiva === "patas") {
-    if (t === "8" && anterior !== "8") teclaPatas("8");
-    else if (anterior === "8" && t !== "8") teclaPatas("suelta8");
-    if (t === "4" || t === "6") teclaPatas(t);
-    else if (t === "5" && anterior !== "5") teclaPatas("5");
-    return;
-  }
+  if (configActiva === "atlas") { teclaAtlas(t, anterior); return; }   // ahi "-" tambien importa (soltar la marcha)
   if (t === "-") return;
+  const repetidas = TECLAS_REPETIDAS[configActiva];
   if (repetidas && !repetidas.has(t) && t === anterior) return;   // tecla de un golpe, sostenida: ya se ejecuto
-  if (configActiva === "drones") teclaDrones(t); else teclaBrazo(t);
+  if (configActiva === "drones") teclaDrones(t); else teclaBaxter(t);
 }
 
 function construirTeclado() {
@@ -457,14 +890,15 @@ function construirTeclado() {
 }
 
 function refrescar() {
-  if (configActiva === "drones") dibujarDrones();
-  else if (configActiva === "brazo") dibujarBrazo();
-  else dibujarPatas();
+  if (configActiva === "drones") { insignias.innerHTML = ""; dibujarDrones(); }
+  else if (configActiva === "baxter") dibujarBaxter();
+  else dibujarAtlas();
 }
 
-const botonesConfig = { drones: "btnConfigDrones", brazo: "btnConfigBrazo", patas: "btnConfigPatas" };
+const botonesConfig = { drones: "btnConfigDrones", baxter: "btnConfigBaxter", atlas: "btnConfigAtlas" };
 Object.entries(botonesConfig).forEach(([nombre, id]) => {
   document.getElementById(id).addEventListener("click", () => {
+    if (configActiva === "atlas" && nombre !== "atlas") at.marcha = null;   // nadie sigue "sosteniendo" la marcha
     configActiva = nombre;
     teclaAnterior = "-";
     Object.values(botonesConfig).forEach((otro) => document.getElementById(otro).classList.toggle("activo", otro === id));

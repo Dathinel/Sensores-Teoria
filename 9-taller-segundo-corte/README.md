@@ -1,59 +1,205 @@
 # Taller segundo corte: consolas de mando con ESP32 para simulaciones en PyBullet
 
-Taller de tres puntos que dejó el profesor para cerrar el segundo corte, en la línea de lo que en clase llamamos *real-to-sim*: algo físico (un ESP32 con un teclado en la mano) manejando algo simulado (robots en PyBullet). El profesor compartió dos repositorios como base: [gym-pybullet-drones](https://github.com/utiasDSL/gym-pybullet-drones) para el punto a) y [pybullet_robots](https://github.com/erwincoumans/pybullet_robots) (`baxter_ik_demo.py` y `laikago.py`) para los puntos b) y c). El enunciado de cada punto está dentro de su carpeta; este es el de la entrega en general:
+Taller de tres puntos que dejó el profesor para cerrar el segundo corte, en la línea de lo que en clase llamamos *real-to-sim*: algo físico (un ESP32 con un teclado en la mano) manejando algo simulado (robots en PyBullet). El profesor compartió dos repositorios como base: [gym-pybullet-drones](https://github.com/utiasDSL/gym-pybullet-drones) para el punto a) y [pybullet_robots](https://github.com/erwincoumans/pybullet_robots) (`baxter_ik_demo.py` y `atlas.py`) para los puntos b) y c). El enunciado de cada punto está dentro de su carpeta; este es el de la entrega en general:
 
 ![Enunciado de la entrega](enunciado-entrega.png)
 
-La entrega pide "mostrar la arquitectura, el análisis desarrollado del proyecto y el paso a paso a seguir", con los códigos y su explicación. Por eso este README explica lo que tienen en común los tres puntos (el teclado, el firmware del ESP32, cómo se leen las teclas en el PC y cómo se conecta todo), y cada punto tiene su propio README con la parte de control y la lógica de su simulación.
+La entrega pide "mostrar la arquitectura, el análisis desarrollado del proyecto y el paso a paso a seguir", con los códigos y su explicación. Por eso este README explica lo que tienen en común los tres puntos (el teclado, el firmware del ESP32, cómo se leen las teclas en el PC y cómo se conecta todo) y, sobre todo, **cómo se maneja cada punto**; cada punto tiene además su propio README con la parte de control y la lógica de su simulación.
+
+## El montaje real
+
+Todo el taller se maneja con este montaje: un ESP32 en su placa de expansión y un teclado matricial 4x4 conectado **directo a 8 GPIO** con 8 cables (4 filas y 4 columnas), sin ningún módulo intermedio. Un solo cable USB va al portátil: por ahí se alimenta el ESP32 y por ahí manda las teclas. Con este mismo montaje, sin reprogramar nada, se probaron los tres puntos, y el teclado respondió en todos.
+
+<table>
+<tr>
+<td><img src="img/montaje-esp32-teclado.jpg" alt="ESP32 en su placa de expansión con el teclado 4x4 conectado por 8 cables de colores y el cable USB al portátil" width="100%"></td>
+<td><img src="img/montaje-teclado.jpg" alt="El teclado 4x4 en la mano, con el ESP32 encendido detrás conectado al portátil" width="100%"></td>
+</tr>
+<tr>
+<td>El ESP32 con los 8 cables del teclado (filas y columnas) y el USB al PC.</td>
+<td>El teclado 4x4 hace de control: el mismo para drones, Baxter y Atlas.</td>
+</tr>
+</table>
 
 ## Lo que se hizo en cada punto
 
 ### [Punto a) Drones: mover entre 3 puntos A, B y C](./punto-a-drones-waypoints)
 Cinco drones en formación en V vuelan con física real (gravedad más la fuerza de los 4 motores de cada uno, con un control en cascada como el de gym-pybullet-drones) entre tres waypoints. Con el teclado se pueden mover a mano, mandar directo a A, B o C, o lanzar la misión automática A → B → C. Trae una prueba sin ventana que vuela la misión y la mide: en nuestra última corrida el líder llegó a A a los 1,2 s, a B a los 2,9 s y a C a los 4,9 s de empezar.
 
-### [Punto b) Brazo robótico tipo Baxter: mover, posicionar y coger un objeto](./punto-b-brazo-tipo-baxter)
-Un brazo KUKA IIWA con pinza (en vez de Baxter, más abajo está el porqué) se mueve con el teclado en X, Y y Z usando cinemática inversa, la misma técnica de `baxter_ik_demo.py`. Puede coger un cubo de una bandeja y llevarlo a una plataforma, a mano (abrir y cerrar la pinza) o con una demo de un solo botón; otra demo recorre los tres ejes para mostrar el rango de movimiento.
+![Los cinco drones volando la misión A → B → C en PyBullet](punto-a-drones-waypoints/video/drones-mision.gif)
 
-### [Punto c) Locomoción real con las 4 patas (cuadrúpedo Laikago)](./punto-c-locomocion-laikago)
-Un robot de 4 patas camina de verdad: un CPG genera el trote con funciones seno y es el contacto de las patas con el piso lo que lo empuja (nada de animaciones ni de mover el cuerpo a mano). Con el teclado se decide cuándo camina y hacia dónde gira. Ahí mismo explicamos por qué interpretamos el punto c) como locomoción y por qué usamos otro robot.
+Video completo: [drones-mision.mp4](punto-a-drones-waypoints/video/drones-mision.mp4)
+
+### [Punto b) Baxter: mover los dos brazos, posicionar y coger un objeto](./punto-b-brazo-tipo-baxter)
+El robot **Baxter real** (el mismo `toms_baxter.urdf` de `baxter_ik_demo.py`) mueve cualquiera de sus dos brazos con el teclado en X, Y y Z usando cinemática inversa; la tecla `*` cambia de brazo y el otro se queda quieto, sostenido por sus motores. Puede coger un cubo de la mesa y llevarlo a otro punto, a mano (abrir y cerrar la pinza) o con una demo de un solo botón; otra demo recorre los tres ejes. La prueba sin ventana (`probar_baxter.py`) mide que cada pinza llega a menos de 0,2 cm de sus objetivos y que la demo deja el cubo a menos de 0,6 cm del destino con los dos brazos.
+
+![Baxter cogiendo el cubo y llevándolo al destino en PyBullet](punto-b-brazo-tipo-baxter/video/baxter-demo.gif)
+
+Video completo: [baxter-demo.mp4](punto-b-brazo-tipo-baxter/video/baxter-demo.mp4)
+
+<table>
+<tr>
+<td><img src="punto-b-brazo-tipo-baxter/img/baxter-home.png" alt="Modelo 3D de Baxter en su pose inicial frente a la mesa con el cubo" width="100%"></td>
+<td><img src="punto-b-brazo-tipo-baxter/img/baxter-agarra-cubo.png" alt="Modelo 3D de Baxter agarrando el cubo con la pinza" width="100%"></td>
+</tr>
+<tr>
+<td>Baxter en su pose inicial (los dos brazos sobre la mesa).</td>
+<td>La pinza cerrada sobre el cubo.</td>
+</tr>
+</table>
+
+### [Punto c) Atlas: humanoide con asistente de equilibrio](./punto-c-atlas)
+El enunciado del punto c) dice "Baxter" pero su imagen es el humanoide **Atlas** de Boston Dynamics (`atlas.py` del mismo repositorio), así que este punto usa el **Atlas real**. Con el teclado se mueven sus brazos, torso, cabeza y piernas, se le ponen poses (saludar, agacharse, brazos arriba) y camina, todo con física real. Tiene un **asistente de equilibrio** que se prende y se apaga con una tecla (y con un botón en la ventana), y una tecla para **ponerlo de pie** si se cae: así se puede comparar la misma caminata con y sin ayuda. Con asistente camina, gira y retrocede sin caerse; sin él aguanta de pie y en las poses, camina derecho al borde de caerse (a veces aguanta, a veces no) y se cae al girar, al retroceder o al arrancar y frenar varias veces.
+
+<table>
+<tr>
+<td><img src="punto-c-atlas/video/atlas-con-asistente.gif" alt="Atlas manejado desde el teclado con el asistente de equilibrio prendido" width="100%"></td>
+<td><img src="punto-c-atlas/video/atlas-sin-asistente.gif" alt="Atlas manejado desde el teclado con el asistente de equilibrio apagado" width="100%"></td>
+</tr>
+<tr>
+<td>Con asistente. Video completo: <a href="punto-c-atlas/video/atlas-con-asistente.mp4">atlas-con-asistente.mp4</a></td>
+<td>Sin asistente. Video completo: <a href="punto-c-atlas/video/atlas-sin-asistente.mp4">atlas-sin-asistente.mp4</a></td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td><img src="punto-c-atlas/img/atlas-de-pie-asistente.png" alt="Modelo 3D de Atlas de pie con el asistente prendido" width="100%"></td>
+<td><img src="punto-c-atlas/img/atlas-caminando.png" alt="Modelo 3D de Atlas a mitad de un paso" width="100%"></td>
+<td><img src="punto-c-atlas/img/atlas-sin-asistente.png" alt="Modelo 3D de Atlas con el asistente apagado" width="100%"></td>
+</tr>
+<tr>
+<td>De pie, asistente ON.</td>
+<td>Caminando.</td>
+<td>Asistente OFF.</td>
+</tr>
+</table>
+
+## Cómo se maneja cada punto: comportamientos y modos
+
+Las tres simulaciones se manejan con el mismo teclado, pero no se manejan igual. Lo que cambia de un punto a otro es **cómo reacciona cada tecla** y **en qué modo está el robot**. Hay tres comportamientos de tecla, y cada punto los combina a su manera:
+
+- **Jog (sostener = seguir moviéndose).** Cada línea `TECLA:x` que llega mueve un paso fijo; como el ESP32 repite la tecla sostenida 20 veces por segundo, sostenerla es moverse de corrido y soltarla es parar. Es el movimiento fino, a mano.
+- **Un golpe (flanco).** La acción ocurre una sola vez, en el instante en que la tecla recibida cambia, aunque se deje sostenida: una demo, cambiar de brazo, prender el asistente, una pose. Para repetirla hay que soltar y volver a pulsar.
+- **Sostener para mantener un estado (flanco al pulsar y al soltar).** Solo en Atlas: pulsar `8 2 4 6` arranca la caminata o el giro, y soltar la frena. No es un paso por línea sino un estado que dura mientras la tecla está abajo.
+
+La explicación de por qué hace falta separar jog y flanco está más abajo, en "El protocolo `TECLA:x` y cómo lo lee el PC".
+
+### a) Drones: manual, waypoints y misión
+
+| Modo | Teclas | Qué pasa |
+|---|---|---|
+| Manual (jog) | `8 2 4 6 9 7` | El objetivo del líder se corre 10 cm por línea: sosteniendo, unos 2 m/s de objetivo. El líder vuela hacia él inclinándose y los otros cuatro lo siguen en V. `7` nunca baja del piso. |
+| Detener | `5` | El objetivo pasa a ser donde está el líder: se queda flotando ahí. |
+| Waypoints | `A` `B` `C`, `D` | Vuela directo al punto elegido, o al origen con `D` (y aterriza ahí). |
+| Despegar / aterrizar | `*` / `#` | Sube a 1 m / baja al piso y apaga los motores al tocarlo. |
+| Misión automática | `0` | Va a A, al llegar (a menos de 12 cm y casi quieto) pasa a B y después a C, sola. Cualquier otra tecla cancela la misión y retoma el control manual. |
+
+En los drones todas las teclas actúan en cada línea: las que no son jog fijan un objetivo, y fijar el mismo objetivo cuatro veces seguidas da lo mismo que fijarlo una.
+
+### b) Baxter: brazo activo, jog XYZ, pinza y demos
+
+| Modo | Teclas | Qué pasa |
+|---|---|---|
+| Elegir brazo | `*` (un golpe) | Cambia el brazo activo, izquierdo ↔ derecho. El otro se queda quieto donde estaba, sostenido por sus motores. |
+| Jog XYZ de la pinza | `8 2 4 6 9 7` (jog) | La pinza del brazo activo se mueve 1,5 cm por línea (30 cm/s sostenida), siempre mirando hacia abajo, y la cinemática inversa calcula las 7 articulaciones. No sale de la caja de trabajo de ese brazo: sosteniendo `7` baja hasta la altura de agarre y se detiene sin atravesar la mesa. |
+| Pinza | `C` / `A` (un golpe) | Cierra (y agarra el cubo si está entre los dedos) / abre (y lo suelta). |
+| Demos | `D` / `B` (un golpe) | `D` coge el cubo y lo lleva al destino con el brazo activo (8,6 s de simulación); `B` recorre los extremos de la caja en X, Y y Z. Mientras corre una demo no se leen teclas, y lo que llegó en ese tiempo se descarta. |
+| Home y reponer | `5` / `0` (un golpe) | Devuelve el brazo activo a su pose inicial / suelta el cubo y lo pone otra vez en el origen. |
+
+Se puede hacer todo a mano (jog hasta encima del cubo, bajar, `C`, subir, jog hasta el destino, bajar, `A`) o de un golpe con `D`, y con cualquiera de los dos brazos.
+
+### c) Atlas: asistente, grupos de juntas, poses y caminata
+
+| Modo | Teclas | Qué pasa |
+|---|---|---|
+| Asistente de equilibrio | `A` (un golpe) | Prende o apaga el arnés virtual: sostiene la mitad del peso y endereza la pelvis, sin empujar en horizontal ni girar el rumbo. |
+| Ponerlo de pie | `B` (un golpe) | Lo deja de pie donde está, lo asienta 0,6 s con asistente y después devuelve el asistente a como estaba. `0` reinicia todo en el origen, con asistente prendido. |
+| Grupos de juntas | `*` (un golpe) | Pasa al siguiente grupo: brazo izquierdo → brazo derecho → torso y cabeza → piernas. |
+| Jog de juntas | `1 3` y `7 9` (jog) | Mueven las dos juntas del grupo activo, 0,03 rad por línea (unos 0,6 rad/s sostenida), sin pasar del límite del URDF. En piernas una tecla mueve cadera, rodilla y tobillo a la vez para agacharlo con los pies planos. |
+| Poses | `C` saludar, `D` agacharse, `#` brazos arriba, `5` de pie y detener (un golpe) | Cambian con una rampa en S de 0,6 s: los motores nunca reciben un salto. |
+| Caminar y girar | `8` / `2`, `4` / `6` (sostener) | Adelante / atrás, girar a la izquierda / derecha dando pasos en el lugar. Arranca al pulsar y frena al soltar, con rampa de 0,6 s. |
+
+**Con y sin asistente.** Es la comparación central del punto c), y sale de `probar_atlas.py` (mismas teclas, misma física, el asistente es lo único que cambia):
+
+| Prueba | Con asistente | Sin asistente |
+|---|---|---|
+| De pie quieto 20 s | de pie | de pie |
+| Caminar adelante 15 s (`8`) | de pie, avanzó 188 cm | depende del arranque: recién creado se cae a los 5,4 s (72 cm); en la prueba de estrés, tras otras pruebas en el mismo mundo, aguantó los 15 s (167 cm) |
+| Arrancar y frenar 5 veces | de pie, avanzó 129 cm | se cae a los 9,8 s |
+| Girar a la izquierda 8 s (`4`) | de pie, giró 151° | se cae a los 2,5 s (giró 23°) |
+| Caminar atrás 8 s (`2`) | de pie, retrocedió 94 cm | se cae a los 2,4 s |
+| Poses seguidas (`C`, `D`, `#`, `5`) | todas bien | todas bien |
+
+Sin asistente Atlas se sostiene de pie y en las poses; caminando derecho está al borde (en la prueba de estrés aguantó 15 s a unos 11 cm/s, pero recién creado se cae a los 5,4 s); lo que no aguanta es arrancar y frenar seguido, girar y retroceder, porque la marcha es un patrón fijo sin realimentación. Con el asistente hace todo (unos 12,5 cm/s adelante y 19° por segundo girando). Y cuando se cae, `B` lo levanta: en la prueba lo tiramos 3 veces de un empujón y las 3 veces quedó de pie y se sostuvo solo después.
+
+### Tres formas de controlarlo
+
+| Forma | Qué se necesita | Cómo se comporta |
+|---|---|---|
+| **Teclado físico por USB** | El ESP32 con `esp32_teclado.py` como `main.py` y el teclado conectado | La forma completa: jog sosteniendo, un golpe por flanco y caminar sosteniendo, tal como se describe arriba. |
+| **Botones de la ventana de PyBullet** | Nada: si el script no encuentra el ESP32, sigue con botones (14 en drones, 13 en Baxter, 16 en Atlas) | Cada click equivale a una pulsación de su tecla. Como un click no se puede sostener, en Atlas caminar y girar se prenden con un click y se apagan con el siguiente, y el jog de juntas mueve 0,15 rad por click. Los botones siguen funcionando aunque el ESP32 esté conectado. |
+| **`preview.html` en el navegador** | Solo Chrome o Edge, sin Python ni PyBullet | Un teclado 4x4 clicable con las tres configuraciones en un esquema 2D, con las mismas teclas y la misma regla de flancos. En "Modo prueba" se simula con clicks; en "Conectado (Web Serial)" se conecta al ESP32 real, muestra las líneas crudas que llegan y el teclado físico mueve el esquema. |
+
+### Qué hace cada tecla en cada punto
+
+Sacado de la función que interpreta las teclas en cada script (`Mando.tecla` en los drones, `ejecutar_tecla` y `procesar_tecla` en Baxter, `procesar_tecla` en Atlas):
+
+| Tecla | a) Drones | b) Baxter | c) Atlas |
+|---|---|---|---|
+| `8` / `2` | objetivo +Y / −Y | pinza +Y / −Y | sostenidas: caminar adelante / atrás |
+| `4` / `6` | objetivo −X / +X | pinza −X / +X | sostenidas: girar a la izquierda / derecha dando pasos |
+| `9` / `7` | subir / bajar (no pasa del suelo) | pinza +Z / −Z | junta B del grupo + / − |
+| `1` / `3` | — | — | junta A del grupo − / + |
+| `5` | congelar el objetivo donde está | home del brazo activo | pose de pie y detener |
+| `A` | ir al waypoint A | abrir la pinza y soltar | asistente de equilibrio ON/OFF |
+| `B` | ir al waypoint B | demo: recorrer los 3 ejes | ponerlo de pie |
+| `C` | ir al waypoint C | cerrar la pinza y agarrar | saludar |
+| `D` | volver al origen | demo: coger el cubo y llevarlo | agacharse |
+| `*` | despegar | cambiar de brazo (izquierdo/derecho) | siguiente grupo de juntas (brazo izq → brazo der → torso y cabeza → piernas) |
+| `#` | aterrizar | — | brazos arriba |
+| `0` | misión automática A → B → C | reponer el cubo | reiniciar todo |
+
+Waypoints del punto a): A = (0,0; 0,9; 1,2) m, B = (1,4; −0,6; 1,6) m, C = (−1,3; 0,4; 0,9) m.
 
 ## Qué es PyBullet
 
-PyBullet es la versión para Python del motor de física Bullet (el mismo que usan algunos videojuegos y bastantes laboratorios de robótica). Uno carga robots y objetos desde archivos de descripción (`.urdf` o `.sdf`), les pone gravedad, y cada llamada a `p.stepSimulation()` avanza el mundo un paso de tiempo fijo (en este taller, 1/240 s en los drones y el brazo, y 1/500 s en el Laikago): calcula choques, fricción, fuerzas de los motores de cada articulación y la nueva posición de todo. Tiene dos modos: `GUI`, que abre una ventana 3D donde se ve la simulación y se pueden poner botones propios (`addUserDebugParameter`), y `DIRECT`, sin ventana, mucho más rápido, que usamos para las pruebas automáticas (medir cuánto se demora el dron en llegar, o cuántas veces se cae el Laikago con unos parámetros dados).
+PyBullet es la versión para Python del motor de física Bullet (el mismo que usan algunos videojuegos y bastantes laboratorios de robótica). Uno carga robots y objetos desde archivos de descripción (`.urdf` o `.sdf`), les pone gravedad, y cada llamada a `p.stepSimulation()` avanza el mundo un paso de tiempo fijo (en este taller, 1/240 s en los drones y en Baxter, y 1/500 s en Atlas): calcula choques, fricción, fuerzas de los motores de cada articulación y la nueva posición de todo. Tiene dos modos: `GUI`, que abre una ventana 3D donde se ve la simulación y se pueden poner botones propios (`addUserDebugParameter`), y `DIRECT`, sin ventana, mucho más rápido, que usamos para las pruebas automáticas (medir cuánto se demora el dron en llegar, o cuánto aguanta Atlas sin el asistente de equilibrio).
 
-PyBullet trae un paquete de modelos listos, `pybullet_data`: el piso (`plane.urdf`), el brazo KUKA, la bandeja, el cubo y el Laikago que usamos salen de ahí, así que no hay que descargar nada aparte. El dron no: ese lo describimos nosotros en `punto-a-drones-waypoints/dron.urdf`.
+PyBullet trae un paquete de modelos listos, `pybullet_data`: el piso (`plane.urdf`), la bandeja y el cubo salen de ahí. Baxter y Atlas no vienen en ese paquete: se bajan una vez con `descargar_modelos.py` (más abajo, "Los modelos 3D reales"). El dron lo describimos nosotros en `punto-a-drones-waypoints/dron.urdf`.
 
 ## Qué es una consola de mandos y por qué un solo teclado para todo
 
-Los tres enunciados piden "una consola de mandos con la ESP32". Lo que hicimos es tratar al ESP32 como un control de videojuego: **un solo teclado matricial 4x4** (el mismo módulo I2C que ya usamos en los temas 7 y 8) conectado a un ESP32, que le cuenta al PC qué tecla está presionada. El firmware (`esp32_teclado.py`) es idéntico para los tres puntos: no sabe nada de drones, brazos ni patas, solo manda por serial la tecla que esté presionada en cada instante (`TECLA:8`, `TECLA:-`, etc.). Lo que hace cada tecla (la "configuración" del control) vive del lado del PC, en el script de Python de cada punto. Así **no hay que reprogramar el ESP32 para pasar de un punto a otro**: se deja conectado y solo se cambia qué script se corre.
+Los tres enunciados piden "una consola de mandos con la ESP32". Lo que hicimos es tratar al ESP32 como un control de videojuego: **un solo teclado matricial 4x4** conectado directo a 8 pines del ESP32 (los mismos pines de los temas 7 y 8), que le cuenta al PC qué tecla está presionada. El firmware (`esp32_teclado.py`) es idéntico para los tres puntos: no sabe nada de drones, de Baxter ni de Atlas, solo manda por serial la tecla que esté presionada en cada instante (`TECLA:8`, `TECLA:-`, etc.). Lo que hace cada tecla (la "configuración" del control) vive del lado del PC, en el script de Python de cada punto. Así **no hay que reprogramar el ESP32 para pasar de un punto a otro**: se deja conectado y solo se cambia qué script se corre.
 
-## Qué es un teclado matricial, I2C y el PCF8574
+## Qué es un teclado matricial y cómo se barre
 
 Un teclado 4x4 tiene 16 teclas pero solo 8 cables: las teclas están en una matriz de 4 filas y 4 columnas, y cada tecla es un interruptor que, al apretarse, une su fila con su columna. Para saber cuál se presionó hay que **barrer** la matriz: poner en 0 una fila a la vez y mirar las columnas. Si una columna aparece en 0 mientras esa fila está en 0, hay una tecla apretada justo en ese cruce.
 
-Conectar esos 8 cables directo al ESP32 gasta 8 pines. En vez de eso usamos un **PCF8574**, un "expansor de pines": un chip que ofrece 8 pines digitales (P0 a P7) y se maneja por **I2C**, un bus de solo 2 cables (`SDA` para los datos y `SCL` para el reloj) en el que cada chip tiene una dirección, como el número de una casa en una calle. El ESP32 le escribe un byte al PCF8574 para fijar sus 8 pines y le pide un byte para leerlos. Nuestro módulo tiene la dirección `0x20` (los tres pines de dirección A0, A1 y A2 en GND).
-
-Un detalle del PCF8574 que explica el código: no tiene un registro para decir "este pin es entrada y este salida". Un pin escrito en 0 queda firme en 0; un pin escrito en 1 queda débilmente en 1, con una pull-up interna, y cualquier cosa externa que lo lleve a GND lo baja. Por eso, para "leer" las columnas, el firmware las escribe en 1 y después lee el byte: la columna que tenga una tecla presionada contra la fila activa vuelve en 0. Esa pull-up interna es la razón de que el teclado no necesite resistencias externas.
+Los 8 cables van **directo a 8 GPIO del ESP32**: las 4 filas como salidas y las 4 columnas como entradas. Las columnas usan la **resistencia de subida (pull-up) interna** del ESP32: mientras nada las toca leen 1, y cuando una tecla las une con la fila que está en 0, bajan a 0. Por eso el teclado no necesita resistencias externas ni ningún módulo intermedio, igual que en los temas 7 y 8.
 
 ## Qué es un jog y por qué no un dial
 
-En los tres puntos el movimiento manual es de tipo **jog**: cada tecla suma o resta un paso fijo (10 cm en el objetivo del dron, 1,5 cm en el efector del brazo, 0,015 rad de giro en el Laikago), y sostener la tecla repite ese paso una y otra vez, como mover un cursor con las flechas. La alternativa sería un **dial**: un valor absoluto (por ejemplo un slider o un potenciómetro) que dice directamente "la posición es tanto". Elegimos jog por dos razones: el teclado es lo que ya teníamos y solo sabe decir "presionada o no", y en el tema 7 comprobamos que los sliders de PyBullet (`addUserDebugParameter` con rango) no se pueden recrear de forma confiable. Con jog, los botones de la ventana son fijos y se crean una sola vez, y cada click equivale exactamente a una pulsación de la tecla correspondiente.
+En los tres puntos el movimiento manual es de tipo **jog**: cada tecla suma o resta un paso fijo (10 cm en el objetivo del dron, 1,5 cm en la pinza de Baxter, 0,03 rad en una junta de Atlas), y sostener la tecla repite ese paso una y otra vez, como mover un cursor con las flechas. La alternativa sería un **dial**: un valor absoluto (por ejemplo un slider o un potenciómetro) que dice directamente "la posición es tanto". Elegimos jog por dos razones: el teclado es lo que ya teníamos y solo sabe decir "presionada o no", y en el tema 7 comprobamos que los sliders de PyBullet (`addUserDebugParameter` con rango) no se pueden recrear de forma confiable. Con jog, los botones de la ventana son fijos y se crean una sola vez, y cada click equivale exactamente a una pulsación de la tecla correspondiente.
 
-## Por qué Baxter se reemplazó por un brazo KUKA + pinza
+## Los modelos 3D reales de Baxter y Atlas
 
-El enunciado del punto b) pide el robot Baxter y da como base `baxter_ik_demo.py`, pero ese script carga un URDF (`baxter_common/baxter_description/urdf/toms_baxter.urdf`) que no viene ni en ese repositorio ni en el paquete de Python `pybullet_data`: son las mallas 3D de [RethinkRobotics/baxter_common](https://github.com/RethinkRobotics/baxter_common), unos 50 MB, fuera de lugar en un repositorio de apuntes de clase como este. Lo comprobamos buscando en el `pybullet_data` instalado en `entorno/`: trae `kuka_iiwa`, `laikago`, `tray` y `cube_small.urdf`, pero nada de Baxter.
+Los puntos b) y c) usan los robots reales del repositorio del profesor: **Baxter** (`baxter_common/baxter_description/urdf/toms_baxter.urdf`, el mismo de `baxter_ik_demo.py`) y **Atlas** (`atlas/atlas_v4_with_multisense.urdf`, el mismo de `atlas.py`). Sus URDF y sus mallas 3D no vienen en el paquete `pybullet_data` (que solo trae modelos livianos como el piso, la bandeja y el cubo), sino en la carpeta `data/` de [pybullet_robots](https://github.com/erwincoumans/pybullet_robots): son unos 37 MB (23 MB de Baxter en mallas `.DAE` y 14 MB de Atlas en `.obj`).
 
-En su lugar usamos el brazo **KUKA IIWA + pinza WSG50** (`kuka_iiwa/kuka_with_gripper2.sdf`), que sí viene incluido, con exactamente la misma técnica de `baxter_ik_demo.py` (`calculateInverseKinematics` hacia una posición XYZ del efector) y los mismos índices de articulación y de pinza que usa el propio ejemplo oficial de PyBullet para este modelo (`pybullet_envs/bullet/kuka.py`). Cada brazo de Baxter tiene 7 articulaciones y el KUKA también, así que el problema de control es el mismo: un solo brazo de 7 grados de libertad alcanza de sobra para lo que pide el punto b) (movimiento fluido, posicionamiento real y coger y mover un objeto).
+Para no cargar el repositorio con esas mallas, **`descargar_modelos.py`** las baja una sola vez a la carpeta `modelos/`, que `.gitignore` deja fuera de git. El script lee el URDF de cada robot, saca la lista exacta de mallas que pide (`filename="..."`) y baja solo esas, más los materiales y texturas de Atlas; si ya están, no las vuelve a bajar. Solo usa la biblioteca estándar de Python, así que no hay que instalar nada más:
 
-Por la misma razón (Baxter no tiene piernas, y sin sus mallas tampoco hay manera de simularlo), el punto c) usa otro robot del mismo repositorio: el cuadrúpedo Laikago, cuyo URDF y mallas sí vienen en `pybullet_data`. La explicación completa está en el README de [`punto-c-locomocion-laikago`](./punto-c-locomocion-laikago).
+```
+entorno\Scripts\python descargar_modelos.py
+```
+
+Un detalle que explica el código de los dos puntos: Baxter nombra sus mallas como `package://baxter_description/meshes/...` (una convención de ROS). PyBullet quita el `package://` y busca el resto dentro de su ruta de búsqueda adicional, así que el script de Baxter pone esa ruta en `modelos/baxter_common/` y carga el URDF con su ruta absoluta (PyBullet guarda **una sola** ruta de búsqueda adicional a la vez). Si `modelos/` no existe, los scripts lo dicen y piden correr `descargar_modelos.py` en vez de fallar con un error raro.
 
 ## La idea general
 
 ```mermaid
 flowchart TD
     subgraph ESP["ESP32 — esp32_teclado.py (el mismo para los tres puntos)"]
-        Teclado["Teclado 4x4"] --> PCF["PCF8574<br/>(I2C 0x20)"]
-        PCF -->|"SDA GPIO21 / SCL GPIO22"| Lee["leer_tecla():<br/>barre fila por fila"]
+        Teclado["Teclado 4x4"] -->|"filas GPIO 14, 27, 26, 25<br/>columnas GPIO 33, 32, 18, 19"| Lee["leer_tecla():<br/>barre fila por fila"]
         Lee --> Envia["print('TECLA:x') o 'TECLA:-'<br/>cada ~50 ms, sin parar"]
     end
 
@@ -63,13 +209,13 @@ flowchart TD
         Recibe["pyserial: lee solo si in_waiting > 0<br/>y drena todo el buffer"] --> Config{"¿Qué script<br/>está corriendo?"}
         Botones["Botones de la ventana<br/>(sin ESP32)"] --> Config
         Config -->|"drones_pybullet.py"| Drones["jog XYZ + saltos a A/B/C<br/>+ misión A→B→C"]
-        Config -->|"brazo_pybullet.py"| Brazo["jog XYZ del efector<br/>+ pinza + 2 demos"]
-        Config -->|"laikago_pybullet.py"| Patas["caminar (sostener, con rampa)<br/>+ girar izquierda/derecha"]
+        Config -->|"brazo_pybullet.py"| Brazo["jog XYZ de la pinza del brazo activo<br/>+ cambiar de brazo + pinza + 2 demos"]
+        Config -->|"atlas_pybullet.py"| Atlas["asistente ON/OFF + ponerlo de pie<br/>+ jog de juntas, poses y caminar"]
     end
 
     Drones --> SimDrones["PyBullet: 5 drones en V<br/>(gravedad + 4 motores cada uno)"]
-    Brazo --> SimBrazo["PyBullet: KUKA + pinza + cubo"]
-    Patas --> SimPatas["PyBullet: Laikago + trote CPG"]
+    Brazo --> SimBrazo["PyBullet: Baxter real + mesa + cubo"]
+    Atlas --> SimAtlas["PyBullet: Atlas real + arnés de equilibrio"]
 ```
 
 Así se ve en el tiempo una pulsación normal (sostener la tecla `8` un momento y soltarla):
@@ -97,21 +243,23 @@ sequenceDiagram
 
 ## El firmware del ESP32 paso a paso (`esp32_teclado.py`)
 
-El archivo es corto (unas 80 líneas) y se guarda como `main.py` en el ESP32 para que arranque solo al conectarlo. Hace tres cosas:
+El archivo es corto (unas 85 líneas, la mitad comentarios) y se guarda como `main.py` en el ESP32 para que arranque solo al conectarlo. Hace tres cosas:
 
-1. **Abre el bus I2C** en `GPIO21` (SDA) y `GPIO22` (SCL) a 100 kHz, el modo estándar del PCF8574:
+1. **Configura los 8 pines**: las filas (`GPIO 14, 27, 26, 25`) como salidas, todas en 1; las columnas (`GPIO 33, 32, 18, 19`) como entradas con la pull-up interna:
    ```python
-   i2c = I2C(0, sda=Pin(I2C_SDA), scl=Pin(I2C_SCL), freq=100000)
+   p = Pin(pin, Pin.OUT); p.value(1)            # cada fila
+   p = Pin(pin, Pin.IN, Pin.PULL_UP)            # cada columna
    ```
-2. **Barre el teclado** en `leer_tecla()`. El nibble alto del byte (P4 a P7) son las filas y el bajo (P0 a P3) las columnas. Para cada fila arma un byte con esa fila en 0, las otras tres en 1 y las cuatro columnas en 1 (para que queden como entradas con pull-up), lo escribe, lee el byte de vuelta y mira qué columna bajó:
+2. **Barre el teclado** en `leer_tecla()`: pone UNA fila en 0, lee las 4 columnas y, si alguna está en 0, devuelve la tecla de ese cruce (después de volver a poner la fila en 1); si no, pasa a la siguiente fila:
    ```python
-   filas = 0x0F & ~(1 << fila)
-   byte_salida = (filas << 4) | 0x0F
-   i2c.writeto(DIR_TECLADO, bytes([byte_salida]))
-   byte_entrada = i2c.readfrom(DIR_TECLADO, 1)[0]
-   columnas = byte_entrada & 0x0F
+   fila.value(0)
+   for j, col in enumerate(columnas):
+       if col.value() == 0:
+           fila.value(1)
+           return MAPA_TECLAS[i][j]
+   fila.value(1)
    ```
-   Un ejemplo concreto: al barrer la fila 1 (la de `4 5 6 B`) se escribe `0b1101_1111` (`0xDF`, P5 en 0). Si la tecla `5` está presionada, une P5 con P1, y el byte que vuelve tiene las columnas en `0b1101`: la columna 1 está en 0, así que la tecla es `MAPA_TECLAS[1][1]`, o sea `"5"`. Si ninguna columna bajó en ninguna de las 4 filas, devuelve `None`.
+   Un ejemplo concreto: al barrer la fila 1 (la de `4 5 6 B`, `GPIO27`) esa fila queda en 0. Si la tecla `5` está presionada, une esa fila con la columna 1 (`GPIO32`), que baja a 0: la tecla es `MAPA_TECLAS[1][1]`, o sea `"5"`. Si ninguna columna bajó en ninguna de las 4 filas, devuelve `None`.
 3. **Manda la tecla actual cada 50 ms, cambie o no**:
    ```python
    while True:
@@ -146,39 +294,27 @@ Lo que sí cambia entre puntos es **cómo se interpreta la repetición**. Como e
 | Punto | Actúan en cada repetición | Actúan solo en el flanco |
 |---|---|---|
 | a) Drones | todas (las que no son jog fijan un objetivo, y repetirlo no cambia nada) | ninguna |
-| b) Brazo | `8 2 4 6 9 7` (jog) | `5 A B C D 0` |
-| c) Laikago | `4 6` (cada línea gira un paso) | `8` (empezar y dejar de caminar), `5` |
+| b) Baxter | `8 2 4 6 9 7` (jog) | `5 A B C D 0 *` |
+| c) Atlas | `1 3 7 9` (jog de juntas) | `A B C D # 5 * 0`, y `8 2 4 6` al sostener y al soltar (empezar y dejar de caminar o girar) |
 
-En el brazo esto no era un detalle: un toque normal de la `D` son unas 4 líneas `TECLA:D`, y antes de separar jog y flanco la demo de coger el cubo (unos 10 s) se ejecutaba cuatro veces seguidas.
+En el brazo esto no era un detalle (y en Atlas tampoco: la `A` prende o apaga el asistente, y cuatro líneas seguidas lo dejarían igual que al principio): un toque normal de la `D` son unas 4 líneas `TECLA:D`, y antes de separar jog y flanco la demo de coger el cubo (unos 10 s) se ejecutaba cuatro veces seguidas.
 
 ## Conexiones
 
-Solo el teclado va al ESP32; no hay ningún otro sensor. Estas conexiones salen del código del firmware (`I2C_SDA = 21`, `I2C_SCL = 22`, `DIR_TECLADO = 0x20`, y el barrido con filas en P4-P7 y columnas en P0-P3).
+Solo el teclado va al ESP32; no hay ningún otro sensor. Estas conexiones salen del código del firmware (`PINES_FILAS = [14, 27, 26, 25]` y `PINES_COLUMNAS = [33, 32, 18, 19]`), y son las mismas de los temas 7 y 8, así que el mismo montaje sirve:
 
-**Teclado 4x4 → PCF8574.** Si el teclado viene con su módulo PCF8574 ya soldado, esto ya está hecho; si se arma a mano, tiene que quedar así para que `MAPA_TECLAS` coincida con las teclas reales:
-
-| Teclado 4x4 | Teclas de esa línea | PCF8574 | Rol en el firmware |
+| Teclado 4x4 | Teclas de esa línea | ESP32 | Rol en el firmware |
 |---|---|---|---|
-| Fila 1 | `1 2 3 A` | `P4` | salida, se pone en 0 al barrer la fila 0 |
-| Fila 2 | `4 5 6 B` | `P5` | salida, fila 1 |
-| Fila 3 | `7 8 9 C` | `P6` | salida, fila 2 |
-| Fila 4 | `* 0 # D` | `P7` | salida, fila 3 |
-| Columna 1 | `1 4 7 *` | `P0` | entrada con pull-up interna, columna 0 |
-| Columna 2 | `2 5 8 0` | `P1` | entrada con pull-up interna, columna 1 |
-| Columna 3 | `3 6 9 #` | `P2` | entrada con pull-up interna, columna 2 |
-| Columna 4 | `A B C D` | `P3` | entrada con pull-up interna, columna 3 |
+| Fila 1 | `1 2 3 A` | `GPIO14` | salida, se pone en 0 al barrer la fila 0 |
+| Fila 2 | `4 5 6 B` | `GPIO27` | salida, fila 1 |
+| Fila 3 | `7 8 9 C` | `GPIO26` | salida, fila 2 |
+| Fila 4 | `* 0 # D` | `GPIO25` | salida, fila 3 |
+| Columna 1 | `1 4 7 *` | `GPIO33` | entrada con pull-up interna, columna 0 |
+| Columna 2 | `2 5 8 0` | `GPIO32` | entrada con pull-up interna, columna 1 |
+| Columna 3 | `3 6 9 #` | `GPIO18` | entrada con pull-up interna, columna 2 |
+| Columna 4 | `A B C D` | `GPIO19` | entrada con pull-up interna, columna 3 |
 
-**PCF8574 → ESP32:**
-
-| Módulo PCF8574 | ESP32 | Por qué |
-|---|---|---|
-| `VCC` | `3V3` | a 3,3 V las líneas I2C quedan al mismo voltaje que los pines del ESP32 (a 5 V, las pull-ups del bus llevarían SDA y SCL a 5 V) |
-| `GND` | `GND` | referencia común |
-| `SDA` | `GPIO21` | pin I2C por defecto del ESP32 DevKit, el mismo de los temas 7 y 8 |
-| `SCL` | `GPIO22` | ídem |
-| `A0`, `A1`, `A2` | a `GND` | dirección `0x20`, la que usa `DIR_TECLADO` |
-
-Las columnas no necesitan resistencias externas (usan la pull-up interna del PCF8574). El bus I2C sí necesita pull-ups en SDA y SCL: los módulos PCF8574 normalmente las traen soldadas; si se usa el chip suelto, hay que poner unas de 4,7 kΩ a 3V3.
+No hacen falta resistencias externas (las columnas usan la pull-up interna del ESP32) ni alimentación aparte: el teclado es pasivo, solo interruptores.
 
 **ESP32 → PC:** un solo cable USB, el mismo con el que se programa. En el Administrador de dispositivos de Windows se ve qué puerto COM le asignó (por defecto los scripts buscan `COM7`).
 
@@ -189,44 +325,48 @@ Las columnas no necesitan resistencias externas (usan la pull-up interna del PCF
 ├─ README.md                    este archivo: lo común a los tres puntos
 ├─ enunciado-entrega.png        captura del enunciado general de la entrega
 ├─ esp32_teclado.py             firmware único del ESP32 (se guarda como main.py)
+├─ descargar_modelos.py         baja las mallas reales de Baxter y Atlas a modelos/
+├─ capturar_modelos.py          genera las imágenes de los README (PyBullet sin ventana)
+├─ preview.html                 simulador web de las tres consolas (modo prueba y Web Serial)
+├─ img/                         fotos del montaje real (ESP32 + teclado) y capturas del preview
+├─ modelos/                     mallas de Baxter y Atlas (no se sube: la crea descargar_modelos.py)
 ├─ entorno/                     entorno de Python compartido (no se sube: su .gitignore tiene "*")
 ├─ punto-a-drones-waypoints/
 │  ├─ README.md
 │  ├─ enunciado-actividad.png
 │  ├─ drones_pybullet.py        simulación y control de los 5 drones
-│  └─ dron.urdf                 el dron: un solo cuerpo con masa, inercia y 4 brazos
+│  ├─ dron.urdf                 el dron: un solo cuerpo con masa, inercia y 4 brazos
+│  └─ video/                    la misión A → B → C (GIF y MP4)
 ├─ punto-b-brazo-tipo-baxter/
 │  ├─ README.md
 │  ├─ enunciado-actividad.png
-│  └─ brazo_pybullet.py         KUKA + pinza + cubo, jog por IK y demos
-└─ punto-c-locomocion-laikago/
+│  ├─ brazo_pybullet.py         Baxter real: dos brazos por IK, pinza, cubo y demos
+│  ├─ probar_baxter.py          prueba sin ventana (IK, demo, flanco, choques)
+│  ├─ img/                      capturas del modelo
+│  └─ video/                    Baxter en acción (GIF y MP4)
+└─ punto-c-atlas/
    ├─ README.md
    ├─ enunciado-actividad.png
-   └─ laikago_pybullet.py       Laikago con trote CPG, rampa y giro
+   ├─ atlas_pybullet.py         Atlas real: asistente, ponerlo de pie, juntas, poses y caminata
+   ├─ probar_atlas.py           prueba de estrés con y sin asistente
+   ├─ img/                      capturas del modelo
+   └─ video/                    Atlas con y sin asistente (GIF y MP4)
 ```
 
-- **`esp32_teclado.py`**: se usa en los tres puntos, sin cambios. Barre el teclado por I2C y manda `TECLA:x` cada 50 ms. Es lo único que se carga en el ESP32.
+- **`esp32_teclado.py`**: se usa en los tres puntos, sin cambios. Barre el teclado por GPIO directo y manda `TECLA:x` cada 50 ms. Es lo único que se carga en el ESP32.
+- **`descargar_modelos.py`**: se corre una vez antes de los puntos b) y c); ver "Los modelos 3D reales".
 - **`entorno/`**: entorno virtual de Python 3.14 con `pybullet`, `pyserial` y `numpy`. Los tres scripts corren con él. No se sube a GitHub; quien clone el repo tiene que crearlo (ver "Cómo probarlo").
-- **`drones_pybullet.py`, `brazo_pybullet.py`, `laikago_pybullet.py`**: un script por punto. Cada uno intenta abrir el puerto serial dentro de un `try/except serial.SerialException`; si no encuentra el ESP32, avisa por consola y sigue funcionando con botones en la ventana de PyBullet. Su lógica está explicada en el README de cada punto.
-- **`dron.urdf`**: la descripción del dron del punto a) (el único modelo que no viene en `pybullet_data`).
+- **`drones_pybullet.py`, `brazo_pybullet.py`, `atlas_pybullet.py`**: un script por punto. Cada uno intenta abrir el puerto serial dentro de un `try/except serial.SerialException`; si no encuentra el ESP32, avisa por consola y sigue funcionando con botones en la ventana de PyBullet. Su lógica está explicada en el README de cada punto.
+- **`preview.html`**: una página suelta (sin instalar nada) con las tres consolas: un teclado 4x4 clicable que simula cada punto en el navegador ("modo prueba") o se conecta de verdad al ESP32 por Web Serial y muestra lo que llega. Sirve para probar el teclado y la lógica de flanco sin abrir PyBullet:
 
-## Qué hace cada tecla en cada punto
+![Preview: consola de Baxter](img/preview-baxter.png)
 
-Sacado de la función que interpreta las teclas en cada script (`Mando.tecla`, `ejecutar_tecla` y `procesar_tecla`):
+![Preview: consola de Atlas](img/preview-atlas.png)
 
-| Tecla | a) Drones | b) Brazo KUKA | c) Laikago |
-|---|---|---|---|
-| `8` / `2` | objetivo +Y / −Y | efector +Y / −Y | `8` sostenida: trotar (al soltar frena con rampa) |
-| `4` / `6` | objetivo −X / +X | efector −X / +X | sostenidas: girar a la izquierda / derecha (frena el trote antes) |
-| `9` / `7` | subir / bajar (no pasa del suelo) | efector +Z / −Z | — |
-| `5` | congelar el objetivo donde está | volver a la pose inicial | reiniciar el robot |
-| `A` / `B` / `C` | ir al waypoint A, B o C | A: abrir pinza · B: demo de los 3 ejes · C: cerrar y agarrar | — |
-| `D` | volver al origen | demo: coger el cubo y llevarlo | — |
-| `*` / `#` | despegar / aterrizar | — | — |
-| `0` | misión automática A → B → C | soltar y reponer el cubo | — |
-| `1` / `3` | — | — | — |
+- **`dron.urdf`**: la descripción del dron del punto a).
+- **`img/`** y la carpeta **`video/`** de cada punto: las fotos del montaje real, las capturas del preview y los videos de cada simulación (un GIF corto para verlo en GitHub y el MP4 completo).
 
-Waypoints del punto a): A = (0,0; 0,9; 1,2) m, B = (1,4; −0,6; 1,6) m, C = (−1,3; 0,4; 0,9) m.
+La tabla de qué hace cada tecla en cada punto está arriba, en "Cómo se maneja cada punto".
 
 ## Cómo probarlo
 
@@ -239,25 +379,27 @@ python -m venv entorno
 entorno\Scripts\python -m pip install pybullet pyserial numpy
 ```
 
+Antes de los puntos b) y c), bajar una vez los modelos reales (unos 36 MB):
+
+```
+entorno\Scripts\python descargar_modelos.py
+```
+
 **Sin ESP32 conectado:**
 1. Correr el punto que se quiera ver:
    ```
    entorno\Scripts\python punto-a-drones-waypoints\drones_pybullet.py
    entorno\Scripts\python punto-b-brazo-tipo-baxter\brazo_pybullet.py
-   entorno\Scripts\python punto-c-locomocion-laikago\laikago_pybullet.py
+   entorno\Scripts\python punto-c-atlas\atlas_pybullet.py
    ```
 2. En consola sale `No se encontro el ESP32 en COM7: usa los botones de la ventana.` y la ventana de PyBullet abre igual. Los botones están en el panel de la derecha ("Params"); cada click equivale a una pulsación de la tecla correspondiente.
-3. Para comprobar el punto a) sin abrir ventana: `entorno\Scripts\python punto-a-drones-waypoints\drones_pybullet.py --prueba` (vuela la misión A → B → C y termina con `PRUEBA OK`).
+3. Para comprobar sin abrir ventana: `entorno\Scripts\python punto-a-drones-waypoints\drones_pybullet.py --prueba` (vuela la misión A → B → C y termina con `PRUEBA OK`), `entorno\Scripts\python punto-b-brazo-tipo-baxter\probar_baxter.py` y `entorno\Scripts\python punto-c-atlas\probar_atlas.py`.
 
 **Con ESP32 conectado:**
 1. Armar las conexiones de arriba y guardar `esp32_teclado.py` como `main.py` en el ESP32 (con Thonny: abrir el archivo, "Guardar como" → dispositivo MicroPython → `main.py`).
 2. Cerrar Thonny (o desconectarlo con "Detener"): si Thonny tiene el puerto abierto, pyserial no puede abrirlo.
-3. Ver el puerto COM en el Administrador de dispositivos. En los drones se pasa por consola (`--puerto COM5`); en el brazo y el Laikago se cambia la constante `PUERTO_SERIAL` al principio del script.
+3. Ver el puerto COM en el Administrador de dispositivos. En los drones se pasa por consola (`--puerto COM5`); en Baxter y Atlas se cambia la constante `PUERTO_SERIAL` al principio del script.
 4. Correr el script del punto. Al abrir el puerto el ESP32 se reinicia (la señal DTR del USB lo resetea), por eso los scripts esperan 2 s antes de empezar a leer. El mismo teclado sirve para los tres puntos sin reprogramar nada.
-5. Si "no pasa nada", mirar la línea cruda del ESP32 en la ventana. Si nunca cambia, conectar Thonny y mirar la consola: un `OSError: [Errno 19] ENODEV` quiere decir que el PCF8574 no contesta en `0x20` (cable de SDA/SCL suelto, sin alimentación o jumpers de dirección distintos).
+5. Si "no pasa nada", mirar la línea cruda del ESP32 en la ventana. Si nunca cambia, conectar Thonny y mirar la consola: si `main.py` corre pero siempre manda `TECLA:-`, revisar los 8 cables del teclado contra la tabla de conexiones (una fila o columna suelta deja muda toda esa línea de teclas).
 
 No sirve escribir `TECLA:8` a mano en la consola de Thonny para probar: Thonny manda ese texto con su protocolo de "raw paste", interrumpe `main.py` y deja la placa en el REPL. Para ver qué manda el ESP32 sin Thonny, lo más directo es la propia línea cruda de la ventana, o un script de tres líneas con pyserial que abra el puerto e imprima lo que llega.
-
-## Pendiente
-
-Se hicieron pruebas adicionales de la comunicación serial antes del montaje físico. Faltan las fotos del montaje (ESP32 + módulo PCF8574 + teclado) y el video de cada punto funcionando con el teclado; se agregan aquí y en el README de cada punto cuando estén.

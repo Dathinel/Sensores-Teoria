@@ -1,40 +1,51 @@
-# Firmware UNICO para todo el taller: lee el teclado matricial 4x4 por I2C
-# (el mismo modulo PCF8574 que ya se usa en los temas 7 y 8) y manda por
-# serial, sin parar, la tecla que este presionada en ese instante:
+# Firmware UNICO para todo el taller: lee el teclado matricial 4x4 por GPIO
+# directo (8 pines del ESP32, sin modulo I2C) y manda por serial, sin parar,
+# la tecla que este presionada en ese instante:
 #
 #   TECLA:8      -> se esta sosteniendo la tecla "8"
 #   TECLA:-      -> ninguna tecla presionada
 #
-# Este archivo NO sabe nada de drones, brazos ni patas: es el mismo
+# Este archivo NO sabe nada de drones, de Baxter ni de Atlas: es el mismo
 # programa para las tres simulaciones del taller (drones_pybullet.py,
-# brazo_pybullet.py y laikago_pybullet.py), cada una interpreta las
-# teclas a su manera. Es lo
-# que permite usar un solo teclado fisico con "multiples configuraciones"
-# -- la configuracion (que hace cada tecla) vive del lado del PC, no en
-# el ESP32.
+# brazo_pybullet.py y atlas_pybullet.py), y cada una interpreta las teclas a
+# su manera. Eso es lo que permite usar un solo teclado fisico con "multiples
+# configuraciones": la configuracion (que hace cada tecla) vive del lado del
+# PC, no en el ESP32.
 #
-# Este archivo debe guardarse como main.py en el ESP32. El puerto USB
-# queda libre para pyserial en el PC sin necesidad de tener Thonny
-# conectado.
+# Por que manda la tecla CADA 50 ms y no solo cuando cambia: asi el PC sabe
+# en todo momento si la tecla sigue sostenida (para el "jog": mover mientras
+# se mantiene presionada) y, si se pierde una linea, la siguiente lo corrige
+# sola. Las acciones de "un solo golpe" (una demo, cambiar de brazo, prender el
+# asistente de Atlas) las detecta el PC por el FLANCO: cuando la tecla recibida
+# es distinta de la anterior.
 #
-# Conexion I2C del teclado (SDA=GPIO21, SCL=GPIO22): expansor PCF8574,
-# direccion 0x20 (todos los pines de direccion a GND) -- igual que en
-# esp32_brazo.py (tema 7). (En el tema 8 el teclado va directo a 8 GPIO.)
-
-from machine import I2C, Pin
+# Este archivo debe guardarse como main.py en el ESP32. El puerto USB queda
+# libre para pyserial en el PC sin necesidad de tener Thonny conectado.
+from machine import Pin
 import time
 
-I2C_SDA = 21
-I2C_SCL = 22
-DIR_TECLADO = 0x20
+# Conexiones segun la tabla del montaje (las mismas de los temas 7 y 8):
+# Filas: GPIO 14, 27, 26, 25
+PINES_FILAS = [14, 27, 26, 25]
+# Columnas: GPIO 33, 32, 18, 19
+PINES_COLUMNAS = [33, 32, 18, 19]
 
-i2c = I2C(0, sda=Pin(I2C_SDA), scl=Pin(I2C_SCL), freq=100000)
+# Filas como SALIDAS, todas en alto (1) mientras no se esten escaneando.
+filas = []
+for pin in PINES_FILAS:
+    p = Pin(pin, Pin.OUT)
+    p.value(1)
+    filas.append(p)
 
-# ------------------------------------------------------------------
-# Teclado matricial 4x4 por I2C (P4-P7 = filas, salidas; P0-P3 =
-# columnas, entradas con pull-up del propio PCF8574) -- mismo escaneo
-# que en los temas 7 y 8.
-# ------------------------------------------------------------------
+# Columnas como ENTRADAS con la resistencia de subida (pull-up) interna del
+# ESP32: si nada las toca leen 1; si una tecla une esa columna con una fila
+# puesta en 0, la columna baja a 0. Por eso no hacen falta resistencias externas.
+columnas = []
+for pin in PINES_COLUMNAS:
+    p = Pin(pin, Pin.IN, Pin.PULL_UP)
+    columnas.append(p)
+
+# Que tecla hay en cada cruce fila/columna (igual a la serigrafia del teclado).
 MAPA_TECLAS = [
     ["1", "2", "3", "A"],
     ["4", "5", "6", "B"],
@@ -44,38 +55,30 @@ MAPA_TECLAS = [
 
 
 def leer_tecla():
-    """Escaneo clasico de un teclado matricial: se "enciende" (pone en 0)
-    UNA fila a la vez y se miran las 4 columnas. Si una tecla de esa fila
-    esta presionada, conecta su fila con su columna y esa columna tambien
-    se lee en 0; las demas quedan en 1 por el pull-up. Fila activa +
-    columna en 0 = tecla exacta. Devuelve la primera encontrada o None."""
-    for fila in range(4):
-        # nibble alto (P4-P7) = filas: todas en 1 salvo la que se escanea.
-        # Ej. fila 1 -> 0b1101 -> P5 en 0.
-        filas = 0x0F & ~(1 << fila)
-        # nibble bajo (P0-P3) = columnas: se ESCRIBEN en 1 porque el
-        # PCF8574 no tiene registro de direccion -- un pin "en 1" queda
-        # como entrada con pull-up debil, que es lo que permite leerlo
-        byte_salida = (filas << 4) | 0x0F
-        i2c.writeto(DIR_TECLADO, bytes([byte_salida]))
-        byte_entrada = i2c.readfrom(DIR_TECLADO, 1)[0]
-        columnas = byte_entrada & 0x0F   # solo interesan P0-P3
-        if columnas != 0x0F:             # alguna columna bajo a 0 -> hay tecla en esta fila
-            for col in range(4):
-                if not (columnas & (1 << col)):
-                    return MAPA_TECLAS[fila][col]
+    """Escaneo de un teclado matricial con pines GPIO puros.
+
+    Se 'enciende' (pone en 0) UNA fila a la vez y se miran las 4 columnas:
+    la columna que lea 0 es la que esta unida a esa fila por la tecla
+    presionada. Solo una fila esta en 0 a la vez, asi que se sabe exactamente
+    que cruce (tecla) es. Devuelve la primera tecla encontrada o None."""
+    for i, fila in enumerate(filas):
+        # Activar la fila actual poniendola a 0 (LOW)
+        fila.value(0)
+
+        # Leer todas las columnas
+        for j, col in enumerate(columnas):
+            if col.value() == 0:  # la columna bajo a 0: hay una tecla uniendola con esta fila
+                fila.value(1)     # restaurar la fila a 1 antes de salir
+                return MAPA_TECLAS[i][j]
+
+        # Desactivar la fila actual devolviendola a 1 (HIGH)
+        fila.value(1)
+
     return None
 
 
-# ------------------------------------------------------------------
-# Programa principal: manda la tecla actual cada ~50ms, sin importar
-# que simulacion la vaya a leer del otro lado. Se manda SIEMPRE, aunque
-# no cambie (y "TECLA:-" cuando no hay nada): asi "sostener" una tecla
-# llega al PC como una repeticion continua (20 por segundo), que es lo
-# que usa el jog, y el PC puede detectar cuando se suelta. 50 ms es
-# rapido para que el jog se sienta continuo y lento para no saturar el
-# puerto (~10 bytes por linea -> ~200 bytes/s de 11.500 posibles).
-# ------------------------------------------------------------------
+# Programa principal: manda la tecla actual cada ~50 ms (20 veces por segundo,
+# suficiente para que el jog se sienta fluido y sin saturar el puerto USB).
 while True:
     tecla = leer_tecla()
     print("TECLA:{}".format(tecla if tecla is not None else "-"))
