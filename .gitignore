@@ -46,3 +46,12 @@ Enlace README - *.pdf
 9-taller-segundo-corte/modelos/
 # Recibo de entrega de Moodle (trae el ID de Turnitin)
 9-taller-segundo-corte/*Taller Segundo Corte*UMNG.pdf
+# Enjambre ACO: captura de la actividad en Moodle (trae nombre y foto del estudiante)
+10-enjambre-algoritmo-hormigas/*Actividad 7*UMNG.pdf
+# Enjambre ACO: salidas del gemelo (se regeneran); en pruebas/ quedan los resumenes json
+10-enjambre-algoritmo-hormigas/resultados/*
+!10-enjambre-algoritmo-hormigas/resultados/.gitkeep
+10-enjambre-algoritmo-hormigas/pruebas/resultados/repeticiones/
+10-enjambre-algoritmo-hormigas/pruebas/resultados/**/*.mp4
+10-enjambre-algoritmo-hormigas/pruebas/resultados/**/*.png
+10-enjambre-algoritmo-hormigas/pruebas/resultados/**/*.jsonl

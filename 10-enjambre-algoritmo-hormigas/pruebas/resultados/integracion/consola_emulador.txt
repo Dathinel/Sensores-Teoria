@@ -1,0 +1,26 @@
+Emulador del enjambre: laberinto almacen-5x5, 29 aristas, CRC A85E23EB
+Parametros: Parametros(alfa=1.0, beta=2.0, rho=0.5, q=100.0, hormigas=4, iteraciones=30, semilla=12345, tau0=1.0, deposito='mejor')
+Nodos: 1 -> 127.0.0.1:4220, 2 -> 127.0.0.1:4230, 3 -> 127.0.0.1:4240   telemetria -> 127.0.0.1:4211
+Escala de tiempo 1.0  (barrera 3.00 s, vivo 4.00 s, pausa 0.300 s)  perdida 0.0%
+   2.02 s  [nodo 3] empieza la busqueda (vio a los otros dos con el mismo CRC)
+   2.02 s  [nodo 1] empieza la busqueda (vio a los otros dos con el mismo CRC)
+   2.02 s  [nodo 2] empieza la busqueda (vio a los otros dos con el mismo CRC)
+  11.27 s  [nodo 2] fin de la busqueda: L = 2.400 m, recorre en 8.0 s
+  11.27 s  [nodo 1] fin de la busqueda: L = 2.400 m, recorre en 0.0 s
+  11.27 s  [nodo 3] fin de la busqueda: L = 2.400 m, recorre en 16.0 s
+  28.08 s  [nodo 1] TERMINADO en la celda 24
+  33.68 s  [nodo 2] TERMINADO en la celda 24
+  41.68 s  [nodo 3] TERMINADO en la celda 24
+
+Fin (todos los nodos vivos llegaron a TERMINADO) en 42.2 s
+  nodo 1: TERMINADO iter  30  sin companero  0  L =  2.400 m  ruta 0-1-2-7-6-5-10-11-16-17-22-23-24
+  nodo 2: TERMINADO iter  30  sin companero  0  L =  2.400 m  ruta 0-1-2-3-4-9-14-19-18-17-22-23-24
+  nodo 3: TERMINADO iter  30  sin companero  0  L =  2.400 m  ruta 0-1-2-3-4-9-14-19-18-17-22-23-24
+
+Comparacion con aco.simular_enjambre(caidas=None):
+  nodo 1: ruta igual SI, tau igual (exacta) SI  (max dif 0)
+  nodo 2: ruta igual SI, tau igual (exacta) SI  (max dif 0)
+  nodo 3: ruta igual SI, tau igual (exacta) SI  (max dif 0)
+  Identico a la simulacion: SI;  tau identica entre nodos vivos: SI
+
+Resumen guardado en pruebas/resultados/integracion/emulador_resumen.json

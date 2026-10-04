@@ -1,0 +1,46 @@
+# Gemelo digital del enjambre ACO en Docker.
+#
+#   docker compose up --build            levanta SOLO el servicio "gemelo" (modo hardware): escucha
+#                                        la telemetria UDP 4211 de los tres ESP32.
+#   docker compose run --rm simulacion   corre la demo sin hardware y termina sola (el servicio esta
+#                                        en el perfil "sin-hardware", por eso "up" no lo levanta).
+#   docker compose run --rm simulacion --modo sin-hardware --apagar-nodo 3 --en-iteracion 10
+#                                        prueba 14 (lo que va despues del nombre reemplaza "command").
+#
+# Las salidas (mp4, png, jsonl, json) quedan en ./resultados del computador.
+# Para el modo hardware el PC debe estar en el WiFi ENJAMBRE_ACO con IP 192.168.4.100 y el firewall
+# debe dejar pasar UDP 4211 (Docker Desktop recibe el paquete en el PC y lo reenvia al contenedor).
+
+services:
+  gemelo:
+    build: .
+    image: enjambre-aco-gemelo
+    # pybullet 3.2.7 solo publica ruedas para Linux x86_64 (no para ARM). En un Mac M1/M2/M3 se
+    # fuerza la imagen amd64: Docker la corre emulada con Rosetta, mas lento pero funciona (sin
+    # esto pip intentaria compilar pybullet dentro de la imagen ARM y fallaria).
+    platform: linux/amd64
+    # Argumentos para gemelo_digital.py (el ENTRYPOINT del Dockerfile es "python gemelo_digital.py").
+    command: ["--modo", "hardware", "--timeout", "240"]
+    ports:
+      # "/udp" es obligatorio: sin el, Docker publicaria el puerto TCP 4211 y los datagramas de
+      # los ESP32 nunca llegarian al contenedor.
+      - "4211:4211/udp"
+    volumes:
+      # La carpeta resultados del computador se monta donde el gemelo escribe (RESULTADOS en el
+      # Dockerfile), asi los archivos sobreviven cuando el contenedor se borra.
+      - ./resultados:/app/resultados
+    # Al detenerlo (Ctrl+C o "docker compose stop") se le manda SIGINT, lo mismo que Ctrl+C en una
+    # consola, y se le dan 20 s para que cierre el video y escriba los json antes de matarlo.
+    stop_signal: SIGINT
+    stop_grace_period: 20s
+
+  simulacion:
+    build: .
+    image: enjambre-aco-gemelo
+    platform: linux/amd64   # mismo motivo que arriba (ruedas de pybullet solo para x86_64)
+    command: ["--modo", "sin-hardware"]
+    volumes:
+      - ./resultados:/app/resultados
+    # Un perfil deja el servicio "apagado" por defecto: "docker compose up" no lo levanta, pero
+    # "docker compose run --rm simulacion" si lo corre.
+    profiles: ["sin-hardware"]

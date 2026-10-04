@@ -1,0 +1,11 @@
+{
+  "nombre": "abierto-5x5",
+  "descripcion": "Prueba 6: sin paredes interiores. Toda ruta monotona (4 a la derecha y 4 arriba) es optima: 8 pasos, 1,60 m.",
+  "columnas": 5,
+  "filas": 5,
+  "tam_celda_m": 0.2,
+  "inicio": [0, 0],
+  "meta": [4, 4],
+  "nota_paredes": "Cada pared es un par de celdas vecinas [x, y] que no se pueden cruzar. x crece a la derecha (columna), y hacia arriba (fila).",
+  "paredes": []
+}

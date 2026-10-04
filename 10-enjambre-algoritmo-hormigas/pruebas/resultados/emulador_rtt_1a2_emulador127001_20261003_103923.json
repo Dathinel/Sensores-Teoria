@@ -1,0 +1,20 @@
+{
+  "origen_de_los_datos": "EMULADOR (emulador_nodos.py en 127.0.0.1): NO es una medicion de hardware",
+  "fecha": "2026-10-03 10:39:23",
+  "distancia": "emulador 127.0.0.1",
+  "nodo_origen": 1,
+  "nodo_destino": 2,
+  "n_pedidos": 100,
+  "intervalo_ms": 50,
+  "enviados": 100,
+  "recibidos": 100,
+  "perdida_pct": 0.0,
+  "rtt_min_ms": 0.135,
+  "rtt_prom_ms": 0.275,
+  "rtt_max_ms": 0.586,
+  "rtt_p95_ms": 0.401,
+  "rssi_dbm": -40,
+  "rssi_ultimo_estado_dbm": -40,
+  "linea_cruda": "RTT;1;2;100;100;0.135;0.275;0.586;0.401;-40",
+  "duracion_s": 4.951
+}

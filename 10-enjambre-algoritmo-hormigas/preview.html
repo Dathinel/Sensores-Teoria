@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Previsualización — enjambre ACO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1013;
+    --panel: #15191d;
+    --panel-border: #262b31;
+    --text: #e7e9ec;
+    --text-muted: #8b929b;
+    --accent: #4f8fce;
+    --verde-ok: #4caf7d;
+    --rojo: #d9534f;
+    --amarillo: #e8b930;
+    --feromona: #34c3a3;
+    --nodo1: #e5534b;
+    --nodo2: #4f8fce;
+    --nodo3: #e8b930;
+    --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: "Space Grotesk", system-ui, "Segoe UI", sans-serif; }
+  body { padding: 1.1rem 1.4rem; min-height: 100vh; }
+  .encabezado { max-width: 1760px; margin: 0 auto 0.9rem; }
+  h1 { font-size: 1.2rem; font-weight: 600; margin: 0 0 0.2rem; }
+  p.sub { color: var(--text-muted); font-size: 0.8rem; margin: 0; max-width: 980px; line-height: 1.45; }
+  .rejilla { max-width: 1760px; margin: 0 auto; display: grid; grid-template-columns: minmax(250px, 285px) minmax(360px, 1fr) minmax(300px, 380px); gap: 0.9rem; align-items: start; }
+  @media (max-width: 1150px) { .rejilla { grid-template-columns: 1fr 1fr; } .rejilla > .centro { grid-column: 1 / -1; order: -1; } }
+  @media (max-width: 720px) { body { padding: 0.8rem 16px; } .rejilla { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 8px; padding: 0.9rem; min-width: 0; }
+  .panel + .panel { margin-top: 0.9rem; }
+  .titulo { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 0.6rem; }
+  .modos { display: flex; gap: 0.5rem; margin-bottom: 0.9rem; }
+  button { font-family: var(--mono); }
+  .modos button { flex: 1; background: transparent; color: var(--text-muted); border: 1px solid var(--panel-border); padding: 0.5rem 0.3rem; border-radius: 6px; font-size: 0.72rem; cursor: pointer; }
+  .modos button.activo { border-color: var(--accent); color: var(--accent); }
+  label.campo { display: flex; flex-direction: column; gap: 0.2rem; font-family: var(--mono); font-size: 0.68rem; color: var(--text-muted); }
+  select, input[type=number] { width: 100%; background: #0a0d10; color: var(--text); border: 1px solid var(--panel-border); border-radius: 5px; padding: 0.35rem 0.45rem; font-family: var(--mono); font-size: 0.78rem; }
+  select:focus, input:focus { outline: 1px solid var(--accent); }
+  .params { display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem 0.6rem; margin-top: 0.6rem; }
+  .botones { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.4rem; margin-top: 0.8rem; }
+  .btn { background: #1c2126; color: var(--text); border: 1px solid var(--panel-border); padding: 0.5rem 0.3rem; border-radius: 6px; font-size: 0.74rem; cursor: pointer; }
+  .btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .btn.primario { border-color: var(--verde-ok); color: var(--verde-ok); }
+  .btn:disabled { color: #4a5058; cursor: default; }
+  .apagar { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.4rem; }
+  .apagar .btn { font-size: 0.68rem; }
+  .apagar .btn.caido { border-style: dashed; }
+  .nota { font-family: var(--mono); font-size: 0.66rem; color: var(--text-muted); line-height: 1.5; margin: 0.55rem 0 0; }
+  .nota b { color: var(--text); font-weight: 500; }
+  .centro .panel { padding: 0.8rem; }
+  .lienzo-caja { position: relative; width: min(100%, 74vh); margin: 0 auto; aspect-ratio: 1; }
+  canvas#lienzo { display: block; width: 100%; height: 100%; background: #0a0d10; border: 1px solid var(--panel-border); border-radius: 8px; }
+  .leyenda { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1rem; margin-top: 0.6rem; font-family: var(--mono); font-size: 0.68rem; color: var(--text-muted); }
+  .leyenda span { display: inline-flex; align-items: center; gap: 0.35rem; }
+  .muestra { display: inline-block; width: 18px; height: 4px; border-radius: 2px; }
+  .barra-fase { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.6rem; font-family: var(--mono); font-size: 0.74rem; }
+  .fase { border: 1px solid var(--panel-border); border-radius: 999px; padding: 0.15rem 0.6rem; color: var(--text-muted); }
+  .fase.BUSQUEDA { border-color: var(--feromona); color: var(--feromona); }
+  .fase.RECORRIDO { border-color: var(--accent); color: var(--accent); }
+  .fase.TERMINADO { border-color: var(--verde-ok); color: var(--verde-ok); }
+  .progreso { flex: 1; min-width: 120px; height: 5px; background: #0a0d10; border-radius: 3px; overflow: hidden; border: 1px solid var(--panel-border); }
+  .progreso div { height: 100%; width: 0; background: var(--feromona); transition: width 0.15s; }
+  .nodos { display: grid; gap: 0.45rem; }
+  .tarjeta { border: 1px solid var(--panel-border); border-left: 3px solid var(--c); border-radius: 6px; padding: 0.45rem 0.6rem; font-family: var(--mono); font-size: 0.7rem; color: var(--text-muted); }
+  .tarjeta .fila1 { display: flex; justify-content: space-between; gap: 0.5rem; color: var(--text); font-size: 0.74rem; margin-bottom: 0.2rem; }
+  .tarjeta .fila1 b { color: var(--c); font-weight: 600; }
+  .tarjeta.caido { opacity: 0.55; }
+  .tarjeta .ruta { word-break: break-all; color: var(--text-muted); }
+  .dato { display: flex; justify-content: space-between; gap: 0.6rem; font-family: var(--mono); font-size: 0.72rem; color: var(--text-muted); padding: 0.18rem 0; border-bottom: 1px dashed #20252b; }
+  .dato:last-child { border-bottom: 0; }
+  .dato span:last-child { color: var(--text); text-align: right; word-break: break-all; }
+  .insignias { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.55rem; font-family: var(--mono); font-size: 0.68rem; }
+  .insignias span { border: 1px solid var(--panel-border); border-radius: 999px; padding: 0.15rem 0.55rem; color: var(--text-muted); }
+  .insignias span.ok { border-color: var(--verde-ok); color: var(--verde-ok); }
+  .insignias span.mal { border-color: var(--rojo); color: var(--rojo); }
+  .insignias span.aviso { border-color: var(--amarillo); color: var(--amarillo); }
+  .monitor { height: 220px; overflow-y: auto; background: #0a0d10; border: 1px solid var(--panel-border); border-radius: 6px; padding: 0.4rem 0.5rem; font-family: var(--mono); font-size: 0.64rem; line-height: 1.45; color: var(--text-muted); white-space: pre; }
+  .monitor .PHER { color: #6f8f86; }
+  .monitor .FIN { color: var(--feromona); }
+  .monitor .PATH { color: var(--text); }
+  .monitor .ESTADO { color: #8f98c9; }
+  .monitor .HELLO { color: var(--accent); }
+  .monitor .LOG { color: var(--amarillo); }
+  .monitor .crudo { color: #6b727b; }
+  .monitor .sep { color: #3b4249; }
+  #estadoSerial { font-family: var(--mono); font-size: 0.7rem; color: var(--text-muted); margin-top: 0.5rem; line-height: 1.45; }
+  #estadoSerial.ok { color: var(--verde-ok); }
+  #estadoSerial.mal { color: var(--rojo); }
+  .oculto { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="encabezado">
+  <h1>Previsualización — enjambre de 3 carritos ESP32 con colonia de hormigas (ACO)</h1>
+  <p class="sub">Tres nodos comparten la feromona por UDP y cada uno suelta sus hormigas virtuales sobre el mismo laberinto de 5x5. El modo prueba corre en el navegador la misma lógica de <b>aco.py</b> y del firmware (xorshift32, misma semilla por nodo, mismo orden de aristas y de suma), así que con los mismos parámetros elige exactamente los mismos caminos. El modo conectado lee por USB la telemetría de un solo carrito.</p>
+</div>
+
+<div class="rejilla">
+  <!-- ======================= columna izquierda: controles ======================= -->
+  <div>
+    <div class="panel">
+      <div class="modos">
+        <button id="btnModoPrueba" class="activo">Modo prueba</button>
+        <button id="btnModoConectado">Conectado (Web Serial)</button>
+      </div>
+
+      <label class="campo">Laberinto
+        <select id="selLaberinto"></select>
+      </label>
+
+      <div id="controlesPrueba">
+        <div class="params">
+          <label class="campo">alfa (feromona)<input type="number" id="pAlfa" value="1" step="0.1" min="0"></label>
+          <label class="campo">beta (1/distancia)<input type="number" id="pBeta" value="2" step="0.1" min="0"></label>
+          <label class="campo">rho (evaporación)<input type="number" id="pRho" value="0.5" step="0.05" min="0" max="1"></label>
+          <label class="campo">Q (depósito)<input type="number" id="pQ" value="100" step="10" min="0"></label>
+          <label class="campo">hormigas por nodo<input type="number" id="pHormigas" value="4" step="1" min="1" max="50"></label>
+          <label class="campo">iteraciones<input type="number" id="pIter" value="30" step="1" min="1" max="500"></label>
+          <label class="campo">semilla<input type="number" id="pSemilla" value="12345" step="1" min="0"></label>
+          <label class="campo">depositan
+            <select id="selDeposito">
+              <option value="mejor" selected title="solo la mejor hormiga de cada nodo">la mejor</option>
+              <option value="todas" title="todas las hormigas que llegan">todas</option>
+            </select>
+          </label>
+          <label class="campo">velocidad
+            <select id="selVelocidad">
+              <option value="0.5">0,5x</option>
+              <option value="1" selected>1x real</option>
+              <option value="2">2x</option>
+              <option value="4">4x</option>
+              <option value="8">8x</option>
+              <option value="20">20x</option>
+            </select>
+          </label>
+        </div>
+        <div class="botones">
+          <button class="btn primario" id="btnIniciar">Iniciar</button>
+          <button class="btn" id="btnPaso">Paso</button>
+          <button class="btn" id="btnReiniciar">Reiniciar</button>
+        </div>
+        <p class="nota">Cambiar un parámetro o el laberinto reinicia la simulación. <b>Paso</b> corre una iteración completa de los tres nodos.</p>
+      </div>
+
+      <div id="controlesConectado" class="oculto">
+        <button class="btn primario" id="btnConectar" style="width:100%; margin-top:0.7rem">Conectar por USB (Web Serial)</button>
+        <div id="estadoSerial">sin conectar</div>
+        <div class="params">
+          <label class="campo">rho del firmware<input type="number" id="pRhoCon" value="0.5" step="0.05" min="0" max="1"></label>
+          <label class="campo">tau0<input type="number" id="pTau0Con" value="1" step="0.1" min="0"></label>
+        </div>
+        <div class="botones" style="grid-template-columns:1fr 1fr">
+          <button class="btn" id="btnLimpiarCon">Limpiar tablero</button>
+          <button class="btn" id="btnDesconectar" disabled>Desconectar</button>
+        </div>
+        <p class="nota">Se enchufa <b>un solo carrito</b> al PC (los tres ya hablan entre sí por WiFi). El firmware repite por USB cada línea de telemetría con el prefijo <b>TEL </b>. El laberinto se elige solo con el CRC del HELLO.</p>
+      </div>
+    </div>
+
+    <div class="panel" id="panelApagar">
+      <div class="titulo">Fallas en pleno funcionamiento</div>
+      <div class="apagar">
+        <button class="btn" data-nodo="1">Apagar nodo 1</button>
+        <button class="btn" data-nodo="2">Apagar nodo 2</button>
+        <button class="btn" data-nodo="3">Apagar nodo 3</button>
+      </div>
+      <p class="nota">Como en la prueba 14: desde la siguiente iteración ese nodo deja de mandar depósitos y los otros siguen con lo que les llega. Un carrito apagado no hace el recorrido final.</p>
+    </div>
+  </div>
+
+  <!-- ======================= columna central: tablero ======================= -->
+  <div class="centro">
+    <div class="panel">
+      <div class="barra-fase">
+        <span class="fase" id="chipFase">ESPERA</span>
+        <span id="txtIter">iteración 0 / 30</span>
+        <div class="progreso"><div id="barraProgreso"></div></div>
+        <span id="txtTiempo">t = 0,0 s</span>
+      </div>
+      <div class="lienzo-caja"><canvas id="lienzo"></canvas></div>
+      <div class="leyenda">
+        <span><i class="muestra" style="background:var(--feromona); height:7px"></i>feromona (grosor)</span>
+        <span><i class="muestra" style="background:var(--nodo1)"></i>nodo 1</span>
+        <span><i class="muestra" style="background:var(--nodo2)"></i>nodo 2</span>
+        <span><i class="muestra" style="background:var(--nodo3)"></i>nodo 3</span>
+        <span><i class="muestra" style="background:repeating-linear-gradient(90deg,#e7e9ec 0 4px,transparent 4px 7px)"></i>máxima feromona</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================= columna derecha: estado y monitor ======================= -->
+  <div>
+    <div class="panel">
+      <div class="titulo">Nodos</div>
+      <div class="nodos" id="tarjetas"></div>
+      <div style="margin-top:0.7rem">
+        <div class="dato"><span>óptimo (BFS)</span><span id="txtOptimo">-</span></div>
+        <div class="dato"><span>mejor del enjambre</span><span id="txtMejorEnjambre">-</span></div>
+        <div class="dato"><span>máxima feromona</span><span id="txtCodicioso">-</span></div>
+        <div class="dato" id="filaExtra1"><span>primera vez óptimo</span><span id="txtPrimera">-</span></div>
+      </div>
+      <div class="insignias" id="insignias"></div>
+    </div>
+    <div class="panel">
+      <div class="titulo" id="tituloMonitor">Líneas de protocolo que se generarían</div>
+      <div class="monitor" id="monitor"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+// =============================================================================================
+// Laberintos embebidos (copiados de maze.json y laberintos/*.json: con file:// no hay fetch).
+// =============================================================================================
+const LABERINTOS = {
+  almacen: {
+    archivo: "maze.json",
+    nombre: "almacen-5x5",
+    descripcion: "Almacen de 5x5 celdas de 20 cm con estanterias (paredes horizontales). Inicio A en (0,0), meta en (4,4).",
+    columnas: 5, filas: 5, tam_celda_m: 0.2, inicio: [0, 0], meta: [4, 4],
+    paredes: [[[0,0],[0,1]], [[1,0],[1,1]], [[1,1],[1,2]], [[1,4],[2,4]], [[2,1],[2,2]], [[2,2],[2,3]], [[3,0],[3,1]], [[3,2],[3,3]], [[3,2],[4,2]], [[3,3],[3,4]], [[4,3],[4,4]]],
+  },
+  abierto: {
+    archivo: "laberintos/abierto.json",
+    nombre: "abierto-5x5",
+    descripcion: "Prueba 6: sin paredes interiores. Toda ruta monotona (4 a la derecha y 4 arriba) es optima: 8 pasos, 1,60 m.",
+    columnas: 5, filas: 5, tam_celda_m: 0.2, inicio: [0, 0], meta: [4, 4],
+    paredes: [],
+  },
+  dos_caminos: {
+    archivo: "laberintos/dos_caminos.json",
+    nombre: "dos-caminos-5x5",
+    descripcion: "Prueba 8: solo dos rutas. Corta: fila de abajo y columna derecha (8 pasos, 1,60 m). Larga: columna izquierda y un zigzag arriba (12 pasos, 2,40 m).",
+    columnas: 5, filas: 5, tam_celda_m: 0.2, inicio: [0, 0], meta: [4, 4],
+    paredes: [[[0,1],[1,1]], [[0,2],[1,2]], [[0,3],[1,3]], [[1,0],[1,1]], [[1,1],[1,2]], [[1,1],[2,1]], [[1,3],[2,3]], [[1,4],[2,4]], [[2,0],[2,1]], [[2,1],[2,2]], [[2,1],[3,1]], [[2,2],[3,2]], [[2,3],[3,3]], [[3,0],[3,1]], [[3,1],[3,2]], [[3,1],[4,1]], [[3,2],[3,3]], [[3,2],[4,2]], [[3,3],[3,4]], [[3,3],[4,3]]],
+  },
+  unico_camino: {
+    archivo: "laberintos/unico_camino.json",
+    nombre: "unico-camino-5x5",
+    descripcion: "Prueba 7: un arbol (sin ciclos), asi que hay una sola ruta de A a la meta (12 pasos, 2,40 m) y cuatro ramas que terminan en callejones.",
+    columnas: 5, filas: 5, tam_celda_m: 0.2, inicio: [0, 0], meta: [4, 4],
+    paredes: [[[0,1],[0,2]], [[0,3],[0,4]], [[1,0],[1,1]], [[1,2],[1,3]], [[1,2],[2,2]], [[1,3],[1,4]], [[2,0],[2,1]], [[2,1],[2,2]], [[2,3],[3,3]], [[2,4],[3,4]], [[3,0],[3,1]], [[3,0],[4,0]], [[3,1],[3,2]], [[3,3],[4,3]], [[4,1],[4,2]], [[4,3],[4,4]]],
+  },
+};
+
+// === NUCLEO ACO INICIO ===
+// Puerto linea por linea de aco.py (y de firmware/esp32_aco_nodo/aco_core.h). Mismas decisiones,
+// en el mismo orden: con la misma semilla elige exactamente los mismos caminos que Python y el C++.
+// Este bloque no toca el DOM: la prueba de equivalencia lo extrae y lo corre con node.
+
+const MASCARA32 = 0xFFFFFFFF;
+
+// Parametros por defecto (los de aco.Parametros).
+function parametrosPorDefecto() {
+  // deposito: "mejor" = solo la mejor hormiga de cada nodo deposita en cada iteracion (por
+  // defecto, igual que aco.py); "todas" = toda hormiga que llego (Ant System original).
+  return { alfa: 1.0, beta: 2.0, rho: 0.5, q: 100.0, hormigas: 4, iteraciones: 30, semilla: 12345, tau0: 1.0,
+           deposito: "mejor" };
+}
+
+// Entero (posiblemente negativo o mayor que 2^32) -> los 32 bits bajos sin signo, como "& MASCARA32".
+function a32(n) { return Number(BigInt.asUintN(32, BigInt(Math.trunc(n)))); }
+
+// xorshift32 de Marsaglia. ">>> 0" deja cada resultado como entero de 32 bits sin signo, igual que
+// "& MASCARA32" en Python y uint32_t en C++.
+class Xorshift32 {
+  constructor(semilla) { this.estado = a32(semilla) || 1; }
+  siguiente() {
+    let x = this.estado;
+    x = (x ^ (x << 13)) >>> 0;
+    x = (x ^ (x >>> 17)) >>> 0;
+    x = (x ^ (x << 5)) >>> 0;
+    this.estado = x;
+    return this.estado;
+  }
+  // Numero en [0, 1) con los 24 bits altos (exacto en double).
+  uniforme() { return (this.siguiente() >>> 8) / 16777216.0; }
+}
+
+function semillaDeNodo(semillaBase, nodo) {
+  // (semilla_base + 0x9E3779B9 * nodo) & MASCARA32, con BigInt para no perder bits.
+  const s = Number(BigInt.asUintN(32, BigInt(Math.trunc(semillaBase)) + 0x9E3779B9n * BigInt(nodo)));
+  return s || 1;
+}
+
+// Laberinto (dict de maze.json) -> grafo con aristas en orden canonico y vecinos en orden +x, +y, -x, -y.
+function cargarLaberinto(datos) {
+  const cols = Math.trunc(datos.columnas), fils = Math.trunc(datos.filas);
+  const tam = Number(datos.tam_celda_m);
+  const nid = (par) => {
+    const [x, y] = par;
+    if (!(x >= 0 && x < cols && y >= 0 && y < fils)) throw new Error("celda fuera del laberinto: " + par);
+    return y * cols + x;
+  };
+  const bloqueadas = new Set();
+  for (const [a, b] of (datos.paredes || [])) {
+    const u = nid(a), v = nid(b);
+    if (Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) !== 1) throw new Error("pared entre celdas no vecinas");
+    bloqueadas.add(Math.min(u, v) + "," + Math.max(u, v));
+  }
+  const aristas = [], longitud = [];
+  for (let y = 0; y < fils; y++) {
+    for (let x = 0; x < cols; x++) {
+      const u = y * cols + x;
+      for (const [dx, dy] of [[1, 0], [0, 1]]) {        // primero +x, despues +y
+        const nx = x + dx, ny = y + dy;
+        if (nx < cols && ny < fils) {
+          const v = ny * cols + nx;
+          if (!bloqueadas.has(u + "," + v)) {
+            aristas.push([u, v]);
+            longitud.push(tam * Math.hypot(dx, dy));
+          }
+        }
+      }
+    }
+  }
+  const indice = new Map();
+  aristas.forEach(([u, v], i) => indice.set(u + "," + v, i));
+  const vecinos = [];
+  for (let i = 0; i < cols * fils; i++) vecinos.push([]);
+  for (let y = 0; y < fils; y++) {
+    for (let x = 0; x < cols; x++) {
+      const u = y * cols + x;
+      for (const [dx, dy] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) {
+        const nx = x + dx, ny = y + dy;
+        if (nx >= 0 && nx < cols && ny >= 0 && ny < fils) {
+          const v = ny * cols + nx;
+          const clave = Math.min(u, v) + "," + Math.max(u, v);
+          if (indice.has(clave)) vecinos[u].push([v, indice.get(clave)]);
+        }
+      }
+    }
+  }
+  return {
+    nombre: datos.nombre || "laberinto", columnas: cols, filas: fils, tam_celda: tam,
+    inicio: nid(datos.inicio), meta: nid(datos.meta), aristas, longitud, vecinos,
+    paredes: datos.paredes || [],
+  };
+}
+
+function celdaDe(lab, nodo) { return [nodo % lab.columnas, Math.floor(nodo / lab.columnas)]; }
+
+function aristaEntre(lab, u, v) {
+  for (const [w, e] of lab.vecinos[u]) if (w === v) return e;
+  throw new Error("no hay arista entre " + u + " y " + v);
+}
+
+// Suma a mano, de izquierda a derecha (como el C++ y como aco.longitud_camino).
+function longitudCamino(lab, camino) {
+  let total = 0.0;
+  for (let i = 0; i + 1 < camino.length; i++) total += lab.longitud[aristaEntre(lab, camino[i], camino[i + 1])];
+  return total;
+}
+
+function textoCanonico(lab) {
+  const ar = lab.aristas.map(([u, v]) => u + "-" + v).join(",");
+  return `${lab.columnas}x${lab.filas};${lab.tam_celda.toFixed(3)};${lab.inicio};${lab.meta};${ar}`;
+}
+
+const TABLA_CRC = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+
+// zlib.crc32 del texto canonico: la huella que el firmware manda en HELLO.
+function crcLaberinto(lab) {
+  const s = textoCanonico(lab);
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < s.length; i++) c = TABLA_CRC[(c ^ s.charCodeAt(i)) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+// Camino mas corto por busqueda en anchura (todas las aristas miden lo mismo).
+function caminoOptimo(lab) {
+  const previo = new Map([[lab.inicio, null]]);
+  const cola = [lab.inicio];
+  let cabeza = 0;
+  while (cabeza < cola.length) {
+    const u = cola[cabeza++];
+    if (u === lab.meta) break;
+    for (const [v] of lab.vecinos[u]) {
+      if (!previo.has(v)) { previo.set(v, u); cola.push(v); }
+    }
+  }
+  if (!previo.has(lab.meta)) return null;
+  const camino = [];
+  let u = lab.meta;
+  while (u !== null) { camino.push(u); u = previo.get(u); }
+  return camino.reverse();
+}
+
+// Un nodo del enjambre: lo mismo que hace UN ESP32.
+class NodoACO {
+  constructor(lab, params, nodo) {
+    this.lab = lab;
+    this.p = params;
+    this.nodo = nodo;
+    this.rng = new Xorshift32(semillaDeNodo(params.semilla, nodo));
+    this.tau = new Array(lab.aristas.length).fill(params.tau0);
+    this.etaBeta = lab.longitud.map((d) => Math.pow(1.0 / d, params.beta));
+    this.mejorCamino = null;
+    this.mejorLongitud = Infinity;
+    this.iteracion = 0;
+  }
+
+  construirHormiga() {
+    const lab = this.lab, p = this.p;
+    let actual = lab.inicio;
+    const camino = [actual];
+    const visitado = new Array(lab.columnas * lab.filas).fill(false);
+    visitado[actual] = true;
+    while (actual !== lab.meta) {
+      const candidatos = [], pesos = [];
+      let total = 0.0;                                   // acumulado en orden
+      for (const [v, e] of lab.vecinos[actual]) {
+        if (!visitado[v]) {
+          candidatos.push(v);
+          pesos.push(Math.pow(this.tau[e], p.alfa) * this.etaBeta[e]);
+          total += pesos[pesos.length - 1];
+        }
+      }
+      if (candidatos.length === 0) return null;          // atrapada: se descarta
+      // Ruleta: SIEMPRE se gasta un aleatorio por paso, aunque haya un solo candidato.
+      const r = this.rng.uniforme() * total;
+      let elegido = candidatos[candidatos.length - 1];
+      let acumulado = 0.0;
+      for (let i = 0; i < candidatos.length; i++) {
+        acumulado += pesos[i];
+        if (r < acumulado) { elegido = candidatos[i]; break; }
+      }
+      actual = elegido;
+      visitado[actual] = true;
+      camino.push(actual);
+    }
+    return camino;
+  }
+
+  // Suelta las hormigas y calcula los depositos SIN tocar la feromona.
+  // depositos: lista [arista, origen, destino, deposito] ordenada por arista.
+  iteracionLocal() {
+    const lab = this.lab, p = this.p;
+    const dep = new Array(lab.aristas.length).fill(null);
+    const caminos = [];
+    let descartadas = 0;
+    let mejorIter = null;                               // [L, camino] de la mejor de ESTA iteracion
+    for (let h = 0; h < p.hormigas; h++) {
+      const camino = this.construirHormiga();
+      if (camino === null) { descartadas++; continue; }
+      caminos.push(camino);
+      const L = longitudCamino(lab, camino);
+      if (L < this.mejorLongitud - 1e-12) {
+        this.mejorLongitud = L;
+        this.mejorCamino = camino.slice();
+      }
+      if (mejorIter === null || L < mejorIter[0] - 1e-12) mejorIter = [L, camino];
+    }
+    // Quienes depositan: solo la mejor de la iteracion, o todas las que llegaron (en su orden).
+    const depositan = p.deposito === "todas" ? caminos.map((c) => [longitudCamino(lab, c), c])
+                                              : (mejorIter ? [mejorIter] : []);
+    for (const [L, camino] of depositan) {
+      const aporte = p.q / L;
+      for (let i = 0; i + 1 < camino.length; i++) {
+        const a = camino[i], b = camino[i + 1];
+        const e = aristaEntre(lab, a, b);
+        if (dep[e] !== null) dep[e][2] += aporte;
+        else dep[e] = [a, b, aporte];                   // origen/destino: como la cruzo la 1a hormiga
+      }
+    }
+    const depositos = [];
+    for (let e = 0; e < dep.length; e++) if (dep[e] !== null) depositos.push([e, dep[e][0], dep[e][1], dep[e][2]]);
+    return { depositos, exitosas: caminos.length, descartadas, caminos };
+  }
+
+  // tau <- (1 - rho) * tau  y luego  tau += depositos, en orden de nodo y de arista.
+  // depositosPorNodo: Map nodo -> lista [arista, origen, destino, deposito] (ordenada por arista).
+  aplicarIteracion(depositosPorNodo) {
+    const f = 1.0 - this.p.rho;
+    for (let e = 0; e < this.tau.length; e++) this.tau[e] = this.tau[e] * f;
+    const nodos = Array.from(depositosPorNodo.keys()).sort((a, b) => a - b);
+    for (const n of nodos) {
+      const lista = depositosPorNodo.get(n).slice().sort((a, b) => a[0] - b[0]);
+      for (const [e, , , d] of lista) this.tau[e] += d;
+    }
+    this.iteracion++;
+  }
+
+  // Sigue siempre la arista de mas feromona; en empate gana la primera en el orden +x, +y, -x, -y.
+  // estricto = true: si hay EMPATE en algun paso devuelve null (la colonia aun no decidio), igual
+  // que aco.camino_codicioso(estricto=True); asi la feromona uniforme no cuenta como convergencia.
+  caminoCodicioso(estricto = false) {
+    const lab = this.lab;
+    let actual = lab.inicio;
+    const camino = [lab.inicio];
+    const vis = new Set([lab.inicio]);
+    while (actual !== lab.meta) {
+      const opciones = [];
+      for (const [v, e] of lab.vecinos[actual]) if (!vis.has(v)) opciones.push([this.tau[e], v]);
+      if (opciones.length === 0) return null;
+      let mejor = opciones[0];
+      for (let i = 1; i < opciones.length; i++) if (opciones[i][0] > mejor[0]) mejor = opciones[i];
+      if (estricto && opciones.filter((o) => o[0] === mejor[0]).length > 1) return null;
+      actual = mejor[1];
+      vis.add(actual);
+      camino.push(actual);
+    }
+    return camino;
+  }
+}
+
+// Enjambre paso a paso: cada llamada a paso() es una iteracion de aco.simular_enjambre.
+class Enjambre {
+  constructor(lab, params, nodos = [1, 2, 3], caidas = {}) {
+    this.lab = lab;
+    this.p = params;
+    this.nodos = nodos.slice();
+    this.caidas = Object.assign({}, caidas);            // {nodo: k}: apagado desde la iteracion k (0-based)
+    this.estado = new Map(this.nodos.map((n) => [n, new NodoACO(lab, params, n)]));
+    this.optimo = caminoOptimo(lab);
+    this.Lopt = this.optimo ? longitudCamino(lab, this.optimo) : Infinity;
+    this.k = 0;
+    this.primeraOpt = null;
+    this.historial = [];
+  }
+  caida(n) { return (n in this.caidas) ? this.caidas[n] : Infinity; }
+  terminado() { return this.k >= this.p.iteraciones; }
+  paso() {
+    const k = this.k;
+    const vivos = this.nodos.filter((n) => this.caida(n) > k);
+    const resultados = new Map();
+    for (const n of vivos) resultados.set(n, this.estado.get(n).iteracionLocal());
+    const depositos = new Map();
+    for (const n of vivos) depositos.set(n, resultados.get(n).depositos);
+    for (const n of vivos) this.estado.get(n).aplicarIteracion(depositos);
+    let mejorEnjambre = Infinity;
+    for (const n of this.nodos) mejorEnjambre = Math.min(mejorEnjambre, this.estado.get(n).mejorLongitud);
+    if (this.primeraOpt === null && this.optimo && mejorEnjambre <= this.Lopt + 1e-9) this.primeraOpt = k + 1;
+    const porNodo = {};
+    for (const n of this.nodos) {
+      const r = resultados.get(n);
+      const st = this.estado.get(n);
+      porNodo[n] = {
+        exitosas: r ? r.exitosas : 0,
+        descartadas: r ? r.descartadas : 0,
+        mejorLongitud: st.mejorLongitud,
+        mejorCamino: st.mejorCamino ? st.mejorCamino.slice() : null,
+        depositos: r ? r.depositos : [],
+      };
+    }
+    const info = {
+      iteracion: k + 1, vivos, porNodo,
+      tau: vivos.length ? this.estado.get(vivos[0]).tau.slice() : [],
+      mejorEnjambre,
+    };
+    this.historial.push(info);
+    this.k++;
+    return info;
+  }
+  // Nodo cuya copia de la feromona sirve de referencia (como "ref" en simular_enjambre).
+  referencia() {
+    // Un nodo vivo AL FINAL (como aco.simular_enjambre): uno apagado tiene la feromona congelada.
+    const candidatos = this.nodos.filter((n) => this.caida(n) > this.p.iteraciones);
+    return candidatos.length ? this.estado.get(Math.min(...candidatos)) : null;
+  }
+  // Copia de la feromona que se muestra: la del primer nodo vivo (o la de referencia).
+  tauVisible() {
+    const vivos = this.nodos.filter((n) => this.caida(n) > Math.max(this.k - 1, 0));
+    const st = vivos.length ? this.estado.get(vivos[0]) : this.referencia();
+    return st ? st.tau : [];
+  }
+}
+
+// Igual que aco.simular_enjambre: corre todas las iteraciones y devuelve el resumen.
+function simularEnjambre(lab, params, nodos = [1, 2, 3], caidas = {}) {
+  const enj = new Enjambre(lab, params, nodos, caidas);
+  while (!enj.terminado()) enj.paso();
+  const ref = enj.referencia();
+  const codicioso = ref ? ref.caminoCodicioso() : null;
+  const decidido = ref ? ref.caminoCodicioso(true) : null;
+  let mejorNodo = nodos[0];
+  for (const n of nodos) if (enj.estado.get(n).mejorLongitud < enj.estado.get(mejorNodo).mejorLongitud) mejorNodo = n;
+  const porNodo = {}, tauFinal = {};
+  for (const n of nodos) {
+    const st = enj.estado.get(n);
+    porNodo[n] = { mejorCamino: st.mejorCamino, mejorLongitud: st.mejorLongitud };
+    tauFinal[n] = st.tau.slice();
+  }
+  return {
+    optimo: enj.optimo, longitudOptima: enj.Lopt, iteracionPrimerOptimo: enj.primeraOpt,
+    mejorCamino: enj.estado.get(mejorNodo).mejorCamino, mejorLongitud: enj.estado.get(mejorNodo).mejorLongitud,
+    caminoCodicioso: codicioso,
+    convergio: decidido !== null && Math.abs(longitudCamino(lab, decidido) - enj.Lopt) < 1e-9,
+    porNodo, tauFinal, historial: enj.historial,
+  };
+}
+// === NUCLEO ACO FIN ===
+
+// =============================================================================================
+// Protocolo (protocolo.py): tiempos, formato de lineas y lectura.
+// =============================================================================================
+const PAUSA_ITER_S = 0.3;
+const T_CELDA_S = 1.0;
+const T_GIRO90_S = 0.6;
+const ESCALON_RECORRIDO_S = 8.0;
+const PERIODO_ESTADO_S = 1.0;
+const COLOR_NODO = { 1: "#e5534b", 2: "#4f8fce", 3: "#e8b930" };
+const NOMBRE_COLOR = { 1: "rojo", 2: "azul", 3: "amarillo" };
+
+// format(x, ".17g") de Python / "%.17g" de C: 17 cifras significativas, sin ceros finales.
+// No se usa toPrecision/toFixed: en un empate exacto JS redondea hacia arriba y C/Python al par
+// (p. ej. 96004809430195.8125). Se parte del valor binario EXACTO (mantisa * 2^e, con BigInt)
+// y se redondea a 17 cifras con "mitad al par", igual que la libc.
+function num17g(x) {
+  if (!isFinite(x)) return x > 0 ? "inf" : (x < 0 ? "-inf" : "nan");
+  if (x === 0) return Object.is(x, -0) ? "-0" : "0";
+  const signo = x < 0 ? "-" : "";
+  const dv = new DataView(new ArrayBuffer(8));
+  dv.setFloat64(0, Math.abs(x));
+  const alto = dv.getUint32(0), bajo = dv.getUint32(4);
+  const expBits = (alto >>> 20) & 0x7FF;
+  let mant = (BigInt(alto & 0xFFFFF) << 32n) | BigInt(bajo);
+  let e2;
+  if (expBits === 0) e2 = -1074; else { mant |= 1n << 52n; e2 = expBits - 1075; }
+  // valor = D * 10^(-escala), con D entero
+  let D, escala;
+  if (e2 >= 0) { D = mant << BigInt(e2); escala = 0; } else { D = mant * 5n ** BigInt(-e2); escala = -e2; }
+  let dig = D.toString();
+  let exp10 = dig.length - 1 - escala;
+  let s;
+  if (dig.length > 17) {
+    const corte = 10n ** BigInt(dig.length - 17);
+    let q = D / corte;
+    const resto = D % corte, mitad = corte / 2n;
+    if (resto > mitad || (resto === mitad && (q & 1n) === 1n)) q += 1n;
+    s = q.toString();
+    if (s.length > 17) { s = s.slice(0, 17); exp10++; }   // 99999... -> 100000...
+  } else {
+    s = dig.padEnd(17, "0");
+  }
+  if (exp10 < -4 || exp10 >= 17) {
+    const m = (s[0] + "." + s.slice(1)).replace(/0+$/, "").replace(/\.$/, "");
+    return signo + m + "e" + (exp10 < 0 ? "-" : "+") + String(Math.abs(exp10)).padStart(2, "0");
+  }
+  let ent, frac;
+  if (exp10 >= 0) { ent = s.slice(0, exp10 + 1); frac = s.slice(exp10 + 1); }
+  else { ent = "0"; frac = "0".repeat(-exp10 - 1) + s; }
+  frac = frac.replace(/0+$/, "");
+  return signo + ent + (frac ? "." + frac : "");
+}
+const lineaPher = (n, it, o, d, v) => `PHER;${n};${it};${o};${d};${num17g(v)}`;
+const lineaFin = (n, it, np, ex, de) => `FIN;${n};${it};${np};${ex};${de}`;
+const lineaPath = (n, L, camino) => `PATH;${n};${(L === null || !isFinite(L) ? -1 : L).toFixed(3)};${(camino || []).join(",")}`;
+const lineaHello = (n, crc, it, fase) => `HELLO;${n};${crc.toString(16).toUpperCase().padStart(8, "0")};${it};${fase}`;
+const lineaEstado = (n, fase, it, mejor, celda, rssi, vivos, up) =>
+  `ESTADO;${n};${fase};${it};${(mejor === null || !isFinite(mejor) ? -1 : mejor).toFixed(3)};${celda};${rssi};${vivos.slice().sort((a, b) => a - b).join(",")};${Math.trunc(up)}`;
+
+// protocolo.leer: misma tolerancia (null si la linea no se entiende).
+function entero(s) { if (s === undefined || !/^\s*[+-]?\d+\s*$/.test(s)) throw new Error("entero"); return parseInt(s, 10); }
+function flotante(s) {
+  if (s === undefined) throw new Error("flotante");
+  const t = s.trim().toLowerCase();
+  if (/^[+-]?(inf|infinity)$/.test(t)) return t.startsWith("-") ? -Infinity : Infinity;
+  if (/^[+-]?nan$/.test(t)) return NaN;
+  if (!/^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/.test(t)) throw new Error("flotante");
+  return parseFloat(t);
+}
+function enteroHex(s) { if (s === undefined || !/^\s*[0-9a-fA-F]+\s*$/.test(s)) throw new Error("hex"); return parseInt(s, 16); }
+function lista(s, f) { return (s === undefined ? "" : s).split(",").filter((x) => x !== "").map(f); }
+function leer(linea) {
+  try {
+    const c = linea.trim().split(";");
+    const t = c[0];
+    if (t === "HELLO") return { tipo: t, nodo: entero(c[1]), crc: enteroHex(c[2]), iter: entero(c[3]), fase: c.length > 4 ? c[4] : "?" };
+    if (t === "PHER") return { tipo: t, nodo: entero(c[1]), iter: entero(c[2]), origen: entero(c[3]), destino: entero(c[4]), deposito: flotante(c[5]) };
+    if (t === "FIN") return { tipo: t, nodo: entero(c[1]), iter: entero(c[2]), n_pher: entero(c[3]), exitosas: entero(c[4]), descartadas: entero(c[5]) };
+    if (t === "PATH") {
+      if (c[3] === undefined) throw new Error("PATH");
+      const camino = lista(c[3], entero);
+      const lon = flotante(c[2]);
+      return { tipo: t, nodo: entero(c[1]), longitud: lon < 0 ? null : lon, camino };
+    }
+    if (t === "TAU") { if (c[3] === undefined) throw new Error("TAU"); return { tipo: t, nodo: entero(c[1]), iter: entero(c[2]), tau: lista(c[3], flotante) }; }
+    if (t === "ESTADO") {
+      const m = flotante(c[4]);
+      if (c[7] === undefined) throw new Error("ESTADO");
+      return { tipo: t, nodo: entero(c[1]), fase: c[2], iter: entero(c[3]), mejor: m < 0 ? null : m, celda: entero(c[5]),
+               rssi: entero(c[6]), vivos: lista(c[7], entero), uptime_ms: entero(c[8]) };
+    }
+    if (t === "RTT") return { tipo: t, nodo: entero(c[1]), destino: entero(c[2]), enviados: entero(c[3]), recibidos: entero(c[4]),
+                              min_ms: flotante(c[5]), prom_ms: flotante(c[6]), max_ms: flotante(c[7]), p95_ms: flotante(c[8]), rssi: entero(c[9]) };
+    if (t === "PING" || t === "PONG") {
+      const d = { tipo: t, origen: entero(c[1]), seq: entero(c[2]), t_us: entero(c[3]) };
+      if (t === "PONG" && c.length > 4) d.rssi = entero(c[4]);
+      return d;
+    }
+    if (t === "LOG") { if (c.length < 2) throw new Error("LOG"); return { tipo: t, nodo: entero(c[1]), texto: c.slice(2).join(";") }; }
+    if (t === "CMD") { if (c.length < 2) throw new Error("CMD"); return { tipo: t, orden: c[1], args: c.slice(2) }; }
+  } catch (e) { return null; }
+  return null;
+}
+
+// protocolo.tiempo_recorrido: instante de llegada a cada celda (arranca mirando a +x).
+function tiempoRecorrido(lab, camino) {
+  let t = 0.0;
+  const tiempos = [0.0];
+  let rumbo = [1, 0];
+  for (let i = 0; i + 1 < camino.length; i++) {
+    const [ax, ay] = celdaDe(lab, camino[i]);
+    const [bx, by] = celdaDe(lab, camino[i + 1]);
+    const nuevo = [bx - ax, by - ay];
+    if (nuevo[0] !== rumbo[0] || nuevo[1] !== rumbo[1]) {
+      const giros = (nuevo[0] === -rumbo[0] && nuevo[1] === -rumbo[1]) ? 2 : 1;
+      t += giros * T_GIRO90_S;
+      rumbo = nuevo;
+    }
+    t += T_CELDA_S;
+    tiempos.push(t);
+  }
+  return tiempos;
+}
+
+// Pose del carrito (x, y en celdas, angulo en radianes, celda actual) en el instante t de su recorrido.
+function poseCarrito(lab, camino, tiempos, t) {
+  let ang = 0;                       // mirando a +x
+  const pos = (i) => celdaDe(lab, camino[i]);
+  if (t <= 0 || camino.length < 2) { const [x, y] = pos(0); return { x, y, ang, celda: camino[0] }; }
+  for (let i = 0; i + 1 < camino.length; i++) {
+    const [ax, ay] = pos(i), [bx, by] = pos(i + 1);
+    const angNuevo = Math.atan2(by - ay, bx - ax);
+    let delta = angNuevo - ang;
+    while (delta > Math.PI + 1e-9) delta -= 2 * Math.PI;
+    while (delta < -Math.PI - 1e-9) delta += 2 * Math.PI;
+    if (Math.abs(Math.abs(delta) - Math.PI) < 1e-6) delta = Math.PI;   // media vuelta: dos giros
+    const tIni = tiempos[i], tFin = tiempos[i + 1], tMov = tFin - T_CELDA_S;
+    if (t < tFin) {
+      if (t < tMov) {
+        const f = (tMov - tIni) > 0 ? (t - tIni) / (tMov - tIni) : 1;
+        return { x: ax, y: ay, ang: ang + delta * f, celda: camino[i] };
+      }
+      const f = (t - tMov) / T_CELDA_S;
+      return { x: ax + (bx - ax) * f, y: ay + (by - ay) * f, ang: angNuevo, celda: camino[i] };
+    }
+    ang = angNuevo;
+  }
+  const [x, y] = pos(camino.length - 1);
+  return { x, y, ang, celda: camino[camino.length - 1] };
+}
+
+// =============================================================================================
+// Dibujo del tablero en canvas (comun a los dos modos).
+// =============================================================================================
+const lienzo = document.getElementById("lienzo");
+const ctx = lienzo.getContext("2d");
+const FUENTE_MONO = '"IBM Plex Mono", ui-monospace, Consolas, monospace';
+
+function ajustarLienzo() {
+  const r = lienzo.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.max(200, Math.round(r.width * dpr)), h = Math.max(200, Math.round(r.height * dpr));
+  if (lienzo.width !== w || lienzo.height !== h) { lienzo.width = w; lienzo.height = h; }
+  return { w: r.width, h: r.height, dpr };
+}
+
+// vista = { lab, tau, mostrarFeromonaUniforme, rutas: {n: camino}, codicioso, carritos: [{n, x, y, ang, activo}] }
+function dibujar(vista) {
+  const { w, dpr } = ajustarLienzo();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, w);
+  const lab = vista.lab;
+  const margen = Math.max(22, w * 0.06);
+  const s = (w - 2 * margen) / Math.max(lab.columnas, lab.filas);
+  const cx = (x) => margen + (x + 0.5) * s;
+  const cy = (y) => margen + (lab.filas - 1 - y + 0.5) * s;
+  const centro = (nodo) => { const [x, y] = celdaDe(lab, nodo); return [cx(x), cy(y)]; };
+
+  // celdas y numero de nodo (es el numero que aparece en PATH y en ESTADO)
+  ctx.font = `${Math.max(9, s * 0.13)}px ${FUENTE_MONO}`;
+  ctx.textAlign = "left"; ctx.textBaseline = "top";
+  for (let y = 0; y < lab.filas; y++) {
+    for (let x = 0; x < lab.columnas; x++) {
+      const x0 = margen + x * s, y0 = margen + (lab.filas - 1 - y) * s;
+      ctx.fillStyle = (x + y) % 2 ? "#0e1216" : "#10151a";
+      ctx.fillRect(x0, y0, s, s);
+      ctx.fillStyle = "#3a424b";
+      ctx.fillText(String(y * lab.columnas + x), x0 + s * 0.06, y0 + s * 0.05);
+    }
+  }
+  // inicio A
+  const [ax, ay] = centro(lab.inicio);
+  ctx.fillStyle = "rgba(79,175,125,0.13)";
+  ctx.fillRect(ax - s / 2 + 1, ay - s / 2 + 1, s - 2, s - 2);
+  // meta: bandera a cuadros
+  const [mx, my] = centro(lab.meta);
+  ctx.fillStyle = "rgba(231,233,236,0.06)";
+  ctx.fillRect(mx - s / 2 + 1, my - s / 2 + 1, s - 2, s - 2);
+  dibujarBandera(mx + s * 0.1, my - s * 0.46, s * 0.27);
+
+  // aristas: base fina + feromona como grosor e intensidad
+  const tau = vista.tau || [];
+  let maxTau = 0;
+  for (const t of tau) if (t > maxTau) maxTau = t;
+  ctx.lineCap = "round";
+  lab.aristas.forEach(([u, v], e) => {
+    const [x1, y1] = centro(u), [x2, y2] = centro(v);
+    ctx.strokeStyle = "#192026"; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    if (!tau.length || maxTau <= 0) return;
+    const r = vista.mostrarFeromonaUniforme ? 0.3 : Math.min(1, tau[e] / maxTau);
+    if (r < 0.02) return;
+    ctx.strokeStyle = `rgba(52,195,163,${(0.18 + 0.72 * r).toFixed(3)})`;
+    ctx.lineWidth = 1 + r * s * 0.2;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  });
+
+  // paredes (y borde exterior)
+  ctx.strokeStyle = "#c9ced6"; ctx.lineWidth = Math.max(3, s * 0.05); ctx.lineCap = "round";
+  ctx.strokeRect(margen, margen, lab.columnas * s, lab.filas * s);
+  for (const [a, b] of lab.paredes) {
+    ctx.beginPath();
+    if (a[0] !== b[0]) {                       // pared vertical entre columnas
+      const xm = margen + Math.max(a[0], b[0]) * s, y0 = margen + (lab.filas - 1 - a[1]) * s;
+      ctx.moveTo(xm, y0); ctx.lineTo(xm, y0 + s);
+    } else {                                   // pared horizontal entre filas
+      const ym = margen + (lab.filas - Math.max(a[1], b[1])) * s, x0 = margen + a[0] * s;
+      ctx.moveTo(x0, ym); ctx.lineTo(x0 + s, ym);
+    }
+    ctx.stroke();
+  }
+
+  // camino de maxima feromona (punteado)
+  if (vista.codicioso && vista.codicioso.length > 1) {
+    ctx.save();
+    ctx.setLineDash([s * 0.07, s * 0.07]);
+    ctx.strokeStyle = "rgba(231,233,236,0.75)"; ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    vista.codicioso.forEach((c, i) => { const [x, y] = centro(c); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // mejor ruta de cada nodo (desplazadas un poco para que se vean las tres aunque coincidan)
+  ctx.lineJoin = "round"; ctx.lineCap = "round";
+  for (const n of [1, 2, 3]) {
+    const cam = vista.rutas && vista.rutas[n];
+    if (!cam || cam.length < 2) continue;
+    const off = (n - 2) * s * 0.075;
+    ctx.strokeStyle = COLOR_NODO[n];
+    // durante la busqueda las rutas van finas para que se vea la feromona debajo
+    ctx.globalAlpha = (vista.rutaApagada && vista.rutaApagada[n] ? 0.4 : 1) * 0.95;
+    ctx.lineWidth = vista.rutasFinas ? Math.max(2, s * 0.026) : Math.max(2, s * 0.035);
+    ctx.beginPath();
+    cam.forEach((c, i) => { const [x, y] = centro(c); i ? ctx.lineTo(x + off, y + off) : ctx.moveTo(x + off, y + off); });
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  // letra A del inicio (encima de las rutas)
+  ctx.fillStyle = "#4caf7d";
+  ctx.font = `600 ${Math.max(11, s * 0.2)}px "Space Grotesk", system-ui, sans-serif`;
+  ctx.textAlign = "left"; ctx.textBaseline = "bottom";
+  ctx.fillText("A", ax - s * 0.42, ay + s * 0.46);
+
+  // carritos
+  const carritos = (vista.carritos || []).slice().sort((p, q) => (p.activo ? 1 : 0) - (q.activo ? 1 : 0));
+  for (const c of carritos) {
+    const off = (c.n - 2) * s * 0.075;
+    const px = cx(c.x) + off, py = cy(c.y) + off;
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(-c.ang);
+    ctx.globalAlpha = c.activo ? 1 : 0.55;
+    const L = s * 0.34, A = s * 0.24;
+    ctx.fillStyle = "#0a0d10";
+    ctx.fillRect(-L * 0.32, -A / 2 - s * 0.035, L * 0.3, s * 0.035);           // ruedas
+    ctx.fillRect(-L * 0.32, A / 2, L * 0.3, s * 0.035);
+    ctx.fillStyle = COLOR_NODO[c.n];
+    redondeado(-L / 2, -A / 2, L, A, s * 0.04); ctx.fill();
+    ctx.strokeStyle = "#0a0d10"; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.fillStyle = "#0a0d10";                                                 // frente
+    ctx.beginPath(); ctx.moveTo(L / 2 - s * 0.02, 0); ctx.lineTo(L / 2 - s * 0.09, -A * 0.25); ctx.lineTo(L / 2 - s * 0.09, A * 0.25); ctx.closePath(); ctx.fill();
+    ctx.rotate(c.ang);
+    ctx.fillStyle = "#0a0d10";
+    ctx.font = `600 ${Math.max(9, s * 0.13)}px ${FUENTE_MONO}`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(String(c.n), -Math.cos(c.ang) * L * 0.12, Math.sin(c.ang) * L * 0.12);
+    ctx.restore();
+  }
+
+  // coordenadas
+  ctx.fillStyle = "#4a525b"; ctx.font = `${Math.max(9, s * 0.11)}px ${FUENTE_MONO}`;
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  for (let x = 0; x < lab.columnas; x++) ctx.fillText("x" + x, cx(x), margen + lab.filas * s + 5);
+  ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  for (let y = 0; y < lab.filas; y++) ctx.fillText("y" + y, margen - 6, cy(y));
+}
+
+function redondeado(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+}
+
+function dibujarBandera(x, y, tam) {
+  // asta + pano de 4x3 cuadros blancos y negros
+  ctx.strokeStyle = "#c9ced6"; ctx.lineWidth = Math.max(1.5, tam * 0.07);
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + tam * 1.85); ctx.stroke();
+  const cols = 4, fils = 3, q = tam / cols * 1.15;
+  for (let i = 0; i < cols; i++) for (let j = 0; j < fils; j++) {
+    ctx.fillStyle = (i + j) % 2 ? "#14181c" : "#eef0f2";
+    ctx.fillRect(x + i * q, y + j * q, q, q);
+  }
+  ctx.strokeStyle = "#eef0f2"; ctx.lineWidth = 0.8;
+  ctx.strokeRect(x, y, cols * q, fils * q);
+}
+
+// =============================================================================================
+// Paneles y monitor
+// =============================================================================================
+const $ = (id) => document.getElementById(id);
+const fmtL = (L) => (L === null || L === undefined || !isFinite(L)) ? "-" : L.toFixed(2).replace(".", ",") + " m";
+const fmtCamino = (c) => (c && c.length) ? c.join("-") : "(ninguno)";
+const monitor = $("monitor");
+let pendientesMonitor = [];
+
+function agregarMonitor(texto, clase) { pendientesMonitor.push([texto, clase]); }
+function volcarMonitor() {
+  if (!pendientesMonitor.length) return;
+  const abajo = monitor.scrollTop + monitor.clientHeight >= monitor.scrollHeight - 30;
+  const frag = document.createDocumentFragment();
+  for (const [texto, clase] of pendientesMonitor.slice(-400)) {
+    const d = document.createElement("div");
+    d.textContent = texto;
+    if (clase) d.className = clase;
+    frag.appendChild(d);
+  }
+  pendientesMonitor = [];
+  monitor.appendChild(frag);
+  while (monitor.childNodes.length > 400) monitor.removeChild(monitor.firstChild);
+  if (abajo) monitor.scrollTop = monitor.scrollHeight;
+}
+function limpiarMonitor() { monitor.innerHTML = ""; pendientesMonitor = []; }
+const claseLinea = (ln) => { const t = ln.split(";")[0]; return ["PHER", "FIN", "PATH", "ESTADO", "HELLO", "LOG"].includes(t) ? t : ""; };
+
+// tarjetas = [{n, estado, mejor, camino, exitosas, descartadas, extra, caido}]
+function pintarTarjetas(tarjetas) {
+  $("tarjetas").innerHTML = tarjetas.map((t) => `
+    <div class="tarjeta${t.caido ? " caido" : ""}" style="--c:${COLOR_NODO[t.n]}">
+      <div class="fila1"><span><b>Nodo ${t.n}</b> · ${NOMBRE_COLOR[t.n]}</span><span>${t.estado}</span></div>
+      <div>mejor ${fmtL(t.mejor)}${t.camino ? " · " + (t.camino.length - 1) + " pasos" : ""} · ${t.extra}</div>
+      <div class="ruta">${fmtCamino(t.camino)}</div>
+    </div>`).join("");
+}
+function insignias(lista) {
+  $("insignias").innerHTML = lista.map(([texto, clase]) => `<span class="${clase || ""}">${texto}</span>`).join("");
+}
+function fijarFase(fase) { const f = $("chipFase"); f.textContent = fase; f.className = "fase " + fase; }
+
+// =============================================================================================
+// Modo prueba: simulador real del enjambre
+// =============================================================================================
+const selLab = $("selLaberinto");
+for (const [clave, d] of Object.entries(LABERINTOS)) {
+  const o = document.createElement("option");
+  o.value = clave; o.textContent = `${d.nombre} (${d.archivo})`;
+  selLab.appendChild(o);
+}
+const GRAFOS = {};
+for (const [clave, d] of Object.entries(LABERINTOS)) GRAFOS[clave] = cargarLaberinto(d);
+
+let modo = "prueba";
+const sim = {
+  enj: null, lab: null, params: null, crc: 0,
+  corriendo: false, fase: "ESPERA",
+  acumIter: 0,          // tiempo simulado acumulado hacia la siguiente iteracion
+  tBusqueda: 0,         // segundos simulados de busqueda
+  tRec: 0,              // segundos simulados desde que empezo el recorrido
+  recorridos: {},       // n -> {camino, tiempos, inicio}
+  ultimaCelda: {},      // para emitir ESTADO al cambiar de celda
+  ultimoInfo: null,
+  acum: {},             // exitosas/descartadas acumuladas
+  mejorAnunciada: {},
+  finRecorrido: 0,
+};
+
+function leerParametros() {
+  const num = (id, def) => { const v = parseFloat($(id).value); return isFinite(v) ? v : def; };
+  const p = parametrosPorDefecto();
+  p.alfa = num("pAlfa", 1); p.beta = num("pBeta", 2);
+  p.rho = Math.min(1, Math.max(0, num("pRho", 0.5)));
+  p.q = num("pQ", 100);
+  p.hormigas = Math.max(1, Math.round(num("pHormigas", 4)));
+  p.iteraciones = Math.max(1, Math.round(num("pIter", 30)));
+  p.semilla = Math.max(0, Math.round(num("pSemilla", 12345)));
+  p.deposito = $("selDeposito").value === "todas" ? "todas" : "mejor";
+  return p;
+}
+
+function reiniciarSim() {
+  sim.lab = GRAFOS[selLab.value];
+  sim.params = leerParametros();
+  sim.enj = new Enjambre(sim.lab, sim.params);
+  sim.crc = crcLaberinto(sim.lab);
+  sim.corriendo = false; sim.fase = "ESPERA";
+  sim.acumIter = 0; sim.tBusqueda = 0; sim.tRec = 0;
+  sim.recorridos = {}; sim.ultimaCelda = {}; sim.ultimoInfo = null; sim.finRecorrido = 0;
+  sim.acum = { 1: [0, 0], 2: [0, 0], 3: [0, 0] };
+  sim.mejorAnunciada = { 1: Infinity, 2: Infinity, 3: Infinity };
+  $("btnIniciar").textContent = "Iniciar";
+  limpiarMonitor();
+  const p = sim.params;
+  agregarMonitor(`# ${sim.lab.nombre}: ${sim.lab.aristas.length} aristas, CRC ${sim.crc.toString(16).toUpperCase().padStart(8, "0")}`, "sep");
+  agregarMonitor(`# alfa=${p.alfa} beta=${p.beta} rho=${p.rho} Q=${p.q} hormigas=${p.hormigas} iteraciones=${p.iteraciones} semilla=${p.semilla}`, "sep");
+  for (const n of [1, 2, 3]) agregarMonitor(lineaHello(n, sim.crc, 0, "ESPERA"), "HELLO");
+  actualizarBotonesApagar();
+}
+
+const vivosAhora = () => sim.enj.nodos.filter((n) => sim.enj.caida(n) > sim.enj.k);
+
+function pasoSim() {
+  if (sim.enj.terminado()) return;
+  if (sim.fase === "ESPERA") sim.fase = "BUSQUEDA";
+  const info = sim.enj.paso();
+  sim.ultimoInfo = info;
+  const k = info.iteracion;
+  const up = Math.round((1 + k * PAUSA_ITER_S) * 1000);   // mismo reloj que protocolo.flujo_simulado
+  for (const n of info.vivos) {
+    const d = info.porNodo[n];
+    for (const [, o, de, v] of d.depositos) agregarMonitor(lineaPher(n, k, o, de, v), "PHER");
+    agregarMonitor(lineaFin(n, k, d.depositos.length, d.exitosas, d.descartadas), "FIN");
+    sim.acum[n][0] += d.exitosas; sim.acum[n][1] += d.descartadas;
+    if (d.mejorLongitud < sim.mejorAnunciada[n] - 1e-12) {
+      sim.mejorAnunciada[n] = d.mejorLongitud;
+      agregarMonitor(lineaPath(n, d.mejorLongitud, d.mejorCamino), "PATH");
+    }
+  }
+  for (const n of info.vivos) {
+    agregarMonitor(lineaEstado(n, "BUSQUEDA", k, info.porNodo[n].mejorLongitud, sim.lab.inicio, -50, info.vivos, up), "ESTADO");
+  }
+  if (sim.enj.terminado()) empezarRecorrido();
+  actualizarBotonesApagar();
+}
+
+function empezarRecorrido() {
+  sim.fase = "RECORRIDO";
+  sim.tRec = 0;
+  sim.recorridos = {};
+  let fin = 0;
+  for (const n of sim.enj.nodos) {
+    if (sim.enj.caida(n) <= sim.params.iteraciones) continue;     // apagado: no recorre
+    const camino = sim.enj.estado.get(n).mejorCamino;
+    if (!camino) continue;
+    const tiempos = tiempoRecorrido(sim.lab, camino);
+    const inicio = (n - 1) * ESCALON_RECORRIDO_S;
+    sim.recorridos[n] = { camino, tiempos, inicio };
+    sim.ultimaCelda[n] = null;
+    fin = Math.max(fin, inicio + tiempos[tiempos.length - 1]);
+  }
+  sim.finRecorrido = fin;
+  agregarMonitor(`# fin de la búsqueda: cada carrito recorre SU mejor ruta, escalonados ${ESCALON_RECORRIDO_S} s`, "sep");
+}
+
+function avanzarSim(dt) {
+  const vel = parseFloat($("selVelocidad").value) || 1;
+  const d = dt * vel;
+  if (sim.fase === "BUSQUEDA" || (sim.fase === "ESPERA" && sim.corriendo)) {
+    if (!sim.corriendo) return;
+    sim.tBusqueda += d;
+    sim.acumIter += d;
+    let n = 0;
+    while (sim.acumIter >= PAUSA_ITER_S && !sim.enj.terminado() && n < 50) { sim.acumIter -= PAUSA_ITER_S; pasoSim(); n++; }
+  } else if (sim.fase === "RECORRIDO") {
+    sim.tRec += d;
+    const vivos = vivosAhora();
+    for (const [nStr, r] of Object.entries(sim.recorridos)) {
+      const n = Number(nStr);
+      const t = sim.tRec - r.inicio;
+      const pose = poseCarrito(sim.lab, r.camino, r.tiempos, Math.max(0, t));
+      // celda "alcanzada" como en flujo_simulado: la ultima cuyo instante ya paso
+      let celda = sim.lab.inicio;
+      for (let i = 0; i < r.camino.length; i++) if (r.inicio + r.tiempos[i] <= sim.tRec) celda = r.camino[i];
+      if (sim.ultimaCelda[n] !== celda) {
+        sim.ultimaCelda[n] = celda;
+        const terminado = sim.tRec >= r.inicio + r.tiempos[r.tiempos.length - 1];
+        const up = Math.round((1 + sim.params.iteraciones * PAUSA_ITER_S + sim.tRec) * 1000);
+        agregarMonitor(lineaEstado(n, terminado ? "TERMINADO" : "RECORRIDO", sim.enj.k, sim.enj.estado.get(n).mejorLongitud, celda, -50, vivos, up), "ESTADO");
+      }
+      r.pose = pose;
+    }
+    if (sim.tRec >= sim.finRecorrido) { sim.fase = "TERMINADO"; sim.corriendo = false; $("btnIniciar").textContent = "Iniciar"; }
+  }
+}
+
+function vistaSim() {
+  const enj = sim.enj, lab = sim.lab;
+  const rutas = {}, rutaApagada = {};
+  for (const n of enj.nodos) {
+    rutas[n] = enj.estado.get(n).mejorCamino;
+    rutaApagada[n] = enj.caida(n) < Infinity;
+  }
+  const ref = enj.referencia();
+  const codicioso = (enj.k > 0 && ref) ? caminoCodiciosoVisible() : null;
+  const carritos = [];
+  if (sim.fase === "RECORRIDO" || sim.fase === "TERMINADO") {
+    for (const [nStr, r] of Object.entries(sim.recorridos)) {
+      const n = Number(nStr);
+      const p = r.pose || poseCarrito(lab, r.camino, r.tiempos, sim.fase === "TERMINADO" ? 1e9 : 0);
+      const activo = sim.tRec >= r.inicio && sim.tRec < r.inicio + r.tiempos[r.tiempos.length - 1];
+      carritos.push({ n, x: p.x, y: p.y, ang: p.ang, activo: activo || sim.fase === "TERMINADO" });
+    }
+  } else {
+    for (const n of enj.nodos) {
+      if (enj.caida(n) <= enj.k) continue;
+      const [x, y] = celdaDe(lab, lab.inicio);
+      carritos.push({ n, x, y, ang: 0, activo: false });
+    }
+  }
+  return { lab, tau: enj.tauVisible(), mostrarFeromonaUniforme: enj.k === 0, rutas, rutaApagada, codicioso, carritos,
+           rutasFinas: sim.fase === "ESPERA" || sim.fase === "BUSQUEDA" };
+}
+
+// camino de maxima feromona con la copia visible (la de un nodo vivo)
+function caminoCodiciosoVisible(estricto = false) {
+  const enj = sim.enj;
+  const vivos = enj.nodos.filter((n) => enj.caida(n) > Math.max(enj.k - 1, 0));
+  const st = vivos.length ? enj.estado.get(vivos[0]) : enj.referencia();
+  return st ? st.caminoCodicioso(estricto) : null;
+}
+
+function panelSim() {
+  const enj = sim.enj, p = sim.params, info = sim.ultimoInfo;
+  $("txtIter").textContent = `iteración ${enj.k} / ${p.iteraciones}`;
+  $("barraProgreso").style.width = (100 * enj.k / p.iteraciones).toFixed(1) + "%";
+  const tTotal = sim.tBusqueda + sim.tRec;
+  $("txtTiempo").textContent = `t = ${tTotal.toFixed(1).replace(".", ",")} s`;
+  fijarFase(sim.fase);
+  const tarjetas = enj.nodos.map((n) => {
+    const st = enj.estado.get(n);
+    const caido = enj.caida(n) < Infinity && enj.caida(n) <= enj.k;
+    let estado = caido ? `apagado desde iter ${enj.caida(n) + 1}` : (enj.caida(n) < Infinity ? `se apaga en iter ${enj.caida(n) + 1}` : "vivo");
+    if (!caido && sim.recorridos[n]) {
+      const r = sim.recorridos[n];
+      const fin = r.inicio + r.tiempos[r.tiempos.length - 1];
+      estado = sim.tRec < r.inicio ? `arranca en ${(r.inicio - sim.tRec).toFixed(1).replace(".", ",")} s` : (sim.tRec < fin ? "recorriendo" : "en la meta");
+    }
+    const ult = info ? info.porNodo[n] : null;
+    const extra = ult && info.vivos.includes(n)
+      ? `última: ${ult.exitosas} ok / ${ult.descartadas} desc. (total ${sim.acum[n][0]} / ${sim.acum[n][1]})`
+      : `total ${sim.acum[n][0]} ok / ${sim.acum[n][1]} desc.`;
+    return { n, estado, mejor: st.mejorLongitud, camino: st.mejorCamino, extra, caido };
+  });
+  pintarTarjetas(tarjetas);
+  $("txtOptimo").textContent = enj.optimo ? `${fmtL(enj.Lopt)} · ${enj.optimo.length - 1} pasos` : "sin camino";
+  let mejor = Infinity;
+  for (const n of enj.nodos) mejor = Math.min(mejor, enj.estado.get(n).mejorLongitud);
+  $("txtMejorEnjambre").textContent = fmtL(mejor);
+  const cod = enj.k > 0 ? caminoCodiciosoVisible() : null;
+  $("txtCodicioso").textContent = cod ? `${fmtCamino(cod)} (${fmtL(longitudCamino(sim.lab, cod))})` : (enj.k > 0 ? "no llega a la meta" : "-");
+  $("txtPrimera").textContent = enj.primeraOpt ? `iteración ${enj.primeraOpt}` : "-";
+  const ins = [];
+  if (enj.k > 0) {
+    const dec = caminoCodiciosoVisible(true);
+    const conv = dec && Math.abs(longitudCamino(sim.lab, dec) - enj.Lopt) < 1e-9;
+    ins.push(conv ? ["máxima feromona = longitud óptima (BFS)", "ok"] : ["máxima feromona aún no es óptima", "aviso"]);
+    const vivos = vivosAhora();
+    ins.push([`vivos: ${vivos.join(",") || "ninguno"}`, vivos.length < 3 ? "aviso" : ""]);
+  } else {
+    ins.push(["sin iteraciones: feromona uniforme (tau0)", ""]);
+  }
+  insignias(ins);
+}
+
+function actualizarBotonesApagar() {
+  const botones = document.querySelectorAll("#panelApagar button");
+  const enj = sim.enj;
+  const vivosFut = enj ? enj.nodos.filter((n) => enj.caida(n) === Infinity) : [];
+  botones.forEach((b) => {
+    const n = Number(b.dataset.nodo);
+    if (modo !== "prueba" || !enj) { b.disabled = true; return; }
+    const caido = enj.caida(n) < Infinity;
+    b.classList.toggle("caido", caido);
+    b.textContent = caido ? `Nodo ${n} apagado` : `Apagar nodo ${n}`;
+    b.disabled = caido || enj.terminado() || vivosFut.length <= 1;
+  });
+}
+
+document.querySelectorAll("#panelApagar button").forEach((b) => b.addEventListener("click", () => {
+  const n = Number(b.dataset.nodo);
+  const enj = sim.enj;
+  if (!enj || enj.terminado() || enj.caida(n) < Infinity) return;
+  enj.caidas[n] = enj.k;                       // desde la proxima iteracion (0-based k = iteracion k+1)
+  agregarMonitor(`# nodo ${n} apagado: desde la iteración ${enj.k + 1} ya no manda HELLO, PHER ni FIN`, "LOG");
+  actualizarBotonesApagar();
+}));
+
+$("btnIniciar").addEventListener("click", () => {
+  if (sim.fase === "TERMINADO") reiniciarSim();
+  sim.corriendo = !sim.corriendo;
+  if (sim.corriendo && sim.fase === "ESPERA") sim.fase = "BUSQUEDA";
+  $("btnIniciar").textContent = sim.corriendo ? "Pausar" : "Seguir";
+});
+$("btnPaso").addEventListener("click", () => {
+  if (sim.fase === "RECORRIDO" || sim.fase === "TERMINADO") return;
+  sim.corriendo = false;
+  $("btnIniciar").textContent = "Seguir";
+  sim.tBusqueda += PAUSA_ITER_S;           // el reloj simulado avanza lo mismo que con Iniciar
+  pasoSim();
+  if (sim.fase === "RECORRIDO") { sim.corriendo = true; $("btnIniciar").textContent = "Pausar"; }
+});
+$("btnReiniciar").addEventListener("click", reiniciarSim);
+for (const id of ["pAlfa", "pBeta", "pRho", "pQ", "pHormigas", "pIter", "pSemilla", "selDeposito"]) $(id).addEventListener("change", () => { if (modo === "prueba") reiniciarSim(); });
+selLab.addEventListener("change", () => { if (modo === "prueba") reiniciarSim(); else reiniciarCon(false); });
+
+// =============================================================================================
+// Modo conectado: Web Serial, un solo carrito, lineas "TEL ..."
+// =============================================================================================
+const con = {
+  puerto: null, lector: null, lab: null,
+  tau: [], aplicada: 0,            // feromona reconstruida y ultima iteracion aplicada
+  buf: new Map(),                  // iter -> Map nodo -> {pher: Map arista->[o,d,v], fin: obj|null}
+  rutas: {}, mejores: {}, estado: {}, fin: {}, aplicadosFirmware: "", omitidos: [],
+  nodoUsb: null, ultimaLinea: 0, recibidas: 0, crc: null,
+};
+const estadoSerial = $("estadoSerial");
+function avisoSerial(texto, clase) { estadoSerial.textContent = texto; estadoSerial.className = clase || ""; }
+
+function reiniciarCon(borrarMonitor) {
+  con.lab = GRAFOS[selLab.value];
+  const tau0 = parseFloat($("pTau0Con").value);
+  con.tau = new Array(con.lab.aristas.length).fill(isFinite(tau0) ? tau0 : 1.0);
+  con.aplicada = 0; con.buf = new Map(); con.rutas = {}; con.mejores = {}; con.estado = {}; con.fin = {};
+  con.aplicadosFirmware = ""; con.omitidos = [];
+  if (borrarMonitor) limpiarMonitor();
+}
+
+function casillaCon(it, n) {
+  if (!con.buf.has(it)) con.buf.set(it, new Map());
+  const m = con.buf.get(it);
+  if (!m.has(n)) m.set(n, { pher: new Map(), fin: null, invalido: false });
+  return m.get(n);
+}
+
+// Aplica las iteraciones hasta 'hasta': evapora (1 - rho) y suma, en orden de nodo, los nodos cuyo
+// FIN llego completo (cantidad de PHER = n_pher); en cada nodo, en orden de arista.
+function aplicarHastaCon(hasta) {
+  const rho = Math.min(1, Math.max(0, parseFloat($("pRhoCon").value) || 0));
+  while (con.aplicada < hasta) {
+    const k = con.aplicada + 1;
+    const f = 1.0 - rho;
+    for (let e = 0; e < con.tau.length; e++) con.tau[e] = con.tau[e] * f;
+    const m = con.buf.get(k) || new Map();
+    const usados = [], omitidos = [];
+    for (const n of Array.from(m.keys()).sort((a, b) => a - b)) {
+      const c = m.get(n);
+      if (c.fin && !c.invalido && c.pher.size === c.fin.n_pher) {
+        for (const e of Array.from(c.pher.keys()).sort((a, b) => a - b)) con.tau[e] += c.pher.get(e)[2];
+        usados.push(n);
+      } else omitidos.push(n);
+    }
+    con.omitidos = omitidos;
+    con.ultimosUsados = usados;
+    con.buf.delete(k);
+    con.aplicada = k;
+  }
+}
+
+function procesarTel(msg) {
+  const lab = con.lab;
+  if (msg.tipo === "HELLO") {
+    con.crc = msg.crc;
+    if (con.nodoUsb === null) con.nodoUsb = msg.nodo;
+    // elegir solo el laberinto cuyo CRC coincide con el del firmware
+    for (const [clave, g] of Object.entries(GRAFOS)) {
+      if (crcLaberinto(g) === msg.crc && selLab.value !== clave) { selLab.value = clave; reiniciarCon(false); break; }
+    }
+  } else if (msg.tipo === "PHER") {
+    if (msg.iter > con.aplicada + 1) aplicarHastaCon(msg.iter - 1);
+    if (msg.iter <= con.aplicada) return;            // llego tarde: esa iteracion ya se cerro
+    const c = casillaCon(msg.iter, msg.nodo);
+    let e = -1;
+    for (const [w, ar] of (lab.vecinos[msg.origen] || [])) if (w === msg.destino) e = ar;
+    if (e < 0) { c.invalido = true; return; }
+    if (!c.pher.has(e)) c.pher.set(e, [msg.origen, msg.destino, msg.deposito]);
+  } else if (msg.tipo === "FIN") {
+    if (msg.iter > con.aplicada + 1) aplicarHastaCon(msg.iter - 1);
+    if (msg.iter <= con.aplicada) return;
+    casillaCon(msg.iter, msg.nodo).fin = msg;
+    con.fin[msg.nodo] = msg;
+  } else if (msg.tipo === "PATH") {
+    if (msg.camino.length) con.rutas[msg.nodo] = msg.camino;
+    con.mejores[msg.nodo] = msg.longitud;
+  } else if (msg.tipo === "ESTADO") {
+    if (con.nodoUsb === null) con.nodoUsb = msg.nodo;
+    con.estado[msg.nodo] = msg;
+    if (msg.iter > con.aplicada) aplicarHastaCon(msg.iter);
+    if (msg.mejor !== null) con.mejores[msg.nodo] = msg.mejor;
+  }
+}
+
+// Lineas que NO son TEL pero traen informacion util del firmware (su propio Serial.printf).
+const reAplicados = /^\[iter (\d+)\/(\d+)\].*aplicados nodos \{([\d,]*)\}/;
+const reAnuncio = /^\s*nodo (\d) anuncia mejor ruta ([-\d.]+) m: ([\d,]+)/;
+function procesarCrudo(linea) {
+  let m = reAplicados.exec(linea);
+  if (m) { con.aplicadosFirmware = `iter ${m[1]}/${m[2]}: el carrito aplicó nodos {${m[3]}}`; con.iterTotal = Number(m[2]); return; }
+  m = reAnuncio.exec(linea);
+  if (m) {
+    const camino = m[3].split(",").filter((x) => x !== "").map(Number);
+    const L = parseFloat(m[2]);
+    if (camino.length) con.rutas[Number(m[1])] = camino;
+    con.mejores[Number(m[1])] = L < 0 ? null : L;
+  }
+}
+
+function procesarLineaSerial(linea) {
+  con.recibidas++;
+  con.ultimaLinea = performance.now();
+  if (linea.startsWith("TEL ")) {
+    const cuerpo = linea.slice(4);
+    if (!cuerpo.trim()) return;                       // eco vacio al final de un datagrama
+    agregarMonitor(linea, claseLinea(cuerpo));
+    const msg = leer(cuerpo);
+    if (msg) procesarTel(msg);
+  } else {
+    agregarMonitor(linea, "crudo");
+    procesarCrudo(linea);
+  }
+}
+
+$("btnConectar").addEventListener("click", async () => {
+  if (!("serial" in navigator)) {
+    avisoSerial("Este navegador no tiene Web Serial. Abre la página en Chrome o Edge de escritorio (Firefox y Safari no lo soportan). El modo prueba sí funciona aquí.", "mal");
+    return;
+  }
+  if (con.puerto) return;
+  try {
+    con.puerto = await navigator.serial.requestPort();
+    await con.puerto.open({ baudRate: 115200 });
+    avisoSerial("conectado a 115200, esperando líneas del carrito...", "ok");
+    $("btnDesconectar").disabled = false;
+    reiniciarCon(true);
+    leerPuerto();
+  } catch (error) {
+    con.puerto = null;
+    avisoSerial("no se pudo conectar: " + error.message, "mal");
+  }
+});
+$("btnDesconectar").addEventListener("click", async () => {
+  if (con.lector) { try { await con.lector.cancel(); } catch (e) { /* ya cerrado */ } }
+});
+$("btnLimpiarCon").addEventListener("click", () => reiniciarCon(true));
+
+async function leerPuerto() {
+  const puerto = con.puerto;
+  con.lector = puerto.readable.getReader();
+  const decodificador = new TextDecoder();
+  let resto = "";
+  try {
+    while (true) {
+      const { value, done } = await con.lector.read();
+      if (done) break;
+      resto += decodificador.decode(value, { stream: true });
+      let i;
+      while ((i = resto.indexOf("\n")) >= 0) {        // puede llegar mas de una linea junta
+        const linea = resto.slice(0, i).replace(/\r$/, "");
+        resto = resto.slice(i + 1);
+        if (linea.trim()) procesarLineaSerial(linea);
+      }
+    }
+    avisoSerial("desconectado", "");
+  } catch (error) {
+    avisoSerial("conexión perdida: " + error.message, "mal");
+  } finally {
+    try { con.lector.releaseLock(); } catch (e) { /* nada */ }
+    try { await puerto.close(); } catch (e) { /* ya estaba cerrado */ }
+    con.puerto = null; con.lector = null;
+    $("btnDesconectar").disabled = true;
+  }
+}
+
+function vistaCon() {
+  const lab = con.lab;
+  const carritos = [];
+  for (const [nStr, e] of Object.entries(con.estado)) {
+    const n = Number(nStr);
+    if (e.celda < 0 || e.celda >= lab.columnas * lab.filas) continue;
+    const [x, y] = celdaDe(lab, e.celda);
+    carritos.push({ n, x, y, ang: 0, activo: e.fase === "RECORRIDO" });
+  }
+  let codicioso = null;
+  if (con.aplicada > 0) {
+    const tmp = new NodoACO(lab, parametrosPorDefecto(), 1);
+    tmp.tau = con.tau;
+    codicioso = tmp.caminoCodicioso();
+  }
+  const fase = con.nodoUsb !== null && con.estado[con.nodoUsb] ? con.estado[con.nodoUsb].fase : "ESPERA";
+  return { lab, tau: con.tau, mostrarFeromonaUniforme: con.aplicada === 0, rutas: con.rutas, codicioso, carritos,
+           rutasFinas: fase === "ESPERA" || fase === "BUSQUEDA" };
+}
+
+function panelCon() {
+  const usb = con.nodoUsb;
+  const e = usb !== null ? con.estado[usb] : null;
+  const total = con.iterTotal || 30;
+  $("txtIter").textContent = e ? `iteración ${e.iter}${con.iterTotal ? " / " + total : ""}` : "iteración -";
+  $("barraProgreso").style.width = e ? Math.min(100, 100 * e.iter / total).toFixed(1) + "%" : "0%";
+  $("txtTiempo").textContent = e ? `uptime ${(e.uptime_ms / 1000).toFixed(1).replace(".", ",")} s` : "sin datos";
+  fijarFase(e ? e.fase : "ESPERA");
+  const vivos = e ? e.vivos : [];
+  pintarTarjetas([1, 2, 3].map((n) => {
+    const est = con.estado[n];
+    const fin = con.fin[n];
+    let estado = n === usb ? "por USB" : (vivos.includes(n) ? "vivo (WiFi)" : (e ? "no se oye" : "-"));
+    if (est) estado += ` · ${est.fase}`;
+    const extra = n === usb
+      ? (est ? `celda ${est.celda} · RSSI ${est.rssi} dBm` : "esperando ESTADO") + (fin ? ` · iter ${fin.iter}: ${fin.exitosas} ok / ${fin.descartadas} desc.` : "")
+      : (con.rutas[n] ? "ruta anunciada por WiFi" : "sus PHER no salen por este USB");
+    return { n, estado, mejor: con.mejores[n] === undefined ? null : con.mejores[n], camino: con.rutas[n], extra, caido: e && !vivos.includes(n) };
+  }));
+  const opt = caminoOptimo(con.lab);
+  const Lopt = opt ? longitudCamino(con.lab, opt) : Infinity;
+  $("txtOptimo").textContent = opt ? `${fmtL(Lopt)} · ${opt.length - 1} pasos` : "sin camino";
+  const ms = Object.values(con.mejores).filter((x) => x !== null && x !== undefined);
+  $("txtMejorEnjambre").textContent = ms.length ? fmtL(Math.min(...ms)) : "-";
+  const v = vistaCon();
+  $("txtCodicioso").textContent = v.codicioso ? `${fmtCamino(v.codicioso)} (${fmtL(longitudCamino(con.lab, v.codicioso))})` : "-";
+  $("txtPrimera").textContent = con.aplicadosFirmware || "-";
+  const ins = [];
+  if (!con.puerto) ins.push(["sin conectar", ""]);
+  else if (!con.recibidas) ins.push(["conectado, sin líneas todavía", "aviso"]);
+  else if (performance.now() - con.ultimaLinea > 4000) ins.push(["más de 4 s sin líneas", "mal"]);
+  else ins.push([`${con.recibidas} líneas recibidas`, "ok"]);
+  if (con.crc !== null) {
+    const coincide = crcLaberinto(con.lab) === con.crc;
+    ins.push([coincide ? `CRC ${con.crc.toString(16).toUpperCase().padStart(8, "0")} = ${con.lab.nombre}` : `CRC ${con.crc.toString(16).toUpperCase()} no coincide con ningún laberinto`, coincide ? "ok" : "mal"]);
+  }
+  if (con.aplicada > 0) {
+    ins.push([`feromona reconstruida hasta iter ${con.aplicada} con nodos {${(con.ultimosUsados || []).join(",")}}`, "aviso"]);
+    if (con.omitidos.length) ins.push([`FIN incompleto de {${con.omitidos.join(",")}}: no se sumó`, "mal"]);
+  }
+  insignias(ins);
+}
+
+// =============================================================================================
+// Cambio de modo y bucle de animacion
+// =============================================================================================
+function ponerModo(nuevo) {
+  modo = nuevo;
+  $("btnModoPrueba").classList.toggle("activo", modo === "prueba");
+  $("btnModoConectado").classList.toggle("activo", modo === "conectado");
+  $("controlesPrueba").classList.toggle("oculto", modo !== "prueba");
+  $("controlesConectado").classList.toggle("oculto", modo !== "conectado");
+  $("panelApagar").style.opacity = modo === "prueba" ? "1" : "0.5";
+  $("tituloMonitor").textContent = modo === "prueba" ? "Líneas de protocolo que se generarían" : "Monitor serie (líneas crudas)";
+  $("filaExtra1").firstElementChild.textContent = modo === "prueba" ? "primera vez óptimo" : "firmware";
+  if (modo === "prueba") { reiniciarSim(); }
+  else {
+    sim.corriendo = false;
+    reiniciarCon(true);
+    if (!("serial" in navigator)) avisoSerial("Este navegador no tiene Web Serial: usa Chrome o Edge de escritorio. El modo prueba sí funciona aquí.", "mal");
+    else if (!con.puerto) avisoSerial("sin conectar: enchufa UN carrito por USB y pulsa Conectar", "");
+  }
+  actualizarBotonesApagar();
+}
+$("btnModoPrueba").addEventListener("click", () => ponerModo("prueba"));
+$("btnModoConectado").addEventListener("click", () => ponerModo("conectado"));
+
+let tAnterior = performance.now();
+let tPanel = 0;
+function cuadro(ahora) {
+  const dt = Math.min(0.25, (ahora - tAnterior) / 1000);
+  tAnterior = ahora;
+  try {
+    if (modo === "prueba") {
+      avanzarSim(dt);
+      dibujar(vistaSim());
+      if (ahora - tPanel > 120) { panelSim(); tPanel = ahora; }
+    } else {
+      dibujar(vistaCon());
+      if (ahora - tPanel > 200) { panelCon(); tPanel = ahora; }
+    }
+    volcarMonitor();
+  } catch (err) {
+    console.error(err);
+  }
+  requestAnimationFrame(cuadro);
+}
+reiniciarSim();
+panelSim();
+requestAnimationFrame(cuadro);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { tPanel = 0; });
+</script>
+</body>
+</html>

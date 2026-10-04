@@ -1,0 +1,99 @@
+{
+  "origen_de_los_datos": "EMULADOR (emulador_nodos.py en 127.0.0.1): NO es una medicion de hardware",
+  "fecha": "2026-10-03 10:39:31",
+  "nodo": 2,
+  "antes_del_reinicio": {
+    "fase": "BUSQUEDA",
+    "iter": 32
+  },
+  "reinicio_estimado_ms_tras_cmd": 3.1,
+  "primer_hello_ms_tras_cmd": 1005.9,
+  "primer_hello": {
+    "fase": "ESPERA",
+    "iter": 0
+  },
+  "vuelve_a_busqueda_ms_tras_cmd": 1006.8,
+  "iteracion_al_volver": 34,
+  "primer_pher_fin_ms_tras_cmd": 1006.8,
+  "iteracion_del_primer_pher_fin": 34,
+  "logs_del_nodo": [
+    [
+      0.0002,
+      "CMD;REINICIAR: reinicio desde cero"
+    ],
+    [
+      1.0062,
+      "adopta TAU del nodo 1: sigue desde la iteracion 34"
+    ]
+  ],
+  "eventos": [
+    [
+      0.0002,
+      "LOG;2;CMD;REINICIAR: reinicio desde cero"
+    ],
+    [
+      1.0059,
+      "HELLO;2;A85E23EB;0;ESPERA"
+    ],
+    [
+      1.0061,
+      "ESTADO;2;ESPERA;0;-1.000;0;-40;2;1003"
+    ],
+    [
+      1.0062,
+      "LOG;2;adopta TAU del nodo 1: sigue desde la iteracion 34"
+    ],
+    [
+      1.0068,
+      "PHER;2;34;0;1;166.66666666666669"
+    ],
+    [
+      1.0068,
+      "PHER;2;34;1;2;166.66666666666669"
+    ],
+    [
+      1.0068,
+      "PHER;2;34;2;3;166.66666666666669"
+    ],
+    [
+      1.0068,
+      "PHER;2;34;3;4;166.66666666666669"
+    ],
+    [
+      1.0068,
+      "PHER;2;34;4;9;166.66666666666669"
+    ],
+    [
+      1.0068,
+      "PHER;2;34;9;14;166.66666666666669"
+    ],
+    [
+      1.0068,
+      "PHER;2;34;14;19;166.66666666666669"
+    ],
+    [
+      1.0068,
+      "PHER;2;34;18;17;166.66666666666669"
+    ],
+    [
+      1.0068,
+      "PHER;2;34;17;22;166.66666666666669"
+    ],
+    [
+      1.0068,
+      "PHER;2;34;19;18;166.66666666666669"
+    ],
+    [
+      1.0068,
+      "PHER;2;34;22;23;166.66666666666669"
+    ],
+    [
+      1.0068,
+      "PHER;2;34;23;24;166.66666666666669"
+    ],
+    [
+      1.0068,
+      "FIN;2;34;12;4;0"
+    ]
+  ]
+}

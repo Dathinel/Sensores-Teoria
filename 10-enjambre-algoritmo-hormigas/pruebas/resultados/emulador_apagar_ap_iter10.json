@@ -1,0 +1,467 @@
+{
+  "origen": "EMULADOR (emulador_nodos.py en 127.0.0.1), no es una medicion de hardware",
+  "fecha": "2026-10-03 11:07:02",
+  "comando": "emulador_nodos.py --semilla 12345 --escala-tiempo 0.25 --apagar-ap-en-iteracion 10 --resumen pruebas/resultados/emulador_apagar_ap_iter10.json",
+  "laberinto": "almacen-5x5",
+  "crc": "A85E23EB",
+  "parametros": {
+    "alfa": 1.0,
+    "beta": 2.0,
+    "rho": 0.5,
+    "q": 100.0,
+    "hormigas": 4,
+    "iteraciones": 30,
+    "semilla": 12345,
+    "tau0": 1.0
+  },
+  "escala_tiempo": 0.25,
+  "perdida": 0.0,
+  "fallas": {
+    "apagar_nodo": null,
+    "apagar_en_iteracion": null,
+    "reiniciar_nodo": null,
+    "reiniciar_en_iteracion": null,
+    "reiniciar_nodo_en_recorrido": null,
+    "apagar_ap_en_iteracion": 10,
+    "sin_red_max_s_escalado": 3.75
+  },
+  "fin": "todos los nodos vivos llegaron a TERMINADO",
+  "duracion_s": 14.762,
+  "nodos": {
+    "1": {
+      "fase_final": "BUSQUEDA",
+      "apagado": true,
+      "reinicios": 0,
+      "iteraciones_aplicadas": 10,
+      "aplicaciones_hechas_por_este_nodo": 10,
+      "iteraciones_sin_algun_companero": 0,
+      "detalle_sin_companero": [],
+      "tau_adoptadas": [],
+      "termino_por_tau_sin_recorrer": false,
+      "quedo_sin_red": false,
+      "espera_sin_red_s": 0.0,
+      "iteraciones_solo_sin_red": 0,
+      "mejor_camino": [
+        0,
+        1,
+        2,
+        7,
+        6,
+        5,
+        10,
+        11,
+        16,
+        17,
+        22,
+        23,
+        24
+      ],
+      "mejor_longitud": 2.4,
+      "celda_final": 0,
+      "datagramas_recibidos": 34,
+      "datagramas_descartados_por_perdida": 0,
+      "tau_final": [
+        985.271158854167,
+        985.271158854167,
+        984.050455729167,
+        1.2216796875,
+        984.050455729167,
+        984.050455729167,
+        1.2216796875,
+        1.2216796875,
+        1.2216796875,
+        0.0009765625,
+        0.0009765625,
+        0.0009765625,
+        984.050455729167,
+        1.2216796875,
+        0.0009765625,
+        0.0009765625,
+        1.2216796875,
+        0.0009765625,
+        984.050455729167,
+        0.0009765625,
+        0.0009765625,
+        1.2216796875,
+        0.0009765625,
+        984.050455729167,
+        985.271158854167,
+        984.050455729167,
+        0.0009765625,
+        985.271158854167,
+        985.271158854167
+      ]
+    },
+    "2": {
+      "fase_final": "TERMINADO",
+      "apagado": false,
+      "reinicios": 0,
+      "iteraciones_aplicadas": 30,
+      "aplicaciones_hechas_por_este_nodo": 30,
+      "iteraciones_sin_algun_companero": 20,
+      "detalle_sin_companero": [
+        {
+          "iteracion": 11,
+          "aplicados": [
+            2
+          ]
+        },
+        {
+          "iteracion": 12,
+          "aplicados": [
+            2
+          ]
+        },
+        {
+          "iteracion": 13,
+          "aplicados": [
+            2
+          ]
+        },
+        {
+          "iteracion": 14,
+          "aplicados": [
+            2
+          ]
+        },
+        {
+          "iteracion": 15,
+          "aplicados": [
+            2
+          ]
+        },
+        {
+          "iteracion": 16,
+          "aplicados": [
+            2
+          ]
+        },
+        {
+          "iteracion": 17,
+          "aplicados": [
+            2
+          ]
+        },
+        {
+          "iteracion": 18,
+          "aplicados": [
+            2
+          ]
+        },
+        {
+          "iteracion": 19,
+          "aplicados": [
+            2
+          ]
+        },
+        {
+          "iteracion": 20,
+          "aplicados": [
+            2
+          ]
+        },
+        {
+          "iteracion": 21,
+          "aplicados": [
+            2
+          ]
+        },
+        {
+          "iteracion": 22,
+          "aplicados": [
+            2
+          ]
+        },
+        {
+          "iteracion": 23,
+          "aplicados": [
+            2
+          ]
+        },
+        {
+          "iteracion": 24,
+          "aplicados": [
+            2
+          ]
+        },
+        {
+          "iteracion": 25,
+          "aplicados": [
+            2
+          ]
+        },
+        {
+          "iteracion": 26,
+          "aplicados": [
+            2
+          ]
+        },
+        {
+          "iteracion": 27,
+          "aplicados": [
+            2
+          ]
+        },
+        {
+          "iteracion": 28,
+          "aplicados": [
+            2
+          ]
+        },
+        {
+          "iteracion": 29,
+          "aplicados": [
+            2
+          ]
+        },
+        {
+          "iteracion": 30,
+          "aplicados": [
+            2
+          ]
+        }
+      ],
+      "tau_adoptadas": [],
+      "termino_por_tau_sin_recorrer": false,
+      "quedo_sin_red": true,
+      "espera_sin_red_s": 3.751,
+      "iteraciones_solo_sin_red": 20,
+      "mejor_camino": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        9,
+        14,
+        19,
+        18,
+        17,
+        22,
+        23,
+        24
+      ],
+      "mejor_longitud": 2.4,
+      "celda_final": 24,
+      "datagramas_recibidos": 34,
+      "datagramas_descartados_por_perdida": 0,
+      "tau_final": [
+        333.3339550696935,
+        333.3339550696935,
+        333.3339539055403,
+        1.1650845408439636e-06,
+        333.3339539055403,
+        333.3339539055403,
+        1.1650845408439636e-06,
+        1.1650845408439636e-06,
+        1.1650845408439636e-06,
+        9.313225746154785e-10,
+        9.313225746154785e-10,
+        9.313225746154785e-10,
+        333.3339539055403,
+        1.1650845408439636e-06,
+        9.313225746154785e-10,
+        9.313225746154785e-10,
+        1.1650845408439636e-06,
+        9.313225746154785e-10,
+        333.3339539055403,
+        9.313225746154785e-10,
+        9.313225746154785e-10,
+        1.1650845408439636e-06,
+        9.313225746154785e-10,
+        333.3339539055403,
+        333.3339550696935,
+        333.3339539055403,
+        9.313225746154785e-10,
+        333.3339550696935,
+        333.3339550696935
+      ]
+    },
+    "3": {
+      "fase_final": "TERMINADO",
+      "apagado": false,
+      "reinicios": 0,
+      "iteraciones_aplicadas": 30,
+      "aplicaciones_hechas_por_este_nodo": 30,
+      "iteraciones_sin_algun_companero": 20,
+      "detalle_sin_companero": [
+        {
+          "iteracion": 11,
+          "aplicados": [
+            3
+          ]
+        },
+        {
+          "iteracion": 12,
+          "aplicados": [
+            3
+          ]
+        },
+        {
+          "iteracion": 13,
+          "aplicados": [
+            3
+          ]
+        },
+        {
+          "iteracion": 14,
+          "aplicados": [
+            3
+          ]
+        },
+        {
+          "iteracion": 15,
+          "aplicados": [
+            3
+          ]
+        },
+        {
+          "iteracion": 16,
+          "aplicados": [
+            3
+          ]
+        },
+        {
+          "iteracion": 17,
+          "aplicados": [
+            3
+          ]
+        },
+        {
+          "iteracion": 18,
+          "aplicados": [
+            3
+          ]
+        },
+        {
+          "iteracion": 19,
+          "aplicados": [
+            3
+          ]
+        },
+        {
+          "iteracion": 20,
+          "aplicados": [
+            3
+          ]
+        },
+        {
+          "iteracion": 21,
+          "aplicados": [
+            3
+          ]
+        },
+        {
+          "iteracion": 22,
+          "aplicados": [
+            3
+          ]
+        },
+        {
+          "iteracion": 23,
+          "aplicados": [
+            3
+          ]
+        },
+        {
+          "iteracion": 24,
+          "aplicados": [
+            3
+          ]
+        },
+        {
+          "iteracion": 25,
+          "aplicados": [
+            3
+          ]
+        },
+        {
+          "iteracion": 26,
+          "aplicados": [
+            3
+          ]
+        },
+        {
+          "iteracion": 27,
+          "aplicados": [
+            3
+          ]
+        },
+        {
+          "iteracion": 28,
+          "aplicados": [
+            3
+          ]
+        },
+        {
+          "iteracion": 29,
+          "aplicados": [
+            3
+          ]
+        },
+        {
+          "iteracion": 30,
+          "aplicados": [
+            3
+          ]
+        }
+      ],
+      "tau_adoptadas": [],
+      "termino_por_tau_sin_recorrer": false,
+      "quedo_sin_red": true,
+      "espera_sin_red_s": 3.751,
+      "iteraciones_solo_sin_red": 20,
+      "mejor_camino": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        9,
+        14,
+        19,
+        18,
+        17,
+        22,
+        23,
+        24
+      ],
+      "mejor_longitud": 2.4,
+      "celda_final": 24,
+      "datagramas_recibidos": 34,
+      "datagramas_descartados_por_perdida": 0,
+      "tau_final": [
+        333.3339550696935,
+        333.3339550696935,
+        333.3339539055403,
+        1.1650845408439636e-06,
+        333.3339539055403,
+        333.3339539055403,
+        1.1650845408439636e-06,
+        1.1650845408439636e-06,
+        1.1650845408439636e-06,
+        9.313225746154785e-10,
+        9.313225746154785e-10,
+        9.313225746154785e-10,
+        333.3339539055403,
+        1.1650845408439636e-06,
+        9.313225746154785e-10,
+        9.313225746154785e-10,
+        1.1650845408439636e-06,
+        9.313225746154785e-10,
+        333.3339539055403,
+        9.313225746154785e-10,
+        9.313225746154785e-10,
+        1.1650845408439636e-06,
+        9.313225746154785e-10,
+        333.3339539055403,
+        333.3339550696935,
+        333.3339539055403,
+        9.313225746154785e-10,
+        333.3339550696935,
+        333.3339550696935
+      ]
+    }
+  },
+  "comparacion": null
+}

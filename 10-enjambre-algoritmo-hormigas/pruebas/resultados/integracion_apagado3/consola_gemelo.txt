@@ -1,0 +1,23 @@
+pybullet build time: Aug 31 2026 11:32:11
+Laberinto almacen-5x5 (5x5), 29 aristas, CRC A85E23EB
+Escuchando telemetria UDP en 0.0.0.0:4211 (timeout 200 s, Ctrl+C para terminar)
+Recordatorio: el PC debe estar en el WiFi ENJAMBRE_ACO con IP 192.168.4.100, y el firewall debe dejar pasar UDP 4211.
+  t =   5.3 s  it  0  vivos [1, 2, 3]  ultima linea: ESTADO;2;ESPERA;0;-1.000;0;-40;1,2,3;1008
+  t =  10.1 s  it 10  vivos [1, 2, 3]  ultima linea: ESTADO;1;BUSQUEDA;10;2.400;0;-40;1,2,3;6028
+  t =  15.0 s  it 18  vivos [1, 2]  ultima linea: ESTADO;1;BUSQUEDA;18;2.400;0;-40;1,2;11070
+  t =  20.3 s  it 30  vivos [1, 2]  ultima linea: ESTADO;2;RECORRIDO;30;2.400;0;-40;1,2;16101
+  t =  25.1 s  it 30  vivos [1, 2]  ultima linea: ESTADO;2;RECORRIDO;30;2.400;0;-40;1,2;21143
+  t =  30.5 s  it 30  vivos [1, 2]  ultima linea: ESTADO;2;RECORRIDO;30;2.400;3;-40;1,2;26177
+  t =  35.4 s  it 30  vivos [1, 2]  ultima linea: ESTADO;1;TERMINADO;30;2.400;24;-40;1,2;31564
+  t =  40.2 s  it 30  vivos [1, 2]  ultima linea: ESTADO;2;RECORRIDO;30;2.400;23;-40;1,2;36216
+Fin del modo hardware (todos terminaron) a los 42.6 s
+Ruta optima (BFS): 2.4 m
+  nodo 1: 2.40 m  fase TERMINADO
+  nodo 2: 2.40 m  fase TERMINADO
+  nodo 3: 2.40 m  fase BUSQUEDA  (apagado)
+Convergio (camino de maxima feromona = optimo): si
+Salidas en D:/cosas uni/Micros/Micros teoria/github/Sensores-Teoria/10-enjambre-algoritmo-hormigas/pruebas/resultados/integracion_apagado3:
+  gemelo_hardware.mp4  (443 KB)
+  ruta_final_hardware.png  (70 KB)
+  telemetria_hardware.jsonl  (181 KB)
+  resumen_hardware.json  (4 KB)

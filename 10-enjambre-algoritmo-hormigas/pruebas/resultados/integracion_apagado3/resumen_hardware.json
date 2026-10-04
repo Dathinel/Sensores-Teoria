@@ -1,0 +1,296 @@
+{
+  "modo": "hardware",
+  "laberinto": "almacen-5x5",
+  "crc_maze": "A85E23EB",
+  "parametros": {
+    "alfa": 1.0,
+    "beta": 2.0,
+    "rho": 0.5,
+    "q": 100.0,
+    "hormigas": 4,
+    "iteraciones": 30,
+    "semilla": 12345,
+    "tau0": 1.0,
+    "deposito": "mejor"
+  },
+  "ruta_optima_bfs": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    9,
+    14,
+    19,
+    18,
+    17,
+    22,
+    23,
+    24
+  ],
+  "longitud_optima_m": 2.4,
+  "por_nodo": {
+    "1": {
+      "mejor_ruta": [
+        0,
+        1,
+        2,
+        7,
+        6,
+        5,
+        10,
+        11,
+        16,
+        17,
+        22,
+        23,
+        24
+      ],
+      "longitud_m": 2.4,
+      "es_optima": true,
+      "fase_final": "TERMINADO",
+      "apagado_al_final": false,
+      "ultima_iteracion_reportada": 30,
+      "crc": "A85E23EB",
+      "crc_coincide": true,
+      "carrito_termino_recorrido": true
+    },
+    "2": {
+      "mejor_ruta": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        9,
+        14,
+        19,
+        18,
+        17,
+        22,
+        23,
+        24
+      ],
+      "longitud_m": 2.4,
+      "es_optima": true,
+      "fase_final": "TERMINADO",
+      "apagado_al_final": false,
+      "ultima_iteracion_reportada": 30,
+      "crc": "A85E23EB",
+      "crc_coincide": true,
+      "carrito_termino_recorrido": true
+    },
+    "3": {
+      "mejor_ruta": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        9,
+        14,
+        19,
+        18,
+        17,
+        22,
+        23,
+        24
+      ],
+      "longitud_m": 2.4,
+      "es_optima": true,
+      "fase_final": "BUSQUEDA",
+      "apagado_al_final": true,
+      "ultima_iteracion_reportada": 10,
+      "crc": "A85E23EB",
+      "crc_coincide": true,
+      "carrito_termino_recorrido": false
+    }
+  },
+  "iteraciones_aplicadas_por_el_gemelo": 30,
+  "camino_maxima_feromona": [
+    0,
+    1,
+    2,
+    7,
+    6,
+    5,
+    10,
+    11,
+    16,
+    17,
+    22,
+    23,
+    24
+  ],
+  "feromona_final": [
+    166.66674590762707,
+    166.66674590762707,
+    4.812764624754589e-06,
+    166.66674109579378,
+    4.812764624754589e-06,
+    4.812764624754589e-06,
+    166.66674109579378,
+    166.66674109579378,
+    166.66674109579378,
+    9.313225746154785e-10,
+    9.313225746154785e-10,
+    9.313225746154785e-10,
+    4.812764624754589e-06,
+    166.66674109579378,
+    9.313225746154785e-10,
+    9.313225746154785e-10,
+    166.66674109579378,
+    9.313225746154785e-10,
+    4.812764624754589e-06,
+    9.313225746154785e-10,
+    9.313225746154785e-10,
+    166.66674109579378,
+    9.313225746154785e-10,
+    4.812764624754589e-06,
+    166.66674590762707,
+    4.812764624754589e-06,
+    9.313225746154785e-10,
+    166.66674590762707,
+    166.66674590762707
+  ],
+  "aristas": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      2,
+      7
+    ],
+    [
+      3,
+      4
+    ],
+    [
+      4,
+      9
+    ],
+    [
+      5,
+      6
+    ],
+    [
+      5,
+      10
+    ],
+    [
+      6,
+      7
+    ],
+    [
+      7,
+      8
+    ],
+    [
+      8,
+      9
+    ],
+    [
+      8,
+      13
+    ],
+    [
+      9,
+      14
+    ],
+    [
+      10,
+      11
+    ],
+    [
+      10,
+      15
+    ],
+    [
+      11,
+      12
+    ],
+    [
+      11,
+      16
+    ],
+    [
+      12,
+      13
+    ],
+    [
+      14,
+      19
+    ],
+    [
+      15,
+      16
+    ],
+    [
+      15,
+      20
+    ],
+    [
+      16,
+      17
+    ],
+    [
+      16,
+      21
+    ],
+    [
+      17,
+      18
+    ],
+    [
+      17,
+      22
+    ],
+    [
+      18,
+      19
+    ],
+    [
+      20,
+      21
+    ],
+    [
+      22,
+      23
+    ],
+    [
+      23,
+      24
+    ]
+  ],
+  "convergio": true,
+  "fin_incompletos": [],
+  "mensajes_por_tipo": {
+    "HELLO": 82,
+    "ESTADO": 83,
+    "LOG": 7,
+    "PHER": 840,
+    "FIN": 70,
+    "PATH": 3
+  },
+  "duracion_s": 42.6,
+  "cuadros_video": 655,
+  "fps": 15,
+  "avisos": [],
+  "archivos": {
+    "video": "gemelo_hardware.mp4",
+    "imagen": "ruta_final_hardware.png",
+    "telemetria": "telemetria_hardware.jsonl"
+  },
+  "motivo_fin": "todos terminaron",
+  "puerto_udp": 4211,
+  "nota_parametros": "rho se toma de --rho; debe ser el mismo del firmware para reconstruir bien la feromona"
+}

@@ -1,0 +1,65 @@
+Emulador del enjambre: laberinto almacen-5x5, 29 aristas, CRC A85E23EB
+Parametros: Parametros(alfa=1.0, beta=2.0, rho=0.5, q=100.0, hormigas=4, iteraciones=30, semilla=12345, tau0=1.0, deposito='mejor')
+Nodos: 1 -> 127.0.0.1:4220, 2 -> 127.0.0.1:4230, 3 -> 127.0.0.1:4240   telemetria -> 127.0.0.1:4211
+Escala de tiempo 1.0  (barrera 3.00 s, vivo 4.00 s, pausa 0.300 s)  perdida 0.0%
+   2.01 s  [nodo 3] empieza la busqueda (vio a los otros dos con el mismo CRC)
+   2.01 s  [nodo 1] empieza la busqueda (vio a los otros dos con el mismo CRC)
+   2.01 s  [nodo 2] empieza la busqueda (vio a los otros dos con el mismo CRC)
+   5.21 s  [nodo 3] SE DESENCHUFA tras aplicar 10 iteraciones (no manda la iteracion 11)
+   8.21 s  [nodo 2] iteracion 11 aplicada con 1,2  (sin el nodo 3)
+   8.21 s  [nodo 1] iteracion 11 aplicada con 1,2  (sin el nodo 3)
+   9.03 s  [nodo 2] iteracion 12 aplicada con 1,2  (sin el nodo 3)
+   9.03 s  [nodo 1] iteracion 12 aplicada con 1,2  (sin el nodo 3)
+   9.34 s  [nodo 1] iteracion 13 aplicada con 1,2  (sin el nodo 3)
+   9.34 s  [nodo 2] iteracion 13 aplicada con 1,2  (sin el nodo 3)
+   9.67 s  [nodo 1] iteracion 14 aplicada con 1,2  (sin el nodo 3)
+   9.67 s  [nodo 2] iteracion 14 aplicada con 1,2  (sin el nodo 3)
+   9.98 s  [nodo 1] iteracion 15 aplicada con 1,2  (sin el nodo 3)
+   9.99 s  [nodo 2] iteracion 15 aplicada con 1,2  (sin el nodo 3)
+  10.30 s  [nodo 1] iteracion 16 aplicada con 1,2  (sin el nodo 3)
+  10.31 s  [nodo 2] iteracion 16 aplicada con 1,2  (sin el nodo 3)
+  10.62 s  [nodo 1] iteracion 17 aplicada con 1,2  (sin el nodo 3)
+  10.62 s  [nodo 2] iteracion 17 aplicada con 1,2  (sin el nodo 3)
+  10.94 s  [nodo 1] iteracion 18 aplicada con 1,2  (sin el nodo 3)
+  10.94 s  [nodo 2] iteracion 18 aplicada con 1,2  (sin el nodo 3)
+  11.26 s  [nodo 1] iteracion 19 aplicada con 1,2  (sin el nodo 3)
+  11.26 s  [nodo 2] iteracion 19 aplicada con 1,2  (sin el nodo 3)
+  11.58 s  [nodo 1] iteracion 20 aplicada con 1,2  (sin el nodo 3)
+  11.58 s  [nodo 2] iteracion 20 aplicada con 1,2  (sin el nodo 3)
+  11.90 s  [nodo 2] iteracion 21 aplicada con 1,2  (sin el nodo 3)
+  11.90 s  [nodo 1] iteracion 21 aplicada con 1,2  (sin el nodo 3)
+  12.21 s  [nodo 1] iteracion 22 aplicada con 1,2  (sin el nodo 3)
+  12.21 s  [nodo 2] iteracion 22 aplicada con 1,2  (sin el nodo 3)
+  12.52 s  [nodo 2] iteracion 23 aplicada con 1,2  (sin el nodo 3)
+  12.52 s  [nodo 1] iteracion 23 aplicada con 1,2  (sin el nodo 3)
+  12.84 s  [nodo 2] iteracion 24 aplicada con 1,2  (sin el nodo 3)
+  12.84 s  [nodo 1] iteracion 24 aplicada con 1,2  (sin el nodo 3)
+  13.15 s  [nodo 1] iteracion 25 aplicada con 1,2  (sin el nodo 3)
+  13.15 s  [nodo 2] iteracion 25 aplicada con 1,2  (sin el nodo 3)
+  13.47 s  [nodo 2] iteracion 26 aplicada con 1,2  (sin el nodo 3)
+  13.47 s  [nodo 1] iteracion 26 aplicada con 1,2  (sin el nodo 3)
+  13.79 s  [nodo 1] iteracion 27 aplicada con 1,2  (sin el nodo 3)
+  13.79 s  [nodo 2] iteracion 27 aplicada con 1,2  (sin el nodo 3)
+  14.09 s  [nodo 2] iteracion 28 aplicada con 1,2  (sin el nodo 3)
+  14.11 s  [nodo 1] iteracion 28 aplicada con 1,2  (sin el nodo 3)
+  14.43 s  [nodo 1] iteracion 29 aplicada con 1,2  (sin el nodo 3)
+  14.43 s  [nodo 2] iteracion 29 aplicada con 1,2  (sin el nodo 3)
+  14.75 s  [nodo 1] iteracion 30 aplicada con 1,2  (sin el nodo 3)
+  14.76 s  [nodo 2] iteracion 30 aplicada con 1,2  (sin el nodo 3)
+  14.76 s  [nodo 1] fin de la busqueda: L = 2.400 m, recorre en 0.0 s
+  14.76 s  [nodo 2] fin de la busqueda: L = 2.400 m, recorre en 8.0 s
+  31.56 s  [nodo 1] TERMINADO en la celda 24
+  37.16 s  [nodo 2] TERMINADO en la celda 24
+
+Fin (todos los nodos vivos llegaron a TERMINADO) en 37.7 s
+  nodo 1: TERMINADO iter  30  sin companero 20  L =  2.400 m  ruta 0-1-2-7-6-5-10-11-16-17-22-23-24
+  nodo 2: TERMINADO iter  30  sin companero 20  L =  2.400 m  ruta 0-1-2-3-4-9-14-19-18-17-22-23-24
+  nodo 3: BUSQUEDA  iter  10  sin companero  0  L =  2.400 m  ruta 0-1-2-3-4-9-14-19-18-17-22-23-24  [APAGADO]
+
+Comparacion con aco.simular_enjambre(caidas={3: 10}):
+  nodo 1: ruta igual SI, tau igual (exacta) SI  (max dif 0)
+  nodo 2: ruta igual SI, tau igual (exacta) SI  (max dif 0)
+  nodo 3: ruta igual SI, tau igual (exacta) SI  (max dif 0)
+  Identico a la simulacion: SI;  tau identica entre nodos vivos: SI
+
+Resumen guardado en pruebas/resultados/integracion_apagado3/emulador_resumen.json

@@ -1,0 +1,48 @@
+{
+  "origen_de_los_datos": "EMULADOR (emulador_nodos.py en 127.0.0.1): NO es una medicion de hardware",
+  "fecha": "2026-10-03 10:39:18",
+  "segundos_esperados": 0.7,
+  "mismo_crc": true,
+  "todos_aparecieron": true,
+  "nodos": {
+    "1": {
+      "primera_vez_s": 0.7,
+      "ip": "127.0.0.1",
+      "puerto": 4220,
+      "hello": true,
+      "crc": "A85E23EB",
+      "fase": "ESPERA",
+      "estado": true,
+      "rssi": -40,
+      "aparecio": true,
+      "ip_esperada": "127.0.0.1",
+      "ip_ok": true
+    },
+    "2": {
+      "primera_vez_s": 0.7,
+      "ip": "127.0.0.1",
+      "puerto": 4230,
+      "hello": true,
+      "crc": "A85E23EB",
+      "fase": "ESPERA",
+      "estado": true,
+      "rssi": -40,
+      "aparecio": true,
+      "ip_esperada": "127.0.0.1",
+      "ip_ok": true
+    },
+    "3": {
+      "primera_vez_s": 0.7,
+      "ip": "127.0.0.1",
+      "puerto": 4240,
+      "hello": true,
+      "crc": "A85E23EB",
+      "fase": "ESPERA",
+      "estado": true,
+      "rssi": -40,
+      "aparecio": true,
+      "ip_esperada": "127.0.0.1",
+      "ip_ok": true
+    }
+  }
+}
