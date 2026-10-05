@@ -1,0 +1,1657 @@
+{
+  "escenario": {
+    "nombre": "base"
+  },
+  "inicio_epoch": 1791215140.454,
+  "duracion_s": 300.0,
+  "intervalo_ping_s": 0.5,
+  "metodo": {
+    "ping_desde_admin": "ICMP desde el contenedor admin (VLAN 3) a cada servicio, cruzando el router; jitter = RFC 3550 sobre la serie de RTT (comun.protocolo.Jitter)",
+    "segun_admin_mqtt": "tabla de lab/admin/resumen; claves usadas: {}",
+    "disponibilidad_por_estado": "fracción de la ventana con lab/estado/<svc> = OK"
+  },
+  "mensajes_mqtt": {
+    "resumenes": 149,
+    "metricas": 1050
+  },
+  "por_servicio": {
+    "player-1": {
+      "vlan": 1,
+      "ping_desde_admin": {
+        "n": 600,
+        "prom_ms": 0.225,
+        "p50_ms": 0.224,
+        "p95_ms": 0.288,
+        "max_ms": 0.39,
+        "min_ms": 0.119,
+        "jitter_rfc3550_ms": 0.024,
+        "jitter_prom_abs_dif_ms": 0.032,
+        "enviados": 600,
+        "recibidos": 600,
+        "perdida_pct": 0.0,
+        "disponibilidad_ping_pct": 100.0,
+        "ttl": [
+          63
+        ]
+      },
+      "segun_admin_mqtt": {
+        "ultimo_estado": "OK"
+      },
+      "disponibilidad_por_estado": {
+        "disponibilidad_pct": 100.0,
+        "cambios": [
+          {
+            "t_rel_s": 4.21,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 14.22,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 24.24,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 34.26,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 44.28,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 54.29,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 64.31,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 74.33,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 84.35,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 94.37,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 104.38,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 114.44,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 124.44,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 134.44,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 144.45,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 154.47,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 164.49,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 174.5,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 184.52,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 194.54,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 204.56,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 214.58,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 224.59,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 234.61,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 244.63,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 254.65,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 264.66,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 274.68,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 284.7,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 294.72,
+            "estado": "OK"
+          }
+        ]
+      }
+    },
+    "player-2": {
+      "vlan": 1,
+      "ping_desde_admin": {
+        "n": 600,
+        "prom_ms": 0.256,
+        "p50_ms": 0.254,
+        "p95_ms": 0.319,
+        "max_ms": 0.524,
+        "min_ms": 0.106,
+        "jitter_rfc3550_ms": 0.043,
+        "jitter_prom_abs_dif_ms": 0.042,
+        "enviados": 600,
+        "recibidos": 600,
+        "perdida_pct": 0.0,
+        "disponibilidad_ping_pct": 100.0,
+        "ttl": [
+          63
+        ]
+      },
+      "segun_admin_mqtt": {
+        "ultimo_estado": "OK"
+      },
+      "disponibilidad_por_estado": {
+        "disponibilidad_pct": 100.0,
+        "cambios": [
+          {
+            "t_rel_s": 4.21,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 14.22,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 24.24,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 34.26,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 44.28,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 54.29,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 64.31,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 74.33,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 84.35,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 94.37,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 104.38,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 114.44,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 124.44,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 134.44,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 144.45,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 154.47,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 164.49,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 174.5,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 184.52,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 194.54,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 204.56,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 214.58,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 224.59,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 234.61,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 244.63,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 254.65,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 264.66,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 274.68,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 284.7,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 294.72,
+            "estado": "OK"
+          }
+        ]
+      }
+    },
+    "player-3": {
+      "vlan": 1,
+      "ping_desde_admin": {
+        "n": 600,
+        "prom_ms": 0.235,
+        "p50_ms": 0.231,
+        "p95_ms": 0.308,
+        "max_ms": 0.533,
+        "min_ms": 0.103,
+        "jitter_rfc3550_ms": 0.036,
+        "jitter_prom_abs_dif_ms": 0.038,
+        "enviados": 600,
+        "recibidos": 600,
+        "perdida_pct": 0.0,
+        "disponibilidad_ping_pct": 100.0,
+        "ttl": [
+          63
+        ]
+      },
+      "segun_admin_mqtt": {
+        "ultimo_estado": "OK"
+      },
+      "disponibilidad_por_estado": {
+        "disponibilidad_pct": 100.0,
+        "cambios": [
+          {
+            "t_rel_s": 4.21,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 14.22,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 24.24,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 34.26,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 44.28,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 54.29,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 64.31,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 74.37,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 84.35,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 94.37,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 104.38,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 114.44,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 124.49,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 134.44,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 144.45,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 154.47,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 164.49,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 174.55,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 184.52,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 194.54,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 204.56,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 214.58,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 224.59,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 234.61,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 244.63,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 254.65,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 264.66,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 274.68,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 284.7,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 294.72,
+            "estado": "OK"
+          }
+        ]
+      }
+    },
+    "router": {
+      "vlan": null,
+      "ping_desde_admin": null,
+      "segun_admin_mqtt": {
+        "ultimo_estado": "OK"
+      }
+    },
+    "sim-nao": {
+      "vlan": 2,
+      "ping_desde_admin": {
+        "n": 600,
+        "prom_ms": 0.214,
+        "p50_ms": 0.213,
+        "p95_ms": 0.273,
+        "max_ms": 0.42,
+        "min_ms": 0.104,
+        "jitter_rfc3550_ms": 0.033,
+        "jitter_prom_abs_dif_ms": 0.035,
+        "enviados": 600,
+        "recibidos": 600,
+        "perdida_pct": 0.0,
+        "disponibilidad_ping_pct": 100.0,
+        "ttl": [
+          63
+        ]
+      },
+      "segun_admin_mqtt": {
+        "ultimo_estado": "OK"
+      },
+      "disponibilidad_por_estado": {
+        "disponibilidad_pct": 100.0,
+        "cambios": [
+          {
+            "t_rel_s": 4.71,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 14.72,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 24.74,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 34.76,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 44.78,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 54.79,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 64.81,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 74.83,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 84.85,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 94.87,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 104.88,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 114.9,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 124.92,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 134.94,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 144.95,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 154.97,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 164.99,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 175.0,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 185.02,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 195.04,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 205.06,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 215.08,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 225.1,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 235.11,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 245.13,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 255.15,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 265.16,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 275.18,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 285.2,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 295.22,
+            "estado": "OK"
+          }
+        ]
+      }
+    },
+    "sim-pepper": {
+      "vlan": 2,
+      "ping_desde_admin": {
+        "n": 600,
+        "prom_ms": 0.251,
+        "p50_ms": 0.249,
+        "p95_ms": 0.314,
+        "max_ms": 0.42,
+        "min_ms": 0.159,
+        "jitter_rfc3550_ms": 0.057,
+        "jitter_prom_abs_dif_ms": 0.04,
+        "enviados": 600,
+        "recibidos": 600,
+        "perdida_pct": 0.0,
+        "disponibilidad_ping_pct": 100.0,
+        "ttl": [
+          63
+        ]
+      },
+      "segun_admin_mqtt": {
+        "ultimo_estado": "OK"
+      },
+      "disponibilidad_por_estado": {
+        "disponibilidad_pct": 100.0,
+        "cambios": [
+          {
+            "t_rel_s": 4.71,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 14.72,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 24.74,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 34.76,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 44.78,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 54.79,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 64.81,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 74.83,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 84.85,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 94.87,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 104.88,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 114.9,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 124.92,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 134.94,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 144.95,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 154.97,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 164.99,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 175.0,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 185.02,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 195.04,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 205.06,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 215.08,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 225.1,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 235.11,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 245.13,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 255.15,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 265.16,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 275.18,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 285.2,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 295.22,
+            "estado": "OK"
+          }
+        ]
+      }
+    },
+    "sim-spot": {
+      "vlan": 2,
+      "ping_desde_admin": {
+        "n": 600,
+        "prom_ms": 0.216,
+        "p50_ms": 0.212,
+        "p95_ms": 0.289,
+        "max_ms": 0.503,
+        "min_ms": 0.09,
+        "jitter_rfc3550_ms": 0.036,
+        "jitter_prom_abs_dif_ms": 0.038,
+        "enviados": 600,
+        "recibidos": 600,
+        "perdida_pct": 0.0,
+        "disponibilidad_ping_pct": 100.0,
+        "ttl": [
+          63
+        ]
+      },
+      "segun_admin_mqtt": {
+        "ultimo_estado": "OK"
+      },
+      "disponibilidad_por_estado": {
+        "disponibilidad_pct": 100.0,
+        "cambios": [
+          {
+            "t_rel_s": 3.7,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 13.72,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 23.74,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 33.75,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 43.77,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 53.79,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 63.81,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 73.83,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 83.85,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 93.86,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 103.88,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 113.9,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 123.92,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 133.93,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 143.95,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 153.97,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 163.99,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 174.0,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 184.02,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 194.04,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 204.06,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 214.08,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 224.09,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 234.11,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 244.13,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 254.14,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 264.16,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 274.18,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 284.2,
+            "estado": "OK"
+          },
+          {
+            "t_rel_s": 294.22,
+            "estado": "OK"
+          }
+        ]
+      }
+    },
+    "track-server": {
+      "vlan": 1,
+      "ping_desde_admin": {
+        "n": 600,
+        "prom_ms": 0.226,
+        "p50_ms": 0.224,
+        "p95_ms": 0.289,
+        "max_ms": 0.412,
+        "min_ms": 0.116,
+        "jitter_rfc3550_ms": 0.039,
+        "jitter_prom_abs_dif_ms": 0.034,
+        "enviados": 600,
+        "recibidos": 600,
+        "perdida_pct": 0.0,
+        "disponibilidad_ping_pct": 100.0,
+        "ttl": [
+          63
+        ]
+      },
+      "segun_admin_mqtt": {
+        "ultimo_estado": "OK"
+      }
+    }
+  },
+  "metricas_contenedores": {
+    "player-3": {
+      "mensajes": 150,
+      "campos": {
+        "recibidos": {
+          "prom": 25195.013,
+          "min": 22213.0,
+          "max": 28177.0
+        },
+        "perdidos": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "perdida_pct": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "desordenados": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "jitter_esp32_ms": {
+          "prom": 0.056,
+          "min": 0.01,
+          "max": 0.18
+        },
+        "rtt_servidor_ms": {
+          "prom": 0.84,
+          "min": 0.0,
+          "max": 3.0
+        },
+        "rtt_servidor_prom_ms": {
+          "prom": 0.875,
+          "min": 0.5,
+          "max": 1.3
+        },
+        "rtt_servidor_jitter_ms": {
+          "prom": 0.428,
+          "min": 0.17,
+          "max": 0.71
+        },
+        "ajenos": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "basura": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "ws_conectado": {
+          "prom": 1.0,
+          "min": 1.0,
+          "max": 1.0
+        },
+        "ws_conexiones": {
+          "prom": 1.0,
+          "min": 1.0,
+          "max": 1.0
+        },
+        "controles_enviados": {
+          "prom": 25194.013,
+          "min": 22212.0,
+          "max": 28176.0
+        },
+        "failsafe": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "failsafes": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "dir": {
+          "prom": -12.513,
+          "min": -27.0,
+          "max": 4.0
+        },
+        "vel": {
+          "prom": 66.033,
+          "min": 60.0,
+          "max": 72.0
+        },
+        "carro_x": {
+          "prom": 0.013,
+          "min": -7.35,
+          "max": 7.35
+        },
+        "carro_y": {
+          "prom": 0.095,
+          "min": -3.5,
+          "max": 3.51
+        },
+        "carro_vuelta": {
+          "prom": 55.493,
+          "min": 49.0,
+          "max": 62.0
+        },
+        "carro_puesto": {
+          "prom": 4.287,
+          "min": 4.0,
+          "max": 5.0
+        }
+      },
+      "tasa_recepcion_hz": 20.0,
+      "tasa_calculada_con": "recibidos"
+    },
+    "sim-pepper": {
+      "mensajes": 150,
+      "campos": {
+        "recibidos": {
+          "prom": 4700.0,
+          "min": 1720.0,
+          "max": 7680.0
+        },
+        "perdidos": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "perdida_pct": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "desordenados": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "jitter_ms": {
+          "prom": 0.084,
+          "min": 0.0,
+          "max": 0.278
+        },
+        "error_realsim_deg": {
+          "prom": 1.755,
+          "min": 0.515,
+          "max": 5.314
+        },
+        "error_realsim_deg_max": {
+          "prom": 30.491,
+          "min": 3.243,
+          "max": 123.937
+        },
+        "fps_fisica": {
+          "prom": 240.0,
+          "min": 240.0,
+          "max": 240.0
+        },
+        "recortes": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "ajenos": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "basura": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "edad_ultimo_ms": {
+          "prom": 37.0,
+          "min": 37.0,
+          "max": 37.0
+        }
+      },
+      "tasa_recepcion_hz": 20.0,
+      "tasa_calculada_con": "recibidos"
+    },
+    "track-server": {
+      "mensajes": 150,
+      "campos": {
+        "fps_fisica": {
+          "prom": 240.0,
+          "min": 240.0,
+          "max": 240.0
+        },
+        "atraso_max_ms": {
+          "prom": 4.227,
+          "min": 4.2,
+          "max": 8.3
+        },
+        "resincronizaciones": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "clientes": {
+          "prom": 6.0,
+          "min": 6.0,
+          "max": 6.0
+        },
+        "observadores": {
+          "prom": 3.0,
+          "min": 3.0,
+          "max": 3.0
+        },
+        "control_rechazados": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "mensajes_invalidos": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "estado_hz": {
+          "prom": 20.013,
+          "min": 20.0,
+          "max": 20.5
+        }
+      }
+    },
+    "player-2": {
+      "mensajes": 150,
+      "campos": {
+        "recibidos": {
+          "prom": 15388.547,
+          "min": 12407.0,
+          "max": 18370.0
+        },
+        "perdidos": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "perdida_pct": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "desordenados": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "jitter_esp32_ms": {
+          "prom": 0.069,
+          "min": 0.0,
+          "max": 0.34
+        },
+        "rtt_servidor_ms": {
+          "prom": 0.9,
+          "min": 0.0,
+          "max": 2.0
+        },
+        "rtt_servidor_prom_ms": {
+          "prom": 0.923,
+          "min": 0.4,
+          "max": 1.2
+        },
+        "rtt_servidor_jitter_ms": {
+          "prom": 0.252,
+          "min": 0.04,
+          "max": 0.49
+        },
+        "ajenos": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "basura": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "ws_conectado": {
+          "prom": 1.0,
+          "min": 1.0,
+          "max": 1.0
+        },
+        "ws_conexiones": {
+          "prom": 1.0,
+          "min": 1.0,
+          "max": 1.0
+        },
+        "controles_enviados": {
+          "prom": 15388.547,
+          "min": 12407.0,
+          "max": 18370.0
+        },
+        "failsafe": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "failsafes": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "dir": {
+          "prom": -12.44,
+          "min": -25.0,
+          "max": 4.0
+        },
+        "vel": {
+          "prom": 66.087,
+          "min": 61.0,
+          "max": 73.0
+        },
+        "carro_x": {
+          "prom": -0.128,
+          "min": -7.35,
+          "max": 7.35
+        },
+        "carro_y": {
+          "prom": -0.052,
+          "min": -3.5,
+          "max": 3.51
+        },
+        "carro_vuelta": {
+          "prom": 54.847,
+          "min": 48.0,
+          "max": 61.0
+        },
+        "carro_puesto": {
+          "prom": 5.667,
+          "min": 4.0,
+          "max": 6.0
+        }
+      },
+      "tasa_recepcion_hz": 20.0,
+      "tasa_calculada_con": "recibidos"
+    },
+    "sim-spot": {
+      "mensajes": 150,
+      "campos": {
+        "recibidos": {
+          "prom": 4740.0,
+          "min": 1760.0,
+          "max": 7720.0
+        },
+        "perdidos": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "perdida_pct": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "desordenados": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "jitter_ms": {
+          "prom": 0.002,
+          "min": 0.0,
+          "max": 0.167
+        },
+        "error_realsim_deg": {
+          "prom": 1.34,
+          "min": 0.21,
+          "max": 2.84
+        },
+        "error_realsim_deg_max": {
+          "prom": 5.135,
+          "min": 0.822,
+          "max": 15.043
+        },
+        "fps_fisica": {
+          "prom": 240.0,
+          "min": 240.0,
+          "max": 240.0
+        },
+        "recortes": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "ajenos": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "basura": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "edad_ultimo_ms": {
+          "prom": 29.0,
+          "min": 29.0,
+          "max": 29.0
+        },
+        "caidas": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "trotando": {
+          "prom": 0.487,
+          "min": 0.0,
+          "max": 1.0
+        },
+        "avance_m": {
+          "prom": 8.216,
+          "min": 3.441,
+          "max": 13.308
+        }
+      },
+      "tasa_recepcion_hz": 20.0,
+      "tasa_calculada_con": "recibidos"
+    },
+    "player-1": {
+      "mensajes": 150,
+      "campos": {
+        "recibidos": {
+          "prom": 25234.12,
+          "min": 22252.0,
+          "max": 28216.0
+        },
+        "perdidos": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "perdida_pct": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "desordenados": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "jitter_esp32_ms": {
+          "prom": 0.003,
+          "min": 0.0,
+          "max": 0.1
+        },
+        "rtt_servidor_ms": {
+          "prom": 0.967,
+          "min": 0.0,
+          "max": 3.0
+        },
+        "rtt_servidor_prom_ms": {
+          "prom": 0.956,
+          "min": 0.4,
+          "max": 1.3
+        },
+        "rtt_servidor_jitter_ms": {
+          "prom": 0.367,
+          "min": 0.11,
+          "max": 0.74
+        },
+        "ajenos": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "basura": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "ws_conectado": {
+          "prom": 1.0,
+          "min": 1.0,
+          "max": 1.0
+        },
+        "ws_conexiones": {
+          "prom": 1.0,
+          "min": 1.0,
+          "max": 1.0
+        },
+        "controles_enviados": {
+          "prom": 25234.12,
+          "min": 22252.0,
+          "max": 28216.0
+        },
+        "failsafe": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "failsafes": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "dir": {
+          "prom": -12.82,
+          "min": -27.0,
+          "max": 4.0
+        },
+        "vel": {
+          "prom": 66.14,
+          "min": 60.0,
+          "max": 74.0
+        },
+        "carro_x": {
+          "prom": -0.137,
+          "min": -7.35,
+          "max": 7.34
+        },
+        "carro_y": {
+          "prom": -0.046,
+          "min": -3.51,
+          "max": 3.52
+        },
+        "carro_vuelta": {
+          "prom": 55.847,
+          "min": 49.0,
+          "max": 62.0
+        },
+        "carro_puesto": {
+          "prom": 4.0,
+          "min": 4.0,
+          "max": 4.0
+        }
+      },
+      "tasa_recepcion_hz": 20.0,
+      "tasa_calculada_con": "recibidos"
+    },
+    "sim-nao": {
+      "mensajes": 150,
+      "campos": {
+        "recibidos": {
+          "prom": 4740.0,
+          "min": 1760.0,
+          "max": 7720.0
+        },
+        "perdidos": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "perdida_pct": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "desordenados": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "jitter_ms": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.019
+        },
+        "error_realsim_deg": {
+          "prom": 1.657,
+          "min": 0.526,
+          "max": 6.001
+        },
+        "error_realsim_deg_max": {
+          "prom": 26.812,
+          "min": 3.348,
+          "max": 126.035
+        },
+        "fps_fisica": {
+          "prom": 240.0,
+          "min": 240.0,
+          "max": 240.0
+        },
+        "recortes": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "ajenos": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "basura": {
+          "prom": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "edad_ultimo_ms": {
+          "prom": 29.0,
+          "min": 29.0,
+          "max": 29.0
+        }
+      },
+      "tasa_recepcion_hz": 20.0,
+      "tasa_calculada_con": "recibidos"
+    }
+  },
+  "csv_admin": {
+    "nota": "1200 de 5328 filas dentro de la ventana (columna 'fecha')",
+    "por_servicio": {
+      "track-server": {
+        "jitter": {
+          "n": 150,
+          "prom": 0.249,
+          "p95": 0.427,
+          "max": 0.494
+        },
+        "disponibilidad": {
+          "n": 150,
+          "prom": 100.0,
+          "p95": 100.0,
+          "max": 100.0
+        }
+      },
+      "player-1": {
+        "jitter": {
+          "n": 150,
+          "prom": 0.006,
+          "p95": 0.049,
+          "max": 0.114
+        },
+        "disponibilidad": {
+          "n": 150,
+          "prom": 100.0,
+          "p95": 100.0,
+          "max": 100.0
+        }
+      },
+      "player-2": {
+        "jitter": {
+          "n": 150,
+          "prom": 0.0,
+          "p95": 0.0,
+          "max": 0.0
+        },
+        "disponibilidad": {
+          "n": 150,
+          "prom": 100.0,
+          "p95": 100.0,
+          "max": 100.0
+        }
+      },
+      "player-3": {
+        "jitter": {
+          "n": 150,
+          "prom": 0.438,
+          "p95": 0.668,
+          "max": 0.71
+        },
+        "disponibilidad": {
+          "n": 150,
+          "prom": 100.0,
+          "p95": 100.0,
+          "max": 100.0
+        }
+      },
+      "sim-spot": {
+        "jitter": {
+          "n": 150,
+          "prom": 0.02,
+          "p95": 0.124,
+          "max": 0.224
+        },
+        "disponibilidad": {
+          "n": 150,
+          "prom": 100.0,
+          "p95": 100.0,
+          "max": 100.0
+        }
+      },
+      "sim-pepper": {
+        "jitter": {
+          "n": 150,
+          "prom": 0.0,
+          "p95": 0.0,
+          "max": 0.0
+        },
+        "disponibilidad": {
+          "n": 150,
+          "prom": 100.0,
+          "p95": 100.0,
+          "max": 100.0
+        }
+      },
+      "sim-nao": {
+        "jitter": {
+          "n": 150,
+          "prom": 0.013,
+          "p95": 0.075,
+          "max": 0.121
+        },
+        "disponibilidad": {
+          "n": 150,
+          "prom": 100.0,
+          "p95": 100.0,
+          "max": 100.0
+        }
+      },
+      "router": {
+        "jitter": {
+          "n": 150,
+          "prom": 4.532,
+          "p95": 4.815,
+          "max": 4.961
+        },
+        "disponibilidad": {
+          "n": 150,
+          "prom": 100.0,
+          "p95": 100.0,
+          "max": 100.0
+        }
+      }
+    }
+  },
+  "graficas": [
+    "pruebas\\resultados\\red_base_rtt_tiempo.png",
+    "pruebas\\resultados\\red_base_resumen.png"
+  ]
+}

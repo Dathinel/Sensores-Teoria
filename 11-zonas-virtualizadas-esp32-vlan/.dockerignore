@@ -1,0 +1,29 @@
+# Lo que NO se manda a Docker al construir (el contexto de todas las imágenes es esta carpeta).
+# Mandar menos = build más rápido y sin meter por error archivos pesados o privados en una imagen.
+
+# Entorno virtual de Windows (no sirve dentro de Linux y pesa cientos de MB)
+entorno/
+**/__pycache__/
+**/*.pyc
+
+# Salidas de las pruebas y videos (se montan como volumen, no se copian a la imagen)
+resultados/
+video/
+
+# Documentos, imágenes y el PDF del enunciado (trae datos de otros estudiantes)
+*.pdf
+*.png
+*.jpg
+*.gif
+*.mp4
+*.docx
+img/
+borradores/
+README.md
+preview.html
+
+# Código que corre en los ESP32 o en el PC, no en los contenedores
+firmware/
+pruebas/
+publicar_dockerhub.ps1
+docker-compose*.yml

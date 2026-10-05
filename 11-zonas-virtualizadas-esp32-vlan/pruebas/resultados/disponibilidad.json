@@ -1,0 +1,380 @@
+{
+  "parametros": {
+    "broker": "localhost",
+    "puerto": 1883,
+    "servicios": [
+      "sim-pepper",
+      "player-2"
+    ],
+    "pausa": 10,
+    "pausa_admin": 30,
+    "espera_inicial": 180,
+    "espera_caido": 60,
+    "espera_ok": 180,
+    "max_deteccion": 10,
+    "max_recuperacion": 60,
+    "sin_admin": false
+  },
+  "fecha_epoch": 1791216357.6,
+  "estado_inicial": {
+    "player-1": "OK",
+    "player-2": "OK",
+    "player-3": "OK",
+    "sim-spot": "OK",
+    "sim-pepper": "OK",
+    "sim-nao": "OK"
+  },
+  "caidas": [
+    {
+      "servicio": "sim-pepper",
+      "docker_stop_s": 1.66,
+      "docker_stop_codigo": 0,
+      "caido_desde_orden_s": 0.5,
+      "caido_desde_detenido_s": -1.16,
+      "vivo0_desde_orden_s": 0.12,
+      "docker_start_s": 0.43,
+      "docker_start_codigo": 0,
+      "ok_desde_start_s": 1.02,
+      "vivo1_desde_start_s": 0.7,
+      "tiempo_total_fuera_s": 11.52,
+      "otros_cambios_no_ok": [],
+      "otros_mensajes_metricas": {
+        "player-1": 6,
+        "player-2": 6,
+        "player-3": 5,
+        "sim-spot": 6,
+        "sim-nao": 6
+      },
+      "criterios": {
+        "CAIDO en <= 10 s": "APROBADA",
+        "OK otra vez en <= 60 s": "APROBADA",
+        "los otros 5 siguen OK y publicando": "APROBADA"
+      }
+    },
+    {
+      "servicio": "player-2",
+      "docker_stop_s": 1.52,
+      "docker_stop_codigo": 0,
+      "caido_desde_orden_s": 0.43,
+      "caido_desde_detenido_s": -1.09,
+      "vivo0_desde_orden_s": 0.07,
+      "docker_start_s": 0.45,
+      "docker_start_codigo": 0,
+      "ok_desde_start_s": 1.02,
+      "vivo1_desde_start_s": 0.55,
+      "tiempo_total_fuera_s": 11.46,
+      "otros_cambios_no_ok": [],
+      "otros_mensajes_metricas": {
+        "player-1": 5,
+        "player-3": 6,
+        "sim-spot": 6,
+        "sim-pepper": 5,
+        "sim-nao": 6
+      },
+      "criterios": {
+        "CAIDO en <= 10 s": "APROBADA",
+        "OK otra vez en <= 60 s": "APROBADA",
+        "los otros 5 siguen OK y publicando": "APROBADA"
+      }
+    }
+  ],
+  "caida_admin": {
+    "docker_stop_admin_s": 1.72,
+    "duracion_caida_observada_s": 30,
+    "muestras_durante_caida": [
+      {
+        "t_rel_s": 1.72,
+        "zonas": {
+          "track-server": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 0,
+            "visor_http": 200
+          },
+          "player-1": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 2
+          },
+          "player-2": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 2
+          },
+          "player-3": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 2
+          },
+          "sim-spot": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 2,
+            "visor_http": 200
+          },
+          "sim-pepper": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 2,
+            "visor_http": 200
+          },
+          "sim-nao": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 3,
+            "visor_http": 200
+          }
+        }
+      },
+      {
+        "t_rel_s": 9.06,
+        "zonas": {
+          "track-server": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 32,
+            "visor_http": 200
+          },
+          "player-1": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 5
+          },
+          "player-2": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 6
+          },
+          "player-3": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 5
+          },
+          "sim-spot": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 6,
+            "visor_http": 200
+          },
+          "sim-pepper": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 6,
+            "visor_http": 200
+          },
+          "sim-nao": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 6,
+            "visor_http": 200
+          }
+        }
+      },
+      {
+        "t_rel_s": 16.08,
+        "zonas": {
+          "track-server": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 64,
+            "visor_http": 200
+          },
+          "player-1": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 9
+          },
+          "player-2": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 9
+          },
+          "player-3": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 9
+          },
+          "sim-spot": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 10,
+            "visor_http": 200
+          },
+          "sim-pepper": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 9,
+            "visor_http": 200
+          },
+          "sim-nao": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 10,
+            "visor_http": 200
+          }
+        }
+      },
+      {
+        "t_rel_s": 23.16,
+        "zonas": {
+          "track-server": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 65,
+            "visor_http": 200
+          },
+          "player-1": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 12
+          },
+          "player-2": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 13
+          },
+          "player-3": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 12
+          },
+          "sim-spot": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 13,
+            "visor_http": 200
+          },
+          "sim-pepper": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 13,
+            "visor_http": 200
+          },
+          "sim-nao": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 13,
+            "visor_http": 200
+          }
+        }
+      },
+      {
+        "t_rel_s": 30.08,
+        "zonas": {
+          "track-server": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 97,
+            "visor_http": 200
+          },
+          "player-1": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 16
+          },
+          "player-2": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 16
+          },
+          "player-3": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 16
+          },
+          "sim-spot": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 17,
+            "visor_http": 200
+          },
+          "sim-pepper": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 16,
+            "visor_http": 200
+          },
+          "sim-nao": {
+            "corriendo": true,
+            "lineas_log_desde_caida": 17,
+            "visor_http": 200
+          }
+        }
+      }
+    ],
+    "zonas_antes": {
+      "track-server": {
+        "corriendo": true,
+        "started_at": "2026-10-05T15:27:05.483482315Z",
+        "restart_count": 0
+      },
+      "player-1": {
+        "corriendo": true,
+        "started_at": "2026-10-05T15:27:08.881200263Z",
+        "restart_count": 0
+      },
+      "player-2": {
+        "corriendo": true,
+        "started_at": "2026-10-05T16:06:19.846744648Z",
+        "restart_count": 0
+      },
+      "player-3": {
+        "corriendo": true,
+        "started_at": "2026-10-05T15:27:09.616274399Z",
+        "restart_count": 0
+      },
+      "sim-spot": {
+        "corriendo": true,
+        "started_at": "2026-10-05T15:44:13.073420958Z",
+        "restart_count": 0
+      },
+      "sim-pepper": {
+        "corriendo": true,
+        "started_at": "2026-10-05T16:06:08.311085926Z",
+        "restart_count": 0
+      },
+      "sim-nao": {
+        "corriendo": true,
+        "started_at": "2026-10-05T15:44:13.475480446Z",
+        "restart_count": 0
+      }
+    },
+    "zonas_despues": {
+      "track-server": {
+        "corriendo": true,
+        "started_at": "2026-10-05T15:27:05.483482315Z",
+        "restart_count": 0
+      },
+      "player-1": {
+        "corriendo": true,
+        "started_at": "2026-10-05T15:27:08.881200263Z",
+        "restart_count": 0
+      },
+      "player-2": {
+        "corriendo": true,
+        "started_at": "2026-10-05T16:06:19.846744648Z",
+        "restart_count": 0
+      },
+      "player-3": {
+        "corriendo": true,
+        "started_at": "2026-10-05T15:27:09.616274399Z",
+        "restart_count": 0
+      },
+      "sim-spot": {
+        "corriendo": true,
+        "started_at": "2026-10-05T15:44:13.073420958Z",
+        "restart_count": 0
+      },
+      "sim-pepper": {
+        "corriendo": true,
+        "started_at": "2026-10-05T16:06:08.311085926Z",
+        "restart_count": 0
+      },
+      "sim-nao": {
+        "corriendo": true,
+        "started_at": "2026-10-05T15:44:13.475480446Z",
+        "restart_count": 0
+      }
+    },
+    "actividad_durante_caida": {
+      "track-server": "con actividad",
+      "player-1": "con actividad",
+      "player-2": "con actividad",
+      "player-3": "con actividad",
+      "sim-spot": "con actividad",
+      "sim-pepper": "con actividad",
+      "sim-nao": "con actividad"
+    },
+    "visor_respuestas_distintas": {
+      "track-server": 1,
+      "sim-spot": 1,
+      "sim-pepper": 1,
+      "sim-nao": 1
+    },
+    "docker_start_admin_s": 0.48,
+    "broker_vuelve_desde_start_s": 1.4,
+    "primera_metrica_desde_start_s": {
+      "track-server": 7.21,
+      "player-1": 6.25,
+      "player-2": 5.68,
+      "player-3": 6.87,
+      "sim-spot": 5.43,
+      "sim-pepper": 6.41,
+      "sim-nao": 5.59
+    },
+    "todos_ok_desde_start_s": 2.11,
+    "criterios": {
+      "ninguna zona se cayó ni se reinició sin el admin": "APROBADA",
+      "hay evidencia de actividad en todas las zonas": "APROBADA",
+      "las métricas de todas las zonas vuelven solas": "APROBADA",
+      "los 6 vuelven a OK en <= 60 s": "APROBADA"
+    }
+  },
+  "veredicto": "APROBADA"
+}

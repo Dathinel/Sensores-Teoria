@@ -1,0 +1,1647 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Previsualización — zonas VLAN con ESP32</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1013;
+    --panel: #15191d;
+    --panel-border: #262b31;
+    --hondo: #0a0d10;
+    --text: #e7e9ec;
+    --text-muted: #8b929b;
+    --accent: #4f8fce;
+    --verde-ok: #4caf7d;
+    --rojo: #d9534f;
+    --amarillo: #e8b930;
+    /* Colores de las tres zonas, parecidos al diagrama del enunciado */
+    --gamer: #3fbf8f;
+    --robot: #f0913a;
+    --admin: #a77be8;
+    --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: "Space Grotesk", system-ui, "Segoe UI", sans-serif; }
+  body { padding: 1.1rem 1.4rem; min-height: 100vh; }
+  .encabezado { max-width: 1760px; margin: 0 auto 0.9rem; }
+  .fila-tit { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  h1 { font-size: 1.2rem; font-weight: 600; margin: 0 0 0.2rem; }
+  p.sub { color: var(--text-muted); font-size: 0.8rem; margin: 0.3rem 0 0; max-width: 1180px; line-height: 1.45; }
+  p.sub b { color: var(--text); font-weight: 500; }
+  .modos { display: flex; gap: 0.5rem; }
+  button { font-family: var(--mono); }
+  .modos button { background: transparent; color: var(--text-muted); border: 1px solid var(--panel-border); padding: 0.45rem 0.8rem; border-radius: 6px; font-size: 0.72rem; cursor: pointer; }
+  .modos button.activo { border-color: var(--accent); color: var(--accent); }
+
+  .rejilla { max-width: 1760px; margin: 0 auto; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 0.9rem; align-items: start; }
+  .c4 { grid-column: span 4; } .c5 { grid-column: span 5; } .c6 { grid-column: span 6; }
+  .c7 { grid-column: span 7; } .c8 { grid-column: span 8; } .c12 { grid-column: span 12; }
+  @media (max-width: 1180px) { .rejilla > section { grid-column: span 12 !important; } }
+  @media (max-width: 720px) { body { padding: 0.8rem 16px; } }
+
+  .panel { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 8px; padding: 0.9rem; min-width: 0; }
+  .panel.zona { border-top: 3px solid var(--zc); }
+  .titulo { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 0.6rem; display: flex; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
+  .titulo b { color: var(--zc, var(--text)); font-weight: 600; }
+  .nota { font-family: var(--mono); font-size: 0.66rem; color: var(--text-muted); line-height: 1.5; margin: 0.55rem 0 0; }
+  .nota b { color: var(--text); font-weight: 500; }
+  canvas { display: block; width: 100%; background: var(--hondo); border: 1px solid var(--panel-border); border-radius: 8px; touch-action: none; }
+  .desliza-x { overflow-x: auto; }
+  .desliza-x canvas { min-width: 640px; }
+
+  .btn { background: #1c2126; color: var(--text); border: 1px solid var(--panel-border); padding: 0.42rem 0.6rem; border-radius: 6px; font-size: 0.7rem; cursor: pointer; user-select: none; -webkit-user-select: none; }
+  .btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { color: #4a5058; cursor: default; }
+  .btn.rojo { border-color: #5a2a29; color: #e58a87; }
+  .btn.rojo:hover { border-color: var(--rojo); color: var(--rojo); }
+  .btn.verde { border-color: #23503a; color: var(--verde-ok); }
+  .btn.apretado { background: #2a3139; border-color: var(--amarillo); color: var(--amarillo); }
+  .fila-btn { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .seg { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+  .seg button { background: transparent; color: var(--text-muted); border: 1px solid var(--panel-border); padding: 0.3rem 0.6rem; border-radius: 999px; font-size: 0.68rem; cursor: pointer; }
+  .seg button.activo { border-color: var(--zc, var(--accent)); color: var(--zc, var(--accent)); }
+  select, input[type=text] { background: var(--hondo); color: var(--text); border: 1px solid var(--panel-border); border-radius: 5px; padding: 0.32rem 0.4rem; font-family: var(--mono); font-size: 0.72rem; }
+  input[type=range] { width: 100%; accent-color: var(--zc, var(--accent)); }
+  label.chk { font-family: var(--mono); font-size: 0.68rem; color: var(--text-muted); display: inline-flex; gap: 0.3rem; align-items: center; cursor: pointer; }
+
+  /* ---- zona gamer ---- */
+  .gamer-caja { display: grid; grid-template-columns: minmax(0, 1fr) 210px; gap: 0.8rem; align-items: start; }
+  @media (max-width: 720px) { .gamer-caja { grid-template-columns: 1fr; } }
+  .joy { position: relative; width: 170px; height: 170px; margin: 0.4rem auto; border-radius: 50%; background: radial-gradient(circle, #1b2026 0%, #11151a 70%); border: 1px solid var(--panel-border); touch-action: none; cursor: grab; }
+  .joy::before, .joy::after { content: ""; position: absolute; background: #222830; }
+  .joy::before { left: 50%; top: 10px; bottom: 10px; width: 1px; }
+  .joy::after { top: 50%; left: 10px; right: 10px; height: 1px; }
+  .perilla { position: absolute; width: 54px; height: 54px; left: 58px; top: 58px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #4a525c, #23292f); border: 2px solid var(--pc, var(--gamer)); z-index: 1; pointer-events: none; }
+  .lectura { display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem; font-family: var(--mono); font-size: 0.72rem; text-align: center; }
+  .lectura div { background: var(--hondo); border: 1px solid var(--panel-border); border-radius: 5px; padding: 0.25rem; }
+  .lectura b { display: block; font-size: 1rem; color: var(--text); font-weight: 600; }
+  .lectura span { color: var(--text-muted); font-size: 0.62rem; }
+  .mini { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.66rem; margin-top: 0.5rem; }
+  .mini td, .mini th { padding: 0.18rem 0.3rem; border-bottom: 1px dashed #20252b; text-align: left; white-space: nowrap; }
+  .mini th { color: var(--text-muted); font-weight: 500; }
+  .mini td.n { text-align: right; }
+  .punto { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 0.35rem; vertical-align: -1px; }
+
+  /* ---- zona robótica ---- */
+  .desl { display: grid; grid-template-columns: 1fr; gap: 0.35rem; margin-top: 0.5rem; }
+  .desl label { font-family: var(--mono); font-size: 0.68rem; color: var(--text-muted); display: grid; grid-template-columns: 175px minmax(0, 1fr) 92px; gap: 0.5rem; align-items: center; }
+  .desl label output { color: var(--text); text-align: right; }
+  @media (max-width: 520px) { .desl label { grid-template-columns: 1fr 70px; } .desl label input { grid-column: 1 / -1; grid-row: 2; } }
+
+  /* ---- admin ---- */
+  table.adm { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.7rem; }
+  table.adm th { color: var(--text-muted); font-weight: 500; text-align: right; padding: 0.3rem 0.4rem; border-bottom: 1px solid var(--panel-border); white-space: nowrap; }
+  table.adm th:first-child, table.adm td:first-child, table.adm th:nth-child(2), table.adm td:nth-child(2) { text-align: left; }
+  table.adm td { padding: 0.28rem 0.4rem; border-bottom: 1px dashed #20252b; text-align: right; white-space: nowrap; }
+  table.adm tr.detenido td { color: #5b626b; }
+  .tabla-caja { overflow-x: auto; }
+  .chip { display: inline-block; min-width: 58px; text-align: center; border-radius: 999px; padding: 0.08rem 0.45rem; font-size: 0.64rem; border: 1px solid; }
+  .chip.OK { color: var(--verde-ok); border-color: var(--verde-ok); }
+  .chip.LENTO { color: var(--amarillo); border-color: var(--amarillo); }
+  .chip.CAIDO { color: var(--rojo); border-color: var(--rojo); }
+  .chip.Q { color: var(--text-muted); border-color: var(--panel-border); }
+  .btn.peq { padding: 0.18rem 0.45rem; font-size: 0.62rem; }
+
+  .placa { background: #10261c; border: 1px solid #1d4532; border-radius: 8px; padding: 0.7rem; }
+  .placa-tit { font-family: var(--mono); font-size: 0.66rem; color: #9bc7b0; margin-bottom: 0.6rem; display: flex; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
+  .leds { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.4rem; }
+  @media (max-width: 520px) { .leds { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .led-caja { text-align: center; font-family: var(--mono); font-size: 0.6rem; color: #9bc7b0; }
+  .led { width: 26px; height: 26px; border-radius: 50%; margin: 0 auto 0.3rem; background: #1a1d20; border: 2px solid #2c3238; transition: background 0.06s, box-shadow 0.06s; }
+  .led.on { background: var(--lc); border-color: var(--lc); box-shadow: 0 0 14px 3px var(--lc); }
+  .led-caja .est { color: var(--text-muted); }
+  .led-placa { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.6rem; font-family: var(--mono); font-size: 0.62rem; color: #9bc7b0; }
+  .led-placa .led { width: 12px; height: 12px; margin: 0; --lc: #4aa3ff; }
+
+  /* ---- aislamiento ---- */
+  pre.salida { margin: 0.5rem 0 0; background: var(--hondo); border: 1px solid var(--panel-border); border-radius: 6px; padding: 0.45rem 0.55rem; font-family: var(--mono); font-size: 0.64rem; line-height: 1.45; color: var(--text-muted); height: 132px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
+  pre.salida .ok { color: var(--verde-ok); } pre.salida .mal { color: var(--rojo); } pre.salida .cmd { color: var(--text); }
+  table.ipt { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.64rem; margin-top: 0.5rem; }
+  table.ipt td { padding: 0.18rem 0.3rem; border-bottom: 1px dashed #20252b; }
+  table.ipt td.n { text-align: right; color: var(--text); }
+  table.ipt .DROP { color: var(--rojo); } table.ipt .ACCEPT { color: var(--verde-ok); }
+  table.ipt tr.flash td { background: #3a1a1a; }
+
+  /* ---- monitor ---- */
+  .monitor { height: 260px; overflow-y: auto; background: var(--hondo); border: 1px solid var(--panel-border); border-radius: 6px; padding: 0.4rem 0.5rem; font-family: var(--mono); font-size: 0.64rem; line-height: 1.5; color: var(--text); white-space: pre; }
+  .monitor .pre { color: #59616a; }
+  .monitor .tag { color: var(--rojo); }
+  .monitor .CTRL { color: #9fe0c4; } .monitor .JOINTS { color: #f6b77a; } .monitor .HB { color: #c9b3f2; }
+  .monitor .MQTT { color: #8f98c9; } .monitor .LEDS { color: var(--amarillo); } .monitor .SERIE { color: #e7e9ec; }
+  .monitor .perdido { opacity: 0.55; text-decoration: line-through; }
+  .ultima { margin-top: 0.5rem; background: #12202e; border: 1px solid #24425f; border-radius: 6px; padding: 0.45rem 0.55rem; font-family: var(--mono); font-size: 0.74rem; color: #cfe5ff; word-break: break-all; min-height: 2.1rem; }
+  .ultima span { display: block; font-size: 0.6rem; color: var(--text-muted); margin-bottom: 0.15rem; }
+  .dato { display: flex; justify-content: space-between; gap: 0.6rem; font-family: var(--mono); font-size: 0.7rem; color: var(--text-muted); padding: 0.18rem 0; border-bottom: 1px dashed #20252b; }
+  .dato span:last-child { color: var(--text); text-align: right; word-break: break-all; }
+  #estadoSerial { font-family: var(--mono); font-size: 0.7rem; color: var(--text-muted); margin-top: 0.5rem; line-height: 1.45; }
+  #estadoSerial.ok { color: var(--verde-ok); } #estadoSerial.mal { color: var(--rojo); }
+  .oculto { display: none !important; }
+  .leyenda { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; margin-top: 0.5rem; font-family: var(--mono); font-size: 0.64rem; color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<header class="encabezado">
+  <div class="fila-tit">
+    <h1>Previsualización — zonas virtualizadas (VLAN) con ESP32, PyBullet y plano de administración</h1>
+    <div class="modos">
+      <button id="btnModoPrueba" class="activo">Modo prueba</button>
+      <button id="btnModoConectado">Conectado (Web Serial)</button>
+    </div>
+  </div>
+  <p class="sub">Todo el laboratorio corre aquí en el navegador: la <b>zona gamer</b> (VLAN 1, pista con 3 jugadores y 3 autónomos), la <b>zona robótica</b> (VLAN 2, Spot, Pepper y NAO en real-to-sim) y el <b>plano de administración</b> (VLAN 3: monitoreo de latencia, jitter y disponibilidad, broker MQTT y la ESP32 esclava con 6 LEDs). El <b>router</b> une las tres redes y su iptables deja pasar admin↔zonas pero descarta gamer↔robótica. Los mensajes que salen tienen el mismo formato que el contrato del tema (<b>CTRL</b>, <b>JOINTS</b>, <b>HB</b>). El modo conectado lee por USB una sola ESP32 (maestra o esclava) y refleja lo que ella hace.</p>
+</header>
+
+<main class="rejilla">
+
+  <!-- ======================= mapa de red ======================= -->
+  <section class="panel c8">
+    <div class="titulo"><span>Mapa de red · 3 redes bridge de Docker = 3 VLAN</span><span id="txtTrafico">-</span></div>
+    <div class="desliza-x"><canvas id="cvMapa" style="aspect-ratio: 1000 / 400"></canvas></div>
+    <div class="leyenda">
+      <span><span class="punto" style="background:var(--verde-ok)"></span>OK</span>
+      <span><span class="punto" style="background:var(--amarillo)"></span>LENTO</span>
+      <span><span class="punto" style="background:var(--rojo)"></span>CAIDO</span>
+      <span>· puntos que viajan = datagramas (latidos HB al admin, CTRL/JOINTS de cada ESP32); un punto que se desvanece = perdido</span>
+    </div>
+  </section>
+
+  <!-- ======================= aislamiento ======================= -->
+  <section class="panel c4">
+    <div class="titulo"><span>Aislamiento · iptables FORWARD del router</span></div>
+    <div class="fila-btn">
+      <button class="btn rojo" id="btnPingMalo">ping de player-1 a sim-nao</button>
+      <button class="btn verde" id="btnPingBueno">ping de admin a sim-nao</button>
+    </div>
+    <div class="fila-btn" style="margin-top:0.45rem; align-items:center">
+      <select id="selOrigen" aria-label="origen"></select><span class="nota" style="margin:0">→</span><select id="selDestino" aria-label="destino"></select>
+      <button class="btn" id="btnPingLibre">ping</button>
+    </div>
+    <pre class="salida" id="salidaPing"></pre>
+    <table class="ipt" id="tablaIpt"></table>
+    <div class="fila-btn" style="margin-top:0.5rem; align-items:center">
+      <button class="btn rojo" id="btnRouter">Detener router</button>
+      <span class="nota" style="margin:0">sin router el admin deja de ver las zonas, pero cada zona sigue jugando sola</span>
+    </div>
+    <p class="nota">Para que el intento prohibido llegue al router, la prueba le da a player-1 la ruta <b>192.168.20.0/24 via .10.254</b>; sin esa ruta lo descarta antes Docker (sus reglas de aislamiento entre bridges). TTL 63 = pasó por un salto (el router).</p>
+  </section>
+
+  <!-- ======================= zona gamer ======================= -->
+  <section class="panel zona c6" style="--zc: var(--gamer)">
+    <div class="titulo"><span><b>VLAN 1 · Zona gamer</b> · 192.168.10.0/24 · track-server PyBullet + player-1..3</span><span id="txtGamer">-</span></div>
+    <div class="gamer-caja">
+      <canvas id="cvPista" style="aspect-ratio: 640 / 400"></canvas>
+      <div>
+        <div class="seg" id="segJugador"></div>
+        <div class="joy" id="joy"><div class="perilla" id="perilla"></div></div>
+        <div class="lectura">
+          <div><span>dir</span><b id="vDir">0</b></div>
+          <div><span>vel</span><b id="vVel">0</b></div>
+        </div>
+        <div class="fila-btn" style="margin-top:0.45rem">
+          <button class="btn" id="btnTurbo" style="flex:1">botón (turbo)</button>
+        </div>
+        <label class="chk" style="margin-top:0.45rem"><input type="checkbox" id="chkAutoSel"> autopiloto también para el elegido</label>
+        <p class="nota">Arrastra la perilla (mouse o dedo) o usa <b>flechas/WASD</b> y <b>espacio</b>. Sale exactamente lo que mandaría el KY-023: dir y vel enteros en −100..100. Los otros dos jugadores llevan un piloto automático que también manda CTRL por la red.</p>
+      </div>
+    </div>
+    <table class="mini" id="tablaCarros"></table>
+  </section>
+
+  <!-- ======================= zona robótica ======================= -->
+  <section class="panel zona c6" style="--zc: var(--robot)">
+    <div class="titulo"><span><b>VLAN 2 · Zona robótica</b> · 192.168.20.0/24 · real-to-sim</span><span id="txtRobot">-</span></div>
+    <canvas id="cvRobots" style="aspect-ratio: 900 / 320"></canvas>
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-top:0.6rem">
+      <div class="seg" id="segRobot"></div>
+      <button class="btn" id="btnGesto">botón (gesto)</button>
+    </div>
+    <div class="desl" id="deslizadores"></div>
+    <table class="mini" id="tablaJuntas"></table>
+    <p class="nota">Punteado = lo que manda la ESP32 (comando, en grados: la entrada −100..100 llevada al rango de cada robot, como en <code>config.h</code>). Sólido = lo que "mide" el simulador: llega con el retardo de la red, se recorta al rango del robot y lo sigue con una dinámica de primer orden. La diferencia es el error real-to-sim. Spot: j1 altura, j2 cabeceo, j3 alabeo (±20) y el botón trota/para; Pepper y NAO: hombro, codo y cabeza, y el botón saluda 2,5 s. Sin JOINTS durante 1 s el sim vuelve a reposo. Los robots no elegidos se mueven con el <b>MODO_DEMO</b> del firmware.</p>
+  </section>
+
+  <!-- ======================= plano admin ======================= -->
+  <section class="panel zona c7" style="--zc: var(--admin)">
+    <div class="titulo"><span><b>VLAN 3 · Plano de administración</b> · admin 192.168.30.10 (monitor + Mosquitto)</span><span id="txtAdmin">-</span></div>
+    <div class="tabla-caja"><table class="adm" id="tablaAdmin"></table></div>
+    <div style="margin-top:0.7rem"><canvas id="cvRtt" style="aspect-ratio: 720 / 210"></canvas></div>
+    <div class="leyenda" id="leyendaRtt"></div>
+    <p class="nota" id="txtReglas"></p>
+  </section>
+
+  <section class="panel zona c5" style="--zc: var(--admin)">
+    <div class="titulo"><span><b>ESP32 esclava</b> · LEDs que siguen lab/estado/&lt;servicio&gt;</span><span id="txtFuenteLeds">fuente: simulación</span></div>
+    <div class="placa">
+      <div class="placa-tit"><span>led-monitor · 192.168.30.40</span><span>fijo = OK · parpadeo 2 Hz = LENTO · apagado = CAIDO · destello = ? · vaivén = sin broker</span></div>
+      <div class="leds" id="leds"></div>
+      <div class="led-placa"><span class="led on" id="ledG2"></span><span>GPIO 2 (LED de la placa) = conectada al broker MQTT</span></div>
+    </div>
+    <div class="titulo" style="margin-top:0.9rem"><span>Meter fallas en una zona (como <b>tc netem</b>)</span></div>
+    <div class="seg" id="segZonaFalla"></div>
+    <div class="desl" style="--zc: var(--rojo)">
+      <label>retardo extra<input type="range" id="rRet" min="0" max="400" step="5" value="0"><output id="oRet">0 ms</output></label>
+      <label>jitter<input type="range" id="rJit" min="0" max="150" step="1" value="0"><output id="oJit">0 ms</output></label>
+      <label>pérdida<input type="range" id="rPer" min="0" max="100" step="1" value="0"><output id="oPer">0 %</output></label>
+    </div>
+    <div class="fila-btn" style="margin-top:0.45rem; align-items:center">
+      <button class="btn" id="btnRedSana">Red sana (todo a 0)</button>
+      <span class="nota" id="txtResumenRed" style="margin:0"></span>
+    </div>
+  </section>
+
+  <!-- ======================= monitor ======================= -->
+  <section class="panel c7" id="panMonitor">
+    <div class="titulo"><span>Monitor de mensajes (datagramas que salen, formato exacto del contrato)</span><span id="txtCuenta">-</span></div>
+    <div class="fila-btn" style="margin-bottom:0.45rem; align-items:center">
+      <label class="chk"><input type="checkbox" data-f="CTRL" checked> CTRL</label>
+      <label class="chk"><input type="checkbox" data-f="JOINTS" checked> JOINTS</label>
+      <label class="chk"><input type="checkbox" data-f="HB" checked> HB</label>
+      <label class="chk"><input type="checkbox" data-f="MQTT" checked> MQTT</label>
+      <label class="chk"><input type="checkbox" data-f="LEDS" checked> LEDS (serie)</label>
+      <label class="chk"><input type="checkbox" data-f="SERIE" checked> serie real</label>
+      <button class="btn peq" id="btnPausa">pausar</button>
+      <button class="btn peq" id="btnLimpiar">limpiar</button>
+    </div>
+    <div class="monitor" id="monitor"></div>
+    <p class="nota">Las ESP32 mandan CTRL y JOINTS a 20 Hz; aquí se muestra uno de cada cuatro (5 Hz, igual que las líneas <b>ENVIADO,…</b> de la serie de la maestra), por eso el seq salta de a 4. Los HB salen cada 1 s de cada contenedor hacia 192.168.30.10:5300.</p>
+  </section>
+
+  <!-- ======================= conectado ======================= -->
+  <section class="panel c5 oculto" id="panSerie">
+    <div class="titulo"><span>Conectado · una ESP32 por USB (115200)</span></div>
+    <div class="fila-btn">
+      <button class="btn verde" id="btnConectar">Conectar placa</button>
+      <button class="btn" id="btnDesconectar" disabled>Desconectar</button>
+    </div>
+    <div id="estadoSerial">sin conectar</div>
+    <p class="nota">Las demás placas hablan por <b>WiFi</b> con los contenedores del PC, no por este puerto: aquí solo se ve la que está enchufada por USB (el resto de la página sigue simulado).</p>
+    <div class="ultima"><span>última línea cruda</span><code id="ultimaLinea">-</code></div>
+    <div style="margin-top:0.5rem">
+      <div class="dato"><span>ESTADO</span><span id="dEstado">-</span></div>
+      <div class="dato"><span>RTT (PING/PONG con el admin)</span><span id="dRtt">-</span></div>
+      <div class="dato"><span>LEDS (esclava)</span><span id="dLeds">-</span></div>
+      <div class="dato"><span>lo que mueve en la página</span><span id="dMueve">-</span></div>
+    </div>
+    <div class="titulo" style="margin-top:0.8rem"><span>La página hace de joystick (MANUAL)</span></div>
+    <div class="fila-btn" style="align-items:center">
+      <label class="chk"><input type="checkbox" id="chkManual"> mandar MANUAL a 5 Hz</label>
+      <select id="selManual" aria-label="qué manda">
+        <option value="auto">auto (según la placa)</option>
+        <option value="joy">joystick (dir, vel)</option>
+        <option value="robot">deslizadores j1..j3</option>
+      </select>
+      <button class="btn" id="btnManualOff">MANUAL,OFF</button>
+    </div>
+    <div class="fila-btn" style="margin-top:0.45rem">
+      <input type="text" id="txtLibre" placeholder="otra línea para mandar" style="flex:1; min-width:140px">
+      <button class="btn" id="btnLibre">enviar</button>
+    </div>
+    <p class="nota">La maestra usa los valores de MANUAL durante 2 s en vez del ADC, así que la página los repite a 5 Hz mientras la casilla esté marcada; al desmarcarla manda <b>MANUAL,OFF</b>.</p>
+  </section>
+</main>
+
+<script>
+'use strict';
+/* =====================================================================================
+   Previsualización del tema 11. Un solo archivo, sin librerías: todo el laboratorio se
+   simula con un modelo sencillo pero coherente con el contrato del tema (mismas IPs, mismos
+   mensajes, mismas reglas de estado). Cada bloque explica por qué se hizo así.
+   ===================================================================================== */
+
+const $ = (id) => document.getElementById(id);
+const ahora = () => performance.now();
+const limitar = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const D2R = Math.PI / 180;
+// Ruido gaussiano (Box-Muller): el jitter de una red real se parece más a una campana que a un
+// reparto uniforme, y con esto la "latencia + ruido" del modelo se ve como en un ping de verdad.
+function gauss() { let u = 0; while (!u) u = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random()); }
+// Copia de aplicarZonaMuerta (firmware/esp32_maestra/logica.h), con el mismo redondeo entero.
+function zonaMuerta(v, zm) {
+  if (zm <= 0) return v;
+  if (v > -zm && v < zm) return 0;
+  const a = Math.abs(v), r = Math.floor(((a - zm) * 100 + Math.floor((100 - zm) / 2)) / (100 - zm));
+  return Math.sign(v) * limitar(r, 0, 100);
+}
+function normAng(a) { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; }
+
+/* ----------------------------- contrato: zonas, servicios, IPs ----------------------------- */
+const ZONAS = {
+  gamer:    { nombre: 'VLAN 1 · Zona gamer',              red: '192.168.10.0/24', color: '#3fbf8f', fondo: 'rgba(63,191,143,0.06)' },
+  robotica: { nombre: 'VLAN 2 · Zona robótica',           red: '192.168.20.0/24', color: '#f0913a', fondo: 'rgba(240,145,58,0.06)' },
+  admin:    { nombre: 'VLAN 3 · Plano de administración', red: '192.168.30.0/24', color: '#a77be8', fondo: 'rgba(167,123,232,0.07)' },
+};
+// Los 7 contenedores que el admin vigila (los 6 con LED + el servidor de pista).
+const SERVICIOS = [
+  { id: 'track-server', ip: '192.168.10.10', zona: 'gamer',    color: '#9aa3ad' },
+  { id: 'player-1',     ip: '192.168.10.21', zona: 'gamer',    color: '#e5534b', ctrl: 'ctrl-1' },
+  { id: 'player-2',     ip: '192.168.10.22', zona: 'gamer',    color: '#4f8fce', ctrl: 'ctrl-2' },
+  { id: 'player-3',     ip: '192.168.10.23', zona: 'gamer',    color: '#4caf7d', ctrl: 'ctrl-3' },
+  { id: 'sim-spot',     ip: '192.168.20.21', zona: 'robotica', color: '#e8b930', ctrl: 'ctrl-spot' },
+  { id: 'sim-pepper',   ip: '192.168.20.22', zona: 'robotica', color: '#d48ad8', ctrl: 'ctrl-pepper' },
+  { id: 'sim-nao',      ip: '192.168.20.23', zona: 'robotica', color: '#5fd0d8', ctrl: 'ctrl-nao' },
+];
+const SERV = Object.fromEntries(SERVICIOS.map((s) => [s.id, s]));
+// Orden de los LEDs de la esclava y sus GPIO (igual que la línea LEDS,... del contrato).
+const LED_ORDEN = ['player-1', 'player-2', 'player-3', 'sim-spot', 'sim-pepper', 'sim-nao'];
+const LED_GPIO = [16, 17, 18, 19, 21, 22];
+// Todas las IPs (para el ping libre y las etiquetas del mapa).
+const IPS = {
+  'track-server': '192.168.10.10', 'player-1': '192.168.10.21', 'player-2': '192.168.10.22', 'player-3': '192.168.10.23',
+  'ctrl-1': '192.168.10.31', 'ctrl-2': '192.168.10.32', 'ctrl-3': '192.168.10.33',
+  'sim-spot': '192.168.20.21', 'sim-pepper': '192.168.20.22', 'sim-nao': '192.168.20.23',
+  'ctrl-spot': '192.168.20.31', 'ctrl-pepper': '192.168.20.32', 'ctrl-nao': '192.168.20.33',
+  'admin': '192.168.30.10', 'esclava': '192.168.30.40',
+};
+const zonaDe = (n) => (IPS[n] || '').startsWith('192.168.10.') ? 'gamer' : (IPS[n] || '').startsWith('192.168.20.') ? 'robotica' : 'admin';
+
+// Reglas con las que el admin clasifica cada servicio: los mismos umbrales por defecto que
+// plano-admin/admin/monitor.py (HB_TIMEOUT_S, FALLOS_PING_CAIDO, UMBRAL_RTT_P95_MS, UMBRAL_JITTER_MS,
+// UMBRAL_PERDIDA_PCT, VENTANA_S). Por qué esos números: el control va a 20 Hz (un paquete cada 50 ms),
+// así que un RTT de más de 20 ms o un jitter de más de 10 ms ya se comen buena parte del período.
+const UMB = { sinLatidoMs: 3000, fallosPing: 2, rttP95Ms: 20, jitterMs: 10, perdidaPct: 5, ventanaS: 60, minMuestras: 20 };
+$('txtReglas').innerHTML = `Reglas del admin (las de <b>monitor.py</b>; los LEDs las siguen por MQTT): <b>CAIDO</b> si el contenedor dijo vivo=0 (testamento MQTT) o si pasan ${UMB.sinLatidoMs / 1000} s sin latido HB <i>y</i> fallan ${UMB.fallosPing} pings seguidos; <b>LENTO</b> si el RTT p95 &gt; ${UMB.rttP95Ms} ms, el jitter (RFC 3550, de latidos o de pings) &gt; ${UMB.jitterMs} ms, la pérdida del último minuto &gt; ${UMB.perdidaPct} % (con al menos ${UMB.minMuestras} muestras en la ventana: con menos, un solo paquete perdido ya pasaría del 5 %) o responde al ping pero no late; si no, <b>OK</b>. Disponibilidad = pings respondidos / intentados en los últimos ${UMB.ventanaS} s. Como todo se mide sobre un minuto, al volver a "red sana" el LENTO tarda hasta un minuto en limpiarse (igual que en el admin real). Al volver de <b>CAIDO</b> (arrancar de nuevo un contenedor o el router) se olvidan los pings y latidos perdidos durante la caída: ya se informaron como CAIDO y no son lentitud, así que vuelve a OK enseguida.`;
+
+// Qué contenedores están corriendo (el botón "detener" de la tabla los apaga).
+const corriendo = Object.fromEntries(SERVICIOS.map((s) => [s.id, true]));
+corriendo.router = true; corriendo.admin = true;
+for (const k of Object.keys(IPS)) if (!(k in corriendo)) corriendo[k] = true;  // ESP32 emuladas y esclava
+
+/* ----------------------------- modelo de red ----------------------------- */
+// Cada zona tiene una degradación que se puede subir con los deslizadores (como hace "tc qdisc add
+// dev eth0 root netem delay 100ms 20ms loss 5%" en la interfaz del contenedor). La red sana de un
+// bridge de Docker tarda unas décimas de milisegundo; cruzar el router agrega otra décima.
+const red = { gamer: { retardo: 0, jitter: 0, perdida: 0 }, robotica: { retardo: 0, jitter: 0, perdida: 0 } };
+function unaVia(zona, cruzaRouter) {
+  const p = red[zona] || { retardo: 0, jitter: 0 };
+  let ms = 0.2 + Math.random() * 0.25;
+  if (cruzaRouter) ms += 0.12 + Math.random() * 0.1;
+  return ms + p.retardo + Math.abs(gauss()) * p.jitter;
+}
+const sePierde = (zona) => !!red[zona] && Math.random() * 100 < red[zona].perdida;
+
+// Cola de entregas: un datagrama "en vuelo" es una función que se ejecuta cuando llega. Así el
+// retardo de la red afecta de verdad al control (el carro reacciona tarde, el robot sigue tarde).
+let cola = [];
+function programar(t, fn) { cola.push({ t, fn }); }
+function procesarCola() {
+  const n = ahora();
+  const listos = cola.filter((c) => c.t <= n);
+  if (!listos.length) return;
+  cola = cola.filter((c) => c.t > n);
+  listos.sort((a, b) => a.t - b.t).forEach((c) => c.fn());
+}
+
+// Reloj de cada ESP32 (millis() desde que arrancó): cada una arrancó en un momento distinto.
+const esp = {};
+for (const k of Object.keys(IPS)) esp[k] = { seq: 0, t0: ahora() - 20000 - Math.random() * 600000 };
+const millisDe = (k) => Math.round(ahora() - esp[k].t0);
+
+/* ----------------------------- monitor de mensajes ----------------------------- */
+const monitor = { pend: [], pausado: false, filtros: { CTRL: true, JOINTS: true, HB: true, MQTT: true, LEDS: true, SERIE: true }, total: 0 };
+const cuenta = { CTRL: 0, JOINTS: 0, HB: 0 };
+function alMonitor(tipo, prefijo, texto, marca) {
+  if (monitor.pausado || !monitor.filtros[tipo]) return;
+  monitor.pend.push({ tipo, prefijo, texto, marca });
+  if (monitor.pend.length > 200) monitor.pend.splice(0, monitor.pend.length - 200);
+}
+function volcarMonitor() {
+  // Se vuelca en lote unas 8 veces por segundo y se recortan las líneas viejas: con ~40 mensajes/s,
+  // tocar el DOM por cada uno haría que la página se trabe.
+  const el = $('monitor');
+  if (!monitor.pend.length) return;
+  const abajo = el.scrollHeight - el.scrollTop - el.clientHeight < 30;
+  const frag = document.createDocumentFragment();
+  for (const l of monitor.pend) {
+    const d = document.createElement('div');
+    d.className = l.tipo;
+    const p = document.createElement('span'); p.className = 'pre'; p.textContent = l.prefijo.padEnd(34, ' ');
+    const t = document.createElement('span'); t.textContent = l.texto; if (l.marca) t.className = 'perdido';
+    d.append(p, t);
+    if (l.marca) { const m = document.createElement('span'); m.className = 'tag'; m.textContent = '  ' + l.marca; d.append(m); }
+    frag.append(d);
+  }
+  monitor.pend.length = 0;
+  el.append(frag);
+  while (el.childElementCount > 220) el.firstChild.remove();
+  if (abajo) el.scrollTop = el.scrollHeight;
+}
+
+/* =====================================================================================
+   ZONA GAMER: pista tipo estadio y 6 carros con modelo de bicicleta (cinemático)
+   ===================================================================================== */
+const PISTA = { cx: 320, cy: 205, L: 150, R: 118, ancho: 62 };
+const PERIM = 4 * PISTA.L + 2 * Math.PI * PISTA.R;
+const N_PTS = 480;
+// Línea central muestreada en N_PTS puntos. El índice 0 es la meta, a mitad de la recta de arriba;
+// el sentido es horario en pantalla (y hacia abajo). Con la línea central se calcula el avance
+// (para contar vueltas), si el carro se salió al pasto y el punto al que apunta el autopiloto.
+function puntoPista(s) {
+  const { cx, cy, L, R } = PISTA;
+  s = ((s + L) % PERIM + PERIM) % PERIM;
+  if (s < 2 * L) return { x: cx - L + s, y: cy - R };
+  s -= 2 * L;
+  if (s < Math.PI * R) { const a = -Math.PI / 2 + s / R; return { x: cx + L + R * Math.cos(a), y: cy + R * Math.sin(a) }; }
+  s -= Math.PI * R;
+  if (s < 2 * L) return { x: cx + L - s, y: cy + R };
+  s -= 2 * L;
+  const a = Math.PI / 2 + s / R; return { x: cx - L + R * Math.cos(a), y: cy + R * Math.sin(a) };
+}
+const centro = [];
+for (let i = 0; i < N_PTS; i++) centro.push(puntoPista(i / N_PTS * PERIM));
+centro.forEach((p, i) => {
+  const q = centro[(i + 1) % N_PTS];
+  const h = Math.atan2(q.y - p.y, q.x - p.x);
+  p.h = h; p.nx = -Math.sin(h); p.ny = Math.cos(h);   // normal (hacia afuera en las curvas)
+});
+
+const VMAX = 170;        // px/s con vel = 100
+const EJE = 18;          // distancia entre ejes (px): con el ángulo de dirección da el radio de giro
+const MAX_GIRO = 0.45;   // rad de dirección con dir = ±100
+// Por defecto del contrato: player-1 rojo/deportivo, player-2 azul/clasico, player-3 verde/rally,
+// autónomos grises.
+const CARROS = [
+  { id: 'player-1', jugador: 1, color: '#e5534b', estilo: 'deportivo', et: 'P1', ini: N_PTS - 10, carril: -12, velAuto: 0.66 },
+  { id: 'player-2', jugador: 2, color: '#4f8fce', estilo: 'clasico',   et: 'P2', ini: N_PTS - 28, carril: 12,  velAuto: 0.6 },
+  { id: 'player-3', jugador: 3, color: '#4caf7d', estilo: 'rally',     et: 'P3', ini: N_PTS - 46, carril: -12, velAuto: 0.7 },
+  { id: 'auto-1', color: '#8b929b', estilo: 'clasico',   et: 'A1', ini: 120, carril: 14,  velAuto: 0.55, auto: true },
+  { id: 'auto-2', color: '#8b929b', estilo: 'deportivo', et: 'A2', ini: 240, carril: -14, velAuto: 0.62, auto: true },
+  { id: 'auto-3', color: '#8b929b', estilo: 'rally',     et: 'A3', ini: 360, carril: 0,   velAuto: 0.58, auto: true },
+];
+for (const c of CARROS) {
+  const p = centro[c.ini];
+  Object.assign(c, { x: p.x + p.nx * c.carril, y: p.y + p.ny * c.carril, yaw: p.h, v: 0, idx: c.ini, vueltas: 0,
+    ctrl: { dir: 0, vel: 0, boton: 0, t: -1e9 }, fuente: '-', fueraPista: false });
+}
+const carroJugador = (n) => CARROS[n - 1];
+
+function masCercano(c) {
+  // Busca cerca del índice anterior (barato); si quedó lejos (choque, reaparición) busca en toda la pista.
+  let mejor = c.idx, dmin = Infinity;
+  for (let k = -30; k <= 30; k++) {
+    const i = (c.idx + k + N_PTS) % N_PTS, p = centro[i];
+    const d = (p.x - c.x) ** 2 + (p.y - c.y) ** 2;
+    if (d < dmin) { dmin = d; mejor = i; }
+  }
+  if (dmin > 70 * 70) {
+    for (let i = 0; i < N_PTS; i++) { const p = centro[i]; const d = (p.x - c.x) ** 2 + (p.y - c.y) ** 2; if (d < dmin) { dmin = d; mejor = i; } }
+  }
+  return { i: mejor, d: Math.sqrt(dmin) };
+}
+
+// Piloto automático ("pure pursuit"): apunta a un punto de la línea central unos metros adelante
+// (desplazado a su carril) y convierte el error de rumbo en dir; frena un poco en las curvas.
+// Devuelve dir/vel enteros en −100..100, o sea, exactamente lo que mandaría un joystick.
+function autopiloto(c) {
+  const j = centro[(c.idx + 26) % N_PTS];
+  const err = normAng(Math.atan2(j.y + j.ny * c.carril - c.y, j.x + j.nx * c.carril - c.x) - c.yaw);
+  const dir = Math.round(limitar(err * 190, -100, 100));
+  const vel = Math.round(100 * c.velAuto * (1 - 0.35 * Math.abs(dir) / 100));
+  return { dir, vel };
+}
+
+function pasoPista(dt) {
+  const n = ahora();
+  for (const c of CARROS) {
+    let dir, vel, boton = 0;
+    if (c.auto) { ({ dir, vel } = autopiloto(c)); c.fuente = 'track-server'; }
+    else {
+      // Failsafe del servidor (contrato): si el player no mandó control en 1 s, el carro frena.
+      const fresco = n - c.ctrl.t < 1000;
+      dir = fresco ? c.ctrl.dir : 0; vel = fresco ? c.ctrl.vel : 0; boton = fresco ? c.ctrl.boton : 0;
+      c.failsafe = !fresco;
+    }
+    // Modelo de bicicleta: la velocidad se acerca a la pedida con aceleración limitada (frenar es
+    // más fuerte que acelerar) y el rumbo gira v/eje·tan(dirección). En el pasto se pierde agarre.
+    let vObj = vel / 100 * VMAX * (boton ? 1.3 : 1);
+    if (c.fueraPista) vObj *= 0.45;
+    const acelera = Math.abs(vObj) > Math.abs(c.v) && (Math.sign(vObj) === Math.sign(c.v) || c.v === 0);
+    const a = acelera ? 230 : 380;
+    c.v += limitar(vObj - c.v, -a * dt, a * dt);
+    c.yaw = normAng(c.yaw + c.v / EJE * Math.tan(dir / 100 * MAX_GIRO) * dt);
+    c.x += c.v * Math.cos(c.yaw) * dt;
+    c.y += c.v * Math.sin(c.yaw) * dt;
+    // Bordes del mundo: rebote suave para que nadie se salga del lienzo.
+    if (c.x < 8 || c.x > 632 || c.y < 8 || c.y > 392) { c.x = limitar(c.x, 8, 632); c.y = limitar(c.y, 8, 392); c.v *= -0.2; }
+    const prev = c.idx, mc = masCercano(c);
+    c.idx = mc.i; c.fueraPista = mc.d > PISTA.ancho / 2;
+    // Vuelta = pasar por el índice 0 hacia adelante (si se cruza hacia atrás, se descuenta).
+    if (prev > N_PTS * 0.8 && c.idx < N_PTS * 0.2) c.vueltas++;
+    if (prev < N_PTS * 0.2 && c.idx > N_PTS * 0.8) c.vueltas--;
+  }
+  // Choques: círculos que se empujan; suficiente para que no se atraviesen.
+  for (let i = 0; i < CARROS.length; i++) for (let k = i + 1; k < CARROS.length; k++) {
+    const a = CARROS[i], b = CARROS[k];
+    const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
+    if (d > 0 && d < 17) {
+      const e = (17 - d) / 2, ux = dx / d, uy = dy / d;
+      a.x -= ux * e; a.y -= uy * e; b.x += ux * e; b.y += uy * e;
+      a.v *= 0.92; b.v *= 0.92;
+    }
+  }
+}
+
+/* ----------------------------- joystick virtual y teclado ----------------------------- */
+const joy = { dir: 0, vel: 0, boton: 0, arrastrando: false };
+let jugadorSel = 1;
+const teclas = new Set();
+(function montarJoystick() {
+  const el = $('joy'), per = $('perilla');
+  const mover = (e) => {
+    const r = el.getBoundingClientRect();
+    const R = r.width / 2 - 27;   // recorrido de la perilla
+    let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+    const d = Math.hypot(dx, dy);
+    if (d > R) { dx *= R / d; dy *= R / d; }
+    // Zona muerta del firmware (aplicarZonaMuerta de logica.h con ZONA_MUERTA = 8): menos de 8 % del
+    // centro vale 0 (un KY-023 en reposo nunca lee el centro exacto) y lo de afuera se re-escala para
+    // que siga llegando a ±100 sin un salto de 0 a 8 en el borde.
+    joy.dir = zonaMuerta(Math.round(dx / R * 100), 8);
+    joy.vel = zonaMuerta(Math.round(-dy / R * 100), 8);   // arriba = acelerar (el eje Y de la pantalla crece hacia abajo)
+  };
+  el.addEventListener('pointerdown', (e) => { joy.arrastrando = true; el.setPointerCapture(e.pointerId); mover(e); });
+  el.addEventListener('pointermove', (e) => { if (joy.arrastrando) mover(e); });
+  const soltar = () => { joy.arrastrando = false; joy.dir = 0; joy.vel = 0; };  // resorte: vuelve al centro
+  el.addEventListener('pointerup', soltar); el.addEventListener('pointercancel', soltar);
+  window.joyPintar = () => {
+    const R = el.clientWidth / 2 - 27;
+    per.style.transform = `translate(${joy.dir / 100 * R}px, ${-joy.vel / 100 * R}px)`;
+    $('vDir').textContent = joy.dir; $('vVel').textContent = joy.vel;
+  };
+})();
+function botonMantener(id, alCambiar) {
+  const b = $(id);
+  const on = (e) => { e.preventDefault(); b.classList.add('apretado'); alCambiar(1); };
+  const off = () => { b.classList.remove('apretado'); alCambiar(0); };
+  b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off);
+  b.addEventListener('pointerleave', off); b.addEventListener('pointercancel', off);
+}
+botonMantener('btnTurbo', (v) => { joy.boton = v; joy.botonBtn = v; });
+const esCampo = (t) => t && /INPUT|SELECT|TEXTAREA|BUTTON/.test(t.tagName);
+window.addEventListener('keydown', (e) => {
+  if (esCampo(e.target) && e.target.id !== 'joy') return;   // las flechas de un deslizador son del deslizador
+  const k = e.key.toLowerCase();
+  if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd', ' '].includes(k)) {
+    e.preventDefault(); teclas.add(k);
+  }
+});
+window.addEventListener('keyup', (e) => teclas.delete(e.key.toLowerCase()));
+window.addEventListener('blur', () => teclas.clear());
+function actualizarTeclado(dt) {
+  if (joy.arrastrando) return;
+  const t = (a, b) => teclas.has(a) || teclas.has(b);
+  const objDir = (t('arrowright', 'd') ? 100 : 0) - (t('arrowleft', 'a') ? 100 : 0);
+  const objVel = (t('arrowup', 'w') ? 100 : 0) - (t('arrowdown', 's') ? 100 : 0);
+  if (!teclas.size && !joy.teclado) return;
+  joy.teclado = teclas.size > 0;
+  // Rampa de ~0.3 s: con teclas el valor no salta de 0 a 100 de golpe (parece más un joystick).
+  joy.dir = Math.round(joy.dir + limitar(objDir - joy.dir, -350 * dt, 350 * dt));
+  joy.vel = Math.round(joy.vel + limitar(objVel - joy.vel, -350 * dt, 350 * dt));
+  joy.boton = teclas.has(' ') ? 1 : (joy.botonBtn || 0);
+}
+
+/* =====================================================================================
+   ZONA ROBÓTICA: Spot, Pepper y NAO, comando (ESP32) vs medido (simulador)
+   ===================================================================================== */
+// Cómo llegan los ángulos (igual que el firmware y zona-robotica/robots.py de este tema):
+//  - La maestra lleva cada entrada (potenciómetro, MODO_DEMO o MANUAL, todas en −100..100) a grados
+//    con una recta de −100..100 a J*_MIN..J*_MAX (config.h). El rango depende del robot: Spot ±20
+//    en los tres ejes; NAO y Pepper hombro −90..90, codo 0..88 (solo dobla hacia un lado) y cabeza
+//    −90..90. Así la carrera completa del potenciómetro cae dentro de lo que el robot puede hacer.
+//  - Cada simulador decide qué mueve cada j y RECORTA al rango de su robot. Spot: j1 = altura del
+//    cuerpo (±20 "grados" = ±30 mm), j2 = cabeceo y j3 = alabeo (±20°); botón = trotar / parar.
+//    Pepper y NAO: j1 = hombro derecho (RShoulderPitch, 0° = brazo al frente, + = hacia abajo),
+//    j2 = codo derecho (RElbowRoll), j3 = cabeza (HeadYaw); botón = saludo de 2,5 s.
+//  Aun así el simulador recorta (por ejemplo, si alguien cambia J*_MIN/MAX en config.h): si se pidiera
+//  60° de cabeceo a Spot, el "medido" se quedaría en 20°, y ese error no sería de la red.
+// tau = constante de tiempo y vmax = velocidad máxima (°/s) del movimiento simulado: Spot va con
+// rampa de 60°/s (robots.py, para no volcarse), Pepper es grande y lento, NAO es chico y rápido.
+const MANDO = {   // J*_MIN..J*_MAX por defecto de firmware/esp32_maestra/config.h, por robot y eje
+  spot:   [[-20, 20], [-20, 20], [-20, 20]],
+  pepper: [[-90, 90], [0, 88], [-90, 90]],
+  nao:    [[-90, 90], [0, 88], [-90, 90]],
+};
+const ROBOTS = {
+  spot:   { nombre: 'Spot',   srv: 'sim-spot',   ctrl: 'ctrl-spot',   tau: 0.15, vmax: 60,  gesto: 'trotar / parar',
+            reposo: [0, 0, 0],
+            j: [{ n: 'altura cuerpo', lo: -20, hi: 20, v: 0 }, { n: 'cabeceo (+ nariz arriba)', lo: -20, hi: 20, v: 0 }, { n: 'alabeo (+ derecha)', lo: -20, hi: 20, v: 0 }] },
+  pepper: { nombre: 'Pepper', srv: 'sim-pepper', ctrl: 'ctrl-pepper', tau: 0.3, vmax: 120, gesto: 'saludo',
+            reposo: [90.5, 29.7, -0.4],   // postura Stand de qibullet (REPOSO de robots.py), en grados
+            j: [{ n: 'hombro (RShoulderPitch)', lo: -119.5, hi: 119.5, v: 20 }, { n: 'codo (RElbowRoll)', lo: 0.5, hi: 89.5, v: 30 }, { n: 'cabeza (HeadYaw)', lo: -119.5, hi: 119.5, v: 0 }] },
+  nao:    { nombre: 'NAO',    srv: 'sim-nao',    ctrl: 'ctrl-nao',    tau: 0.12, vmax: 300, gesto: 'saludo',
+            reposo: [82.7, 23.9, 0],
+            j: [{ n: 'hombro (RShoulderPitch)', lo: -119.5, hi: 119.5, v: 20 }, { n: 'codo (RElbowRoll)', lo: 2, hi: 88.5, v: 30 }, { n: 'cabeza (HeadYaw)', lo: -119.5, hi: 119.5, v: 0 }] },
+};
+// −100..100 -> grados, la misma recta que hace la maestra (logica.h): −100 = MIN, 100 = MAX.
+const aDeg = (pos, clave, k) => { const [lo, hi] = MANDO[clave][k]; return lo + (pos + 100) / 200 * (hi - lo); };
+// La inversa (grados -> −100..100), solo para poner los deslizadores en la pose inicial.
+const aPos = (deg, clave, k) => { const [lo, hi] = MANDO[clave][k]; return Math.round(limitar((deg - lo) / (hi - lo) * 200 - 100, -100, 100)); };
+for (const [clave, r] of Object.entries(ROBOTS)) {
+  const ini = r.j.map((x) => x.v);
+  Object.assign(r, { clave, desl: ini.map((g, k) => aPos(g, clave, k)), cmd: ini.slice(), rec: ini.slice(), med: r.reposo.slice(), obj: r.reposo.slice(),
+    boton: 0, botonRec: 0, gestoHasta: 0, trotando: false, tRec: -1e9, modo: 'reposo' });
+}
+let robotSel = 'pepper';
+
+function pasoRobots(dt) {
+  const n = ahora();
+  for (const r of Object.values(ROBOTS)) {
+    if (!corriendo[r.srv]) continue;   // contenedor detenido: el robot queda congelado
+    // Máquina de estados de sim_robot.py: sin JOINTS durante 1 s = reposo (failsafe: deja de trotar
+    // y corta el gesto); con datos = siguiendo; el botón arranca el gesto / el trote.
+    let obj, vmax = r.vmax;
+    if (n - r.tRec > 1000) {
+      r.modo = 'reposo'; r.trotando = false; r.gestoHasta = 0;
+      obj = r.reposo; vmax = Math.min(vmax, 57);   // vuelve a la postura "suavemente" (1 rad/s)
+    } else if (n < r.gestoHasta) {
+      // Saludo de robots.py (_saludo): hombro arriba (−1,15 rad), codo yendo y viniendo a 2 Hz,
+      // cabeza girada −0,35 rad. Mientras dura, el robot NO sigue a j1..j3 (el error sube a propósito).
+      r.modo = 'gesto';
+      const t = (n - (r.gestoHasta - 2500)) / 1000;
+      obj = [-65.9, 43 + 25.8 * Math.sin(2 * Math.PI * 2 * t), -20];
+    } else {
+      r.modo = r.trotando ? 'trotando' : 'siguiendo';
+      obj = r.rec.map((v, k) => limitar(v, r.j[k].lo, r.j[k].hi));   // recorte al rango del robot
+    }
+    r.obj = obj;
+    for (let k = 0; k < 3; k++) {
+      let d = (obj[k] - r.med[k]) * (1 - Math.exp(-dt / r.tau));     // primer orden
+      d = limitar(d, -vmax * dt, vmax * dt);                           // saturación de velocidad
+      r.med[k] += d + gauss() * 0.04;                                  // un poco de ruido del "sensor"
+    }
+  }
+}
+
+/* =====================================================================================
+   PLANO DE ADMINISTRACIÓN: latidos, ping, clasificación, MQTT y la ESP32 esclava
+   ===================================================================================== */
+const t0Pagina = ahora();
+const adm = {};
+// rtt = los últimos 60 s para la gráfica (un hueco = sin respuesta); vent = la ventana con la que se
+// decide (como Sondeo.intentos de monitor.py), de la que se pueden "olvidar" los fallos de una caída
+// sin borrar los huecos de la gráfica.
+for (const s of SERVICIOS) adm[s.id] = { ultimoHB: ahora(), llegadas: [], jit: 0, prevHB: null, rtt: new Array(60).fill(null), vent: [],
+  estado: 'OK', tEstado: ahora(), perdida: 0, perdidaHB: 0, muestrasHB: 0, disp: 100, p95: null, fallos: 0, jitPing: 0, vivo0: false };
+const ledEst = Object.fromEntries(LED_ORDEN.map((s) => [s, 'OK']));   // lo que cree la esclava (por MQTT)
+// Contadores de las reglas FORWARD del router (lo que muestra "iptables -L FORWARD -v").
+const IPT = [
+  { acc: 'ACCEPT', txt: 'vlan3_admin → vlan1_gamer', n: 0 },
+  { acc: 'ACCEPT', txt: 'vlan1_gamer → vlan3_admin', n: 0 },
+  { acc: 'ACCEPT', txt: 'vlan3_admin → vlan2_robotica', n: 0 },
+  { acc: 'ACCEPT', txt: 'vlan2_robotica → vlan3_admin', n: 0 },
+  { acc: 'DROP',   txt: 'vlan1_gamer ↔ vlan2_robotica', n: 0 },
+];
+const reglaIpt = (zo, zd) => (zo === 'admin' && zd === 'gamer' ? 0 : zo === 'gamer' && zd === 'admin' ? 1 : zo === 'admin' && zd === 'robotica' ? 2 : zo === 'robotica' && zd === 'admin' ? 3 : 4);
+let flashDrop = 0;
+
+// Latido HB de un contenedor: cruza el router hacia el admin. Si se pierde o no hay router, el
+// admin simplemente no lo ve (UDP no avisa); eso es lo que termina marcándolo CAIDO.
+function enviarLatido(s) {
+  const z = s.zona, k = esp[s.id] || (esp[s.id] = { seq: 0, t0: ahora() - 5000 });
+  k.seq++;
+  const seq = k.seq, txt = `HB,${s.id},${seq},${millisDe(s.id)}`;
+  cuenta.HB++;
+  const tEnvio = ahora();
+  const perdido = sePierde(z);
+  const lat = unaVia(z, true);
+  alMonitor('HB', `${s.id} → 192.168.30.10:5300`, txt, !corriendo.router ? '(sin router: no sale de la zona)' : perdido ? '(se perdió en la red)' : '');
+  paqueteMapa(rutaHacia(s.id, 'admin'), s.color, lat, !corriendo.router ? 'router' : perdido ? 'perdido' : 'ok');
+  if (!corriendo.router || perdido) return;
+  IPT[reglaIpt(z, 'admin')].n++;
+  programar(tEnvio + lat, () => {
+    if (!corriendo.admin) return;
+    const a = adm[s.id], llegada = tEnvio + lat;
+    a.ultimoHB = Math.max(a.ultimoHB, llegada);
+    a.llegadas.push({ t: llegada, seq });
+    // Jitter RFC 3550 entre latidos consecutivos que llegaron: D = Δllegada − Δenvío; J += (|D| − J)/16.
+    if (a.prevHB) { const D = (llegada - a.prevHB[1]) - (tEnvio - a.prevHB[0]); a.jit += (Math.abs(D) - a.jit) / 16; }
+    a.prevHB = [tEnvio, llegada];
+  });
+}
+
+function clasificar(a, n) {
+  const hbFresco = n - a.ultimoHB <= UMB.sinLatidoMs;
+  if (a.vivo0) return 'CAIDO';
+  // Se piden las dos cosas (sin latido Y sin ping) porque cada una sola puede fallar sin que el
+  // servicio esté caído: un latido puede trabarse, y un ping suelto lo puede descartar la red.
+  if (!hbFresco && a.fallos >= UMB.fallosPing) return 'CAIDO';
+  // La pérdida solo cuenta con suficientes muestras (MIN_MUESTRAS_PERDIDA de monitor.py): la de
+  // latidos (por seq) y la de pings, cada una con su propio número de muestras.
+  const perdidaJuzgable = (a.perdidaHB > UMB.perdidaPct && a.muestrasHB >= UMB.minMuestras) ||
+    (100 - a.disp > UMB.perdidaPct && a.vent.length >= UMB.minMuestras);
+  if (!hbFresco || (a.p95 !== null && a.p95 > UMB.rttP95Ms) || Math.max(a.jit, a.jitPing) > UMB.jitterMs || perdidaJuzgable) return 'LENTO';
+  return 'OK';
+}
+// p95, disponibilidad y jitter del ping sobre la ventana, como Sondeo.resumen de monitor.py (el
+// jitter del ping es el promedio de |RTT_i − RTT_(i−1)| entre respuestas consecutivas).
+function medirVentana(a) {
+  const ok = a.vent.filter((x) => x.rtt !== null).map((x) => x.rtt);
+  a.p95 = p95(ok);
+  a.disp = a.vent.length ? 100 * ok.length / a.vent.length : 100;
+  let suma = 0;
+  for (let i = 1; i < ok.length; i++) suma += Math.abs(ok[i] - ok[i - 1]);
+  a.jitPing = ok.length >= 2 ? suma / (ok.length - 1) : 0;
+  // Pérdida del último minuto que muestra la tabla: la peor entre latidos (por seq) y pings.
+  a.perdida = Math.max(a.perdidaHB, 100 - a.disp);
+}
+function p95(v) { if (!v.length) return null; const o = v.slice().sort((x, y) => x - y); return o[Math.min(o.length - 1, Math.ceil(0.95 * o.length) - 1)]; }
+
+// Cada segundo el admin: hace ping (ICMP por el router) a cada contenedor, actualiza la ventana de
+// pérdida y la disponibilidad, reclasifica y, si cambió el estado, lo publica retenido por MQTT.
+function tickAdmin() {
+  const n = ahora();
+  for (const s of SERVICIOS) {
+    const a = adm[s.id], z = s.zona;
+    // Pérdida por número de secuencia (como ContadorSecuencia de comun/protocolo.py): entre el
+    // menor y el mayor seq que llegaron en la ventana deberían haber llegado todos los del medio.
+    a.llegadas = a.llegadas.filter((x) => n - x.t <= UMB.ventanaS * 1000);
+    a.muestrasHB = 0;
+    if (a.llegadas.length >= 2) {
+      const seqs = a.llegadas.map((x) => x.seq), esperados = Math.max(...seqs) - Math.min(...seqs) + 1;
+      a.perdidaHB = Math.max(0, 100 * (1 - a.llegadas.length / esperados));
+      a.muestrasHB = esperados;
+    } else a.perdidaHB = 0;   // con 0 o 1 latido no hay pérdida que medir (el CAIDO lo da la edad del latido)
+    let rtt = null;
+    if (corriendo.router && corriendo[s.id] && !sePierde(z) && !sePierde(z)) {
+      rtt = unaVia(z, true) + unaVia(z, true);
+      IPT[reglaIpt('admin', z)].n++; IPT[reglaIpt(z, 'admin')].n++;
+    }
+    a.rtt.push(rtt); a.rtt.shift();
+    a.vent.push({ t: n, rtt });
+    a.vent = a.vent.filter((x) => n - x.t <= UMB.ventanaS * 1000);
+    a.fallos = rtt === null ? a.fallos + 1 : 0;
+    medirVentana(a);
+    let nuevo = clasificar(a, n);
+    if (a.estado === 'CAIDO' && nuevo !== 'CAIDO') {
+      // Volvió (olvidar_fallos + olvidar_ventana de monitor.py): lo perdido durante la caída ya se
+      // informó como CAIDO; si se quedara en la ventana, el servicio pasaría casi un minuto en LENTO
+      // "por pérdida" aunque ya responde perfecto.
+      a.vent = a.vent.filter((x) => x.rtt !== null);
+      // De los latidos solo quedan los que llegaron DESPUÉS de marcarse CAIDO (los de la vuelta): si
+      // quedara uno de antes, el salto de seq de la caída (router detenido) contaría como pérdida.
+      a.llegadas = a.llegadas.filter((x) => x.t > a.tEstado);
+      a.perdidaHB = 0; a.muestrasHB = 0;
+      medirVentana(a);
+      nuevo = clasificar(a, n);
+    }
+    if (nuevo !== a.estado) {
+      a.estado = nuevo; a.tEstado = n;
+      alMonitor('MQTT', 'admin → mosquitto (retenido)', `lab/estado/${s.id} = ${nuevo}`);
+      // La esclava está suscrita a lab/estado/#: le llega en unas decenas de ms (misma VLAN que el broker).
+      if (LED_ORDEN.includes(s.id)) programar(n + 30 + Math.random() * 30, () => { ledEst[s.id] = nuevo; imprimirLeds(); });
+    }
+  }
+}
+// La esclava imprime LEDS,... por su serie al cambiar algo y cada 2 s (contrato).
+function imprimirLeds() { alMonitor('LEDS', 'esclava (serie USB)', 'LEDS,' + LED_ORDEN.map((s) => ledEst[s]).join(',')); }
+
+/* =====================================================================================
+   MAPA DE RED: zonas, nodos, router y paquetes animados
+   ===================================================================================== */
+const NODOS = {
+  'ctrl-1': { x: 80, y: 62, esp: true }, 'ctrl-2': { x: 205, y: 62, esp: true }, 'ctrl-3': { x: 330, y: 62, esp: true },
+  'player-1': { x: 80, y: 122 }, 'player-2': { x: 205, y: 122 }, 'player-3': { x: 330, y: 122 }, 'track-server': { x: 205, y: 200 },
+  'ctrl-spot': { x: 670, y: 62, esp: true }, 'ctrl-pepper': { x: 795, y: 62, esp: true }, 'ctrl-nao': { x: 920, y: 62, esp: true },
+  'sim-spot': { x: 670, y: 122 }, 'sim-pepper': { x: 795, y: 122 }, 'sim-nao': { x: 920, y: 122 },
+  'admin': { x: 410, y: 345 }, 'esclava': { x: 590, y: 345, esp: true },
+};
+const ROUTER = { x: 500, y: 162 };
+const BUS = { gamer: 162, robotica: 162, admin: 296 };
+const CAJAS = { gamer: [12, 12, 400, 238], robotica: [600, 12, 988, 238], admin: [290, 252, 710, 392] };
+// Ruta de un nodo hasta el router: baja/sube a la "barra" de su red y la recorre hasta el router.
+// Arranca en el borde de la caja que mira a la barra (no en el centro, para no tapar el texto).
+const borde = (n) => { const p = NODOS[n], h = p.esp ? 15 : 20; return { x: p.x, y: zonaDe(n) === 'admin' ? p.y - h : p.y + h }; };
+function hastaRouter(n) {
+  const p = NODOS[n], z = zonaDe(n);
+  if (z === 'admin') return [borde(n), { x: p.x, y: BUS.admin }, { x: ROUTER.x, y: BUS.admin }, { x: ROUTER.x, y: ROUTER.y }];
+  return [borde(n), { x: p.x, y: BUS[z] }, { x: ROUTER.x, y: ROUTER.y }];
+}
+function rutaHacia(o, d) {
+  const zo = zonaDe(o), zd = zonaDe(d);
+  if (zo === zd) { const a = borde(o), b = borde(d), y = BUS[zo]; return [a, { x: a.x, y }, { x: b.x, y }, b]; }
+  return hastaRouter(o).concat(hastaRouter(d).reverse().slice(1));
+}
+let paquetes = [];
+// final: 'ok' llega; 'perdido' se desvanece a mitad de camino; 'bloqueado' muere en el router con
+// una X roja; 'router' muere en la barra porque no hay router. alFin se llama al terminar.
+function paqueteMapa(ruta, color, latMs, final, alFin, grande) {
+  if (paquetes.length > 160) return;
+  let pts = ruta;
+  if (final === 'bloqueado' || final === 'router') {
+    const iR = ruta.findIndex((p) => p.x === ROUTER.x && p.y === ROUTER.y);
+    pts = ruta.slice(0, iR + 1);
+    if (final === 'router') pts = pts.slice(0, -1);
+  }
+  let largo = 0; for (let i = 1; i < pts.length; i++) largo += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+  // La duración visual crece con la latencia real, así el retardo que se mete "se ve".
+  const dur = Math.min(3000, 450 + largo * 1.6 + latMs * 4);
+  paquetes.push({ pts, largo, t0: ahora(), dur, color, final, alFin, grande, corte: final === 'perdido' ? 0.3 + Math.random() * 0.5 : 1 });
+}
+function puntoEn(pq, f) {
+  let obj = f * pq.largo;
+  for (let i = 1; i < pq.pts.length; i++) {
+    const a = pq.pts[i - 1], b = pq.pts[i], l = Math.hypot(b.x - a.x, b.y - a.y);
+    if (obj <= l || i === pq.pts.length - 1) { const t = l ? Math.min(1, obj / l) : 1; return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }; }
+    obj -= l;
+  }
+  return pq.pts[pq.pts.length - 1];
+}
+
+function estadoNodo(n) {
+  if (!corriendo[n]) return 'CAIDO';
+  if (adm[n]) return adm[n].estado;
+  return null;
+}
+const COLOR_EST = { OK: '#4caf7d', LENTO: '#e8b930', CAIDO: '#d9534f' };
+
+function dibujarMapa(ctx) {
+  const W = 1000, H = 400, n = ahora();
+  ctx.clearRect(0, 0, W, H);
+  ctx.font = '600 12px "IBM Plex Mono", monospace';
+  // Zonas (cajas de color como en el diagrama del enunciado)
+  for (const [z, c] of Object.entries(CAJAS)) {
+    const Z = ZONAS[z];
+    ctx.fillStyle = Z.fondo; ctx.strokeStyle = Z.color; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.roundRect(c[0], c[1], c[2] - c[0], c[3] - c[1], 8); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = Z.color; ctx.textAlign = 'left';
+    ctx.fillText(`${Z.nombre} · ${Z.red}`, c[0] + 10, c[1] + 18);
+  }
+  // Barras de cada red (el "switch" virtual del bridge) y enlaces al router
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(63,191,143,0.5)'; ctx.beginPath(); ctx.moveTo(60, BUS.gamer); ctx.lineTo(ROUTER.x, BUS.gamer); ctx.stroke();
+  ctx.strokeStyle = 'rgba(240,145,58,0.5)'; ctx.beginPath(); ctx.moveTo(ROUTER.x, BUS.robotica); ctx.lineTo(940, BUS.robotica); ctx.stroke();
+  ctx.strokeStyle = 'rgba(167,123,232,0.55)'; ctx.beginPath(); ctx.moveTo(390, BUS.admin); ctx.lineTo(610, BUS.admin); ctx.moveTo(ROUTER.x, BUS.admin); ctx.lineTo(ROUTER.x, ROUTER.y); ctx.stroke();
+  ctx.lineWidth = 1.2;
+  for (const [k, p] of Object.entries(NODOS)) {
+    const z = zonaDe(k);
+    if (p.esp && z !== 'admin') continue;
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x, BUS[z]); ctx.stroke();
+  }
+  // ESP32 -> su contenedor (UDP; en el laboratorio real llegan por WiFi a la IP del PC)
+  ctx.setLineDash([3, 3]);
+  for (const s of SERVICIOS) if (s.ctrl) { const a = NODOS[s.ctrl], b = NODOS[s.id]; ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.beginPath(); ctx.moveTo(a.x, a.y + 14); ctx.lineTo(b.x, b.y - 18); ctx.stroke(); }
+  ctx.setLineDash([]);
+  ctx.font = '10px "IBM Plex Mono", monospace'; ctx.fillStyle = '#6b737c'; ctx.textAlign = 'center';
+  ctx.fillText('UDP dir/vel', 142, 96); ctx.fillText('UDP joints', 732, 96);
+  ctx.fillText('WebSocket', 310, 186);
+  // Router
+  ctx.fillStyle = corriendo.router ? '#1c2228' : '#141618';
+  ctx.strokeStyle = corriendo.router ? '#e7e9ec' : '#4a5058'; ctx.lineWidth = 1.6;
+  if (!corriendo.router) ctx.setLineDash([5, 4]);
+  ctx.beginPath(); ctx.roundRect(ROUTER.x - 62, ROUTER.y - 30, 124, 60, 8); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = corriendo.router ? '#e7e9ec' : '#5b626b'; ctx.font = '600 12px "IBM Plex Mono", monospace';
+  ctx.fillText(corriendo.router ? 'router' : 'router (detenido)', ROUTER.x, ROUTER.y - 12);
+  ctx.font = '10px "IBM Plex Mono", monospace'; ctx.fillStyle = '#8b929b';
+  ctx.fillText('FRR + iptables', ROUTER.x, ROUTER.y + 2);
+  ctx.fillText('.10/.20/.30.254', ROUTER.x, ROUTER.y + 16);
+  // Nodos
+  for (const [k, p] of Object.entries(NODOS)) {
+    const vivo = corriendo[k];
+    const w = p.esp ? 112 : 118, h = p.esp ? 30 : 40;
+    ctx.fillStyle = vivo ? '#171c21' : '#121417';
+    ctx.strokeStyle = vivo ? (p.esp ? '#4b5560' : '#9aa3ad') : '#3a4047';
+    ctx.lineWidth = 1.2; if (p.esp || !vivo) ctx.setLineDash([4, 3]);
+    ctx.beginPath(); ctx.roundRect(p.x - w / 2, p.y - h / 2, w, h, 6); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
+    const col = SERV[k] ? SERV[k].color : '#c9cdd3';
+    ctx.textAlign = 'center';
+    ctx.font = (p.esp ? '' : '600 ') + '11px "IBM Plex Mono", monospace';
+    ctx.fillStyle = vivo ? (SERV[k] ? col : '#c9cdd3') : '#5b626b';
+    const nom = p.esp ? (k === 'esclava' ? 'ESP32 esclava' : 'ESP32 ' + k) : k;
+    ctx.fillText(nom, p.x, p.y + (p.esp ? -2 : -4));
+    ctx.font = '10px "IBM Plex Mono", monospace'; ctx.fillStyle = vivo ? '#8b929b' : '#4a5058';
+    ctx.fillText(vivo ? '.' + IPS[k].split('.').slice(2).join('.') : 'detenido', p.x, p.y + (p.esp ? 10 : 11));
+    const est = estadoNodo(k);
+    if (est) { ctx.fillStyle = COLOR_EST[est]; ctx.beginPath(); ctx.arc(p.x + w / 2 - 8, p.y - h / 2 + 8, 4, 0, 7); ctx.fill(); }
+  }
+  // Paquetes. Los alFin se llaman DESPUÉS del filtro: si un alFin crea otro paquete (la respuesta
+  // de un ping) y se llamara dentro del filter, el paquete nuevo quedaría en el arreglo viejo y se perdería.
+  const pendientes = [];
+  paquetes = paquetes.filter((pq) => {
+    const f = (n - pq.t0) / pq.dur;
+    if (pq.final === 'perdido' && f >= pq.corte) {
+      const q = puntoEn(pq, pq.corte), g = (f - pq.corte) / 0.25;
+      if (g > 1) return false;
+      ctx.globalAlpha = 1 - g; ctx.strokeStyle = '#d9534f'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(q.x, q.y, 3 + g * 8, 0, 7); ctx.stroke(); ctx.globalAlpha = 1;
+      return true;
+    }
+    if (f >= 1) {
+      if (pq.alFin && !pq.hecho) { pq.hecho = true; pendientes.push(pq.alFin); }
+      if (pq.final === 'bloqueado' || pq.final === 'router') {
+        const g = (f - 1) * pq.dur;   // ms desde que llegó: la X queda fija 1.5 s y se apaga en 0.5 s
+        if (g > 2000) return false;
+        const q = pq.pts[pq.pts.length - 1];
+        ctx.globalAlpha = g < 1500 ? 1 : 1 - (g - 1500) / 500; ctx.strokeStyle = '#ff5c57'; ctx.lineWidth = 3;
+        const r = pq.grande ? 12 : 6;
+        ctx.beginPath(); ctx.moveTo(q.x - r, q.y - r); ctx.lineTo(q.x + r, q.y + r); ctx.moveTo(q.x + r, q.y - r); ctx.lineTo(q.x - r, q.y + r); ctx.stroke();
+        if (pq.grande) { ctx.font = '600 11px "IBM Plex Mono", monospace'; ctx.fillStyle = '#ff5c57'; ctx.fillText('DROP', q.x, q.y + 26); }
+        ctx.globalAlpha = 1;
+        return true;
+      }
+      return false;
+    }
+    const q = puntoEn(pq, f);
+    ctx.fillStyle = pq.color;
+    ctx.beginPath(); ctx.arc(q.x, q.y, pq.grande ? 6 : 3, 0, 7); ctx.fill();
+    if (pq.grande) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); }
+    return true;
+  });
+  pendientes.forEach((fn) => fn());
+}
+
+/* =====================================================================================
+   PING de un contenedor a otro: muestra el aislamiento
+   ===================================================================================== */
+const salida = $('salidaPing');
+let icmpSeq = 0;
+function logPing(html) { salida.insertAdjacentHTML('beforeend', html + '\n'); salida.scrollTop = salida.scrollHeight; }
+function hacerPing(o, d) {
+  const ipD = IPS[d], zo = zonaDe(o), zd = zonaDe(d);
+  icmpSeq++;
+  logPing(`<span class="cmd">$ docker exec ${o} ping -c 1 ${ipD}</span>`);
+  if (!corriendo[o]) { logPing(`<span class="mal">Error: el contenedor ${o} está detenido</span>`); return; }
+  if (o === d) { logPing('64 bytes from ' + ipD + ': ttl=64 time=0.04 ms (es él mismo)'); return; }
+  const fin = (ok, extra) => logPing(ok ? `<span class="ok">${extra}</span>` : `<span class="mal">${extra}</span>`);
+  // Misma red: no pasa por el router (TTL 64, un salto de capa 2 en el bridge).
+  if (zo === zd) {
+    const perd = sePierde(zo) || sePierde(zo) || !corriendo[d];
+    const lat = unaVia(zo) + unaVia(zo);
+    paqueteMapa(rutaHacia(o, d), '#ffffff', lat / 2, perd ? 'perdido' : 'ok', () => {
+      if (perd) return;
+      paqueteMapa(rutaHacia(d, o), '#ffffff', lat / 2, 'ok', () => fin(true, `64 bytes from ${ipD}: icmp_seq=${icmpSeq} ttl=64 time=${lat.toFixed(2)} ms`), true);
+    }, true);
+    if (perd) setTimeout(() => fin(false, `1 paquetes transmitidos, 0 recibidos, 100% pérdida${!corriendo[d] ? ' (' + d + ' detenido)' : ''}`), 1500);
+    return;
+  }
+  // Zona -> zona sin pasar por el admin: el router lo descarta (regla DROP vlan1<->vlan2).
+  if (zo !== 'admin' && zd !== 'admin') {
+    if (!corriendo.router) {
+      paqueteMapa(rutaHacia(o, d), '#ffffff', 0, 'router', () => fin(false, `From ${IPS[o]}: Destination Host Unreachable (el router está detenido: nadie responde en la .254)`), true);
+      return;
+    }
+    paqueteMapa(rutaHacia(o, d), '#ff8a80', 0, 'bloqueado', () => {
+      IPT[4].n++; flashDrop = ahora();
+      fin(false, `1 paquetes transmitidos, 0 recibidos, 100% pérdida\n→ el router lo descartó: iptables FORWARD ${zo === 'gamer' ? 'vlan1' : 'vlan2'} → ${zd === 'gamer' ? 'vlan1' : 'vlan2'} -j DROP`);
+    }, true);
+    return;
+  }
+  // Admin <-> zona: permitido por el router (TTL 63 = un salto de capa 3).
+  if (!corriendo.router) {
+    paqueteMapa(rutaHacia(o, d), '#ffffff', 0, 'router', () => fin(false, 'Destination Host Unreachable (el router está detenido)'), true);
+    return;
+  }
+  const zz = zo === 'admin' ? zd : zo;
+  const perd = sePierde(zz) || sePierde(zz) || !corriendo[d];
+  const lat = unaVia(zz, true) + unaVia(zz, true);
+  IPT[reglaIpt(zo, zd)].n++;
+  paqueteMapa(rutaHacia(o, d), '#ffffff', lat / 2, perd ? 'perdido' : 'ok', () => {
+    if (perd) return;
+    IPT[reglaIpt(zd, zo)].n++;
+    paqueteMapa(rutaHacia(d, o), '#ffffff', lat / 2, 'ok', () => fin(true, `64 bytes from ${ipD}: icmp_seq=${icmpSeq} ttl=63 time=${lat.toFixed(2)} ms  (pasó por el router)`), true);
+  }, true);
+  if (perd) setTimeout(() => fin(false, `1 paquetes transmitidos, 0 recibidos, 100% pérdida${!corriendo[d] ? ' (' + d + ' detenido)' : ''}`), 1800);
+}
+
+/* =====================================================================================
+   Control a 20 Hz: cada ESP32 manda su CTRL / JOINTS por la red simulada
+   ===================================================================================== */
+const placa = { conectada: false, ctrlHasta: { 1: 0, 2: 0, 3: 0 }, jointsHasta: { spot: 0, pepper: 0, nao: 0 }, tipo: null, robot: null, jugador: null, leds: null, tLeds: 0, mqtt: null, wifi: true };
+const player = { 1: { ultimoEsp: ahora() }, 2: { ultimoEsp: ahora() }, 3: { ultimoEsp: ahora() } };
+
+function tick20() {
+  const n = ahora();
+  // ---- zona gamer ----
+  for (const p of [1, 2, 3]) {
+    const s = SERV['player-' + p], car = carroJugador(p), ctrlId = s.ctrl;
+    if (n < placa.ctrlHasta[p]) { car.fuente = 'placa (serie)'; continue; }   // lo maneja la ESP32 real
+    let dir, vel, boton = 0;
+    if (p === jugadorSel && !$('chkAutoSel').checked) { dir = joy.dir; vel = joy.vel; boton = joy.boton; car.fuenteLocal = 'joystick'; }
+    else { ({ dir, vel } = autopiloto(car)); car.fuenteLocal = 'autopiloto'; }
+    const k = esp[ctrlId]; k.seq++;
+    const txt = `CTRL,${p},${k.seq},${millisDe(ctrlId)},${dir},${vel},${boton}`;
+    cuenta.CTRL++;
+    const perdido = sePierde('gamer'), lat = unaVia('gamer');
+    if (k.seq % 4 === 0) {
+      alMonitor('CTRL', `${ctrlId} → ${s.ip}:5000`, txt, perdido ? '(se perdió en la red)' : '');
+      paqueteMapa([{ x: NODOS[ctrlId].x, y: NODOS[ctrlId].y + 15 }, { x: NODOS[s.id].x, y: NODOS[s.id].y - 20 }], 'rgba(159,224,196,0.8)', lat, perdido ? 'perdido' : 'ok');
+    }
+    if (perdido) continue;
+    programar(n + lat, () => {
+      if (!corriendo[s.id]) return;
+      player[p].ultimoEsp = ahora();
+      // El player reenvía al track-server por WebSocket (TCP: no se pierde, pero sí se retrasa).
+      programar(ahora() + unaVia('gamer'), () => { if (corriendo['track-server']) { car.ctrl = { dir, vel, boton, t: ahora() }; car.fuente = car.fuenteLocal; } });
+    });
+  }
+  // Failsafe del player (contrato): sin nada de su ESP32 en 1 s, manda vel 0 al servidor.
+  for (const p of [1, 2, 3]) {
+    if (corriendo['player-' + p] && corriendo['track-server'] && n >= placa.ctrlHasta[p] && n - player[p].ultimoEsp > 1000) {
+      const car = carroJugador(p); car.ctrl = { dir: 0, vel: 0, boton: 0, t: n }; car.fuente = 'failsafe (vel 0)';
+    }
+  }
+  // ---- zona robótica ----
+  for (const r of Object.values(ROBOTS)) {
+    if (n < placa.jointsHasta[r.clave]) continue;
+    let j, boton = 0;
+    if (r.clave === robotSel) { j = r.desl.map((v, i) => aDeg(v, r.clave, i)); boton = r.boton; }
+    else {
+      // MODO_DEMO del firmware, copiado tal cual: senos de 8, 11 y 5 s con amplitud 80, 60 y 70
+      // (en −100..100) sobre el reloj de esa placa, y el botón apretado 0,5 s cada 6 s.
+      const ms = millisDe(r.ctrl), t = ms / 1000;
+      const v = [Math.round(80 * Math.sin(2 * Math.PI * t / 8)), Math.round(60 * Math.sin(2 * Math.PI * t / 11)), Math.round(70 * Math.sin(2 * Math.PI * t / 5))];
+      j = v.map((x, i) => aDeg(x, r.clave, i));
+      boton = ms % 6000 < 500 ? 1 : 0;
+    }
+    r.cmd = j;
+    const k = esp[r.ctrl]; k.seq++;
+    const txt = `JOINTS,${r.clave},${k.seq},${millisDe(r.ctrl)},${j[0].toFixed(1)},${j[1].toFixed(1)},${j[2].toFixed(1)},${boton}`;
+    cuenta.JOINTS++;
+    const perdido = sePierde('robotica'), lat = unaVia('robotica');
+    if (k.seq % 4 === 0) {
+      alMonitor('JOINTS', `${r.ctrl} → ${IPS[r.srv]}:5100`, txt, perdido ? '(se perdió en la red)' : '');
+      paqueteMapa([{ x: NODOS[r.ctrl].x, y: NODOS[r.ctrl].y + 15 }, { x: NODOS[r.srv].x, y: NODOS[r.srv].y - 20 }], 'rgba(246,183,122,0.8)', lat, perdido ? 'perdido' : 'ok');
+    }
+    if (perdido) continue;
+    const jj = j.slice();
+    programar(n + lat, () => recibirJoints(r, jj, boton));
+  }
+}
+function recibirJoints(r, j, boton) {
+  if (!corriendo[r.srv]) return;
+  r.rec = j; r.tRec = ahora();
+  // Se reacciona al FLANCO de subida (0 -> 1), no a cada datagrama con 1: la ESP32 repite el 1 a
+  // 20 Hz mientras el botón está apretado. Spot alterna trotar/parar; Pepper y NAO saludan 2,5 s.
+  if (boton && !r.botonRec) {
+    if (r.clave === 'spot') r.trotando = !r.trotando;
+    else if (ahora() >= r.gestoHasta) r.gestoHasta = ahora() + 2500;
+  }
+  r.botonRec = boton;
+}
+
+let ledsCada2 = 0;
+function tick1() {
+  for (const s of SERVICIOS) if (corriendo[s.id]) enviarLatido(s);
+  // Las ESP32 y la esclava también laten (solo se ven en el monitor).
+  for (const k of ['ctrl-1', 'ctrl-2', 'ctrl-3', 'ctrl-spot', 'ctrl-pepper', 'ctrl-nao', 'esclava']) {
+    esp[k].seq++; cuenta.HB++;
+    alMonitor('HB', `${k} → 192.168.30.10:5300`, `HB,${k},${esp[k].seq},${millisDe(k)}`);
+  }
+  tickAdmin();
+  if (++ledsCada2 % 2 === 0) imprimirLeds();
+}
+
+/* =====================================================================================
+   DIBUJO: pista, robots, gráfica de RTT
+   ===================================================================================== */
+// Ajusta la resolución real del canvas a su tamaño en pantalla (nítido en pantallas HiDPI) y
+// deja las coordenadas "lógicas" fijas (W x H) para que el dibujo no dependa del tamaño.
+function lienzo(cv, W, H) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.max(1, Math.round(cv.clientWidth * dpr)), h = Math.max(1, Math.round(w * H / W));
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(w / W, 0, 0, w / W, 0, 0);
+  return ctx;
+}
+
+function dibujarPista(ctx) {
+  ctx.fillStyle = '#0f1914'; ctx.fillRect(0, 0, 640, 400);
+  const traza = () => { ctx.beginPath(); centro.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))); ctx.closePath(); };
+  ctx.lineJoin = 'round';
+  // Pianos (rayas rojo/blanco) debajo, asfalto encima: queda un borde rayado a cada lado.
+  traza(); ctx.lineWidth = PISTA.ancho + 8; ctx.strokeStyle = '#d9d9d9'; ctx.setLineDash([10, 10]); ctx.stroke();
+  traza(); ctx.strokeStyle = '#b8443f'; ctx.lineDashOffset = 10; ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
+  traza(); ctx.lineWidth = PISTA.ancho; ctx.strokeStyle = '#2a2f35'; ctx.stroke();
+  traza(); ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.setLineDash([12, 14]); ctx.stroke(); ctx.setLineDash([]);
+  // Meta a cuadros (índice 0)
+  const m = centro[0];
+  for (let k = -4; k < 4; k++) for (let c = 0; c < 2; c++) {
+    ctx.fillStyle = (k + c) % 2 ? '#e7e9ec' : '#111';
+    ctx.fillRect(m.x - 4 + c * 4, m.y + k * (PISTA.ancho / 8), 4, PISTA.ancho / 8);
+  }
+  ctx.font = '600 13px "Space Grotesk", sans-serif'; ctx.fillStyle = '#5c7a6c'; ctx.textAlign = 'center';
+  ctx.fillText('track-server · PyBullet headless', PISTA.cx, PISTA.cy - 8);
+  ctx.font = '11px "IBM Plex Mono", monospace'; ctx.fillStyle = '#4a6458';
+  ctx.fillText('ws://192.168.10.10:8765 · estado a 20 Hz', PISTA.cx, PISTA.cy + 12);
+  for (const c of CARROS) dibujarCarro(ctx, c);
+  if (!corriendo['track-server']) {
+    ctx.fillStyle = 'rgba(10,13,16,0.72)'; ctx.fillRect(0, 0, 640, 400);
+    ctx.fillStyle = '#d9534f'; ctx.font = '600 18px "Space Grotesk", sans-serif';
+    ctx.fillText('track-server detenido: la física está congelada', 320, 200);
+  }
+}
+function dibujarCarro(ctx, c) {
+  const vivo = c.auto || corriendo[c.id];
+  ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.yaw);
+  // "altura" del estilo = qué tanto se separa la sombra (rally va más alto, deportivo pegado al piso)
+  const alt = c.estilo === 'rally' ? 4 : c.estilo === 'deportivo' ? 1.5 : 2.5;
+  ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.beginPath(); ctx.roundRect(-11 + alt, -6 + alt, 22, 12, 3); ctx.fill();
+  ctx.fillStyle = '#0b0d0f';
+  for (const [x, y] of [[-8, -7.5], [5, -7.5], [-8, 5.5], [5, 5.5]]) ctx.fillRect(x, y, 5, 2);
+  ctx.fillStyle = vivo ? c.color : '#3a4047';
+  ctx.beginPath(); ctx.roundRect(-11, -6, 22, 12, 3); ctx.fill();
+  if (c.estilo === 'rally') { ctx.fillStyle = '#f2f2f2'; ctx.fillRect(-11, -1.4, 22, 2.8); ctx.fillStyle = '#ffd34d'; ctx.fillRect(9.5, -5, 1.5, 2.5); ctx.fillRect(9.5, 2.5, 1.5, 2.5); }
+  if (c.estilo === 'deportivo') { ctx.fillStyle = '#111'; ctx.fillRect(-13, -7, 2.5, 14); }
+  if (c.estilo === 'clasico') { ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(10, -5, 1.2, 10); ctx.fillRect(-11.2, -5, 1.2, 10); }
+  ctx.fillStyle = 'rgba(10,14,18,0.85)'; ctx.fillRect(1, -4.5, 4, 9);
+  ctx.restore();
+  ctx.font = '600 10px "IBM Plex Mono", monospace'; ctx.textAlign = 'center';
+  ctx.fillStyle = c.auto ? '#8b929b' : c.color;
+  ctx.fillText(c.et, c.x, c.y - 12);
+  if (!c.auto && c.jugador === jugadorSel) { ctx.strokeStyle = c.color; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(c.x, c.y, 17, 0, 7); ctx.stroke(); }
+}
+
+// --- robots en vista lateral: cada uno es una función de "cinemática directa" con 3 ángulos ---
+function estiloTrazo(ctx, fantasma, color) {
+  if (fantasma) { ctx.strokeStyle = 'rgba(231,233,236,0.45)'; ctx.fillStyle = 'rgba(0,0,0,0)'; ctx.setLineDash([4, 4]); ctx.lineWidth = 2; }
+  else { ctx.strokeStyle = color; ctx.fillStyle = color + '33'; ctx.setLineDash([]); ctx.lineWidth = 5; }
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+}
+function linea(ctx, pts) { ctx.beginPath(); pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.stroke(); }
+function articulacion(ctx, x, y, fantasma, color) { if (fantasma) return; ctx.fillStyle = '#0a0d10'; ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 3.5, 0, 7); ctx.fill(); ctx.stroke(); }
+
+function dibujarSpot(ctx, cx, suelo, j, fant, col, trote) {
+  // Como en robots.py: las 3 entradas mueven la POSE DEL CUERPO y los pies quedan en el piso; la
+  // cinemática inversa de cada pata (dos eslabones, rodilla hacia atrás) sale de dónde quedó la
+  // cadera. j1 = altura (190 mm + 1,5 mm por grado), j2 = cabeceo (+ nariz arriba), j3 = alabeo.
+  const ESC = 0.62, L = 68, med = 50;
+  const alt = (190 + 1.5 * j[0]) * ESC;
+  const p = -j[1] * D2R;                       // nariz arriba = giro antihorario en la pantalla
+  const oy = suelo - alt;
+  const ts = ahora() / 1000;
+  estiloTrazo(ctx, fant, col);
+  [1, -1].forEach((sgn, i) => {
+    const hx = cx + sgn * med * Math.cos(p), hy = oy + sgn * med * Math.sin(p);
+    // Trote: pares diagonales desfasados medio ciclo; en la vista lateral, pata delantera y trasera
+    // alternan (una en el aire mientras la otra apoya), a 2 Hz.
+    const fase = trote ? Math.sin(2 * Math.PI * 2 * ts + i * Math.PI) : 0;
+    const fx = cx + sgn * med + (trote ? 12 * Math.cos(2 * Math.PI * 2 * ts + i * Math.PI) : 0);
+    const fy = suelo - Math.max(0, fase) * 16;
+    const dx = fx - hx, dy = fy - hy, d = Math.min(Math.hypot(dx, dy), 2 * L - 0.5);
+    const th = Math.atan2(dx, dy), al = Math.acos(d / (2 * L));
+    const kx = hx + L * Math.sin(th - al), ky = hy + L * Math.cos(th - al);
+    linea(ctx, [[hx, hy], [kx, ky], [fx, fy]]);
+    articulacion(ctx, kx, ky, fant, col);
+  });
+  ctx.save(); ctx.translate(cx, oy); ctx.rotate(p);
+  estiloTrazo(ctx, fant, col); ctx.lineWidth = fant ? 2 : 2.5;
+  ctx.beginPath(); ctx.roundRect(-64, -14, 128, 26, 8); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(64, -14, 20, 17, 4); ctx.fill(); ctx.stroke();
+  ctx.restore();
+  // Alabeo: en la vista lateral no se ve, así que va un recuadro chico con la vista de frente.
+  const ix = cx + 122, iy = suelo - 262;   // esquina superior derecha de su panel
+  ctx.save(); ctx.translate(ix, iy); ctx.rotate(j[2] * D2R);
+  estiloTrazo(ctx, fant, col); ctx.lineWidth = fant ? 1.5 : 2.5;
+  ctx.beginPath(); ctx.roundRect(-20, -7, 40, 14, 4); ctx.fill(); ctx.stroke();
+  linea(ctx, [[-14, 7], [-14, 22]]); linea(ctx, [[14, 7], [14, 22]]);
+  ctx.restore(); ctx.setLineDash([]);
+  if (!fant) { ctx.font = '11px "IBM Plex Mono", monospace'; ctx.fillStyle = '#6b737c'; ctx.textAlign = 'center'; ctx.fillText('alabeo', ix, iy + 38); }
+}
+function brazo(ctx, sx, sy, pitch, codo, L1, L2, fant, col) {
+  // Convención de SoftBank: RShoulderPitch 0° = brazo al frente, +90° = colgando, −90° = arriba.
+  // En el dibujo el ángulo se mide desde "colgando", así que a = 90° − pitch. El codo (RElbowRoll)
+  // dobla el antebrazo; en la vista lateral se dibuja como un giro más del antebrazo.
+  const a = (90 - pitch) * D2R, b = (90 - pitch + codo) * D2R;
+  const ex = sx + L1 * Math.sin(a), ey = sy + L1 * Math.cos(a);
+  const hx = ex + L2 * Math.sin(b), hy = ey + L2 * Math.cos(b);
+  estiloTrazo(ctx, fant, col); ctx.lineWidth = fant ? 2 : 4.5;
+  linea(ctx, [[sx, sy], [ex, ey], [hx, hy]]);
+  articulacion(ctx, ex, ey, fant, col);
+  if (!fant) { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(hx, hy, 4, 0, 7); ctx.fill(); }
+}
+function cabeza(ctx, x, y, r, yaw, fant, col) {
+  // HeadYaw visto de costado: con 0° la cara mira al frente (+x); al girar, el visor se corre
+  // hacia el centro (mira al que observa) o hacia atrás (más de 90°).
+  estiloTrazo(ctx, fant, col); ctx.lineWidth = fant ? 2 : 2.5;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); ctx.stroke();
+  const vx = x + r * 0.7 * Math.cos(yaw * D2R);
+  ctx.lineWidth = fant ? 2 : 4;
+  linea(ctx, [[vx, y - r * 0.35], [vx, y + r * 0.1]]);
+}
+function dibujarPepper(ctx, cx, suelo, j, fant, col) {
+  estiloTrazo(ctx, fant, col); ctx.lineWidth = fant ? 2 : 2.5;
+  ctx.beginPath(); ctx.moveTo(cx - 32, suelo); ctx.lineTo(cx + 32, suelo); ctx.lineTo(cx + 20, suelo - 40); ctx.lineTo(cx - 20, suelo - 40); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(cx - 18, suelo - 122, 36, 84, 12); ctx.fill(); ctx.stroke();
+  cabeza(ctx, cx, suelo - 146, 20, j[2], fant, col);
+  brazo(ctx, cx + 4, suelo - 112, j[0], j[1], 36, 32, fant, col);
+  ctx.setLineDash([]);
+}
+function dibujarNao(ctx, cx, suelo, j, fant, col) {
+  const L = 26, pie = 6, hy = suelo - pie - 2 * L;   // NAO va con la base fija (de pie), como en robots.py
+  estiloTrazo(ctx, fant, col);
+  linea(ctx, [[cx, hy], [cx + 2, hy + L], [cx, suelo - pie]]);
+  ctx.lineWidth = fant ? 2 : 2.5;
+  ctx.beginPath(); ctx.roundRect(cx - 7, suelo - pie, 22, pie, 2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(cx - 14, hy - 48, 28, 50, 8); ctx.fill(); ctx.stroke();
+  cabeza(ctx, cx, hy - 64, 15, j[2], fant, col);
+  brazo(ctx, cx + 2, hy - 40, j[0], j[1], 24, 22, fant, col);
+  ctx.setLineDash([]);
+}
+function dibujarRobots(ctx) {
+  ctx.clearRect(0, 0, 900, 320);
+  const n = ahora();
+  Object.values(ROBOTS).forEach((r, i) => {
+    const cx = 150 + i * 300, suelo = 300, s = SERV[r.srv], vivo = corriendo[r.srv];
+    if (r.clave === robotSel) { ctx.fillStyle = 'rgba(240,145,58,0.07)'; ctx.fillRect(i * 300 + 4, 4, 292, 312); }
+    ctx.strokeStyle = '#262b31'; ctx.lineWidth = 1; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(i * 300 + 20, suelo + 0.5); ctx.lineTo(i * 300 + 280, suelo + 0.5); ctx.stroke();
+    if (i) { ctx.beginPath(); ctx.moveTo(i * 300, 10); ctx.lineTo(i * 300, 310); ctx.stroke(); }
+    const dib = r.clave === 'spot' ? dibujarSpot : r.clave === 'pepper' ? dibujarPepper : dibujarNao;
+    const ox = r.clave === 'spot' ? -20 : -20;
+    dib(ctx, cx + ox, suelo, r.cmd, true, s.color, false);                                   // comando (punteado)
+    dib(ctx, cx + ox, suelo, r.med, false, vivo ? s.color : '#3a4047', vivo && r.trotando);  // medido (sólido)
+    ctx.textAlign = 'left'; ctx.font = '600 17px "Space Grotesk", sans-serif'; ctx.fillStyle = vivo ? s.color : '#5b626b';
+    ctx.fillText(`${r.nombre} · ${r.srv}`, i * 300 + 14, 24);
+    ctx.font = '13px "IBM Plex Mono", monospace'; ctx.fillStyle = '#8b929b';
+    ctx.fillText(IPS[r.srv] + ':5100', i * 300 + 14, 42);
+    const err = Math.sqrt(r.cmd.reduce((a, c, k) => a + (c - r.med[k]) ** 2, 0) / 3);
+    const fuente = n < placa.jointsHasta[r.clave] ? 'placa (serie)' : r.clave === robotSel ? 'deslizadores' : 'MODO_DEMO';
+    ctx.fillText(`mando: ${fuente}`, i * 300 + 14, 60);
+    ctx.fillStyle = err > 15 ? '#e8b930' : '#8b929b';
+    ctx.fillText(`error RMS ${err.toFixed(1)}°`, i * 300 + 14, 78);
+    ctx.fillStyle = r.modo === 'siguiendo' ? '#8b929b' : '#e8b930';
+    ctx.fillText(`estado: ${r.modo}`, i * 300 + 14, 96);
+    if (!vivo) { ctx.fillStyle = '#d9534f'; ctx.font = '600 16px "Space Grotesk", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('contenedor detenido', cx, 150); }
+  });
+}
+
+function dibujarRtt(ctx) {
+  const W = 720, H = 210, l = 46, r = 12, t = 12, b = 24;
+  ctx.clearRect(0, 0, W, H);
+  let max = 0;
+  for (const s of SERVICIOS) for (const v of adm[s.id].rtt) if (v !== null) max = Math.max(max, v);
+  // Escala "redonda" que se acomoda sola: con red sana se ve el milisegundo, con 300 ms de retardo
+  // también; la línea del umbral LENTO aparece cuando entra en la escala.
+  const escalas = [2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000];
+  const ymax = escalas.find((e) => e >= max * 1.1) || 2000;
+  const X = (i) => l + (W - l - r) * i / 59, Y = (v) => t + (H - t - b) * (1 - v / ymax);
+  ctx.font = '10px "IBM Plex Mono", monospace'; ctx.textAlign = 'right';
+  for (let k = 0; k <= 4; k++) {
+    const v = ymax * k / 4;
+    ctx.strokeStyle = '#1d2227'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(l, Y(v)); ctx.lineTo(W - r, Y(v)); ctx.stroke();
+    ctx.fillStyle = '#6b737c'; ctx.fillText((v < 10 ? v.toFixed(1) : v.toFixed(0)) + ' ms', l - 6, Y(v) + 3);
+  }
+  ctx.textAlign = 'center';
+  ctx.fillText('−60 s', X(0), H - 8); ctx.fillText('−30 s', X(30), H - 8); ctx.textAlign = 'right'; ctx.fillText('ahora', X(59), H - 8);
+  if (UMB.rttP95Ms <= ymax) {
+    ctx.strokeStyle = '#e8b930'; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.moveTo(l, Y(UMB.rttP95Ms)); ctx.lineTo(W - r, Y(UMB.rttP95Ms)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#e8b930'; ctx.textAlign = 'left'; ctx.fillText('umbral LENTO (p95 > 20 ms)', l + 4, Y(UMB.rttP95Ms) - 4);
+  }
+  for (const s of SERVICIOS) {
+    const d = adm[s.id].rtt;
+    ctx.strokeStyle = s.color; ctx.lineWidth = 1.6; ctx.beginPath();
+    let abierto = false;
+    d.forEach((v, i) => { if (v === null) { abierto = false; return; } if (!abierto) { ctx.moveTo(X(i), Y(v)); abierto = true; } else ctx.lineTo(X(i), Y(v)); });
+    ctx.stroke();
+  }
+  ctx.textAlign = 'left'; ctx.fillStyle = '#8b929b';
+  ctx.fillText('RTT admin → contenedor (ping ICMP por el router), un punto por segundo; hueco = sin respuesta', l + 4, t + 10);
+}
+
+/* =====================================================================================
+   UI: tablas, LEDs, deslizadores
+   ===================================================================================== */
+// Selector de jugador
+$('segJugador').innerHTML = [1, 2, 3].map((p) => `<button data-p="${p}" style="--zc:${CARROS[p - 1].color}" class="${p === 1 ? 'activo' : ''}">player-${p}</button>`).join('');
+$('segJugador').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  jugadorSel = Number(b.dataset.p);
+  $('segJugador').querySelectorAll('button').forEach((x) => x.classList.toggle('activo', x === b));
+  $('joy').style.setProperty('--pc', CARROS[jugadorSel - 1].color);
+});
+$('joy').style.setProperty('--pc', CARROS[0].color);
+
+$('tablaCarros').innerHTML = '<tr><th>carro</th><th>estilo</th><th>mando</th><th class="n">dir</th><th class="n">vel</th><th class="n">v (px/s)</th><th class="n">vueltas</th></tr>' +
+  CARROS.map((c, i) => `<tr><td><span class="punto" style="background:${c.color}"></span>${c.id}</td><td>${c.estilo}</td><td id="tcF${i}"></td><td class="n" id="tcD${i}"></td><td class="n" id="tcV${i}"></td><td class="n" id="tcS${i}"></td><td class="n" id="tcL${i}"></td></tr>`).join('');
+function pintarTablaCarros() {
+  CARROS.forEach((c, i) => {
+    const k = c.auto ? autopiloto(c) : (ahora() - c.ctrl.t < 1000 ? c.ctrl : { dir: 0, vel: 0 });
+    $('tcF' + i).textContent = c.auto ? 'track-server' : !corriendo[c.id] ? 'detenido → frena' : c.failsafe ? 'failsafe (sin control)' : c.fuente;
+    $('tcD' + i).textContent = k.dir; $('tcV' + i).textContent = k.vel;
+    $('tcS' + i).textContent = Math.abs(c.v).toFixed(0); $('tcL' + i).textContent = c.vueltas;
+  });
+}
+
+// Selector de robot y deslizadores j1..j3 (posición −100..100, lo mismo que manda MANUAL)
+$('segRobot').innerHTML = Object.values(ROBOTS).map((r) => `<button data-r="${r.clave}" class="${r.clave === robotSel ? 'activo' : ''}">${r.nombre}</button>`).join('');
+$('segRobot').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) elegirRobot(b.dataset.r); });
+function elegirRobot(clave) {
+  robotSel = clave;
+  $('segRobot').querySelectorAll('button').forEach((x) => x.classList.toggle('activo', x.dataset.r === clave));
+  const r = ROBOTS[clave];
+  $('deslizadores').innerHTML = r.j.map((x, k) => `<label>j${k + 1} ${x.n}<input type="range" min="-100" max="100" step="1" value="${r.desl[k]}" data-k="${k}"><output id="oJ${k}"></output></label>`).join('');
+  $('deslizadores').querySelectorAll('input').forEach((inp) => inp.addEventListener('input', () => { r.desl[Number(inp.dataset.k)] = Number(inp.value); pintarDesl(); }));
+  $('btnGesto').textContent = `botón (${r.gesto})`;
+  pintarDesl();
+}
+function pintarDesl() {
+  const r = ROBOTS[robotSel];
+  // Se muestra lo que mandaría la maestra (la recta de MANDO) y, si se sale del rango del robot, a
+  // cuánto lo va a recortar el simulador.
+  r.desl.forEach((v, k) => {
+    const o = $('oJ' + k); if (!o) return;
+    const g = aDeg(v, robotSel, k), x = r.j[k], rec = limitar(g, x.lo, x.hi);
+    o.textContent = g.toFixed(1) + '°' + (rec !== g ? ` → ${rec.toFixed(0)}` : '');
+    o.style.color = rec !== g ? 'var(--amarillo)' : '';
+  });
+}
+botonMantener('btnGesto', (v) => { ROBOTS[robotSel].boton = v; });
+elegirRobot(robotSel);
+function pintarJuntas() {
+  const r = ROBOTS[robotSel];
+  $('tablaJuntas').innerHTML = '<tr><th>' + r.nombre + ' (' + r.modo + ')</th><th class="n">rango sim</th><th class="n">comando</th><th class="n">llegó</th><th class="n">objetivo</th><th class="n">medido</th><th class="n">error</th></tr>' +
+    r.j.map((x, k) => `<tr><td>j${k + 1} ${x.n}</td><td class="n">${x.lo.toFixed(0)}..${x.hi.toFixed(0)}</td><td class="n">${r.cmd[k].toFixed(1)}°</td><td class="n">${r.rec[k].toFixed(1)}°</td><td class="n">${r.obj[k].toFixed(1)}°</td><td class="n">${r.med[k].toFixed(1)}°</td><td class="n">${(r.cmd[k] - r.med[k]).toFixed(1)}°</td></tr>`).join('');
+}
+
+// Tabla del admin con botón detener/arrancar por contenedor
+$('tablaAdmin').innerHTML = '<tr><th>servicio</th><th>IP</th><th>RTT p95</th><th>jitter</th><th>pérdida</th><th>disp.</th><th>estado</th><th></th></tr>' +
+  SERVICIOS.map((s) => `<tr id="fa-${s.id}"><td><span class="punto" style="background:${s.color}"></span>${s.id}</td><td>${s.ip}</td><td data-c="rtt"></td><td data-c="jit"></td><td data-c="per"></td><td data-c="disp"></td><td data-c="est"></td><td><button class="btn peq rojo" data-s="${s.id}">detener</button></td></tr>`).join('');
+$('tablaAdmin').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-s]'); if (!b) return;
+  const id = b.dataset.s;
+  corriendo[id] = !corriendo[id];
+  b.textContent = corriendo[id] ? 'detener' : 'arrancar';
+  b.className = 'btn peq ' + (corriendo[id] ? 'rojo' : 'verde');
+  if (!corriendo[id]) {
+    // Testamento MQTT (LWT): el broker lo publica solo al notar que se cortó la conexión
+    // (~1.5 × keepalive de 5 s). El admin ya lo había marcado CAIDO por los latidos.
+    setTimeout(() => { if (!corriendo[id]) { adm[id].vivo0 = true; alMonitor('MQTT', 'mosquitto (testamento LWT)', `lab/vivo/${id} = 0`); } }, 7500);
+  } else {
+    adm[id].vivo0 = false;
+    alMonitor('MQTT', `${id} → mosquitto (retenido)`, `lab/vivo/${id} = 1`);
+    if (id.startsWith('player-')) player[Number(id.slice(-1))].ultimoEsp = ahora();
+  }
+});
+function pintarAdmin() {
+  for (const s of SERVICIOS) {
+    const a = adm[s.id], fila = $('fa-' + s.id), c = (k) => fila.querySelector(`[data-c="${k}"]`);
+    fila.classList.toggle('detenido', !corriendo[s.id]);
+    c('rtt').textContent = a.p95 === null ? '—' : a.p95.toFixed(a.p95 < 10 ? 2 : 0) + ' ms';
+    const jm = Math.max(a.jit, a.jitPing);
+    c('jit').textContent = jm.toFixed(jm < 10 ? 2 : 0) + ' ms';
+    c('per').textContent = a.perdida.toFixed(0) + ' %';
+    c('disp').textContent = a.disp.toFixed(1) + ' %';
+    c('est').innerHTML = `<span class="chip ${a.estado}">${a.estado}</span>`;
+  }
+  const n = SERVICIOS.filter((s) => adm[s.id].estado === 'OK').length;
+  $('txtAdmin').textContent = `${n}/7 OK`;
+}
+$('leyendaRtt').innerHTML = SERVICIOS.map((s) => `<span><span class="punto" style="background:${s.color}"></span>${s.id}</span>`).join('');
+
+// LEDs de la esclava
+$('leds').innerHTML = LED_ORDEN.map((s, i) => `<div class="led-caja"><div class="led" id="led-${s}" style="--lc:${SERV[s].color}"></div>${s}<br>GPIO ${LED_GPIO[i]}<br><span class="est" id="ledE-${s}"></span></div>`).join('');
+function pintarLeds() {
+  const n = ahora();
+  // Si hay una esclava real conectada y mandó LEDS,... hace poco, se muestran SUS LEDs.
+  const dePlaca = placa.leds && n - placa.tLeds < 5000;
+  const fuente = dePlaca ? Object.fromEntries(LED_ORDEN.map((s, i) => [s, placa.leds[i]])) : ledEst;
+  $('txtFuenteLeds').textContent = dePlaca ? 'fuente: placa real (LEDS por serie)' : 'fuente: simulación';
+  // Mismos patrones que firmware/esp32_esclava_leds: OK fijo, LENTO 2 Hz (250/250 ms), CAIDO
+  // apagado, "?" un destello de 60 ms cada segundo. Si la placa dice todo "?" es que lleva más de
+  // 5 s sin broker: hace una luz en vaivén (0,1,..,5,4,..) a 120 ms por paso, un patrón que ninguna
+  // combinación de estados puede producir, para no confundir "no sé" con "todo caído".
+  const parpadeo = Math.floor(n / 250) % 2 === 0;
+  const destello = n % 1000 < 60;
+  // La esclava pone los seis en "?" a los 5 s sin broker, pero también se ven todos en "?" un instante
+  // al arrancar CON broker (antes de que lleguen los retenidos): por eso se mira además el "mqtt 0/1"
+  // de su línea ESTADO, y el vaivén solo se pinta si dice que no tiene broker.
+  const sinBroker = dePlaca && placa.mqtt === 0 && LED_ORDEN.every((s) => fuente[s] === '?');
+  const paso = Math.floor(n / 120) % 10, pos = paso < 6 ? paso : 10 - paso;
+  LED_ORDEN.forEach((s, i) => {
+    const e = fuente[s];
+    const on = sinBroker ? i === pos : e === 'OK' || (e === 'LENTO' && parpadeo) || (e === '?' && destello);
+    $('led-' + s).classList.toggle('on', on);
+    $('ledE-' + s).textContent = sinBroker ? 'sin broker' : e;
+  });
+  // LED azul (GPIO 2), como el firmware: fijo = conectada al broker; WiFi sin broker = 1 Hz; sin
+  // WiFi = 5 Hz. Con la placa real se sigue su línea ESTADO; en la simulación el broker es el admin.
+  let g2 = corriendo.admin;
+  if (dePlaca && placa.mqtt === 0) g2 = placa.wifi ? n % 1000 < 500 : n % 200 < 100;
+  $('ledG2').classList.toggle('on', g2);
+}
+
+// Tabla de iptables
+function pintarIpt() {
+  const flash = ahora() - flashDrop < 1500;
+  $('tablaIpt').innerHTML = '<tr><td style="color:var(--text-muted)">acción</td><td style="color:var(--text-muted)">regla FORWARD</td><td class="n" style="color:var(--text-muted)">pkts</td></tr>' +
+    IPT.map((r, i) => `<tr class="${i === 4 && flash ? 'flash' : ''}"><td class="${r.acc}">${r.acc}</td><td>${r.txt}</td><td class="n">${r.n}</td></tr>`).join('');
+}
+
+// Fallas de red por zona
+let zonaFalla = 'robotica';
+$('segZonaFalla').innerHTML = `<button data-z="gamer" style="--zc:var(--gamer)">Zona gamer</button><button data-z="robotica" style="--zc:var(--robot)" class="activo">Zona robótica</button>`;
+$('segZonaFalla').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; zonaFalla = b.dataset.z; $('segZonaFalla').querySelectorAll('button').forEach((x) => x.classList.toggle('activo', x === b)); cargarFallas(); });
+function cargarFallas() { const p = red[zonaFalla]; $('rRet').value = p.retardo; $('rJit').value = p.jitter; $('rPer').value = p.perdida; pintarFallas(); }
+function pintarFallas() {
+  const p = red[zonaFalla];
+  $('oRet').textContent = p.retardo + ' ms'; $('oJit').textContent = p.jitter + ' ms'; $('oPer').textContent = p.perdida + ' %';
+  const t = (z) => `${z}: +${red[z].retardo} ms ±${red[z].jitter} ms, ${red[z].perdida} %`;
+  $('txtResumenRed').textContent = t('gamer') + ' · ' + t('robotica');
+}
+[['rRet', 'retardo'], ['rJit', 'jitter'], ['rPer', 'perdida']].forEach(([id, k]) => $(id).addEventListener('input', () => { red[zonaFalla][k] = Number($(id).value); pintarFallas(); }));
+$('btnRedSana').addEventListener('click', () => { for (const z of Object.values(red)) Object.assign(z, { retardo: 0, jitter: 0, perdida: 0 }); cargarFallas(); });
+cargarFallas();
+
+// Ping
+const NOMBRES_PING = ['admin', 'player-1', 'player-2', 'player-3', 'track-server', 'sim-spot', 'sim-pepper', 'sim-nao'];
+$('selOrigen').innerHTML = NOMBRES_PING.map((n) => `<option>${n}</option>`).join('');
+$('selDestino').innerHTML = NOMBRES_PING.map((n) => `<option ${n === 'sim-spot' ? 'selected' : ''}>${n}</option>`).join('');
+$('selOrigen').value = 'player-2';
+$('btnPingMalo').addEventListener('click', () => hacerPing('player-1', 'sim-nao'));
+$('btnPingBueno').addEventListener('click', () => hacerPing('admin', 'sim-nao'));
+$('btnPingLibre').addEventListener('click', () => hacerPing($('selOrigen').value, $('selDestino').value));
+$('btnRouter').addEventListener('click', () => {
+  corriendo.router = !corriendo.router;
+  $('btnRouter').textContent = corriendo.router ? 'Detener router' : 'Arrancar router';
+  $('btnRouter').className = 'btn ' + (corriendo.router ? 'rojo' : 'verde');
+});
+
+// Monitor
+document.querySelectorAll('[data-f]').forEach((c) => c.addEventListener('change', () => { monitor.filtros[c.dataset.f] = c.checked; }));
+$('btnPausa').addEventListener('click', () => { monitor.pausado = !monitor.pausado; $('btnPausa').textContent = monitor.pausado ? 'seguir' : 'pausar'; });
+$('btnLimpiar').addEventListener('click', () => { $('monitor').innerHTML = ''; });
+
+// Modos
+function modo(conectado) {
+  $('btnModoPrueba').classList.toggle('activo', !conectado);
+  $('btnModoConectado').classList.toggle('activo', conectado);
+  $('panSerie').classList.toggle('oculto', !conectado);
+  $('panMonitor').classList.toggle('c7', conectado);
+  $('panMonitor').classList.toggle('c12', !conectado);
+}
+$('btnModoPrueba').addEventListener('click', () => modo(false));
+$('btnModoConectado').addEventListener('click', () => modo(true));
+modo(false);
+
+/* =====================================================================================
+   MODO CONECTADO: Web Serial con UNA ESP32 (maestra o esclava)
+   ===================================================================================== */
+const con = { puerto: null, lector: null, escritor: null, ultimoManual: '' };
+function avisoSerial(txt, clase) { const e = $('estadoSerial'); e.textContent = txt; e.className = clase || ''; }
+if (!('serial' in navigator)) avisoSerial('Este navegador no tiene Web Serial: usa Chrome o Edge de escritorio. El modo prueba sí funciona aquí.', 'mal');
+
+$('btnConectar').addEventListener('click', async () => {
+  if (!('serial' in navigator)) { avisoSerial('Este navegador no tiene Web Serial (usa Chrome o Edge de escritorio).', 'mal'); return; }
+  if (con.puerto) return;
+  try {
+    con.puerto = await navigator.serial.requestPort();
+    await con.puerto.open({ baudRate: 115200 });
+    con.escritor = con.puerto.writable.getWriter();
+    placa.conectada = true;
+    avisoSerial('conectado a 115200, esperando líneas de la placa...', 'ok');
+    $('btnDesconectar').disabled = false; $('btnConectar').disabled = true;
+    leerPuerto();
+  } catch (error) {
+    con.puerto = null;
+    avisoSerial('no se pudo conectar: ' + error.message, 'mal');
+  }
+});
+$('btnDesconectar').addEventListener('click', async () => {
+  if ($('chkManual').checked) { $('chkManual').checked = false; await enviarSerie('MANUAL,OFF'); }
+  if (con.lector) { try { await con.lector.cancel(); } catch (e) { /* ya cerrado */ } }
+});
+
+async function leerPuerto() {
+  const puerto = con.puerto;
+  con.lector = puerto.readable.getReader();
+  const dec = new TextDecoder();
+  let resto = '';
+  try {
+    while (true) {
+      const { value, done } = await con.lector.read();
+      if (done) break;
+      resto += dec.decode(value, { stream: true });
+      let i;
+      while ((i = resto.indexOf('\n')) >= 0) {        // pueden llegar varias líneas juntas o media línea
+        const linea = resto.slice(0, i).replace(/\r$/, '');
+        resto = resto.slice(i + 1);
+        if (linea.trim()) procesarLineaSerie(linea.trim());
+      }
+    }
+    avisoSerial('desconectado', '');
+  } catch (error) {
+    avisoSerial('conexión perdida: ' + error.message, 'mal');
+  } finally {
+    try { con.lector.releaseLock(); } catch (e) { /* nada */ }
+    try { con.escritor.releaseLock(); } catch (e) { /* nada */ }
+    try { await puerto.close(); } catch (e) { /* ya estaba cerrado */ }
+    con.puerto = null; con.lector = null; con.escritor = null; placa.conectada = false;
+    $('btnDesconectar').disabled = true; $('btnConectar').disabled = false;
+  }
+}
+
+async function enviarSerie(txt, silencioso) {
+  if (!con.escritor) return;
+  try {
+    await con.escritor.write(new TextEncoder().encode(txt + '\n'));
+    if (!silencioso) alMonitor('SERIE', 'página → placa (USB)', txt);
+  } catch (e) { avisoSerial('no se pudo escribir: ' + e.message, 'mal'); }
+}
+
+// Interpreta una línea del contrato serie. Lo que la placa dice que mandó por WiFi (ENVIADO,...)
+// se aplica directo al carro/robot de la página, que así hace de "espejo" de lo que está pasando
+// en los contenedores reales. Una línea que no se entiende solo se muestra.
+function procesarLineaSerie(linea) {
+  $('ultimaLinea').textContent = linea;
+  alMonitor('SERIE', 'placa → página (USB)', linea);
+  const c = linea.split(',');
+  const n = ahora();
+  if (c[0] === 'ENVIADO' && c[1] === 'CTRL' && c.length === 8) {
+    const p = Number(c[2]);
+    if (p >= 1 && p <= 3) {
+      const car = carroJugador(p);
+      car.ctrl = { dir: limitar(Number(c[5]) || 0, -100, 100), vel: limitar(Number(c[6]) || 0, -100, 100), boton: c[7] === '1' ? 1 : 0, t: n };
+      car.fuente = 'placa (serie)';
+      placa.ctrlHasta[p] = n + 1000; placa.tipo = 'gamer'; placa.jugador = p;
+      $('dMueve').textContent = `carro player-${p} (dir ${car.ctrl.dir}, vel ${car.ctrl.vel})`;
+    }
+  } else if (c[0] === 'ENVIADO' && c[1] === 'JOINTS' && c.length === 9 && ROBOTS[c[2]]) {
+    const r = ROBOTS[c[2]];
+    const j = [Number(c[5]), Number(c[6]), Number(c[7])].map((v) => (Number.isFinite(v) ? v : 0));
+    r.cmd = j; recibirJoints(r, j, c[8] === '1' ? 1 : 0);
+    if (placa.robot !== r.clave) elegirRobot(r.clave);   // los deslizadores pasan a ser los de ese robot
+    placa.jointsHasta[r.clave] = n + 1000; placa.tipo = 'robot'; placa.robot = r.clave;
+    $('dMueve').textContent = `${r.nombre} (j ${j.map((v) => v.toFixed(1)).join(', ')})`;
+  } else if (c[0] === 'RTT' && c.length >= 2) {
+    $('dRtt').textContent = Number(c[1]).toFixed(1) + ' ms';
+  } else if (c[0] === 'ESTADO' && c.length >= 5) {
+    $('dEstado').textContent = `${c[1]} · ${c[2]} · RSSI ${c[3]} dBm · ${c[1] === 'esclava' ? 'mqtt' : 'wifi'} ${c[4] === '1' ? 'ok' : 'NO'}`;
+    if (c[1] === 'esclava') { placa.tipo = 'esclava'; placa.mqtt = c[4] === '1' ? 1 : 0; placa.wifi = c[2] !== '0.0.0.0'; }
+    else if (/spot|pepper|nao/.test(c[1])) { placa.tipo = 'robot'; const m = c[1].match(/spot|pepper|nao/)[0]; placa.robot = m; }
+    else if (/ctrl-\d/.test(c[1])) { placa.tipo = 'gamer'; placa.jugador = Number(c[1].slice(-1)); }
+  } else if (c[0] === 'LEDS' && c.length === 7) {
+    placa.leds = c.slice(1).map((v) => (['OK', 'LENTO', 'CAIDO'].includes(v) ? v : '?'));
+    placa.tLeds = n; placa.tipo = 'esclava';
+    $('dLeds').textContent = c.slice(1).join(' ');
+  }
+}
+
+// MANUAL a 5 Hz mientras la casilla esté marcada (la maestra los usa 2 s y vuelve al ADC).
+function tickManual() {
+  if (!con.escritor || !$('chkManual').checked) return;
+  let que = $('selManual').value;
+  if (que === 'auto') que = placa.tipo === 'robot' ? 'robot' : 'joy';
+  let txt;
+  if (que === 'robot') { const r = ROBOTS[placa.robot || robotSel]; txt = `MANUAL,${r.desl[0]},${r.desl[1]},${r.desl[2]},${r.boton}`; }
+  else txt = `MANUAL,${joy.dir},${joy.vel},0,${joy.boton}`;
+  // Se manda siempre (para renovar los 2 s), pero solo se anota en el monitor si cambió.
+  enviarSerie(txt, txt === con.ultimoManual);
+  con.ultimoManual = txt;
+}
+$('chkManual').addEventListener('change', () => { if (!$('chkManual').checked) { enviarSerie('MANUAL,OFF'); con.ultimoManual = ''; } });
+$('btnManualOff').addEventListener('click', () => { $('chkManual').checked = false; enviarSerie('MANUAL,OFF'); con.ultimoManual = ''; });
+$('btnLibre').addEventListener('click', () => { const t = $('txtLibre').value.trim(); if (t) enviarSerie(t); });
+$('txtLibre').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnLibre').click(); });
+
+/* =====================================================================================
+   BUCLE PRINCIPAL
+   ===================================================================================== */
+let tAnt = ahora(), acc20 = 0, acc1 = 0, accFis = 0, accUi = 0, accMan = 0;
+const ctxs = {};
+function bucle() {
+  const n = ahora();
+  let dt = (n - tAnt) / 1000; tAnt = n;
+  // Si la pestaña estuvo oculta, requestAnimationFrame se detiene; al volver no se "recupera" el
+  // tiempo perdido de golpe (serían miles de pasos), se sigue desde ahora. Un cuadro lento de
+  // menos de 2 s (PC cargado) sí se recupera, para no saltarse latidos y marcar CAIDO por error.
+  if (dt > 2) { dt = 0.016; acc20 = 0; acc1 = 0; accFis = 0; }
+  procesarCola();
+  actualizarTeclado(dt);
+  acc20 += dt; while (acc20 >= 0.05) { acc20 -= 0.05; tick20(); }
+  acc1 += dt; while (acc1 >= 1) { acc1 -= 1; tick1(); }
+  // Física a 120 Hz fija (independiente de los fps de la pantalla), como el paso de PyBullet.
+  // Como mucho 0.1 s de física por cuadro: si la pantalla se traba un segundo, los carros no
+  // corren todo ese tiempo "a ciegas" con el último comando (se salían de la pista); van en cámara lenta.
+  accFis = Math.min(accFis + dt, 0.1); while (accFis >= 1 / 120) { accFis -= 1 / 120; if (corriendo['track-server']) pasoPista(1 / 120); }
+  pasoRobots(dt);
+  accMan += dt; if (accMan >= 0.2) { accMan = 0; tickManual(); }
+
+  dibujarMapa(lienzo($('cvMapa'), 1000, 400));
+  dibujarPista(lienzo($('cvPista'), 640, 400));
+  dibujarRobots(lienzo($('cvRobots'), 900, 320));
+  window.joyPintar();
+  pintarLeds();
+  accUi += dt;
+  if (accUi >= 0.125) {   // tablas y monitor a 8 Hz: suficiente para leer y no recarga el DOM
+    accUi = 0;
+    volcarMonitor(); pintarTablaCarros(); pintarJuntas(); pintarAdmin(); pintarIpt();
+    dibujarRtt(lienzo($('cvRtt'), 720, 210));
+    const seg = Math.max(1, (n - t0Pagina) / 1000);
+    $('txtCuenta').textContent = `CTRL ${cuenta.CTRL} · JOINTS ${cuenta.JOINTS} · HB ${cuenta.HB}`;
+    $('txtTrafico').textContent = `~${Math.round((cuenta.CTRL + cuenta.JOINTS + cuenta.HB) / seg)} datagramas/s`;
+    const car = carroJugador(jugadorSel);
+    $('txtGamer').textContent = `player-${jugadorSel}: ${car.vueltas} vueltas`;
+    const r = ROBOTS[robotSel];
+    $('txtRobot').textContent = `${r.nombre}: retardo red ${(red.robotica.retardo).toFixed(0)} ms`;
+  }
+  requestAnimationFrame(bucle);
+}
+requestAnimationFrame(bucle);
+</script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+Prueba de aislamiento entre VLAN - tema 11 - 2026-10-05 10:00:21
+Docker Engine 29.8.1 (linux/amd64)
+Compose de prueba: pruebas/red/docker-compose.prueba-red.yml (proyecto t11-prueba-red)
+
+== Levantando router real + contenedores de relleno ==
+router -> interfaces: vlan1_gamer=eth0  vlan2_robotica=eth1  vlan3_admin=eth2
+
+Contador de descartes AISLAR_V1_V2 al empezar: 0 paquetes
+
+== 1-2. Tráfico permitido (debe llegar) ==
+  [OK   ] vlan1 player-1 (192.168.10.21) -> vlan3 admin (192.168.30.10)  ping
+  [OK   ] vlan2 sim-spot (192.168.20.21) -> vlan3 admin (192.168.30.10)  ping
+  [OK   ] vlan3 admin -> vlan1 player-1 (192.168.10.21)                  ping
+  [OK   ] vlan3 admin -> vlan2 sim-spot (192.168.20.21)                  ping
+
+== 3. Tráfico prohibido por el router (no debe llegar) ==
+  [OK   ] vlan1 -> vlan2 (192.168.10.21 -> 192.168.20.21) ping, con ruta por el router
+  [OK   ] vlan2 -> vlan1 (192.168.20.21 -> 192.168.10.21) ping, con ruta por el router
+  descartes AISLAR_V1_V2: 0 -> 11 (+11; se esperaban +11: 3 pings vlan1->vlan2, 3 pings vlan2->vlan1, 5 UDP)
+  [OK   ] el tráfico permitido NO sumó descartes de aislamiento
+  [OK   ] el contador del router subió exactamente 11
+
+== 4. Sin ruta por el router: la puerta por defecto de Docker tampoco deja cruzar ==
+  [OK   ] vlan1 -> vlan2 (192.168.10.22 -> 192.168.20.21) ping por la .1 de Docker
+  [OK   ] ese intento no pasó por el router (contador sin cambios)
+
+== 5. Cortafuegos del router (iptables -n -v -L) ==
+  Chain FORWARD (policy DROP 0 packets, 0 bytes)
+  num   pkts bytes target     prot opt in     out     source               destination         
+  1        8   482 AISLAR_V1_V2  0    --  eth0   eth1    0.0.0.0/0            0.0.0.0/0           
+  2        3   252 AISLAR_V1_V2  0    --  eth1   eth0    0.0.0.0/0            0.0.0.0/0           
+  3       20  1680 ACCEPT     0    --  *      *       0.0.0.0/0            0.0.0.0/0            ctstate RELATED,ESTABLISHED
+  4        1    84 ACCEPT     0    --  eth0   eth2    192.168.10.0/24      192.168.30.0/24     
+  5        1    84 ACCEPT     0    --  eth2   eth0    192.168.30.0/24      192.168.10.0/24     
+  6        1    84 ACCEPT     0    --  eth1   eth2    192.168.20.0/24      192.168.30.0/24     
+  7        1    84 ACCEPT     0    --  eth2   eth1    192.168.30.0/24      192.168.20.0/24     
+  
+  Chain AISLAR_V1_V2 (2 references)
+      pkts      bytes target     prot opt in     out     source               destination         
+         6      466 LOG        0    --  *      *       0.0.0.0/0            0.0.0.0/0            limit: avg 5/min burst 5 LOG flags 0 level 4 prefix "T11-AISLADO-V1V2: "
+        11      734 DROP       0    --  *      *       0.0.0.0/0            0.0.0.0/0
+
+== 6. FRR: vtysh -c 'show ip route' ==
+  Codes: K - kernel route, C - connected, L - local, S - static,
+         R - RIP, O - OSPF, I - IS-IS, B - BGP, E - EIGRP, N - NHRP,
+         T - Table, v - VNC, V - VNC-Direct, A - Babel, F - PBR,
+         f - OpenFabric, t - Table-Direct,
+         > - selected route, * - FIB route, q - queued, r - rejected, b - backup
+         t - trapped, o - offload failure
+  
+  K>* 0.0.0.0/0 [0/0] via 192.168.10.1, eth0, 00:00:31
+  C>* 192.168.10.0/24 is directly connected, eth0, 00:00:31
+  L>* 192.168.10.254/32 is directly connected, eth0, 00:00:31
+  C>* 192.168.20.0/24 is directly connected, eth1, 00:00:31
+  L>* 192.168.20.254/32 is directly connected, eth1, 00:00:31
+  C>* 192.168.30.0/24 is directly connected, eth2, 00:00:31
+  L>* 192.168.30.254/32 is directly connected, eth2, 00:00:31
+  [OK   ] FRR (zebra) responde y ve las tres VLAN como redes conectadas
+  Interface       Status  VRF             Addresses
+  ---------       ------  ---             ---------
+  eth0            up      default         192.168.10.254/24
+  eth1            up      default         192.168.20.254/24
+  eth2            up      default         192.168.30.254/24
+  lo              up      default
+
+== 7. Latido del router al admin (UDP 5300) ==
+  recibido en 192.168.30.10: HB,router,16,1645950
+  recibido en 192.168.30.10: HB,router,19,1648940
+  recibido en 192.168.30.10: HB,router,22,1651940
+  recibido en 192.168.30.10: HB,router,25,1654950
+  recibido en 192.168.30.10: HB,router,28,1657940
+  (el receptor de relleno es un 'nc' que se reabre tras cada datagrama y se pierde algunos; el admin real escucha sin cortes)
+  [OK   ] llegan latidos HB,router,<seq>,<t_ms> al admin
+
+RESULTADO: TODO OK

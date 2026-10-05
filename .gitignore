@@ -55,3 +55,10 @@ Enlace README - *.pdf
 10-enjambre-algoritmo-hormigas/pruebas/resultados/**/*.mp4
 10-enjambre-algoritmo-hormigas/pruebas/resultados/**/*.png
 10-enjambre-algoritmo-hormigas/pruebas/resultados/**/*.jsonl
+# Zonas VLAN (tema 11): captura de Moodle (trae la tabla de notas de otros estudiantes) y salidas regenerables
+11-zonas-virtualizadas-esp32-vlan/*Actividad 8*UMNG.pdf
+11-zonas-virtualizadas-esp32-vlan/resultados/*
+!11-zonas-virtualizadas-esp32-vlan/resultados/.gitkeep
+11-zonas-virtualizadas-esp32-vlan/pruebas/resultados/**/*.mp4
+11-zonas-virtualizadas-esp32-vlan/pruebas/resultados/**/*.jsonl
+11-zonas-virtualizadas-esp32-vlan/borradores/

@@ -1,0 +1,756 @@
+{
+  "fecha_epoch": 1791217409.1,
+  "resumen": {
+    "casos": 45,
+    "aprobadas": 45,
+    "falladas": 0,
+    "veredicto": "APROBADA"
+  },
+  "router": {
+    "ip_forward": "1",
+    "frr_show_ip_route": "Codes: K - kernel route, C - connected, L - local, S - static,\n       R - RIP, O - OSPF, I - IS-IS, B - BGP, E - EIGRP, N - NHRP,\n       T - Table, v - VNC, V - VNC-Direct, A - Babel, F - PBR,\n       f - OpenFabric, t - Table-Direct,\n       > - selected route, * - FIB route, q - queued, r - rejected, b - backup\n       t - trapped, o - offload failure\n\nK>* 0.0.0.0/0 [0/0] via 192.168.10.1, eth2, 00:00:35\nC>* 192.168.10.0/24 is directly connected, eth2, 00:00:35\nL>* 192.168.10.254/32 is directly connected, eth2, 00:00:35\nC>* 192.168.20.0/24 is directly connected, eth0, 00:00:35\nL>* 192.168.20.254/32 is directly connected, eth0, 00:00:35\nC>* 192.168.30.0/24 is directly connected, eth1, 00:00:35\nL>* 192.168.30.254/32 is directly connected, eth1, 00:00:35",
+    "iptables_forward_reglas": [
+      "-P FORWARD DROP",
+      "-A FORWARD -i eth2 -o eth0 -j AISLAR_V1_V2",
+      "-A FORWARD -i eth0 -o eth2 -j AISLAR_V1_V2",
+      "-A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT",
+      "-A FORWARD -s 192.168.10.0/24 -d 192.168.30.0/24 -i eth2 -o eth1 -j ACCEPT",
+      "-A FORWARD -s 192.168.30.0/24 -d 192.168.10.0/24 -i eth1 -o eth2 -j ACCEPT",
+      "-A FORWARD -s 192.168.20.0/24 -d 192.168.30.0/24 -i eth0 -o eth1 -j ACCEPT",
+      "-A FORWARD -s 192.168.30.0/24 -d 192.168.20.0/24 -i eth1 -o eth0 -j ACCEPT"
+    ],
+    "drops_inicio": {
+      "total": 0,
+      "por_cadena": {
+        "INPUT": 0,
+        "FORWARD": 0,
+        "OUTPUT": 0,
+        "AISLAR_V1_V2": 0
+      }
+    },
+    "rutas_forzadas": [
+      {
+        "servicio": "player-1",
+        "red": "192.168.20.0/24",
+        "via": "192.168.10.254",
+        "puesta": true,
+        "salida": ""
+      },
+      {
+        "servicio": "sim-spot",
+        "red": "192.168.10.0/24",
+        "via": "192.168.20.254",
+        "puesta": true,
+        "salida": ""
+      }
+    ],
+    "drops_fin": {
+      "total": 12,
+      "por_cadena": {
+        "INPUT": 0,
+        "FORWARD": 0,
+        "OUTPUT": 0,
+        "AISLAR_V1_V2": 12
+      }
+    }
+  },
+  "casos": [
+    {
+      "caso": "ping player-1 -> sim-nao (192.168.20.23)",
+      "esperado": "FALLA",
+      "obtenido": "FALLA",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 0,
+        "rtt_ms": [],
+        "ttl": [],
+        "via": "auxiliar alpine:3.20 en la red del contenedor",
+        "salida": "PING 192.168.20.23 (192.168.20.23): 56 data bytes\n\n--- 192.168.20.23 ping statistics ---\n3 packets transmitted, 0 packets received, 100% packet loss"
+      }
+    },
+    {
+      "caso": "ping player-1 -> sim-spot (192.168.20.21)",
+      "esperado": "FALLA",
+      "obtenido": "FALLA",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 0,
+        "rtt_ms": [],
+        "ttl": [],
+        "via": "auxiliar alpine:3.20 en la red del contenedor",
+        "salida": "PING 192.168.20.21 (192.168.20.21): 56 data bytes\n\n--- 192.168.20.21 ping statistics ---\n3 packets transmitted, 0 packets received, 100% packet loss"
+      }
+    },
+    {
+      "caso": "ping player-1 -> sim-pepper (192.168.20.22)",
+      "esperado": "FALLA",
+      "obtenido": "FALLA",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 0,
+        "rtt_ms": [],
+        "ttl": [],
+        "via": "auxiliar alpine:3.20 en la red del contenedor",
+        "salida": "PING 192.168.20.22 (192.168.20.22): 56 data bytes\n\n--- 192.168.20.22 ping statistics ---\n3 packets transmitted, 0 packets received, 100% packet loss"
+      }
+    },
+    {
+      "caso": "ping player-1 -> ctrl-spot (192.168.20.31)",
+      "esperado": "FALLA",
+      "obtenido": "FALLA",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 0,
+        "rtt_ms": [],
+        "ttl": [],
+        "via": "auxiliar alpine:3.20 en la red del contenedor",
+        "salida": "PING 192.168.20.31 (192.168.20.31): 56 data bytes\n\n--- 192.168.20.31 ping statistics ---\n3 packets transmitted, 0 packets received, 100% packet loss"
+      }
+    },
+    {
+      "caso": "ping player-1 -> ctrl-pepper (192.168.20.32)",
+      "esperado": "FALLA",
+      "obtenido": "FALLA",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 0,
+        "rtt_ms": [],
+        "ttl": [],
+        "via": "auxiliar alpine:3.20 en la red del contenedor",
+        "salida": "PING 192.168.20.32 (192.168.20.32): 56 data bytes\n\n--- 192.168.20.32 ping statistics ---\n3 packets transmitted, 0 packets received, 100% packet loss"
+      }
+    },
+    {
+      "caso": "ping player-1 -> ctrl-nao (192.168.20.33)",
+      "esperado": "FALLA",
+      "obtenido": "FALLA",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 0,
+        "rtt_ms": [],
+        "ttl": [],
+        "via": "auxiliar alpine:3.20 en la red del contenedor",
+        "salida": "PING 192.168.20.33 (192.168.20.33): 56 data bytes\n\n--- 192.168.20.33 ping statistics ---\n3 packets transmitted, 0 packets received, 100% packet loss"
+      }
+    },
+    {
+      "caso": "ping sim-spot -> track-server (192.168.10.10)",
+      "esperado": "FALLA",
+      "obtenido": "FALLA",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 0,
+        "rtt_ms": [],
+        "ttl": [],
+        "via": "auxiliar alpine:3.20 en la red del contenedor",
+        "salida": "PING 192.168.10.10 (192.168.10.10): 56 data bytes\n\n--- 192.168.10.10 ping statistics ---\n3 packets transmitted, 0 packets received, 100% packet loss"
+      }
+    },
+    {
+      "caso": "ping sim-spot -> player-1 (192.168.10.21)",
+      "esperado": "FALLA",
+      "obtenido": "FALLA",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 0,
+        "rtt_ms": [],
+        "ttl": [],
+        "via": "auxiliar alpine:3.20 en la red del contenedor",
+        "salida": "PING 192.168.10.21 (192.168.10.21): 56 data bytes\n\n--- 192.168.10.21 ping statistics ---\n3 packets transmitted, 0 packets received, 100% packet loss"
+      }
+    },
+    {
+      "caso": "ping player-1 -> sim-nao con ruta forzada via 192.168.10.254",
+      "esperado": "FALLA",
+      "obtenido": "FALLA",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 0,
+        "rtt_ms": [],
+        "ttl": [],
+        "via": "auxiliar alpine:3.20 en la red del contenedor",
+        "salida": "PING 192.168.20.23 (192.168.20.23): 56 data bytes\n\n--- 192.168.20.23 ping statistics ---\n3 packets transmitted, 0 packets received, 100% packet loss"
+      }
+    },
+    {
+      "caso": "ping player-1 -> sim-spot con ruta forzada via 192.168.10.254",
+      "esperado": "FALLA",
+      "obtenido": "FALLA",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 0,
+        "rtt_ms": [],
+        "ttl": [],
+        "via": "auxiliar alpine:3.20 en la red del contenedor",
+        "salida": "PING 192.168.20.21 (192.168.20.21): 56 data bytes\n\n--- 192.168.20.21 ping statistics ---\n3 packets transmitted, 0 packets received, 100% packet loss"
+      }
+    },
+    {
+      "caso": "ping sim-spot -> track-server con ruta forzada via 192.168.20.254",
+      "esperado": "FALLA",
+      "obtenido": "FALLA",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 0,
+        "rtt_ms": [],
+        "ttl": [],
+        "via": "auxiliar alpine:3.20 en la red del contenedor",
+        "salida": "PING 192.168.10.10 (192.168.10.10): 56 data bytes\n\n--- 192.168.10.10 ping statistics ---\n3 packets transmitted, 0 packets received, 100% packet loss"
+      }
+    },
+    {
+      "caso": "TCP sim-spot -> track-server:8765 (WebSocket) con ruta forzada",
+      "esperado": "FALLA",
+      "obtenido": "FALLA",
+      "resultado": "APROBADA",
+      "detalle": {
+        "salida": ""
+      }
+    },
+    {
+      "caso": "contadores DROP del router suben con los intentos VLAN1<->VLAN2",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "antes": {
+          "total": 0,
+          "por_cadena": {
+            "INPUT": 0,
+            "FORWARD": 0,
+            "OUTPUT": 0,
+            "AISLAR_V1_V2": 0
+          }
+        },
+        "despues": {
+          "total": 12,
+          "por_cadena": {
+            "INPUT": 0,
+            "FORWARD": 0,
+            "OUTPUT": 0,
+            "AISLAR_V1_V2": 12
+          }
+        },
+        "delta_paquetes": 12,
+        "minimo_esperado": 9
+      }
+    },
+    {
+      "caso": "TCP player-1 -> track-server:8765 (misma VLAN)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "salida": ""
+      }
+    },
+    {
+      "caso": "ping admin -> track-server (192.168.10.10)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 3,
+        "rtt_ms": [
+          0.13,
+          0.089,
+          0.097
+        ],
+        "ttl": [
+          63
+        ],
+        "via": "docker exec",
+        "salida": "PING 192.168.10.10 (192.168.10.10): 56 data bytes\n64 bytes from 192.168.10.10: seq=0 ttl=63 time=0.130 ms\n64 bytes from 192.168.10.10: seq=1 ttl=63 time=0.089 ms\n64 bytes from 192.168.10.10: seq=2 ttl=63 time=0.097 ms\n\n--- 192.168.10.10 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.089/0.105/0.130 ms"
+      }
+    },
+    {
+      "caso": "la respuesta de track-server cruzó exactamente un router (ttl 63)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "ttl": [
+          63
+        ]
+      }
+    },
+    {
+      "caso": "ping admin -> player-1 (192.168.10.21)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 3,
+        "rtt_ms": [
+          0.15,
+          0.136,
+          0.096
+        ],
+        "ttl": [
+          63
+        ],
+        "via": "docker exec",
+        "salida": "PING 192.168.10.21 (192.168.10.21): 56 data bytes\n64 bytes from 192.168.10.21: seq=0 ttl=63 time=0.150 ms\n64 bytes from 192.168.10.21: seq=1 ttl=63 time=0.136 ms\n64 bytes from 192.168.10.21: seq=2 ttl=63 time=0.096 ms\n\n--- 192.168.10.21 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.096/0.127/0.150 ms"
+      }
+    },
+    {
+      "caso": "la respuesta de player-1 cruzó exactamente un router (ttl 63)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "ttl": [
+          63
+        ]
+      }
+    },
+    {
+      "caso": "ping admin -> player-2 (192.168.10.22)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 3,
+        "rtt_ms": [
+          0.147,
+          0.119,
+          0.12
+        ],
+        "ttl": [
+          63
+        ],
+        "via": "docker exec",
+        "salida": "PING 192.168.10.22 (192.168.10.22): 56 data bytes\n64 bytes from 192.168.10.22: seq=0 ttl=63 time=0.147 ms\n64 bytes from 192.168.10.22: seq=1 ttl=63 time=0.119 ms\n64 bytes from 192.168.10.22: seq=2 ttl=63 time=0.120 ms\n\n--- 192.168.10.22 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.119/0.128/0.147 ms"
+      }
+    },
+    {
+      "caso": "la respuesta de player-2 cruzó exactamente un router (ttl 63)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "ttl": [
+          63
+        ]
+      }
+    },
+    {
+      "caso": "ping admin -> player-3 (192.168.10.23)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 3,
+        "rtt_ms": [
+          0.108,
+          0.115,
+          0.107
+        ],
+        "ttl": [
+          63
+        ],
+        "via": "docker exec",
+        "salida": "PING 192.168.10.23 (192.168.10.23): 56 data bytes\n64 bytes from 192.168.10.23: seq=0 ttl=63 time=0.108 ms\n64 bytes from 192.168.10.23: seq=1 ttl=63 time=0.115 ms\n64 bytes from 192.168.10.23: seq=2 ttl=63 time=0.107 ms\n\n--- 192.168.10.23 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.107/0.110/0.115 ms"
+      }
+    },
+    {
+      "caso": "la respuesta de player-3 cruzó exactamente un router (ttl 63)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "ttl": [
+          63
+        ]
+      }
+    },
+    {
+      "caso": "ping admin -> sim-spot (192.168.20.21)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 3,
+        "rtt_ms": [
+          0.105,
+          0.088,
+          0.078
+        ],
+        "ttl": [
+          63
+        ],
+        "via": "docker exec",
+        "salida": "PING 192.168.20.21 (192.168.20.21): 56 data bytes\n64 bytes from 192.168.20.21: seq=0 ttl=63 time=0.105 ms\n64 bytes from 192.168.20.21: seq=1 ttl=63 time=0.088 ms\n64 bytes from 192.168.20.21: seq=2 ttl=63 time=0.078 ms\n\n--- 192.168.20.21 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.078/0.090/0.105 ms"
+      }
+    },
+    {
+      "caso": "la respuesta de sim-spot cruzó exactamente un router (ttl 63)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "ttl": [
+          63
+        ]
+      }
+    },
+    {
+      "caso": "ping admin -> sim-pepper (192.168.20.22)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 3,
+        "rtt_ms": [
+          0.102,
+          0.083,
+          0.102
+        ],
+        "ttl": [
+          63
+        ],
+        "via": "docker exec",
+        "salida": "PING 192.168.20.22 (192.168.20.22): 56 data bytes\n64 bytes from 192.168.20.22: seq=0 ttl=63 time=0.102 ms\n64 bytes from 192.168.20.22: seq=1 ttl=63 time=0.083 ms\n64 bytes from 192.168.20.22: seq=2 ttl=63 time=0.102 ms\n\n--- 192.168.20.22 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.083/0.095/0.102 ms"
+      }
+    },
+    {
+      "caso": "la respuesta de sim-pepper cruzó exactamente un router (ttl 63)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "ttl": [
+          63
+        ]
+      }
+    },
+    {
+      "caso": "ping admin -> sim-nao (192.168.20.23)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 3,
+        "rtt_ms": [
+          0.113,
+          0.094,
+          0.109
+        ],
+        "ttl": [
+          63
+        ],
+        "via": "docker exec",
+        "salida": "PING 192.168.20.23 (192.168.20.23): 56 data bytes\n64 bytes from 192.168.20.23: seq=0 ttl=63 time=0.113 ms\n64 bytes from 192.168.20.23: seq=1 ttl=63 time=0.094 ms\n64 bytes from 192.168.20.23: seq=2 ttl=63 time=0.109 ms\n\n--- 192.168.20.23 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.094/0.105/0.113 ms"
+      }
+    },
+    {
+      "caso": "la respuesta de sim-nao cruzó exactamente un router (ttl 63)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "ttl": [
+          63
+        ]
+      }
+    },
+    {
+      "caso": "ping admin -> ctrl-1 (192.168.10.31)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 3,
+        "rtt_ms": [
+          0.167,
+          0.095,
+          0.107
+        ],
+        "ttl": [
+          63
+        ],
+        "via": "docker exec",
+        "salida": "PING 192.168.10.31 (192.168.10.31): 56 data bytes\n64 bytes from 192.168.10.31: seq=0 ttl=63 time=0.167 ms\n64 bytes from 192.168.10.31: seq=1 ttl=63 time=0.095 ms\n64 bytes from 192.168.10.31: seq=2 ttl=63 time=0.107 ms\n\n--- 192.168.10.31 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.095/0.123/0.167 ms"
+      }
+    },
+    {
+      "caso": "la respuesta de ctrl-1 cruzó exactamente un router (ttl 63)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "ttl": [
+          63
+        ]
+      }
+    },
+    {
+      "caso": "ping admin -> ctrl-2 (192.168.10.32)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 3,
+        "rtt_ms": [
+          0.148,
+          0.095,
+          0.106
+        ],
+        "ttl": [
+          63
+        ],
+        "via": "docker exec",
+        "salida": "PING 192.168.10.32 (192.168.10.32): 56 data bytes\n64 bytes from 192.168.10.32: seq=0 ttl=63 time=0.148 ms\n64 bytes from 192.168.10.32: seq=1 ttl=63 time=0.095 ms\n64 bytes from 192.168.10.32: seq=2 ttl=63 time=0.106 ms\n\n--- 192.168.10.32 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.095/0.116/0.148 ms"
+      }
+    },
+    {
+      "caso": "la respuesta de ctrl-2 cruzó exactamente un router (ttl 63)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "ttl": [
+          63
+        ]
+      }
+    },
+    {
+      "caso": "ping admin -> ctrl-3 (192.168.10.33)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 3,
+        "rtt_ms": [
+          0.198,
+          0.107,
+          0.135
+        ],
+        "ttl": [
+          63
+        ],
+        "via": "docker exec",
+        "salida": "PING 192.168.10.33 (192.168.10.33): 56 data bytes\n64 bytes from 192.168.10.33: seq=0 ttl=63 time=0.198 ms\n64 bytes from 192.168.10.33: seq=1 ttl=63 time=0.107 ms\n64 bytes from 192.168.10.33: seq=2 ttl=63 time=0.135 ms\n\n--- 192.168.10.33 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.107/0.146/0.198 ms"
+      }
+    },
+    {
+      "caso": "la respuesta de ctrl-3 cruzó exactamente un router (ttl 63)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "ttl": [
+          63
+        ]
+      }
+    },
+    {
+      "caso": "ping admin -> ctrl-spot (192.168.20.31)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 3,
+        "rtt_ms": [
+          0.136,
+          0.13,
+          0.122
+        ],
+        "ttl": [
+          63
+        ],
+        "via": "docker exec",
+        "salida": "PING 192.168.20.31 (192.168.20.31): 56 data bytes\n64 bytes from 192.168.20.31: seq=0 ttl=63 time=0.136 ms\n64 bytes from 192.168.20.31: seq=1 ttl=63 time=0.130 ms\n64 bytes from 192.168.20.31: seq=2 ttl=63 time=0.122 ms\n\n--- 192.168.20.31 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.122/0.129/0.136 ms"
+      }
+    },
+    {
+      "caso": "la respuesta de ctrl-spot cruzó exactamente un router (ttl 63)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "ttl": [
+          63
+        ]
+      }
+    },
+    {
+      "caso": "ping admin -> ctrl-pepper (192.168.20.32)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 3,
+        "rtt_ms": [
+          0.18,
+          0.115,
+          0.11
+        ],
+        "ttl": [
+          63
+        ],
+        "via": "docker exec",
+        "salida": "PING 192.168.20.32 (192.168.20.32): 56 data bytes\n64 bytes from 192.168.20.32: seq=0 ttl=63 time=0.180 ms\n64 bytes from 192.168.20.32: seq=1 ttl=63 time=0.115 ms\n64 bytes from 192.168.20.32: seq=2 ttl=63 time=0.110 ms\n\n--- 192.168.20.32 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.110/0.135/0.180 ms"
+      }
+    },
+    {
+      "caso": "la respuesta de ctrl-pepper cruzó exactamente un router (ttl 63)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "ttl": [
+          63
+        ]
+      }
+    },
+    {
+      "caso": "ping admin -> ctrl-nao (192.168.20.33)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 3,
+        "rtt_ms": [
+          0.116,
+          0.093,
+          0.085
+        ],
+        "ttl": [
+          63
+        ],
+        "via": "docker exec",
+        "salida": "PING 192.168.20.33 (192.168.20.33): 56 data bytes\n64 bytes from 192.168.20.33: seq=0 ttl=63 time=0.116 ms\n64 bytes from 192.168.20.33: seq=1 ttl=63 time=0.093 ms\n64 bytes from 192.168.20.33: seq=2 ttl=63 time=0.085 ms\n\n--- 192.168.20.33 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.085/0.098/0.116 ms"
+      }
+    },
+    {
+      "caso": "la respuesta de ctrl-nao cruzó exactamente un router (ttl 63)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "ttl": [
+          63
+        ]
+      }
+    },
+    {
+      "caso": "ping player-1 -> admin (192.168.30.10)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 3,
+        "rtt_ms": [
+          0.127,
+          0.083,
+          0.165
+        ],
+        "ttl": [
+          63
+        ],
+        "via": "auxiliar alpine:3.20 en la red del contenedor",
+        "salida": "PING 192.168.30.10 (192.168.30.10): 56 data bytes\n64 bytes from 192.168.30.10: seq=0 ttl=63 time=0.127 ms\n64 bytes from 192.168.30.10: seq=1 ttl=63 time=0.083 ms\n64 bytes from 192.168.30.10: seq=2 ttl=63 time=0.165 ms\n\n--- 192.168.30.10 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.083/0.125/0.165 ms"
+      }
+    },
+    {
+      "caso": "ping sim-nao -> admin (192.168.30.10)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 3,
+        "rtt_ms": [
+          0.128,
+          0.116,
+          0.118
+        ],
+        "ttl": [
+          63
+        ],
+        "via": "auxiliar alpine:3.20 en la red del contenedor",
+        "salida": "PING 192.168.30.10 (192.168.30.10): 56 data bytes\n64 bytes from 192.168.30.10: seq=0 ttl=63 time=0.128 ms\n64 bytes from 192.168.30.10: seq=1 ttl=63 time=0.116 ms\n64 bytes from 192.168.30.10: seq=2 ttl=63 time=0.118 ms\n\n--- 192.168.30.10 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.116/0.120/0.128 ms"
+      }
+    },
+    {
+      "caso": "ping track-server -> admin (192.168.30.10)",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "enviados": 3,
+        "recibidos": 3,
+        "rtt_ms": [
+          0.147,
+          0.095,
+          0.087
+        ],
+        "ttl": [
+          63
+        ],
+        "via": "auxiliar alpine:3.20 en la red del contenedor",
+        "salida": "PING 192.168.30.10 (192.168.30.10): 56 data bytes\n64 bytes from 192.168.30.10: seq=0 ttl=63 time=0.147 ms\n64 bytes from 192.168.30.10: seq=1 ttl=63 time=0.095 ms\n64 bytes from 192.168.30.10: seq=2 ttl=63 time=0.087 ms\n\n--- 192.168.30.10 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.087/0.109/0.147 ms"
+      }
+    },
+    {
+      "caso": "traceroute admin -> sim-nao: 192.168.30.254 > 192.168.20.23",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "saltos": [
+          "192.168.30.254",
+          "192.168.20.23"
+        ],
+        "esperado": [
+          "192.168.30.254",
+          "192.168.20.23"
+        ],
+        "salida": "traceroute to 192.168.20.23 (192.168.20.23), 5 hops max, 46 byte packets\n 1  192.168.30.254  0.006 ms\n 2  192.168.20.23  0.005 ms"
+      }
+    },
+    {
+      "caso": "traceroute admin -> player-1: 192.168.30.254 > 192.168.10.21",
+      "esperado": "OK",
+      "obtenido": "OK",
+      "resultado": "APROBADA",
+      "detalle": {
+        "saltos": [
+          "192.168.30.254",
+          "192.168.10.21"
+        ],
+        "esperado": [
+          "192.168.30.254",
+          "192.168.10.21"
+        ],
+        "salida": "traceroute to 192.168.10.21 (192.168.10.21), 5 hops max, 46 byte packets\n 1  192.168.30.254  0.009 ms\n 2  192.168.10.21  0.006 ms"
+      }
+    }
+  ]
+}

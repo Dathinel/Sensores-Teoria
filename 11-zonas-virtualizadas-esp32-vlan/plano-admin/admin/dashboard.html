@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plano de administración</title>
+<!-- Única dependencia externa: las fuentes (si no hay internet, el navegador usa las del sistema). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Misma paleta que gesture_control.html (tema 6) y el resto de páginas del repo. */
+  :root {
+    --bg: #0d1013;
+    --panel: #15191d;
+    --panel-2: #1b2025;
+    --panel-border: #262b31;
+    --text: #e7e9ec;
+    --text-muted: #8b929b;
+    --amarillo: #e8b930;
+    --azul: #4f8fce;
+    --rojo: #d9534f;
+    --modo: #9b7fd1;
+    --verde-ok: #4caf7d;
+    --gris: #59606a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: 14px;
+  }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+  .envoltura { max-width: 1500px; margin: 0 auto; padding: 18px 20px 28px; }
+
+  .encabezado { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .encabezado h1 { font-size: 1.25rem; font-weight: 600; margin: 0; letter-spacing: 0.01em; }
+  .encabezado p { margin: 0.15rem 0 0; color: var(--text-muted); font-size: 0.8rem; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    border: 1px solid var(--panel-border); border-radius: 999px; padding: 4px 11px;
+    font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--text-muted);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .chip b { color: var(--text); font-weight: 500; }
+  .punto { width: 8px; height: 8px; border-radius: 50%; background: var(--gris); display: inline-block; }
+
+  .fila-sup { display: grid; grid-template-columns: 1.35fr 1fr; gap: 14px; margin-top: 16px; }
+  .panel { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 10px; padding: 14px 16px; }
+  .panel h2 { font-size: 0.8rem; font-weight: 600; margin: 0 0 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+  /* "LEDs" de la ESP32 esclava: encendido = OK, parpadeo = LENTO, apagado = CAIDO. */
+  .leds { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+  .led-caja { text-align: center; }
+  .led {
+    width: 30px; height: 30px; border-radius: 50%; margin: 2px auto 6px;
+    background: #20252b; border: 2px solid #2d333a;
+  }
+  .led.OK { background: var(--verde-ok); border-color: #6fd39f; box-shadow: 0 0 14px 2px rgba(76,175,125,0.55); }
+  .led.LENTO { background: var(--amarillo); border-color: #f5d572; box-shadow: 0 0 14px 2px rgba(232,185,48,0.5); animation: parpadeo 0.8s steps(1) infinite; }
+  .led.CAIDO { background: #2a1d1d; border-color: #4a2a2a; }
+  @keyframes parpadeo { 50% { background: #3a3220; box-shadow: none; } }
+  .led-caja .n { font-size: 0.78rem; }
+  .led-caja .g { font-family: "IBM Plex Mono", monospace; font-size: 0.66rem; color: var(--text-muted); margin-top: 2px; }
+  .leyenda { margin-top: 10px; font-size: 0.72rem; color: var(--text-muted); }
+
+  .umbrales { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .umbral { background: var(--panel-2); border-radius: 8px; padding: 8px 10px; }
+  .umbral .k { font-size: 0.68rem; color: var(--text-muted); }
+  .umbral .v { font-family: "IBM Plex Mono", monospace; font-size: 0.95rem; margin-top: 2px; }
+  .regla { font-size: 0.72rem; color: var(--text-muted); margin-top: 10px; line-height: 1.45; }
+  .regla b { font-weight: 600; }
+
+  .vlans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 14px; align-items: start; }
+  .vlan { border-radius: 12px; border: 1px solid var(--panel-border); background: #11151a; padding: 12px; }
+  .vlan-cab { display: flex; justify-content: space-between; align-items: baseline; padding: 2px 4px 10px; border-bottom: 2px solid var(--c); margin-bottom: 12px; }
+  .vlan-cab h3 { margin: 0; font-size: 0.98rem; font-weight: 600; }
+  .vlan-cab h3 span { color: var(--c); }
+  .vlan-cab .red { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--text-muted); }
+
+  .tarjeta { background: var(--panel); border: 1px solid var(--panel-border); border-left: 3px solid var(--gris); border-radius: 9px; padding: 10px 12px; margin-bottom: 10px; }
+  .tarjeta.OK { border-left-color: var(--verde-ok); }
+  .tarjeta.LENTO { border-left-color: var(--amarillo); }
+  .tarjeta.CAIDO { border-left-color: var(--rojo); }
+  .t-cab { display: flex; align-items: center; gap: 8px; }
+  .t-cab .nombre { font-weight: 600; font-size: 0.95rem; }
+  .t-cab .ip { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--text-muted); }
+  .t-cab .esp { flex: 1; }
+  .insignia { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 5px; border: 1px solid; }
+  .insignia.OK { color: var(--verde-ok); border-color: rgba(76,175,125,0.5); background: rgba(76,175,125,0.08); }
+  .insignia.LENTO { color: var(--amarillo); border-color: rgba(232,185,48,0.5); background: rgba(232,185,48,0.08); }
+  .insignia.CAIDO { color: var(--rojo); border-color: rgba(217,83,79,0.5); background: rgba(217,83,79,0.08); }
+  .insignia.x { color: var(--text-muted); border-color: var(--panel-border); }
+  .motivo { font-size: 0.72rem; color: var(--text-muted); margin: 5px 0 8px; min-height: 1em; }
+  .num { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  /* ">" importa: sin él, la regla alcanzaría también a los div internos (.k y .v) y cada casilla
+     tendría fondo y relleno dobles. */
+  .num > div { background: var(--panel-2); border-radius: 6px; padding: 5px 8px; min-width: 0; }
+  .num .k { font-size: 0.62rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .num .v { font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; margin-top: 1px; white-space: nowrap; }
+  .num .v.mal { color: var(--rojo); }
+  .num .v.reg { color: var(--amarillo); }
+  .num .v.nd { color: var(--gris); }
+  .grafica { margin-top: 8px; position: relative; }
+  .grafica canvas { width: 100%; height: 58px; display: block; background: #101418; border-radius: 6px; }
+  .grafica .tit { position: absolute; left: 8px; top: 4px; font-family: "IBM Plex Mono", monospace; font-size: 0.6rem; color: var(--text-muted); pointer-events: none; }
+  .grafica .aviso { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; color: var(--rojo); pointer-events: none; text-align: center; padding: 0 10px; }
+  .metr { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
+  .metr span { font-family: "IBM Plex Mono", monospace; font-size: 0.66rem; color: var(--text-muted); border: 1px solid var(--panel-border); border-radius: 4px; padding: 1px 6px; }
+  .metr span b { color: var(--text); font-weight: 500; }
+  .metr .vacio { border: none; padding: 0; color: var(--gris); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.74rem; }
+  th { text-align: left; color: var(--text-muted); font-weight: 500; font-size: 0.66rem; padding: 4px 6px; border-bottom: 1px solid var(--panel-border); }
+  td { font-family: "IBM Plex Mono", monospace; padding: 5px 6px; border-bottom: 1px solid #1d2227; white-space: nowrap; }
+  td.viejo { color: var(--rojo); }
+  .nada { color: var(--text-muted); font-size: 0.74rem; padding: 6px 2px; }
+  .pie { margin-top: 16px; font-size: 0.7rem; color: var(--text-muted); font-family: "IBM Plex Mono", monospace; }
+  .error-api { color: var(--rojo); }
+
+  @media (max-width: 1100px) {
+    .fila-sup, .vlans { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 560px) {
+    .envoltura { padding: 14px 16px; }
+    .leds { grid-template-columns: repeat(3, 1fr); }
+    .num { grid-template-columns: repeat(2, 1fr); }
+    .umbrales { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <div class="encabezado">
+    <div>
+      <h1>Plano de administración · VLAN 3</h1>
+      <p>admin 192.168.30.10 — broker MQTT, latidos UDP 5300, sondeo ICMP a través del router</p>
+    </div>
+    <div class="chips">
+      <span class="chip"><span class="punto" id="pMqtt"></span>MQTT <b id="tMqtt">—</b></span>
+      <span class="chip">en marcha <b id="tMarcha">—</b></span>
+      <span class="chip">actualizado <b id="tAct">—</b></span>
+    </div>
+  </div>
+
+  <div class="fila-sup">
+    <div class="panel">
+      <h2>ESP32 esclava · 6 LEDs (lab/estado/&lt;servicio&gt;)</h2>
+      <div class="leds" id="leds"></div>
+      <div class="leyenda">encendido = OK · parpadeo = LENTO · apagado = CAIDO — lo mismo que muestran los LEDs físicos en GPIO 16, 17, 18, 19, 21, 22</div>
+    </div>
+    <div class="panel">
+      <h2>Cómo se decide el estado</h2>
+      <div class="umbrales" id="umbrales"></div>
+      <div class="regla">
+        <b style="color:var(--rojo)">CAIDO</b>: vivo=0 por MQTT, o sin latido y sin respuesta al ping.
+        <b style="color:var(--amarillo)">LENTO</b>: RTT p95, jitter o pérdida por encima del umbral.
+        <b style="color:var(--verde-ok)">OK</b>: el resto. Ventana de métricas: <span id="ventana">60</span> s.
+      </div>
+    </div>
+  </div>
+
+  <div class="vlans">
+    <section class="vlan" style="--c: var(--amarillo)">
+      <div class="vlan-cab"><h3><span>VLAN 1</span> · Zona Gamer</h3><span class="red">192.168.10.0/24</span></div>
+      <div id="vlan1"></div>
+    </section>
+    <section class="vlan" style="--c: var(--azul)">
+      <div class="vlan-cab"><h3><span>VLAN 2</span> · Zona Robótica</h3><span class="red">192.168.20.0/24</span></div>
+      <div id="vlan2"></div>
+    </section>
+    <section class="vlan" style="--c: var(--modo)">
+      <div class="vlan-cab"><h3><span>VLAN 3</span> · Administración</h3><span class="red">192.168.30.0/24</span></div>
+      <div id="vlan3"></div>
+      <div class="panel" style="margin-top:2px">
+        <h2>Otros orígenes de latido (ESP32 reales y emulados)</h2>
+        <div id="otros"></div>
+      </div>
+      <div class="panel" style="margin-top:10px">
+        <h2>Métricas MQTT de otros clientes</h2>
+        <div id="otrasMet"></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="pie" id="pie">pidiendo /api/resumen.json…</div>
+</div>
+
+<script>
+// La página no calcula nada: pide cada segundo /api/resumen.json (lo arma monitor.py) y lo dibuja.
+// Sin librerías: el DOM se arma la primera vez (una tarjeta por servicio) y después solo se le
+// cambian los textos, para que no parpadee ni se pierda el estado de los canvas.
+const ESTADOS = ["OK", "LENTO", "CAIDO"];
+const $ = (id) => document.getElementById(id);
+const fmt = (v, dec = 2, uni = "") => (v === null || v === undefined) ? "—" : (Number(v).toFixed(dec) + uni);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let tarjetas = {};      // nombre -> elementos de su tarjeta
+let umbr = null;
+
+function crearTarjeta(nombre) {
+  const d = document.createElement("div");
+  d.className = "tarjeta";
+  d.innerHTML = `
+    <div class="t-cab"><span class="nombre">${esc(nombre)}</span><span class="ip"></span><span class="esp"></span><span class="insignia x">?</span></div>
+    <div class="motivo"></div>
+    <div class="num">
+      <div><div class="k">RTT último</div><div class="v" data-k="rtt"></div></div>
+      <div><div class="k">RTT p95</div><div class="v" data-k="p95"></div></div>
+      <div><div class="k">jitter ping</div><div class="v" data-k="jp"></div></div>
+      <div><div class="k">disp. 60 s</div><div class="v" data-k="d60"></div></div>
+      <div><div class="k">último HB</div><div class="v" data-k="hb"></div></div>
+      <div><div class="k">jitter HB</div><div class="v" data-k="jhb"></div></div>
+      <div><div class="k">pérdida HB</div><div class="v" data-k="phb"></div></div>
+      <div><div class="k">disp. total</div><div class="v" data-k="dt"></div></div>
+    </div>
+    <div class="grafica"><canvas></canvas><span class="tit"></span><span class="aviso"></span></div>
+    <div class="metr"></div>`;
+  const v = {};
+  d.querySelectorAll(".v[data-k]").forEach((e) => (v[e.dataset.k] = e));
+  return { raiz: d, ip: d.querySelector(".ip"), ins: d.querySelector(".insignia"), motivo: d.querySelector(".motivo"),
+           v, canvas: d.querySelector("canvas"), tit: d.querySelector(".tit"), aviso: d.querySelector(".aviso"),
+           metr: d.querySelector(".metr") };
+}
+
+function poner(el, texto, clase) {
+  el.textContent = texto;
+  el.className = "v" + (clase ? " " + clase : "");
+}
+
+function dibujarRtt(t, ping) {
+  // Mini gráfica de los últimos 60 s: eje x = segundos hacia atrás (derecha = ahora), eje y = RTT.
+  // Los pings sin respuesta se marcan con una rayita roja abajo: así se ve si "no hay ruta" (todo
+  // rojo) o si se pierde uno de vez en cuando.
+  const c = t.canvas, dpr = window.devicePixelRatio || 1;
+  const W = c.clientWidth, H = c.clientHeight;
+  if (c.width !== Math.round(W * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+  const g = c.getContext("2d");
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, W, H);
+  const ventana = (umbr && umbr.ventana_s) || 60;
+  const hist = (ping && ping.historial) || [];
+  const rtts = hist.filter((p) => p[1] !== null).map((p) => p[1]);
+  // Escala automática con un piso de 0,2 ms: entre contenedores el RTT es de décimas de ms y con un
+  // piso de 1 ms la línea quedaría aplastada contra el borde de abajo.
+  const maxY = Math.max(0.2, ...rtts) * 1.25;
+  const x = (atras) => W - 4 - (atras / ventana) * (W - 8);
+  const y = (r) => H - 8 - (r / maxY) * (H - 22);
+  // Línea del umbral de RTT si cae dentro de la escala.
+  if (umbr && umbr.rtt_p95_ms < maxY) {
+    g.strokeStyle = "rgba(232,185,48,0.35)"; g.setLineDash([3, 3]); g.lineWidth = 1;
+    g.beginPath(); g.moveTo(0, y(umbr.rtt_p95_ms)); g.lineTo(W, y(umbr.rtt_p95_ms)); g.stroke(); g.setLineDash([]);
+  }
+  g.strokeStyle = "#4f8fce"; g.lineWidth = 1.5; g.beginPath();
+  let abierto = false;
+  for (const [atras, r] of hist) {
+    if (r === null) { abierto = false; continue; }      // un hueco corta la línea
+    if (!abierto) { g.moveTo(x(atras), y(r)); abierto = true; } else g.lineTo(x(atras), y(r));
+  }
+  g.stroke();
+  g.fillStyle = "#d9534f";
+  for (const [atras, r] of hist) if (r === null) g.fillRect(x(atras) - 1, H - 5, 2, 4);
+  t.tit.textContent = ping ? `RTT ICMP · 60 s · máx escala ${maxY.toFixed(maxY < 10 ? 2 : 0)} ms` : "sin sondeo ICMP configurado";
+  let aviso = "";
+  if (ping && ping.total > 0 && !ping.alguna_vez_ok) aviso = `sin respuesta ICMP (${ping.total} intentos): ¿router o ruta caídos?`;
+  else if (ping && ping.total === 0) aviso = "esperando el primer ping…";
+  t.aviso.textContent = aviso;
+}
+
+function pintarServicio(nombre, s) {
+  if (!tarjetas[nombre]) {
+    tarjetas[nombre] = crearTarjeta(nombre);
+    $("vlan" + s.vlan).appendChild(tarjetas[nombre].raiz);
+  }
+  const t = tarjetas[nombre];
+  const est = ESTADOS.includes(s.estado) ? s.estado : "x";
+  t.raiz.className = "tarjeta " + est;
+  t.ins.className = "insignia " + est;
+  t.ins.textContent = s.estado;
+  t.ip.textContent = s.ip + (s.led ? " · LED" : "");
+  t.motivo.textContent = s.motivo.startsWith("vivo=") ? s.motivo : `vivo=${s.vivo ?? "?"} · ${s.motivo}`;
+  const p = s.ping, h = s.hb;
+  const u = umbr || {};
+  poner(t.v.rtt, p ? fmt(p.rtt_ultimo_ms, 2, " ms") : "—", p && p.rtt_ultimo_ms === null ? "nd" : "");
+  poner(t.v.p95, p ? fmt(p.rtt_p95_ms, 2, " ms") : "—", p && p.rtt_p95_ms > u.rtt_p95_ms ? "reg" : (p && p.rtt_p95_ms === null ? "nd" : ""));
+  poner(t.v.jp, p ? fmt(p.jitter_ms, 2, " ms") : "—", p && p.jitter_ms > u.jitter_ms ? "reg" : (p && p.jitter_ms === null ? "nd" : ""));
+  poner(t.v.d60, p ? fmt(p.disp_60s_pct, 1, " %") : "—", p && p.disp_60s_pct !== null && p.disp_60s_pct < 100 - u.perdida_pct ? "mal" : "");
+  poner(t.v.hb, h ? fmt(h.edad_s, 1, " s") : "nunca", !h ? "nd" : (h.edad_s > u.hb_timeout_s ? "mal" : ""));
+  poner(t.v.jhb, h ? fmt(h.jitter_ms, 2, " ms") : "—", h && h.jitter_ms > u.jitter_ms ? "reg" : (!h ? "nd" : ""));
+  poner(t.v.phb, h ? fmt(h.perdida_60s_pct, 1, " %") : "—", h && h.perdida_60s_pct > u.perdida_pct ? "reg" : (!h ? "nd" : ""));
+  poner(t.v.dt, p ? fmt(p.disp_total_pct, 1, " %") : "—", p && p.disp_total_pct === null ? "nd" : (p && p.disp_total_pct < 100 - u.perdida_pct ? "mal" : ""));
+  dibujarRtt(t, p);
+  // Métricas que publica el propio contenedor por MQTT (lab/metricas/<servicio>): se muestran tal cual.
+  if (s.metricas) {
+    const pares = Object.entries(s.metricas).filter(([k]) => k !== "servicio" && k !== "t_ms").slice(0, 10);
+    t.metr.innerHTML = pares.map(([k, v]) => `<span>${esc(k)} <b>${esc(typeof v === "object" ? JSON.stringify(v) : v)}</b></span>`).join("")
+      + `<span>hace <b>${fmt(s.metricas_edad_s, 1, " s")}</b></span>`;
+  } else {
+    t.metr.innerHTML = `<span class="vacio">sin métricas MQTT (lab/metricas/${esc(nombre)})</span>`;
+  }
+}
+
+function pintarLeds(r) {
+  const cont = $("leds");
+  if (!cont.children.length) {
+    cont.innerHTML = r.leds.map((n, i) => `<div class="led-caja"><div class="led" id="led-${n}"></div><div class="n">${n}</div><div class="g">GPIO ${[16, 17, 18, 19, 21, 22][i]}</div></div>`).join("");
+  }
+  for (const n of r.leds) $("led-" + n).className = "led " + (r.servicios[n] ? r.servicios[n].estado : "");
+}
+
+function pintarOtros(r) {
+  const filas = r.otros_origenes;
+  if (!filas.length) {
+    $("otros").innerHTML = `<div class="nada">ningún ESP32 ha mandado HB todavía (HB,&lt;origen&gt;,seq,t_ms a UDP 5300)</div>`;
+  } else {
+    $("otros").innerHTML = `<table><tr><th>origen</th><th>IP</th><th>último</th><th>HB</th><th>pérdida</th><th>jitter</th><th>PING</th></tr>` +
+      filas.map((o) => `<tr><td>${esc(o.origen)}</td><td>${esc(o.ip)}</td>` +
+        `<td class="${o.edad_s === null || o.edad_s > r.umbrales.hb_timeout_s ? "viejo" : ""}">${o.edad_s === null ? "—" : fmt(o.edad_s, 1, " s")}</td>` +
+        `<td>${o.recibidos}</td><td>${fmt(o.perdida_60s_pct, 1, " %")}</td><td>${fmt(o.jitter_ms, 2, " ms")}</td><td>${o.pings}</td></tr>`).join("") + `</table>`;
+  }
+  const om = Object.entries(r.otras_metricas);
+  $("otrasMet").innerHTML = om.length
+    ? om.map(([n, m]) => `<div class="metr" style="margin:0 0 6px"><span><b>${esc(n)}</b></span>` +
+        Object.entries(m.datos).filter(([k]) => k !== "servicio" && k !== "t_ms").slice(0, 8)
+          .map(([k, v]) => `<span>${esc(k)} <b>${esc(typeof v === "object" ? JSON.stringify(v) : v)}</b></span>`).join("") +
+        `<span>hace <b>${fmt(m.edad_s, 1, " s")}</b></span></div>`).join("")
+    : `<div class="nada">ninguna todavía</div>`;
+}
+
+function pintarUmbrales(u) {
+  $("umbrales").innerHTML = [
+    ["sin latido", fmt(u.hb_timeout_s, 0, " s")], ["RTT p95", fmt(u.rtt_p95_ms, 0, " ms")],
+    ["jitter", fmt(u.jitter_ms, 0, " ms")], ["pérdida", fmt(u.perdida_pct, 0, " %")],
+    ["ventana", fmt(u.ventana_s, 0, " s")], ["pings para CAIDO", "2 seguidos"],
+  ].map(([k, v]) => `<div class="umbral"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+  $("ventana").textContent = u.ventana_s;
+}
+
+function duracion(s) {
+  s = Math.floor(s);
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60;
+  return (h ? h + " h " : "") + (h || m ? m + " min " : "") + x + " s";
+}
+
+async function actualizar() {
+  try {
+    const r = await (await fetch("/api/resumen.json", { cache: "no-store" })).json();
+    if (!umbr) pintarUmbrales(r.umbrales);
+    umbr = r.umbrales;
+    $("pMqtt").style.background = r.mqtt_conectado ? "var(--verde-ok)" : "var(--rojo)";
+    $("tMqtt").textContent = r.mqtt_conectado ? "conectado" : "desconectado";
+    $("tMarcha").textContent = duracion(r.en_marcha_s);
+    $("tAct").textContent = new Date(r.t * 1000).toLocaleTimeString();
+    pintarLeds(r);
+    for (const [n, s] of Object.entries(r.servicios)) pintarServicio(n, s);
+    pintarOtros(r);
+    const cuenta = { OK: 0, LENTO: 0, CAIDO: 0 };
+    for (const s of Object.values(r.servicios)) if (s.estado in cuenta) cuenta[s.estado]++;
+    $("pie").textContent = `${cuenta.OK} OK · ${cuenta.LENTO} LENTO · ${cuenta.CAIDO} CAIDO — ` +
+      `orígenes de latido: ${Object.values(r.servicios).filter((s) => s.hb).length + r.otros_origenes.length} — ` +
+      `JSON completo en /api/resumen.json (y por MQTT en lab/admin/resumen cada 2 s)`;
+    $("pie").classList.remove("error-api");
+  } catch (e) {
+    $("pie").textContent = "no se pudo leer /api/resumen.json: " + e;
+    $("pie").classList.add("error-api");
+    $("pMqtt").style.background = "var(--gris)";
+  }
+}
+actualizar();
+setInterval(actualizar, 1000);
+</script>
+</body>
+</html>
