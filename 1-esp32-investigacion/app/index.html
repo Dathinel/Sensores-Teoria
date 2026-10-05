@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Investigación del ESP32</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/comun/app.css">
+<link rel="stylesheet" href="lector.css">
+</head>
+<body class="lector">
+
+<header class="barra">
+  <button class="menu-movil" id="bMenu" aria-label="Abrir el índice">☰</button>
+  <div class="barra-titulo">
+    <span class="sello">Tema 1</span>
+    <strong>Investigación del ESP32</strong>
+  </div>
+  <div class="barra-progreso" title="Capítulos leídos"><div id="progresoLectura"></div></div>
+  <span class="barra-leidos" id="txtLeidos"></span>
+  <a class="boton-sec" id="bGithub" href="https://github.com/Dathinel/Sensores-Teoria/tree/main/1-esp32-investigacion" target="_blank" rel="noopener">Ver en GitHub ↗</a>
+</header>
+
+<div class="cuerpo">
+  <nav class="indice" id="indice" aria-label="Capítulos">
+    <div class="indice-cab">Capítulos</div>
+    <ol id="listaCap"></ol>
+    <div class="indice-pie">
+      <a href="/app/2-lenguajes-thonny/" target="_blank" rel="noopener">Tema 2: Thonny y MicroPython ↗</a>
+    </div>
+  </nav>
+
+  <main class="hoja" id="hoja">
+    <!-- PORTADA -->
+    <section class="capitulo" id="cap-portada" data-cap="portada">
+      <div class="portada">
+        <div class="portada-texto">
+          <p class="antetitulo">Actividad 1 · lectura</p>
+          <h1>El chip de todo el curso, explicado de punta a punta</h1>
+          <p class="entradilla">Qué es el ESP32, de dónde viene, cómo está armado por dentro, qué hace cada pin,
+            cómo se programa, cuánto le cuesta al planeta y para qué se usa. Se lee por capítulos con el
+            índice de la izquierda, y al final hay un script corto que le pregunta todo esto al propio chip.</p>
+          <div class="portada-botones">
+            <button class="boton-pri" id="bEmpezar">Empezar a leer →</button>
+            <button class="boton-sec" id="bIrPlaca">Ir al script de la placa</button>
+          </div>
+        </div>
+        <figure class="portada-figura">
+          <svg viewBox="0 0 360 230" role="img" aria-label="Placa ESP32 DevKit dibujada">
+            <defs>
+              <linearGradient id="gPlaca" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#1b2a3a"/><stop offset="1" stop-color="#14202d"/></linearGradient>
+            </defs>
+            <rect x="20" y="30" width="320" height="170" rx="10" fill="url(#gPlaca)" stroke="#2f4a63"/>
+            <g fill="#c9a24a"><g id="filaPines"></g></g>
+            <rect x="120" y="55" width="150" height="120" rx="4" fill="#9aa4ad"/>
+            <rect x="128" y="63" width="134" height="104" rx="2" fill="#b7c0c8"/>
+            <path d="M270 68 h40 v10 h-32 v10 h32 v10 h-32 v10 h32 v10 h-32 v10 h32 v10 h-40" fill="none" stroke="#c9a24a" stroke-width="3"/>
+            <text x="195" y="110" text-anchor="middle" font-family="IBM Plex Mono" font-size="13" fill="#2a3540">ESP32-WROOM-32</text>
+            <text x="195" y="128" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#3d4a56">2 núcleos · Wi-Fi · BT</text>
+            <rect x="0" y="95" width="40" height="40" rx="4" fill="#7c868f"/>
+            <text x="20" y="152" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#8fb3d1">USB</text>
+            <rect x="60" y="60" width="26" height="16" rx="3" fill="#2a2f34" stroke="#56606a"/><text x="73" y="90" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#8fb3d1">EN</text>
+            <rect x="60" y="150" width="26" height="16" rx="3" fill="#2a2f34" stroke="#56606a"/><text x="73" y="145" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#8fb3d1">BOOT</text>
+          </svg>
+          <figcaption>DevKit V1 con el módulo ESP32-WROOM-32, la placa de los laboratorios.</figcaption>
+        </figure>
+      </div>
+
+      <div class="dos-columnas">
+        <div class="tarjeta">
+          <h2>Qué pide la actividad</h2>
+          <p class="nota">Cada punto lleva al capítulo que lo responde. Se marca solo al leer ese capítulo (o márcalo tú).</p>
+          <ul class="pide" id="listaPide"></ul>
+        </div>
+        <div class="tarjeta">
+          <h2>Cómo está organizado</h2>
+          <ol class="mapa" id="mapaGrupos"></ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- capítulos del README: se generan desde README.md -->
+    <div id="capsReadme"></div>
+
+    <!-- EL SCRIPT EN LA PLACA (capítulo propio de la app) -->
+    <section class="capitulo" id="cap-placa" data-cap="placa" hidden>
+      <p class="antetitulo">Para comprobarlo de verdad</p>
+      <h1>Correr <code>ficha_placa.py</code> en tu ESP32</h1>
+
+      <div class="aviso-placa">
+        <div class="icono-placa" aria-hidden="true">⚡</div>
+        <div>
+          <strong>Esto se corre en el ESP32, no en el computador.</strong>
+          El script es MicroPython: lo manda Thonny por el cable USB y lo ejecuta el propio chip, que responde
+          con sus datos (CPU, flash, RAM, temperatura, ADC, DAC y táctil). Por eso esta app no tiene un botón de
+          "probar": sin la placa no hay nada que medir.
+        </div>
+      </div>
+
+      <div class="flujo-placa" aria-label="Recorrido del script">
+        <div class="nodo">PC con <b>Thonny</b><small>F5 sobre el script</small></div>
+        <div class="flecha">USB →<small>manda el texto</small></div>
+        <div class="nodo resalta">ESP32 con <b>MicroPython</b><small>se pregunta a sí mismo</small></div>
+        <div class="flecha">← USB<small>print() de vuelta</small></div>
+        <div class="nodo">Shell de Thonny<small>los 5 bloques</small></div>
+      </div>
+
+      <h2>Paso a paso</h2>
+      <ol class="pasos-placa">
+        <li>
+          <b>¿Tu ESP32 ya tiene MicroPython?</b> Si no, la app del tema 2 te guía para instalarlo (son unos minutos).
+          <div class="acciones-linea"><a class="boton-pri" href="/app/2-lenguajes-thonny/#instalar" target="_blank" rel="noopener">Instalar MicroPython (tema 2) ↗</a></div>
+        </li>
+        <li><b>Conecta la placa por USB</b> y en Thonny, abajo a la derecha, elige el intérprete
+          <i>MicroPython (ESP32)</i> con su puerto COM. En la Shell debe aparecer <code>&gt;&gt;&gt;</code>.</li>
+        <li><b>Abre el script en Thonny</b> (cópialo con el botón de abajo y pégalo en un archivo nuevo) y presiona
+          <kbd>F5</kbd>. No hace falta guardarlo como <code>main.py</code>: es una prueba de una sola vez.</li>
+        <li><b>Prueba ADC contra DAC</b> (opcional): pon un cable entre <b>GPIO25</b> y <b>GPIO34</b> y vuelve a
+          presionar <kbd>F5</kbd>. La línea <code>DAC GPIO25 en 128 -&gt; ADC GPIO34 lee:</code> debe rondar
+          <b>2000</b>. Sin el cable sale un número al azar, y eso también es correcto.</li>
+        <li><b>Prueba del táctil</b>: anota el valor de <code>Tactil GPIO4</code>, corre otra vez con el dedo sobre
+          el pin GPIO4 y compara: tocando, <b>baja</b>.</li>
+      </ol>
+
+      <div class="dos-columnas">
+        <div class="tarjeta">
+          <h2>Qué se conecta (casi nada)</h2>
+          <table class="tabla">
+            <thead><tr><th>Qué</th><th>Pin</th><th>¿Hace falta?</th></tr></thead>
+            <tbody>
+              <tr><td>Cable USB al PC</td><td>USB</td><td>Sí: alimenta y transmite</td></tr>
+              <tr><td>Puente DAC → ADC</td><td>GPIO25 → GPIO34</td><td>Opcional, sin resistencia</td></tr>
+              <tr><td>Botón táctil</td><td>GPIO4</td><td>No: se toca el pin con el dedo</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="tarjeta">
+          <h2>Qué deberías ver en la Shell</h2>
+          <pre class="salida" id="salidaEsperada">== Chip y firmware
+Firmware: &lt;versión&gt; | maquina: &lt;placa y chip&gt;
+CPU a 160 MHz
+CPU subida a 240 MHz
+ID unico: &lt;12 cifras hexadecimales&gt;
+== Memoria
+Flash: 4 MB
+RAM libre para Python: &lt;KB&gt; KB
+Sistema de archivos: &lt;KB&gt; KB libres de &lt;KB&gt; KB
+== Sensores internos
+Temperatura interna: &lt;F&gt; F (~&lt;C&gt; C)
+== ADC (12 bits) y DAC (8 bits)
+ADC GPIO34 (0-4095): [&lt;5 lecturas&gt;]
+DAC GPIO25 en 128 -&gt; ADC GPIO34 lee: &lt;valor&gt;
+== Tactil
+Tactil GPIO4 (tocar el pin y volver a correr): &lt;valor&gt;</pre>
+          <p class="nota">Lo que va entre &lt; &gt; cambia en cada placa. Aún no tenemos la captura de la Shell con la placa del laboratorio (está en Pendiente del README).</p>
+        </div>
+      </div>
+
+      <div class="codigo-caja">
+        <div class="codigo-cab">
+          <span><b>ficha_placa.py</b> · MicroPython · corre en el ESP32</span>
+          <span class="codigo-botones">
+            <button class="boton-sec" id="bCopiar">Copiar el código</button>
+            <a class="boton-sec" href="https://github.com/Dathinel/Sensores-Teoria/blob/main/1-esp32-investigacion/ficha_placa.py" target="_blank" rel="noopener">En GitHub ↗</a>
+          </span>
+        </div>
+        <pre class="codigo" id="codigoFicha">Cargando…</pre>
+      </div>
+
+      <details class="plegado">
+        <summary>¿Y sin placa? (Wokwi)</summary>
+        <p>Wokwi simula un ESP32 en el navegador y se puede pegar el script ahí, pero el simulador no tiene flash,
+          temperatura ni capacitancia reales: esos números no dicen nada de la placa. Para jugar sin hardware sirven
+          mejor los ejemplos del tema 2 (LEDs y siete segmentos).</p>
+        <button class="boton-sec" id="bWokwi">Abrir Wokwi (MicroPython en ESP32) ↗</button>
+      </details>
+    </section>
+
+    <nav class="paginacion" id="paginacion">
+      <button class="boton-sec" id="bAnterior">← Anterior</button>
+      <span id="posCap"></span>
+      <button class="boton-pri" id="bSiguiente">Siguiente →</button>
+    </nav>
+  </main>
+</div>
+
+<script src="/comun/app.js"></script>
+<script src="lector.js"></script>
+</body>
+</html>

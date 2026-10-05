@@ -1,0 +1,163 @@
+/* Estilos propios de la app del tema 6 (encima de /comun/app.css). Prefijo g- para no chocar. */
+:root {
+  color-scheme: dark;
+  --acento: #e8b930;
+  --g-bg: #0d1013;
+  --g-panel: #15191d;
+  --g-borde: #262b31;
+  --g-texto: #e7e9ec;
+  --g-muted: #8b929b;
+  --g-amarillo: #e8b930;
+  --g-azul: #4f8fce;
+  --g-rojo: #d9534f;
+  --g-modo: #9b7fd1;
+  --g-ok: #4caf7d;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--g-bg); color: var(--g-texto);
+  font-family: "Space Grotesk", system-ui, sans-serif; line-height: 1.5;
+}
+code, pre { font-family: "IBM Plex Mono", monospace; }
+code { font-size: .85em; background: #1c2126; padding: .05em .35em; border-radius: 4px; }
+h1, h2, h3 { line-height: 1.2; }
+img { max-width: 100%; display: block; }
+.g-muted { color: var(--g-muted); }
+.g-chico { font-size: .85rem; }
+
+/* ── Portada ─────────────────────────────────────────── */
+.g-portada {
+  display: grid; grid-template-columns: 1.2fr 1fr .9fr; gap: 1.4rem; align-items: start;
+  padding: 1.6rem clamp(1rem, 3vw, 2.4rem) 1.2rem;
+  background: radial-gradient(circle at 12% 0%, rgba(232,185,48,.10), transparent 45%),
+              radial-gradient(circle at 60% 10%, rgba(79,143,206,.10), transparent 45%),
+              radial-gradient(circle at 95% 0%, rgba(217,83,79,.10), transparent 40%);
+  border-bottom: 1px solid var(--g-borde);
+}
+@media (max-width: 1100px) { .g-portada { grid-template-columns: 1fr 1fr; } .g-pide { grid-column: 1 / -1; } }
+@media (max-width: 700px) { .g-portada { grid-template-columns: 1fr; } }
+.g-etiqueta { font-family: "IBM Plex Mono", monospace; font-size: .75rem; color: var(--g-amarillo); letter-spacing: .08em; text-transform: uppercase; margin: 0 0 .3rem; }
+.g-portada h1 { font-size: clamp(1.7rem, 3.4vw, 2.6rem); margin: 0 0 .6rem; }
+.g-frase { color: #c9cdd2; margin: 0 0 1rem; max-width: 46ch; }
+.g-portada-botones { display: flex; gap: .6rem; flex-wrap: wrap; }
+.g-portada-gif { margin: 0; }
+.g-portada-gif img { border-radius: 10px; border: 1px solid var(--g-borde); }
+figcaption { font-size: .8rem; color: var(--g-muted); margin-top: .35rem; }
+.g-pide { background: var(--g-panel); border: 1px solid var(--g-borde); border-radius: 10px; padding: .9rem 1rem; }
+.g-pide h2 { font-size: .95rem; margin: 0 0 .5rem; }
+
+/* ── Botones ─────────────────────────────────────────── */
+.g-boton {
+  font-family: inherit; font-weight: 600; cursor: pointer; border-radius: 8px;
+  border: 1px solid var(--g-borde); background: #1c2126; color: var(--g-texto);
+  padding: .55rem 1rem; font-size: .95rem;
+}
+.g-boton:hover { border-color: var(--g-azul); }
+.g-boton-grande { background: var(--g-amarillo); color: #1a1405; border-color: var(--g-amarillo); padding: .75rem 1.4rem; font-size: 1.05rem; }
+.g-boton-grande:hover { filter: brightness(1.08); border-color: var(--g-amarillo); }
+.g-boton-sec { background: transparent; }
+
+/* ── Pasos ───────────────────────────────────────────── */
+.g-pasos { padding: 1.2rem clamp(1rem, 3vw, 2.4rem) 3rem; }
+.paso { margin-bottom: 2.4rem; }
+.paso > h2 { font-size: 1.45rem; margin: 0 0 .6rem; }
+.paso p { max-width: 80ch; }
+.g-tarjeta { background: var(--g-panel); border: 1px solid var(--g-borde); border-radius: 10px; padding: .9rem 1.1rem; }
+.g-tarjeta h3 { margin: 0 0 .4rem; font-size: 1.02rem; }
+.g-tarjeta p { margin: .3rem 0; }
+.g-tarjeta-sin { border-color: rgba(76,175,125,.45); }
+.g-dos-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin: 1rem 0; }
+.g-dos-col figure { margin: 0; }
+.g-dos-col figure img { border-radius: 8px; border: 1px solid var(--g-borde); }
+.g-lista { padding-left: 1.2rem; margin: .4rem 0; }
+.g-lista li { margin: .25rem 0; }
+.g-nota { background: rgba(76,175,125,.10); border-left: 3px solid var(--g-ok); padding: .5rem .8rem; border-radius: 0 6px 6px 0; }
+.g-detalle { margin: 1rem 0; background: var(--g-panel); border: 1px solid var(--g-borde); border-radius: 8px; padding: .5rem .9rem; }
+.g-detalle summary { cursor: pointer; font-weight: 600; color: #c9cdd2; }
+.g-detalle[open] summary { margin-bottom: .5rem; }
+.g-tecnico summary { color: var(--g-muted); font-weight: 500; }
+.g-md { font-size: .92rem; }
+.g-enlace { color: var(--g-azul); }
+.g-panel-accion { margin: 1rem 0; }
+.g-ampliable { cursor: zoom-in; }
+
+/* ── Gestos + LEDs ───────────────────────────────────── */
+.g-gestos-y-leds { display: grid; grid-template-columns: 1fr minmax(260px, 320px); gap: 1.2rem; align-items: start; margin-top: 1rem; }
+@media (max-width: 900px) { .g-gestos-y-leds { grid-template-columns: 1fr; } }
+.g-gestos { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: .8rem; }
+.g-gesto {
+  display: flex; flex-direction: column; align-items: flex-start; gap: .2rem; text-align: left;
+  font-family: inherit; color: var(--g-texto); cursor: pointer;
+  background: var(--g-panel); border: 1px solid var(--g-borde); border-top: 4px solid var(--c);
+  border-radius: 10px; padding: .8rem .9rem; transition: transform .12s, box-shadow .12s;
+}
+.g-gesto:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+.g-gesto.activo { box-shadow: 0 0 0 2px var(--c), 0 6px 18px rgba(0,0,0,.35); }
+.g-mano { font-size: 2.1rem; line-height: 1.1; }
+.g-gesto-nombre { font-weight: 700; font-size: 1.02rem; }
+.g-gesto-accion { color: #c9cdd2; font-size: .88rem; }
+.g-gesto-accion b { color: var(--c); }
+.g-gesto code { margin-top: .3rem; color: var(--g-muted); }
+.g-leds-panel { background: var(--g-panel); border: 1px solid var(--g-borde); border-radius: 10px; padding: 1rem; position: sticky; top: 1rem; }
+.g-leds-panel h3 { margin: 0 0 .8rem; font-size: 1rem; }
+.g-leds { display: flex; justify-content: space-around; gap: .6rem; }
+.g-led { display: flex; flex-direction: column; align-items: center; gap: .15rem; --b: 0; }
+.g-bombillo {
+  width: 54px; height: 54px; border-radius: 50% 50% 46% 46%;
+  background: color-mix(in srgb, var(--c) calc(18% + var(--b) * 82%), #20252a);
+  border: 2px solid color-mix(in srgb, var(--c) 55%, #333);
+  box-shadow: 0 0 calc(var(--b) * 34px) calc(var(--b) * 8px) color-mix(in srgb, var(--c) 80%, transparent);
+  transition: background .08s, box-shadow .08s;
+}
+.g-led-nombre { font-weight: 600; font-size: .85rem; margin-top: .3rem; }
+.g-led-pin, .g-led-pct { font-family: "IBM Plex Mono", monospace; font-size: .72rem; color: var(--g-muted); }
+.g-led-pct { color: var(--g-texto); }
+.g-ultimo { margin: 1rem 0 .4rem; font-size: .9rem; }
+
+/* ── Flujo ───────────────────────────────────────────── */
+.g-flujo { list-style: none; padding: 0; margin: 1rem 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .6rem; counter-reset: none; }
+.g-flujo li { position: relative; background: var(--g-panel); border: 1px solid var(--g-borde); border-radius: 10px; padding: .8rem .8rem .7rem; display: flex; flex-direction: column; gap: .2rem; }
+.g-flujo li small { color: var(--g-muted); font-size: .8rem; line-height: 1.35; }
+.g-flujo-n { width: 1.6rem; height: 1.6rem; border-radius: 50%; display: grid; place-items: center; background: var(--g-azul); color: #071321; font-weight: 700; font-size: .85rem; margin-bottom: .2rem; }
+
+/* ── Montaje ─────────────────────────────────────────── */
+.g-montaje { display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.2rem; align-items: start; }
+@media (max-width: 900px) { .g-montaje { grid-template-columns: 1fr; } }
+.g-montaje figure { margin: 0; }
+.g-montaje img { border-radius: 10px; border: 1px solid var(--g-borde); }
+.g-tabla { width: 100%; border-collapse: collapse; font-size: .92rem; margin-bottom: .6rem; }
+.g-tabla th, .g-tabla td { border-bottom: 1px solid var(--g-borde); padding: .45rem .5rem; text-align: left; }
+.g-tabla th { color: var(--g-muted); font-weight: 500; font-size: .8rem; }
+.g-tabla td { font-family: "IBM Plex Mono", monospace; font-size: .85rem; }
+.g-tabla td:first-child { font-family: inherit; font-weight: 600; }
+.g-punto { display: inline-block; width: .7rem; height: .7rem; border-radius: 50%; background: var(--c); margin-right: .45rem; box-shadow: 0 0 6px var(--c); }
+
+/* ── Embebido ────────────────────────────────────────── */
+.g-embebido { margin-top: 1.2rem; }
+.g-embebido-barra { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; margin-bottom: .6rem; }
+.g-marco { border: 1px solid var(--g-borde); border-radius: 10px; overflow: hidden; background: #0a0d10; }
+.g-marco iframe { width: 100%; height: 960px; border: 0; display: block; }
+
+/* ── ESP32 real ──────────────────────────────────────── */
+.g-pasos-esp { padding-left: 0; list-style: none; counter-reset: p; display: grid; gap: .6rem; max-width: 900px; }
+.g-pasos-esp li { counter-increment: p; position: relative; padding: .7rem .9rem .7rem 3rem; background: var(--g-panel); border: 1px solid var(--g-borde); border-radius: 10px; }
+.g-pasos-esp li::before { content: counter(p); position: absolute; left: .8rem; top: .7rem; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--g-amarillo); color: #1a1405; font-weight: 700; display: grid; place-items: center; font-size: .85rem; }
+.g-diagnostico { margin: 1rem 0; max-width: 900px; border-color: rgba(217,83,79,.4); }
+.g-codigo { max-height: 420px; overflow: auto; background: #0a0d10; border: 1px solid var(--g-borde); border-radius: 8px; padding: .8rem; font-size: .78rem; line-height: 1.45; white-space: pre; }
+
+/* ── Resultados ──────────────────────────────────────── */
+.g-estados { display: grid; grid-template-columns: repeat(3, 1fr); gap: .8rem; margin: .8rem 0; }
+@media (max-width: 800px) { .g-estados { grid-template-columns: 1fr; } }
+.g-estados figure { margin: 0; }
+.g-estados img { border-radius: 8px; border: 1px solid var(--g-borde); }
+
+/* Visor simple de imágenes si /comun/app.js no trae App.imagen */
+.g-visor { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: grid; place-items: center; z-index: 1000; cursor: zoom-out; padding: 2rem; }
+.g-visor img { max-width: 95vw; max-height: 92vh; border-radius: 8px; }
+
+/* Portada: texto + gif arriba, la lista de la actividad a todo el ancho debajo */
+.g-portada { grid-template-columns: 1.1fr 1fr; }
+.g-pide { grid-column: 1 / -1; padding: .4rem .6rem; }
+.g-pide .app-checklist ul { columns: 2 320px; column-gap: 1.6rem; }
+.g-pide .app-checklist li { break-inside: avoid; }
+@media (max-width: 700px) { .g-portada { grid-template-columns: 1fr; } }

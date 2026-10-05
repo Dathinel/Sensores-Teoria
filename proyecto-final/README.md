@@ -44,13 +44,32 @@ de los demás grupos (1 a 6 y 8) no los implementamos.
 
 ## Cómo verlo
 
-Doble clic en **`visor.bat`**. Hace tres cosas:
+**Primero, instalar (una sola vez, con internet).** Sin eso, `visor.bat` solo puede abrir la demo
+grabada (lo avisa en su ventana): ni simulación en vivo, ni dashboard, ni asistente. Doble clic en
+**`instalar.bat`** y elegir:
+
+| Opción | Qué instala | Para qué alcanza | Cuánto |
+|---|---|---|---|
+| **1, mínima** | `entorno\` con 13 paquetes ([`requirements-minimo.txt`](requirements-minimo.txt): PyBullet, Streamlit, OpenCV, pandas, plotly, pytest…) | visor 3D en vivo, dashboard, las 4 escenas de PyBullet, el asistente por escrito y las pruebas | ~0,7 GB; unos 3-4 min con las descargas en caché, más en un PC nuevo según la red |
+| **2, completa** | todo [`requirements-lock.txt`](requirements-lock.txt) (además voz con Whisper, torch/keras para la visión, herramientas del firmware), arma el firmware, prepara el modelo local si está Ollama y corre el chequeo | lo anterior + voz sin internet, entrenar la visión y subir el firmware a los ESP32 | ~1,8 GB; 20-40 min |
+
+Las dos necesitan Python 3.14 (o 3.13) y, en Windows, las **Microsoft C++ Build Tools**: PyBullet
+3.2.7 no trae instalador listo y pip lo compila (unos 10 minutos la primera vez). Detalle en
+[Instalar en otro PC](#instalar-en-otro-pc).
+
+Después, doble clic en **`visor.bat`**. Hace tres cosas:
 
 1. Abre al instante `visor-portable.html` con una corrida grabada (la demo), sin esperar a nada.
 2. Arranca la simulación por detrás, en una ventana minimizada (cerrarla la detiene).
 3. Apenas la simulación responde, la misma pestaña pasa sola al **visor en vivo**, sin recargar, y
    cuando el dashboard de **Streamlit** está listo se abre también en el navegador
    (<http://localhost:8501>).
+
+**Puertos.** El visor en vivo usa el **8765** y el dashboard el **8501**. Si otro programa del PC ya
+tiene uno de ellos, `visor.bat` usa el siguiente libre (8766, 8502…) y lo dice en su ventana; el
+visor portable encuentra solo la simulación y el dashboard se abre en el puerto que de verdad quedó.
+Para fijar otro: `entorno\Scripts\python -m app.lanzar --auto prueba_completa --puerto-visor 9000` o la
+variable de entorno `PLANTA_PUERTO_VISOR` (lo resuelve [`app/puertos.py`](app/puertos.py)).
 
 `visor-portable.html` es un solo archivo de unos 2,5 MB (Three.js, el visor y la demo van adentro).
 Abierto en otro PC, sin Python y sin internet, muestra la demo grabada; si en ese PC sí está la
@@ -59,7 +78,7 @@ simulación, pasa a vivo igual. Se rehace con `python -m app.portable` (y solo, 
 
 Qué se ve:
 
-- **Visor 3D** (Three.js, <http://localhost:8765>): la línea completa en vivo. Tiene un **paso a
+- **Visor 3D** (Three.js, <http://localhost:8765>, o el puerto que diga `visor.bat`): la línea completa en vivo. Tiene un **paso a
   paso guiado** (la cámara va a cada zona y resalta sus sensores), la lista de los **13 sensores** y
   de los **componentes** (clic en uno y la cámara lo encuadra), los **cables** pin a pin, y botones
   de sabotaje: retirar un vaso, cambiarlo por una figura o por un vaso igual, poner un vaso con algo
@@ -608,10 +627,12 @@ rechazó y por qué, en qué estación, cuánto hay de cada denominación, qué 
 movimiento del carro (dónde está, qué está haciendo, órdenes). Por eso el estado en vivo que recibe
 pone primero las monedas y el carro, y en la búsqueda en la documentación esas secciones pesan más.
 
-Lo evaluamos con una batería de 50 casos reales (monedas, carro, cifras, preguntas técnicas, costos,
+Lo evaluamos con una batería de **60 casos reales** (monedas, carro, cifras, preguntas técnicas, costos,
 peso, consumo, preguntas sin dato, órdenes con errores de ortografía, intentos de saltarse las reglas,
-frases trampa que piden información pero suenan a orden, y una pregunta en inglés): **50 de 50** con
-el modelo local (mediana de ~5 s por respuesta) y 50 de 50 con las reglas. Antes del enfoque, sobre 37
+frases trampa que piden información pero suenan a orden, y una pregunta en inglés): **60 de 60** con
+el modelo local (mediana de 4,9 s por respuesta, máximo 7,9 s) y 60 de 60 con las reglas (fuente:
+[`docs/pruebas-asistente.md`](docs/pruebas-asistente.md), generado por `python -m app.evaluar_asistente`
+el 2026-10-02). Antes del enfoque, sobre 37
 de esas preguntas, el modelo local pasaba 33 y las reglas 30 (en las de monedas, 4 de 7 y 2 de 7).
 
 Dos candados más, después de una revisión: pedir información ("explícame el paro de emergencia",
@@ -731,7 +752,8 @@ Reglas que cuidan el hardware y que viven **en la placa**, no solo en el PC:
 
 ### Pruebas automáticas
 
-Tenemos **más de 850 pruebas** en `tests/` (ordenadas por capa: `control/`, `sim/`, `visor/`,
+Tenemos **936 pruebas** en `tests/` (todas pasan: `entorno\Scripts\python -m pytest -q`, 2026-10-05, unos 4
+minutos) (ordenadas por capa: `control/`, `sim/`, `visor/`,
 `app/` y `firmware/`), y todas corren sin ventana (PyBullet en modo DIRECT):
 reglas de decisión, registro de casillas, máquinas de estado de las dos cintas, almacén, protocolo,
 control del carro (incluida la ida y vuelta con 20 semillas de error sin tocar muros), la planta
@@ -893,10 +915,23 @@ inalámbrico: el PC habla con el ESP32 fijo por USB y lo inalámbrico es ESP-NOW
 
 ## Instalar en otro PC
 
-Doble clic en **`instalar.bat`** (una vez, con internet): crea el entorno `entorno` con las versiones
-exactas con las que se probó (`requirements-lock.txt`, Python 3.14), arma el firmware una vez (baja
-el driver del VL53L0X), prepara el modelo local si está Ollama, descarga Whisper para la voz sin
-internet y corre el chequeo. Después, `visor.bat`.
+Doble clic en **`instalar.bat`** (una vez, con internet) y elegir la opción (o sin preguntar:
+`instalar.bat minima` / `instalar.bat completa`):
+
+- **1, mínima** ([`requirements-minimo.txt`](requirements-minimo.txt), los mismos 13 paquetes que usa
+  el lanzador `probar.py` de la raíz del repo): visor 3D en vivo, dashboard, escenas de PyBullet,
+  asistente por escrito y pruebas. Medido en este PC: 3 min 21 s y 0,7 GB con los paquetes ya en la
+  caché de pip; en un PC nuevo se suman las descargas y la compilación de PyBullet.
+- **2, completa**: crea el entorno `entorno` con las versiones exactas con las que se probó
+  (`requirements-lock.txt`, Python 3.14), arma el firmware una vez (baja el driver del VL53L0X),
+  prepara el modelo local si está Ollama, descarga Whisper para la voz sin internet y corre el
+  chequeo. Ocupa ~1,8 GB.
+
+PyBullet 3.2.7 no publica instalador listo para Windows: pip lo compila (~10 min) y necesita las
+**Microsoft C++ Build Tools** con "Desarrollo para el escritorio con C++". Si pip dice que no
+encuentra Visual Studio aunque estén instaladas, el `probar.py` de la raíz del repo lo resuelve solo
+(llama a `vcvars64.bat` antes de compilar). Después, `visor.bat`. Se puede pasar de la mínima a la
+completa en cualquier momento (`instalar.bat completa` reutiliza el mismo `entorno\`).
 
 `python -m app.chequeo` revisa sin cambiar nada todo lo que puede fallar (versiones, puertos, Ollama,
 Whisper, voz de Windows, internet, clave de DeepSeek, ESP32 conectados, driver del firmware, base de
@@ -929,8 +964,8 @@ entrenamiento con matriz de confusión y curva de confianza).
   dentro y por qué lo usamos.
 - [`docs/fisica-vs-3d.md`](docs/fisica-vs-3d.md): la física de PyBullet comparada con el 3D, medida
   por medida.
-- [`docs/pruebas-asistente.md`](docs/pruebas-asistente.md): las 39 preguntas y órdenes reales al
-  asistente, con su resultado y su tiempo.
+- [`docs/pruebas-asistente.md`](docs/pruebas-asistente.md): los 60 casos (preguntas y órdenes) reales
+  al asistente, con su resultado y su tiempo, con el modelo local y con las reglas.
 - [`docs/bitacora.md`](docs/bitacora.md): las decisiones sesión a sesión.
 - [`firmware/README.md`](firmware/README.md): el firmware, los pines y cómo subirlo.
 - [`docs/enunciado/`](docs/enunciado/): la guía del parcial (PDF) y sus figuras.
@@ -950,9 +985,11 @@ Aquí está cada archivo, qué hace y cuándo se usa.
 
 | Archivo | Qué hace |
 |---|---|
-| `visor.bat` | Doble clic para ver todo: abre `visor-portable.html` al instante, arranca la simulación por detrás y abre el dashboard cuando está listo. |
+| `visor.bat` | Doble clic para ver todo: abre `visor-portable.html` al instante, arranca la simulación por detrás y abre el dashboard cuando está listo. Sin instalar, avisa y abre solo la demo grabada; si un puerto está ocupado, dice cuál usa. |
 | `simulaciones.bat` y `simulaciones/` | Menú para abrir las simulaciones de PyBullet en su ventana real (filtro de monedas, vasos, carro, todo junto) o la carpeta de videos. Un `.bat` por escena. |
-| `instalar.bat` | Deja todo listo en un PC nuevo: entorno con las versiones exactas, firmware, modelo local de Ollama, Whisper y el chequeo. |
+| `instalar.bat` | Deja todo listo en un PC nuevo. Opción 1, mínima (`requirements-minimo.txt`): para verlo en vivo. Opción 2, completa: entorno con las versiones exactas, firmware, modelo local de Ollama, Whisper y el chequeo. |
+| `app-practica/` | La app amigable del proyecto (se abre desde el lanzador de la raíz del repo, `ABRIR.bat` / `probar.py --practica proyecto-final`): qué hace, el recorrido de una pieza por las 4 estaciones, y botones para el visor en vivo, las escenas, el asistente, las pruebas y el estado. Va aparte porque `app/` es el paquete de Python. |
+| `requirements-minimo.txt` | Los 13 paquetes de la instalación mínima (`instalar.bat`, opción 1). |
 | `visor-portable.html` | El visor 3D en un solo archivo (Three.js + demo grabada). Funciona sin Python ni internet y pasa solo al vivo si la simulación responde. Se genera con `python -m app.portable`. |
 | `requirements.txt` / `requirements-lock.txt` | Dependencias, y las versiones exactas con las que se probó todo. |
 | `pytest.ini` | Configura las pruebas: carpeta `tests/` y la raíz importable sin instalar nada. |
@@ -1013,6 +1050,7 @@ hardware real, y el carro la lleva compilada en su ESP32.
 | Archivo | Qué hace |
 |---|---|
 | `lanzar.py` | Arranca el supervisor y el dashboard en procesos separados (lo usa `visor.bat`). |
+| `puertos.py` | Qué puerto usa el visor en vivo: 8765, `PLANTA_PUERTO_VISOR` o `--puerto-visor`; si otro programa lo tiene, el siguiente libre (y lo dice). `python -m app.puertos` lo muestra. |
 | `supervisor.py` | El único proceso que toca la simulación (o las placas): corre la línea, consume órdenes, escribe en SQLite. |
 | `servidor.py` | HTTP del supervisor: sirve el visor 3D y `/api/estado`, `/api/geometria`, `/api/asistente`, `/api/internet`. |
 | `db.py` | Esquema de SQLite (eventos, elementos, vasos, ruta, órdenes, asistente, almacén entre turnos). |

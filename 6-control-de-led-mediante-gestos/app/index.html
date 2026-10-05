@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Luces por gestos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/comun/app.css">
+<link rel="stylesheet" href="gestos.css">
+</head>
+<body>
+
+<header class="g-portada">
+  <div class="g-portada-texto">
+    <p class="g-etiqueta">Tema 6 · MediaPipe + ESP32</p>
+    <h1>Prende luces con la mano</h1>
+    <p class="g-frase">La cámara del computador mira tu mano, una inteligencia artificial de Google
+      (MediaPipe) reconoce el gesto y le dice al ESP32 qué LED prender y con cuánta fuerza.
+      <strong>No necesitas la placa ni la cámara para probarlo:</strong> la página trae botones y
+      unos LEDs dibujados que se comportan igual que los reales.</p>
+    <div class="g-portada-botones">
+      <button class="g-boton g-boton-grande" data-ir="probar">Probarlo ya</button>
+      <button class="g-boton g-boton-sec" data-ir="gestos">Ver los gestos</button>
+    </div>
+  </div>
+  <figure class="g-portada-gif">
+    <img src="/repo/6-control-de-led-mediante-gestos/img/demo-leds.gif" alt="Animación de los tres LEDs recorriendo los gestos y los dos modos" class="g-ampliable">
+    <figcaption>Los tres LEDs recorriendo los cinco gestos y los dos modos.</figcaption>
+  </figure>
+  <aside class="g-pide">
+    <div id="checklist"><p class="g-muted">Cargando la lista…</p></div>
+  </aside>
+</header>
+
+<main id="pasos" class="g-pasos">
+
+  <!-- 1 ─────────────────────────────────────────────────────────────── -->
+  <section class="paso" data-titulo="Los gestos" id="paso-gestos">
+    <h2>1. Cada gesto, una orden</h2>
+    <p>MediaPipe reconoce varios gestos; usamos cinco. Los tres primeros prenden un LED fijo con una
+      intensidad distinta; los dos pulgares arrancan una <em>secuencia</em> de luces que corre sola en el
+      ESP32 (las "interrupciones" del enunciado). <strong>Toca una tarjeta</strong> y mira cómo reaccionan los LEDs
+      de la derecha: es la misma lógica que corre en la placa.</p>
+
+    <div class="g-gestos-y-leds">
+      <div class="g-gestos" id="tarjetasGestos">
+        <button class="g-gesto" data-cmd="FIST" style="--c: var(--g-amarillo)">
+          <span class="g-mano" aria-hidden="true">✊</span>
+          <span class="g-gesto-nombre">Puño cerrado</span>
+          <span class="g-gesto-accion">LED amarillo al <b>30 %</b></span>
+          <code>FIST</code>
+        </button>
+        <button class="g-gesto" data-cmd="VICTORY" style="--c: var(--g-azul)">
+          <span class="g-mano" aria-hidden="true">✌️</span>
+          <span class="g-gesto-nombre">Victoria (V)</span>
+          <span class="g-gesto-accion">LED azul al <b>70 %</b></span>
+          <code>VICTORY</code>
+        </button>
+        <button class="g-gesto" data-cmd="OPEN2" style="--c: var(--g-rojo)">
+          <span class="g-mano" aria-hidden="true">🖐️🖐️</span>
+          <span class="g-gesto-nombre">Dos manos abiertas</span>
+          <span class="g-gesto-accion">LED rojo al <b>100 %</b></span>
+          <code>OPEN2</code>
+        </button>
+        <button class="g-gesto" data-cmd="THUMB_DOWN" style="--c: var(--g-modo)">
+          <span class="g-mano" aria-hidden="true">👎</span>
+          <span class="g-gesto-nombre">Pulgar abajo</span>
+          <span class="g-gesto-accion"><b>Modo 1</b>: barrido amarillo → azul → rojo</span>
+          <code>THUMB_DOWN</code>
+        </button>
+        <button class="g-gesto" data-cmd="THUMB_UP" style="--c: var(--g-modo)">
+          <span class="g-mano" aria-hidden="true">👍</span>
+          <span class="g-gesto-nombre">Pulgar arriba</span>
+          <span class="g-gesto-accion"><b>Modo 2</b>: los tres parpadean juntos</span>
+          <code>THUMB_UP</code>
+        </button>
+        <button class="g-gesto g-gesto-off" data-cmd="NONE" style="--c: var(--g-muted)">
+          <span class="g-mano" aria-hidden="true">✋</span>
+          <span class="g-gesto-nombre">Bajar la mano</span>
+          <span class="g-gesto-accion">Apaga todo (modo automático)</span>
+          <code>NONE</code>
+        </button>
+      </div>
+
+      <div class="g-leds-panel">
+        <h3>Los LEDs (simulados)</h3>
+        <div class="g-leds">
+          <div class="g-led" id="ledAmarillo" style="--c: var(--g-amarillo)"><span class="g-bombillo"></span><span class="g-led-nombre">Amarillo</span><span class="g-led-pin">GPIO25</span><span class="g-led-pct" id="pctAmarillo">0 %</span></div>
+          <div class="g-led" id="ledAzul" style="--c: var(--g-azul)"><span class="g-bombillo"></span><span class="g-led-nombre">Azul</span><span class="g-led-pin">GPIO26</span><span class="g-led-pct" id="pctAzul">0 %</span></div>
+          <div class="g-led" id="ledRojo" style="--c: var(--g-rojo)"><span class="g-bombillo"></span><span class="g-led-nombre">Rojo</span><span class="g-led-pin">GPIO27</span><span class="g-led-pct" id="pctRojo">0 %</span></div>
+        </div>
+        <p class="g-ultimo">Llegaría al ESP32: <code id="ultimoCmd">—</code></p>
+        <p class="g-muted g-chico">Un gesto de LED fijo <em>alterna</em> su LED (lo prende o, si ya estaba prendido, lo
+          apaga) y detiene cualquier secuencia. Así pueden quedar varios prendidos a la vez.</p>
+      </div>
+    </div>
+
+    <details class="g-detalle">
+      <summary>¿Por qué 30 %, 70 % y 100 %? (PWM)</summary>
+      <p>Un pin del ESP32 solo da 0 V o 3,3 V. Para "medio brillo" se prende y apaga 5000 veces por segundo:
+        si pasa prendido el 30 % del tiempo, el ojo ve el LED al 30 %. A eso se le llama <b>PWM</b>, y la fracción
+        es el <em>duty</em>: en el ESP32 va de 0 a 1023, así que 30 % = 306, 70 % = 716 y 100 % = 1023.</p>
+    </details>
+  </section>
+
+  <!-- 2 ─────────────────────────────────────────────────────────────── -->
+  <section class="paso" data-titulo="Cómo funciona" id="paso-funciona">
+    <h2>2. Cómo funciona, de la mano al LED</h2>
+    <ol class="g-flujo">
+      <li><span class="g-flujo-n">1</span><b>Cámara</b><small>La página pide la webcam del computador.</small></li>
+      <li><span class="g-flujo-n">2</span><b>MediaPipe</b><small>Ubica 21 puntos de cada mano y dice qué gesto es y con qué confianza.</small></li>
+      <li><span class="g-flujo-n">3</span><b>Filtro</b><small>Solo cuenta si se sostiene: 12 de los últimos 15 cuadros (≈ medio segundo).</small></li>
+      <li><span class="g-flujo-n">4</span><b>Orden</b><small>Lo traduce a una palabra: <code>FIST</code>, <code>VICTORY</code>…</small></li>
+      <li><span class="g-flujo-n">5</span><b>Cable USB</b><small>El navegador la manda al ESP32 (Web Serial).</small></li>
+      <li><span class="g-flujo-n">6</span><b>ESP32</b><small>Prende el LED con PWM y contesta <code>OK FIST</code>.</small></li>
+    </ol>
+    <div class="g-dos-col">
+      <div class="g-tarjeta">
+        <h3>¿Por qué el filtro?</h3>
+        <p>MediaPipe mira cada cuadro de la cámara por separado y a veces se equivoca un instante (un puño que
+          por un cuadro "parece" una V). Si cada cuadro mandara una orden, los LEDs temblarían. Por eso la página
+          exige <b>al menos 65 % de confianza</b> por cuadro y que el gesto ocupe <b>el 80 % de los últimos 15</b>.</p>
+      </div>
+      <div class="g-tarjeta">
+        <h3>¿Y las "interrupciones"?</h3>
+        <p>Los modos 1 y 2 corren en un <b>Timer</b> del ESP32 que se dispara cada 200 ms por su cuenta, aunque el
+          programa principal esté esperando la siguiente orden. Por eso la secuencia sigue sola hasta que llegue
+          otro gesto.</p>
+      </div>
+    </div>
+    <details class="g-detalle">
+      <summary>Leer la explicación completa (del README)</summary>
+      <div id="mdFiltro" class="g-md"></div>
+    </details>
+  </section>
+
+  <!-- 3 ─────────────────────────────────────────────────────────────── -->
+  <section class="paso" data-titulo="Cómo se conecta" id="paso-conecta">
+    <h2>3. Cómo se conecta</h2>
+    <p class="g-nota"><b>Para probar no hace falta armar nada.</b> Esto es solo para cuando tengas el ESP32 y los LEDs a mano.</p>
+    <div class="g-montaje">
+      <figure>
+        <img src="/repo/6-control-de-led-mediante-gestos/img/montaje-3d.png" alt="Montaje 3D: ESP32 en la protoboard con tres LEDs y sus resistencias" class="g-ampliable">
+        <figcaption>Montaje en 3D (clic para ampliar).</figcaption>
+      </figure>
+      <div>
+        <table class="g-tabla">
+          <thead><tr><th>LED</th><th>Pata larga (+)</th><th>Pata corta (−)</th></tr></thead>
+          <tbody>
+            <tr><td><span class="g-punto" style="--c: var(--g-amarillo)"></span>Amarillo</td><td>GPIO25 → 330 Ω</td><td>GND</td></tr>
+            <tr><td><span class="g-punto" style="--c: var(--g-azul)"></span>Azul</td><td>GPIO26 → 330 Ω</td><td>GND</td></tr>
+            <tr><td><span class="g-punto" style="--c: var(--g-rojo)"></span>Rojo</td><td>GPIO27 → 330 Ω</td><td>GND</td></tr>
+            <tr><td>ESP32</td><td colspan="2">Cable micro USB al computador: da la energía y los datos.</td></tr>
+          </tbody>
+        </table>
+        <ul class="g-lista">
+          <li>Cada LED lleva su <b>resistencia de 330 Ω</b> en serie: sin ella pediría demasiada corriente al pin.</li>
+          <li>Los tres cátodos van al riel azul (−) de la protoboard, unido al <b>GND</b> del ESP32.</li>
+          <li>El azul se ve más tenue que los otros: su LED "gasta" casi todo el voltaje del pin. Es normal.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 ─────────────────────────────────────────────────────────────── -->
+  <section class="paso" data-titulo="Pruébalo" id="paso-probar">
+    <h2>4. Pruébalo: el reconocedor de gestos</h2>
+    <div class="g-dos-col">
+      <div class="g-tarjeta g-tarjeta-sin">
+        <h3>¿Sin cámara? Igual funciona</h3>
+        <p>Si no hay webcam o niegas el permiso, la página lo avisa y los botones de <b>Control manual</b>
+          (Puño, Victoria, Manos abiertas, Modo 1, Modo 2, Detener todo) hacen exactamente lo mismo que los gestos.</p>
+        <p class="g-chico g-muted">Arriba a la izquierda eliges cómo se apagan: <b>persistente</b> (un clic alterna) o
+          <b>automático</b> (el LED vive mientras sostienes el gesto o el botón).</p>
+      </div>
+    </div>
+
+    <div id="panelWeb" class="g-panel-accion"></div>
+
+    <div class="g-embebido">
+      <div class="g-embebido-barra">
+        <span>¿Prefieres verlo aquí mismo?</span>
+        <button class="g-boton g-boton-sec" id="btnEmbeber">Mostrar el reconocedor dentro de esta página</button>
+      </div>
+      <div id="marcoGestos" class="g-marco" hidden></div>
+      <p class="g-chico g-muted">Dentro de esta página también funcionan la cámara y la conexión con el ESP32 (el
+        navegador te pedirá permiso igual). Si algo no responde, usa el botón grande de arriba: abre el reconocedor en
+        su propia pestaña.</p>
+    </div>
+    <p class="g-chico g-muted">Funciona en <b>Chrome o Edge</b>. Firefox y Safari no traen la conexión por USB (Web Serial),
+      aunque el reconocimiento y los botones sí andan.</p>
+  </section>
+
+  <!-- 5 ─────────────────────────────────────────────────────────────── -->
+  <section class="paso" data-titulo="Con el ESP32 real" id="paso-esp32">
+    <h2>5. Con el ESP32 real (opcional)</h2>
+    <ol class="g-pasos-esp">
+      <li><b>Arma el circuito</b> del paso 3: tres LEDs con su resistencia en GPIO25, 26 y 27, cátodos a GND.</li>
+      <li><b>Carga el programa del ESP32</b> con Thonny: abre el firmware (botón de abajo para verlo), y guárdalo
+        <em>en la placa</em> con el nombre <code>main.py</code>, así arranca solo cada vez que se conecta.</li>
+      <li><b>Cierra Thonny.</b> Un puerto USB solo lo puede usar un programa a la vez. Si la placa quedó detenida,
+        desconecta y vuelve a conectar el cable.</li>
+      <li><b>Abre el reconocedor</b> (paso 4) y pulsa <b>Conectar ESP32</b>. Elige el puerto de la placa en la lista del
+        navegador: debe pasar a "conectado".</li>
+      <li><b>Haz los gestos</b> (o usa los botones). Los LEDs reales se prenden igual que el espejo, y en
+        <b>Última línea recibida</b> aparece <code>OK FIST</code>, <code>OK VICTORY</code>…</li>
+    </ol>
+    <div class="g-tarjeta g-diagnostico">
+      <h3>Si no pasa nada</h3>
+      <ul class="g-lista">
+        <li><b>Nunca llega nada</b> a "Última línea recibida": la placa no está corriendo <code>main.py</code> o Thonny
+          sigue con el puerto abierto.</li>
+        <li><b>Llega <code>? algo</code></b>: el cable anda bien; la palabra enviada no es una de las conocidas.</li>
+        <li><b>Un LED no prende</b> pero llega <code>OK</code>: revisa ese LED (patas al revés) o su resistencia.</li>
+      </ul>
+    </div>
+    <details class="g-detalle">
+      <summary>Ver el programa del ESP32 (MicroPython)</summary>
+      <pre class="g-codigo" id="codigoFw">Cargando…</pre>
+    </details>
+  </section>
+
+  <!-- 6 ─────────────────────────────────────────────────────────────── -->
+  <section class="paso" data-titulo="Resultados" id="paso-resultados">
+    <h2>6. Resultados</h2>
+    <p>Así queda cada gesto en el circuito (render del montaje con el brillo de cada duty):</p>
+    <div class="g-estados">
+      <figure><img src="/repo/6-control-de-led-mediante-gestos/img/estado-puno.png" alt="LED amarillo al 30 %" class="g-ampliable"><figcaption>Puño · <code>FIST</code> · amarillo 30 %</figcaption></figure>
+      <figure><img src="/repo/6-control-de-led-mediante-gestos/img/estado-victoria.png" alt="LED azul al 70 %" class="g-ampliable"><figcaption>Victoria · <code>VICTORY</code> · azul 70 %</figcaption></figure>
+      <figure><img src="/repo/6-control-de-led-mediante-gestos/img/estado-dos-manos.png" alt="LED rojo al 100 %" class="g-ampliable"><figcaption>Dos manos · <code>OPEN2</code> · rojo 100 %</figcaption></figure>
+    </div>
+    <div class="g-dos-col">
+      <figure><img src="/repo/6-control-de-led-mediante-gestos/img/demo-leds.gif" alt="Animación con los cinco gestos y los dos modos" class="g-ampliable"><figcaption>La secuencia completa, incluidos los dos modos por Timer.</figcaption></figure>
+      <figure><img src="/repo/6-control-de-led-mediante-gestos/img/interfaz-web.png" alt="La página del reconocedor sin cámara ni ESP32" class="g-ampliable"><figcaption>El reconocedor recién abierto, sin cámara ni ESP32.</figcaption></figure>
+      <figure><img src="/repo/6-control-de-led-mediante-gestos/img/interfaz-web-victoria.png" alt="Victoria pulsada: LED azul al 70 %" class="g-ampliable"><figcaption>Victoria (botón manual): azul al 70 %.</figcaption></figure>
+      <figure><img src="/repo/6-control-de-led-mediante-gestos/img/interfaz-web-modo1.png" alt="Modo 1 corriendo" class="g-ampliable"><figcaption>Modo 1 corriendo: el barrido va por el azul.</figcaption></figure>
+    </div>
+    <p><a class="g-enlace" href="https://github.com/Dathinel/Sensores-Teoria/tree/main/6-control-de-led-mediante-gestos" target="_blank" rel="noopener">Ver el tema completo en GitHub →</a></p>
+
+    <details class="g-detalle g-tecnico">
+      <summary>Detalles técnicos</summary>
+      <ul class="g-lista g-chico">
+        <li>Reconocedor: <code>gesture_control.html</code> (HTML + JavaScript puro, MediaPipe <code>tasks-vision 0.10.14</code>, sin Python).</li>
+        <li>Firmware: <code>esp32_gestos.py</code>, se guarda como <code>main.py</code>. 115200 baudios, una palabra por línea.</li>
+        <li>Protocolo: <code>FIST</code>/<code>VICTORY</code>/<code>OPEN2</code> (alternar), <code>*_ON</code>/<code>*_OFF</code>,
+          <code>THUMB_DOWN</code>, <code>THUMB_UP</code>, <code>NONE</code>; respuesta <code>OK &lt;orden&gt;</code> o <code>? &lt;orden&gt;</code>.</li>
+        <li>Filtros: confianza ≥ 0,65 por cuadro, ventana de 15 cuadros, proporción ≥ 0,8; enfriamiento de 2,5 s en los pulgares.</li>
+      </ul>
+    </details>
+  </section>
+</main>
+
+<script src="/comun/app.js"></script>
+<script src="gestos.js"></script>
+</body>
+</html>

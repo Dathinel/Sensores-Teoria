@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tema 3 · YOLO prende LEDs</title>
+<link rel="stylesheet" href="/comun/app.css">
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body class="t3">
+
+<!-- ============ PORTADA ============ -->
+<header class="portada">
+  <div class="portada-texto">
+    <p class="sobretitulo mono">Tema 3 · Detección de objetos</p>
+    <h1>La cámara ve una <span class="resalta r1">silla</span> o un <span class="resalta r2">celular</span>
+      y en la protoboard se prende <em>su</em> LED.</h1>
+    <p class="bajada">La computadora mira con la cámara usando <b>YOLO</b> (una red neuronal que reconoce objetos),
+      y le avisa al <b>ESP32</b> por el mismo cable USB con el que se programa. No hace falta tener ni cámara ni ESP32
+      para probarlo: hay fotos de ejemplo y un simulador.</p>
+    <div class="portada-botones">
+      <a class="boton-grande" href="#paso-fotos" data-ir="fotos">Probarlo ya con fotos ▸</a>
+      <a class="boton-sec" href="#paso-funciona" data-ir="funciona">Cómo funciona</a>
+    </div>
+    <div id="avisoInstalacion" class="aviso-instalacion" hidden></div>
+  </div>
+  <figure class="portada-gif visor">
+    <span class="esq a"></span><span class="esq b"></span><span class="esq c"></span><span class="esq d"></span>
+    <img src="/repo/3-deteccion-objetos/demo-montaje-1.gif" alt="El montaje: la pantalla reconoce objetos y los LEDs se prenden">
+    <figcaption class="mono">grabación real del montaje</figcaption>
+  </figure>
+</header>
+
+<section class="pide-bloque">
+  <p class="nota">Cada punto se marca solo cuando pruebas la parte que lo cumple (o puedes marcarlo tú).</p>
+  <div id="checklist"></div>
+</section>
+
+<!-- ============ PASOS ============ -->
+<main id="pasos">
+
+  <!-- 1 -->
+  <section class="paso" id="paso-funciona" data-titulo="Cómo funciona" data-clave="funciona">
+    <h2>Cómo funciona, en cinco piezas</h2>
+    <p>Todo es una cadena: la cámara toma la imagen, YOLO dice qué hay, el programa lo resume en <b>dos cifras</b>,
+      esas dos cifras viajan por el cable y el ESP32 prende o apaga cada LED. Juega con el diagrama: pon y quita los
+      objetos y mira cómo cambia el mensaje.</p>
+
+    <div class="diagrama" id="diagrama">
+      <div class="controles-diagrama">
+        <div class="grupo">
+          <span class="etiqueta">Directiva</span>
+          <button class="chip-sel activo" data-par="silla">silla · celular</button>
+          <button class="chip-sel" data-par="carro">carro · moto</button>
+        </div>
+        <div class="grupo">
+          <span class="etiqueta">Frente a la cámara</span>
+          <button class="obj" id="dObj1">+ silla</button>
+          <button class="obj" id="dObj2">+ celular</button>
+        </div>
+        <div class="grupo">
+          <button class="cable" id="dCable">✂ Desconectar el cable</button>
+        </div>
+      </div>
+
+      <div class="cadena">
+        <button class="nodo" data-info="camara">
+          <span class="nodo-ico">◉</span><b>Cámara</b>
+          <span class="nodo-sub" id="dCam">nada en cuadro</span>
+        </button>
+        <span class="flecha">→</span>
+        <button class="nodo" data-info="yolo">
+          <span class="nodo-ico">▣</span><b>YOLO</b><span class="nodo-sub">en la computadora</span>
+          <span class="nodo-sub" id="dYolo">ve: —</span>
+        </button>
+        <span class="flecha">→</span>
+        <button class="nodo nodo-msg" data-info="mensaje">
+          <b>Mensaje</b>
+          <span class="msg mono" id="dMsg">00</span>
+        </button>
+        <span class="flecha cable-linea" id="dLinea"><span class="pulso" id="dPulso"></span>USB</span>
+        <button class="nodo" data-info="esp32">
+          <span class="nodo-ico">▤</span><b>ESP32</b>
+          <span class="nodo-sub mono" id="dEsp">esperando…</span>
+          <span class="reloj"><span id="dReloj"></span></span>
+        </button>
+        <span class="flecha">→</span>
+        <div class="nodo nodo-leds" data-info="leds" tabindex="0" role="button">
+          <span class="led-d" id="dLed1"></span><span class="mono pin">GPIO25 · <span id="dNom1">silla</span></span>
+          <span class="led-d verde" id="dLed2"></span><span class="mono pin">GPIO26 · <span id="dNom2">celular</span></span>
+        </div>
+      </div>
+      <p class="info-nodo" id="dInfo">Toca cualquier pieza para ver qué hace.</p>
+    </div>
+
+    <div class="tabla-msg">
+      <div><span class="mono msg-chico">10</span> solo el primero (silla / carro)</div>
+      <div><span class="mono msg-chico">01</span> solo el segundo (celular / moto)</div>
+      <div><span class="mono msg-chico">11</span> los dos</div>
+      <div><span class="mono msg-chico">00</span> ninguno</div>
+    </div>
+    <p class="nota">El mensaje se manda apenas algo cambia y además se repite cada medio segundo. Si el ESP32 pasa
+      <b>2 segundos</b> sin oír nada (programa cerrado o cable suelto), apaga los LEDs por su cuenta: es el
+      <b>apagado de seguridad</b>. Pruébalo arriba con «Desconectar el cable».</p>
+
+    <details class="mas">
+      <summary>Qué es YOLO, en simple</summary>
+      <p>YOLO («You Only Look Once», solo miras una vez) es una red neuronal que mira la imagen completa de una sola
+        pasada y devuelve <b>cajas</b>: dónde está cada objeto, qué es y qué tan seguro está (de 0 a 1). Usamos la
+        versión más pequeña, <span class="mono">YOLOv8 nano</span> (6 MB), que corre fluida en una laptop sin tarjeta
+        de video.</p>
+      <p>Viene entrenada con <b>COCO</b>, una colección de fotos con 80 tipos de objetos cotidianos (persona, silla,
+        celular, carro, moto…). Por eso no hubo que entrenar nada: basta con decirle cuáles de esos 80 nos importan.
+        Cambiar de silla/celular a carro/moto es cambiar dos palabras. Solo se tienen en cuenta las cajas con
+        confianza de 0,4 o más.</p>
+    </details>
+    <details class="mas">
+      <summary>Leer la explicación completa del README</summary>
+      <div id="mdIdea" class="md"></div>
+    </details>
+  </section>
+
+  <!-- 2 -->
+  <section class="paso" id="paso-conecta" data-titulo="Cómo se conecta" data-clave="conecta">
+    <h2>Cómo se conecta</h2>
+    <div class="cinta-ok">Para probar <b>no hace falta</b> armar nada: los pasos siguientes funcionan sin ESP32 y sin
+      cámara. Esto es para cuando quieras el montaje real.</div>
+
+    <div class="dos-col">
+      <div>
+        <h3>Lo que se necesita</h3>
+        <ul class="materiales">
+          <li>Un ESP32 y su cable USB <b>de datos</b> (algunos cables solo cargan)</li>
+          <li>Dos LEDs (rojo y verde si haces la directiva carro/moto)</li>
+          <li>Dos resistencias de <b>220 Ω</b> (rojo-rojo-marrón)</li>
+          <li>Protoboard y unos cables</li>
+          <li>Opcional: la cámara web de la laptop</li>
+        </ul>
+        <h3>Pines</h3>
+        <table class="pines">
+          <thead><tr><th>Pieza</th><th>Va a</th><th>Pasando por</th></tr></thead>
+          <tbody>
+            <tr><td><span class="punto rojo"></span>LED silla / carro · pata larga</td><td class="mono">GPIO25</td><td>resistencia 220 Ω</td></tr>
+            <tr><td><span class="punto verde"></span>LED celular / moto · pata larga</td><td class="mono">GPIO26</td><td>resistencia 220 Ω</td></tr>
+            <tr><td>Las dos patas cortas</td><td class="mono">GND</td><td>directo</td></tr>
+            <tr><td>ESP32</td><td>USB de la computadora</td><td>da la energía y los datos</td></tr>
+          </tbody>
+        </table>
+        <details class="mas">
+          <summary>¿Por qué esos pines y esa resistencia?</summary>
+          <p><b>GPIO25 y 26</b> no tienen funciones especiales al arrancar (los pines 0, 2, 5, 12 y 15 sí, y un LED
+            ahí puede impedir que el ESP32 arranque) y están uno al lado del otro.</p>
+          <p><b>220 Ω</b>: el ESP32 saca 3,3 V y el LED se come unos 2 V; quedan 1,3 V en la resistencia →
+            1,3 / 220 ≈ 6 mA, seguro para el LED y para el pin (máx. ~20 mA).</p>
+          <p>Todo se alimenta por el USB: no hace falta fuente ni batería.</p>
+        </details>
+      </div>
+      <figure class="figura">
+        <img id="imgCircuito" src="/repo/3-deteccion-objetos/diagrama-circuito-carro-moto.png" alt="Circuito: ESP32 con un LED rojo y uno verde, cada uno con su resistencia">
+        <figcaption>Esquema de referencia (Wokwi) de la directiva carro/moto: un LED rojo y uno verde con su
+          resistencia. Los dos pulsadores del esquema no se usan: su papel (probar sin cámara) lo cumplen las fotos de
+          ejemplo y el simulador. Toca la imagen para ampliarla.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="paso" id="paso-fotos" data-titulo="Pruébalo con fotos" data-clave="fotos">
+    <h2>Pruébalo con fotos de ejemplo <span class="etq">sin cámara</span></h2>
+    <p>YOLO de verdad, pero mirando fotos en vez de la cámara. Es la forma más rápida de ver todo funcionando.</p>
+
+    <div class="aviso-primera" data-aviso-instalacion></div>
+
+    <div class="bloque-prueba">
+      <div class="bloque-cab">
+        <span class="etiqueta">Las tres fotos, en orden</span>
+        <div class="miniaturas">
+          <img src="/repo/3-deteccion-objetos/img/ejemplos/ejemplo-silla.jpg" alt="foto de ejemplo: silla"><span class="mono">10</span>
+          <img src="/repo/3-deteccion-objetos/img/ejemplos/ejemplo-celular.jpg" alt="foto de ejemplo: celular"><span class="mono">01</span>
+          <img src="/repo/3-deteccion-objetos/img/ejemplos/ejemplo-silla-y-celular.jpg" alt="foto de ejemplo: silla y celular"><span class="mono">11</span>
+        </div>
+      </div>
+      <div class="panel-ej" data-accion="fotos"></div>
+    </div>
+
+    <div class="bloque-prueba">
+      <div class="bloque-cab">
+        <span class="etiqueta">Directiva alternativa · <span class="punto rojo"></span>carro y <span class="punto verde"></span>moto</span>
+        <div class="miniaturas">
+          <img src="/repo/3-deteccion-objetos/img/ejemplos/ejemplo-carro.jpg" alt="foto de ejemplo: carro"><span class="mono">10</span>
+          <img src="/repo/3-deteccion-objetos/img/ejemplos/ejemplo-moto.jpg" alt="foto de ejemplo: moto"><span class="mono">01</span>
+          <img src="/repo/3-deteccion-objetos/img/ejemplos/ejemplo-carro-y-moto.jpg" alt="foto de ejemplo: carro y moto"><span class="mono">11</span>
+        </div>
+      </div>
+      <p class="nota">Mismo programa y mismo ESP32; solo cambian los objetos: el carro prende el LED <b>rojo</b>
+        (GPIO25, primera cifra) y la moto el <b>verde</b> (GPIO26, segunda cifra).</p>
+      <div class="panel-ej" data-accion="fotos-carro-moto"></div>
+    </div>
+
+    <figure class="figura chica">
+      <img src="/repo/3-deteccion-objetos/img/deteccion-fotos-carro-moto.jpg" alt="Así se ve la ventana con la foto de carro y moto: mensaje '11'">
+      <figcaption>Así se ve la ventana con la foto de carro y moto: cajas de YOLO y, arriba,
+        <span class="mono">car: 1  motorcycle: 1 -> '11'</span> y <span class="mono">SIN ESP32 (solo vision)</span>.</figcaption>
+    </figure>
+    <p class="nota">En «Lo que dice el programa» verás algo como <span class="mono">Sin ESP32 (…). Se sigue solo con la
+      vision</span> y <span class="mono">Objetivos: ['chair', 'cell phone']. Fuente: FOTOS…</span>: es normal, significa
+      que no encontró un ESP32 y sigue mostrando el mensaje en la ventana.</p>
+  </section>
+
+  <!-- 4 -->
+  <section class="paso" id="paso-camara" data-titulo="Con tu cámara" data-clave="camara">
+    <h2>Con tu cámara</h2>
+    <p>Lo mismo, pero en vivo. Pon una silla o un celular frente a la cámara (o un carro y una moto, en la directiva
+      alternativa) y mira la franja de arriba de la ventana.</p>
+
+    <div class="aviso-primera" data-aviso-instalacion></div>
+
+    <div class="bloque-prueba">
+      <div class="panel-ej" data-accion="camara"></div>
+    </div>
+    <div class="bloque-prueba">
+      <p class="nota">Con juguetes pequeños la confianza baja: acércalos y usa buena luz. YOLO aprendió «carro» y «moto»
+        con vehículos reales, así que un juguete muy caricaturesco puede no reconocerse.</p>
+      <div class="panel-ej" data-accion="camara-carro-moto"></div>
+    </div>
+    <details class="mas">
+      <summary>Si la cámara no abre</summary>
+      <ul>
+        <li>Si dice «Error al abrir la camara»: otra aplicación (Teams, Zoom, el navegador) puede estar usándola; ciérrala.</li>
+        <li>Sin cámara: usa el paso anterior (fotos de ejemplo); todo lo demás funciona igual.</li>
+        <li>La ventana tarda 10 a 30 s en aparecer la primera vez (carga PyTorch): no está colgado.</li>
+      </ul>
+    </details>
+  </section>
+
+  <!-- 5 -->
+  <section class="paso" id="paso-simulador" data-titulo="Simulador y apagado de seguridad" data-clave="simulador">
+    <h2>Simulador y apagado de seguridad <span class="etq">sin instalar nada</span></h2>
+    <p>El simulador hace de todo el sistema dentro del navegador: los botones <b>objeto 1 / objeto 2 en cuadro</b>
+      hacen de YOLO, el ESP32 de la derecha usa la misma lógica que el firmware real y el monitor muestra cada línea
+      que va (<span class="mono tx">→ 11</span>) y vuelve (<span class="mono rx">← LEDS 11</span>).</p>
+
+    <div class="seguridad">
+      <div class="seg-txt">
+        <h3>El apagado de seguridad</h3>
+        <p>Si la computadora deja de hablarle al ESP32 —se cerró el programa, se soltó el cable— los LEDs no se
+          quedan prendidos para siempre: el ESP32 cuenta el tiempo desde el último mensaje y, a los <b>2 segundos</b>,
+          apaga los dos y avisa <span class="mono">APAGADO_SEGURIDAD</span>.</p>
+        <ol>
+          <li>Pulsa <b>objeto 1 en cuadro</b>: se prende el LED de la izquierda.</li>
+          <li>Pulsa <b>Simular cable desconectado</b>.</li>
+          <li>Mira la barra amarilla llenarse y, a los 2 s, los LEDs apagarse solos.</li>
+        </ol>
+        <p class="nota">Por eso el programa repite el mensaje cada medio segundo aunque nada cambie: si no, una silla
+          quieta dejaría de generar mensajes y su LED se apagaría.</p>
+      </div>
+    </div>
+
+    <div class="marco-sim">
+      <div class="marco-barra">
+        <span class="mono">preview.html</span>
+        <button class="boton-sec" id="btnSimPestana">Abrir en pestaña aparte</button>
+      </div>
+      <iframe id="simulador" title="Simulador del sistema" loading="lazy" allow="camera; serial"
+        src="/repo/3-deteccion-objetos/preview.html"></iframe>
+    </div>
+    <p class="nota">«Usar cámara (COCO-SSD)» corre en el navegador otro detector con las mismas 80 clases (no es YOLO,
+      pero sirve para ver la idea) y necesita internet. «Conectar ESP32 (Web Serial)» habla con el ESP32 real desde
+      Chrome o Edge.</p>
+  </section>
+
+  <!-- 6 -->
+  <section class="paso" id="paso-esp32" data-titulo="Con el ESP32 real" data-clave="esp32">
+    <h2>Con el ESP32 real <span class="etq">opcional</span></h2>
+    <p>El ESP32 lleva un programa corto en MicroPython (<span class="mono">esp32_leds.py</span>) que escucha el cable y
+      mueve los pines. Se graba <b>una sola vez</b>; después arranca solo cada vez que la placa recibe energía.</p>
+
+    <ol class="pasos-esp">
+      <li><b>Arma el circuito</b> del paso «Cómo se conecta» y conecta el ESP32 por USB.</li>
+      <li><b>Abre Thonny</b>. Abajo a la derecha elige el intérprete <i>MicroPython (ESP32)</i> y el puerto de tu placa.</li>
+      <li><b>Abre el firmware</b> en Thonny: <button class="enlace" id="btnVerFw">ver el código</button> y
+        <button class="enlace" id="btnCopiarFw">copiarlo</button>, y en Thonny Archivo → Nuevo → pegar.</li>
+      <li><b>Guárdalo en el ESP32 como <span class="mono">main.py</span></b>: Archivo → Guardar como → «Dispositivo
+        MicroPython» → nombre <span class="mono">main.py</span>. Pulsa el botón EN (reset) de la placa: verás
+        <span class="mono">Esperando datos de deteccion por serial...</span> en la consola de Thonny.</li>
+      <li><b>Cierra Thonny</b> (o pulsa Detener/desconectar): el puerto USB solo lo puede usar un programa a la vez.</li>
+      <li><b>Mira tu puerto COM</b>: Administrador de dispositivos → Puertos (COM y LPT). El programa busca
+        <span class="mono">COM7</span>; si el tuyo es otro, cambia la línea <span class="mono">PUERTO_SERIAL = "COM7"</span>
+        al principio de <span class="mono">deteccion_pc.py</span>.</li>
+      <li><b>Vuelve a «Con tu cámara» o «Con fotos»</b> y pulsa Iniciar. Ahora la ventana dice
+        <span class="mono">ESP32 en COM7</span> y la línea <span class="mono">ESP32 dice: LEDS 10</span> confirma que
+        llegó. Si se queda en <span class="mono">(nada todavia)</span>, el ESP32 no tiene <span class="mono">main.py</span>
+        corriendo.</li>
+    </ol>
+    <div class="fw-codigo" id="fwCodigo" hidden><pre class="mono" id="fwTexto"></pre></div>
+    <details class="mas">
+      <summary>Detalles técnicos</summary>
+      <ul class="mono tecnico">
+        <li>PC: deteccion_pc.py [--carro-moto] [--imagen [ARCHIVOS]] [--video ARCHIVO]</li>
+        <li>Serial: 115200 baudios · PC→ESP32 "10\n"/"01\n"/"11\n"/"00\n" · ESP32→PC "LEDS xy", "APAGADO_SEGURIDAD"</li>
+        <li>Reenvío cada 500 ms (REENVIO_S) · apagado tras 2000 ms (TIEMPO_LIMITE_MS) · confianza ≥ 0,4</li>
+        <li>Entorno: 3-deteccion-objetos\entorno (ultralytics, torch, opencv-python, pyserial)</li>
+      </ul>
+    </details>
+  </section>
+
+  <!-- 7 -->
+  <section class="paso" id="paso-resultados" data-titulo="Resultados" data-clave="resultados">
+    <h2>Resultados</h2>
+    <p>Grabaciones reales del montaje (con silla y celular). Toca una para verla en grande.</p>
+    <div class="galeria">
+      <figure><img loading="lazy" src="/repo/3-deteccion-objetos/demo-deteccion.gif" alt="Ventana de detección">
+        <figcaption>La ventana de YOLO reconociendo persona, silla, mesa y celular, con su confianza.</figcaption></figure>
+      <figure><img loading="lazy" src="/repo/3-deteccion-objetos/demo-protoboard-encendida.gif" alt="LEDs encendidos">
+        <figcaption>Los LEDs se prenden cuando la cámara reconoce el objeto.</figcaption></figure>
+      <figure><img loading="lazy" src="/repo/3-deteccion-objetos/demo-protoboard-reposo.gif" alt="Protoboard en reposo">
+        <figcaption>La protoboard en reposo.</figcaption></figure>
+      <figure><img loading="lazy" src="/repo/3-deteccion-objetos/demo-montaje-2.gif" alt="Montaje desde otro ángulo">
+        <figcaption>El montaje desde otro ángulo, reconociendo el teléfono.</figcaption></figure>
+      <figure><img loading="lazy" src="/repo/3-deteccion-objetos/img/preview-apagado-seguridad.png" alt="Simulador tras el apagado de seguridad">
+        <figcaption>El simulador tras cortar el cable: LEDs apagados y <span class="mono">APAGADO_SEGURIDAD</span>.</figcaption></figure>
+    </div>
+    <p class="nota">Pendiente (lo dice el README): un video con la versión actual (reenvío cada 500 ms) y otro de la
+      directiva carro/moto con juguetes. Las grabaciones de arriba son de la versión que mandaba solo al cambiar.</p>
+    <p><button class="boton-sec" id="btnReadme">Abrir el README completo en GitHub</button></p>
+  </section>
+</main>
+
+<script src="/comun/app.js"></script>
+<script src="app3.js"></script>
+</body>
+</html>

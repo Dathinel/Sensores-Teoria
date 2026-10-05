@@ -27,3 +27,6 @@ firmware/salida/
 vision/dataset/
 vision/entorno/
 vision/modelos/
+
+# puertos reales de la corrida en marcha (app/puertos.py): se escribe al arrancar
+datos/puertos.json

@@ -1,0 +1,19 @@
+# Instalacion MINIMA (instalar.bat -> opcion 1): lo justo para ver el proyecto funcionando.
+# Alcanza para: visor 3D en vivo, dashboard de Streamlit, las 4 escenas de PyBullet, el asistente
+# por escrito (reglas sin internet; DeepSeek si hay clave en .env; Ollama si esta instalado) y las
+# pruebas automaticas (pytest). NO trae: voz (Whisper, gTTS, pyttsx3), entrenar la vision (torch,
+# keras) ni subir el firmware (mpremote, esptool, mpy-cross): eso es la instalacion completa
+# (requirements-lock.txt). Mismas versiones que el lock y que probar.json.
+pybullet==3.2.7
+numpy==2.5.3
+PyYAML==6.0.3
+streamlit==1.64.0
+plotly==7.1.0
+pandas==3.0.6
+pyserial==3.5
+requests==2.34.2
+python-dotenv==1.2.3
+openai==3.19.2
+pillow==12.3.0
+opencv-python==5.0.0.93
+pytest==9.1.1

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Peces en el osciloscopio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/comun/app.css">
+<link rel="stylesheet" href="peces.css">
+</head>
+<body class="peces">
+
+<header class="cabecera">
+  <div class="marca">
+    <span class="punto-fosforo" aria-hidden="true"></span>
+    <div>
+      <div class="sello">Tema 5 · parcial del primer corte</div>
+      <h1>Peces en el osciloscopio</h1>
+    </div>
+  </div>
+  <a class="boton-sec" href="https://github.com/Dathinel/Sensores-Teoria/tree/main/5-parcial-figuras-lissauer" target="_blank" rel="noopener">Ver en GitHub ↗</a>
+</header>
+
+<!-- PORTADA -->
+<section class="portada">
+  <div class="portada-texto">
+    <p class="frase">El ESP32 saca dos voltajes que cambian muy rápido, uno para la <b class="x">X</b> y otro para la
+      <b class="y">Y</b>; el osciloscopio en modo XY los usa para mover su punto, y el punto dibuja un pez.</p>
+    <div class="cifras">
+      <div><b>2</b><span>salidas DAC<br>GPIO25 y GPIO26</span></div>
+      <div><b>314</b><span>puntos por pez</span></div>
+      <div><b>3</b><span>peces a la vez<br>(942 puntos)</span></div>
+    </div>
+    <div class="portada-botones">
+      <button class="boton-pri" data-ir="simulador">Probar el simulador →</button>
+      <button class="boton-sec" data-ir="resultados">Ver los videos del laboratorio</button>
+    </div>
+    <div id="checklist"></div>
+  </div>
+  <figure class="pantalla-osc">
+    <div class="bisel">
+      <img id="gifPortada" src="/repo/5-parcial-figuras-lissauer/demo-tres-peces.gif" alt="Tres peces dibujados en el osciloscopio real del laboratorio">
+    </div>
+    <figcaption>Los tres peces de <code>pez5_esp32.py</code> en el osciloscopio del laboratorio.</figcaption>
+  </figure>
+</section>
+
+<div id="guia" class="guia">
+
+  <!-- 1. QUÉ ES -->
+  <section class="paso" data-titulo="Qué es: Lissajous y el modo XY" id="paso-que-es">
+    <h2>Qué es: del modo XY a un pez</h2>
+    <div class="tres">
+      <div class="tarjeta concepto">
+        <div class="icono">⏚→〰</div>
+        <h3>Un DAC</h3>
+        <p>Convierte un número en voltaje. Los del ESP32 aceptan de 0 a 255: <code>write(0)</code> ≈ 0 V,
+          <code>write(255)</code> ≈ 3,3 V. Solo hay dos: <b>GPIO25</b> y <b>GPIO26</b>.</p>
+      </div>
+      <div class="tarjeta concepto">
+        <div class="icono">✛</div>
+        <h3>El modo XY</h3>
+        <p>Normalmente el osciloscopio dibuja voltaje contra tiempo. En XY el tiempo desaparece: el canal 1 dice
+          qué tan a la <b class="x">derecha</b> va el punto y el canal 2 qué tan <b class="y">arriba</b>.</p>
+      </div>
+      <div class="tarjeta concepto">
+        <div class="icono">∞</div>
+        <h3>Lissajous</h3>
+        <p>Si a cada canal le llega una senoidal, el punto traza figuras clásicas (Lissajous, 1857). Nosotros fuimos
+          más allá: el ESP32 calcula la lista de puntos de un pez y la repite sin parar.</p>
+      </div>
+    </div>
+
+    <div class="lab-lissajous tarjeta">
+      <div class="lab-pantalla">
+        <canvas id="cvXY" width="320" height="320" aria-label="Figura de Lissajous en modo XY"></canvas>
+      </div>
+      <div class="lab-controles">
+        <h3>Juega con dos senoidales</h3>
+        <div class="trazas">
+          <div><span class="x">X = sen(<b id="txtFx">1</b>·t)</span><canvas id="cvX" width="300" height="46"></canvas></div>
+          <div><span class="y">Y = sen(<b id="txtFy">1</b>·t + <b id="txtFase">90</b>°)</span><canvas id="cvY" width="300" height="46"></canvas></div>
+        </div>
+        <label>Relación de frecuencias X:Y
+          <select id="selRel">
+            <option value="1:1">1:1</option><option value="1:2">1:2</option><option value="2:3" selected>2:3</option>
+            <option value="3:4">3:4</option><option value="3:2">3:2</option><option value="5:4">5:4</option>
+          </select>
+        </label>
+        <label>Desfase: <b id="txtFase2">90</b>°
+          <input type="range" id="rgFase" min="0" max="180" step="5" value="90">
+        </label>
+        <div class="presets">
+          <button class="boton-sec" id="bElipse">1:1 con 90° = la elipse del cuerpo del pez</button>
+        </div>
+        <p class="nota">Con la misma frecuencia y 90° de desfase sale una elipse: <code>x = cx + rx·cos(t)</code>,
+          <code>y = cy + ry·sen(t)</code>, que es justo como el script dibuja el cuerpo, el ojo, la pupila y la boca.</p>
+      </div>
+    </div>
+
+    <h3>El pez, pieza por pieza</h3>
+    <p>En vez de dibujarlo punto por punto a mano, el script lo arma con tres formas: elipses, líneas rectas y
+      curvas Bézier. Al arrancar calcula todas las listas una sola vez y después solo las recorre en un bucle
+      infinito; como lo hace muy rápido, el ojo ve una figura sólida (persistencia de la visión).</p>
+    <div class="piezas">
+      <div><b>Cuerpo</b><span>elipse · 111 puntos</span></div>
+      <div><b>Cola</b><span>3 líneas · 88</span></div>
+      <div><b>Ojo</b><span>elipse · 31</span></div>
+      <div><b>Pupila</b><span>elipse chica · 15</span></div>
+      <div><b>Boca</b><span>arco 200°-340° · 31</span></div>
+      <div><b>Aleta</b><span>2 Bézier · 38</span></div>
+      <div class="total"><b>Total</b><span>314 por pez</span></div>
+    </div>
+  </section>
+
+  <!-- 2. CÓMO SE ARMA -->
+  <section class="paso" data-titulo="Cómo se conecta" id="paso-conexion">
+    <h2>Cómo se conecta</h2>
+    <p class="aviso-suave">Para probar en el PC <b>no hace falta nada de esto</b>: el simulador del paso siguiente
+      reemplaza la placa y el osciloscopio. Esto es para el día del laboratorio.</p>
+    <div class="montaje tarjeta">
+      <svg viewBox="0 0 720 300" role="img" aria-label="ESP32 conectado a los dos canales del osciloscopio">
+        <!-- ESP32 -->
+        <rect x="20" y="60" width="200" height="180" rx="10" fill="#1b2a3a" stroke="#2f4a63"/>
+        <rect x="60" y="85" width="120" height="90" rx="4" fill="#9aa4ad"/>
+        <text x="120" y="135" text-anchor="middle" font-family="IBM Plex Mono" font-size="13" fill="#25303a">ESP32</text>
+        <text x="120" y="210" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8fb3d1">DevKit (ESP32 clásico)</text>
+        <g font-family="IBM Plex Mono" font-size="12">
+          <circle cx="220" cy="100" r="6" fill="#f2c94c"/><text x="232" y="96" fill="#f2c94c">GPIO25 · DAC1</text>
+          <circle cx="220" cy="150" r="6" fill="#56ccf2"/><text x="232" y="146" fill="#56ccf2">GPIO26 · DAC2</text>
+          <circle cx="220" cy="200" r="6" fill="#bbb"/><text x="232" y="196" fill="#bbb">GND</text>
+        </g>
+        <!-- cables -->
+        <path d="M226 100 C 380 100, 380 95, 470 95" stroke="#f2c94c" stroke-width="4" fill="none"/>
+        <path d="M226 150 C 380 150, 380 160, 470 160" stroke="#56ccf2" stroke-width="4" fill="none"/>
+        <path d="M226 200 C 360 200, 400 230, 470 230" stroke="#888" stroke-width="4" fill="none" stroke-dasharray="2 0"/>
+        <text x="410" y="84" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#f2c94c">X: 0,13 a 3,17 V</text>
+        <text x="410" y="178" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#56ccf2">Y: mismo rango</text>
+        <text x="400" y="246" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#999">tierra común</text>
+        <!-- osciloscopio -->
+        <rect x="470" y="40" width="235" height="220" rx="12" fill="#22272c" stroke="#3a424a"/>
+        <rect x="490" y="58" width="140" height="120" rx="6" fill="#06130c" stroke="#1d3326"/>
+        <path id="pezMini" d="" fill="none" stroke="#7dff9b" stroke-width="1.6"/>
+        <text x="560" y="196" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#9fb">Formato: XY</text>
+        <g font-family="IBM Plex Mono" font-size="11">
+          <circle cx="470" cy="95" r="9" fill="#333" stroke="#f2c94c" stroke-width="3"/><text x="650" y="99" fill="#f2c94c">CH1 = X</text>
+          <circle cx="470" cy="160" r="9" fill="#333" stroke="#56ccf2" stroke-width="3"/><text x="650" y="164" fill="#56ccf2">CH2 = Y</text>
+          <circle cx="470" cy="230" r="7" fill="#333" stroke="#888" stroke-width="3"/><text x="650" y="234" fill="#aaa">pinzas</text>
+        </g>
+      </svg>
+    </div>
+    <div class="dos">
+      <div class="tarjeta">
+        <h3>Tabla de conexiones</h3>
+        <table class="tabla">
+          <thead><tr><th>Del ESP32</th><th>Va a</th><th>Qué lleva</th></tr></thead>
+          <tbody>
+            <tr><td class="x">GPIO25 (DAC1)</td><td>Punta del canal 1</td><td>Coordenada X (valor 10-245)</td></tr>
+            <tr><td class="y">GPIO26 (DAC2)</td><td>Punta del canal 2</td><td>Coordenada Y (mismo rango)</td></tr>
+            <tr><td>GND</td><td>Pinzas de tierra de las dos puntas</td><td>Referencia común</td></tr>
+          </tbody>
+        </table>
+        <p class="nota">Sin resistencias ni nada más: la entrada del osciloscopio (~1 MΩ) casi no pide corriente.
+          Los DAC no se pueden mover a otros pines, y solo existen en el ESP32 clásico (los S2, S3 y C3 no tienen DAC).</p>
+      </div>
+      <div class="tarjeta">
+        <h3>En el osciloscopio</h3>
+        <ol class="lista-num">
+          <li>Menú <b>Pantalla → Formato: XY</b> (en YT solo se ven dos ondas, no el pez).</li>
+          <li>Los dos canales con los <b>mismos voltios por división</b>; si no, el pez sale estirado.</li>
+          <li>Persistencia apagada: la figura "sólida" ya la da la velocidad del bucle.</li>
+          <li>¿Sale espejado? Se cambia <code>INVERT_X</code> o <code>INVERT_Y</code> en el script, sin recablear.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. SIMULADOR -->
+  <section class="paso" data-titulo="Pruébalo: osciloscopio simulado" id="paso-simulador">
+    <h2>Pruébalo: el osciloscopio simulado</h2>
+    <p>Es la misma geometría de los dos scripts (mismas funciones, mismos números, mismo rango 10-245), dibujada
+      punto por punto como lo haría el haz. No hace falta placa ni osciloscopio.</p>
+    <div class="guia-sim">
+      <div class="guia-paso"><b>1</b> En <i>Qué dibuja el ESP32</i> elige <b>un pez</b> o <b>tres peces</b>.</div>
+      <div class="guia-paso"><b>2</b> Baja <i>Velocidad del haz</i> a 10-30: verás el punto recorrer cuerpo, cola, ojo, pupila, boca y aleta.</div>
+      <div class="guia-paso"><b>3</b> Con tres peces, <i>Puntos recortados</i> marca <b>19</b>: el pez grande toca el borde. Mueve <code>DESPLAZAMIENTO_X</code> hasta que marque 0.</div>
+      <div class="guia-paso"><b>4</b> La opción <i>Lissajous</i> muestra las figuras clásicas para comparar.</div>
+    </div>
+    <div class="marco-sim">
+      <iframe id="iframeSim" title="Osciloscopio XY simulado" src="/repo/5-parcial-figuras-lissauer/preview.html" allow="serial" loading="lazy"></iframe>
+    </div>
+    <div class="fila-abrir">
+      <div id="panelPreview"></div>
+      <p class="nota">Si se ve apretado, ábrelo en una ventana grande. El modo <i>Conectado (Web Serial)</i>
+        funciona en Chrome o Edge y se explica en el paso siguiente.</p>
+    </div>
+  </section>
+
+  <!-- 4. CON EL ESP32 REAL -->
+  <section class="paso" data-titulo="Con el ESP32 real" id="paso-real">
+    <h2>Con el ESP32 real (opcional)</h2>
+    <p>Los dos scripts son MicroPython y usan los DAC del chip, así que <b>corren en el ESP32, no en el PC</b>.
+      Se cargan con Thonny. Si tu placa aún no tiene MicroPython:
+      <a href="/app/2-lenguajes-thonny/#instalar" target="_blank" rel="noopener">instálalo con la app del tema 2 ↗</a>.</p>
+
+    <div class="caminos">
+      <div class="tarjeta camino">
+        <div class="camino-cab"><span class="etiqueta y">Con osciloscopio</span><h3>La demo del laboratorio</h3></div>
+        <ol class="lista-num">
+          <li>Conecta el ESP32 por USB y abre en Thonny el script (copia el código de abajo): <b>un pez</b> o <b>tres peces</b>.</li>
+          <li><b>Archivo → Guardar como… → dispositivo MicroPython</b>, con el nombre <code>main.py</code>: así arranca solo al tener energía.</li>
+          <li>Cablea como en el paso 2: GPIO25 → CH1, GPIO26 → CH2, GND → pinzas.</li>
+          <li>Osciloscopio en <b>Formato XY</b>, mismos V/div en los dos canales, y centra con la posición vertical.</li>
+          <li>Si el pez sale espejado, pon <code>INVERT_X</code> o <code>INVERT_Y = True</code> y vuelve a guardar.</li>
+        </ol>
+      </div>
+      <div class="tarjeta camino">
+        <div class="camino-cab"><span class="etiqueta x">Sin osciloscopio</span><h3>Ver lo que calcula la placa</h3></div>
+        <ol class="lista-num">
+          <li>En el script pon <code>ENVIAR_SERIAL = True</code> (y <code>ESCRIBIR_DAC = False</code> si no hay nada en los pines).</li>
+          <li>Córrelo en Thonny con F5: en la Shell salen los puntos como <code>158 132</code>, <code>157 135</code>…</li>
+          <li>Para verlos dibujados: guárdalo como <code>main.py</code>, <b>cierra Thonny</b> (suelta el puerto), en el simulador pulsa
+            <i>Conectado (Web Serial)</i> → <i>Elegir puerto del ESP32</i> y presiona <b>EN</b> en la placa.</li>
+          <li>Antes de la demo real vuelve a <code>ENVIAR_SERIAL = False</code> y <code>ESCRIBIR_DAC = True</code> (imprimir es lento y el pez parpadearía).</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="codigo-caja">
+      <div class="codigo-cab">
+        <div class="pestanas" role="tablist">
+          <button class="pestana activa" data-archivo="pez3_esp32.py">Un pez · pez3_esp32.py</button>
+          <button class="pestana" data-archivo="pez5_esp32.py">Tres peces · pez5_esp32.py</button>
+        </div>
+        <button class="boton-sec" id="bCopiar">Copiar el código</button>
+      </div>
+      <pre class="codigo" id="codigo">Cargando…</pre>
+    </div>
+  </section>
+
+  <!-- 5. RESULTADOS -->
+  <section class="paso" data-titulo="Resultados: el laboratorio" id="paso-resultados">
+    <h2>Resultados en el osciloscopio del laboratorio</h2>
+    <p>Desde el primer intento hasta los tres peces. Haz clic en cualquiera para verlo en grande.</p>
+    <div class="galeria">
+      <figure><img loading="lazy" src="/repo/5-parcial-figuras-lissauer/demo-tres-peces.gif" alt="Tres peces dibujados al mismo tiempo en el osciloscopio"><figcaption><b>Tres peces</b> (<code>pez5_esp32.py</code>): la versión final, un pez base reutilizado en tres posiciones y tamaños.</figcaption></figure>
+      <figure><img loading="lazy" src="/repo/5-parcial-figuras-lissauer/demo-un-pez-limpio.gif" alt="Un solo pez en modo XY"><figcaption><b>Un pez</b> (<code>pez3_esp32.py</code>), ya con la figura resuelta.</figcaption></figure>
+      <figure><img loading="lazy" src="/repo/5-parcial-figuras-lissauer/demo-primer-pez-cerca.jpg" alt="El pez de cerca en la pantalla"><figcaption><b>De cerca</b>: cuerpo, cola, ojo y boca.</figcaption></figure>
+      <figure><img loading="lazy" src="/repo/5-parcial-figuras-lissauer/demo-ajustando-en-vivo.gif" alt="Ajustando los controles del osciloscopio"><figcaption><b>Ajustando en vivo</b> los controles verticales mientras el pez se sigue dibujando.</figcaption></figure>
+      <figure><img loading="lazy" src="/repo/5-parcial-figuras-lissauer/demo-primer-intento.gif" alt="Primer intento, sin la figura resuelta"><figcaption><b>Primer intento</b>, antes de resolver la escala y el desplazamiento.</figcaption></figure>
+    </div>
+    <p class="nota">Falta una foto del montaje completo (ESP32 con las dos puntas): está anotada como pendiente en el README.</p>
+  </section>
+</div>
+
+<script src="/comun/app.js"></script>
+<script src="peces.js"></script>
+</body>
+</html>

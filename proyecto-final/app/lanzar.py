@@ -6,6 +6,11 @@ simulacion (si no estaba andando) y abre el dashboard de Streamlit apenas respon
     python -m app.lanzar --auto prueba_completa --abrir-dashboard   # lo que hace visor.bat
     python -m app.lanzar --auto prueba_completa --abrir         # abre el visor en vivo
     python -m app.lanzar --auto prueba_completa --reemplazar    # reinicia con el codigo actual
+    python -m app.lanzar --auto prueba_completa --puerto-visor 9000   # otro puerto para el visor
+
+Puertos (app/puertos.py): el visor 3D usa el 8765 (config/parametros.yaml) o el de
+PLANTA_PUERTO_VISOR / --puerto-visor; si lo tiene OTRO programa, usa el siguiente libre y lo
+dice, y abre el navegador en ese puerto. Igual el dashboard (8501, --puerto).
 
 Ctrl+C (o cerrar la ventana) cierra los dos procesos.
 """
@@ -13,6 +18,7 @@ Ctrl+C (o cerrar la ventana) cierra los dos procesos.
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 import time
@@ -79,22 +85,43 @@ def main() -> None:
     analizador.add_argument("--abrir-dashboard", action="store_true",
                             help="abrir el dashboard de Streamlit en el navegador cuando responda")
     analizador.add_argument("--ver", default="", help="parametros de la URL del visor, p. ej. 'sensor=cortina'")
+    analizador.add_argument("--puerto-visor", type=int, default=None,
+                            help="puerto del visor 3D (por defecto PLANTA_PUERTO_VISOR o config/parametros.yaml, "
+                                 "8765); si lo tiene otro programa se usa el siguiente libre")
     args = analizador.parse_args()
 
-    import yaml
-    puerto_visor = yaml.safe_load((RAIZ / "config" / "parametros.yaml").read_text(encoding="utf-8"))[
-        "supervisor"]["puerto_http"]
+    from app import puertos
+
+    pedido = args.puerto_visor or puertos.puerto_pedido()
     if args.reemplazar:
-        _cerrar_instancia_anterior([puerto_visor, args.puerto])
-    elif _esperar(f"http://localhost:{puerto_visor}/", segundos=1):
+        # La corrida anterior pudo quedar en un puerto corrido (8766...) si el pedido estaba ocupado.
+        _cerrar_instancia_anterior(list(range(pedido, pedido + puertos.INTENTOS + 1))
+                                   + list(range(args.puerto, args.puerto + puertos.INTENTOS + 1)))
+    puerto_visor, como, ocupados = puertos.elegir(pedido)
+    aviso = puertos.mensaje(pedido, puerto_visor, como, ocupados)
+    if aviso:
+        print(aviso)
+    if como == "nuestro":
         # Ya hay una corrida andando (por ejemplo la que se deja en segundo
-        # plano): no se arranca otra, solo se abre el visor.
-        print("La simulacion ya esta corriendo.")
+        # plano): no se arranca otra, solo se abre el visor (en SU puerto).
+        print(f"La simulacion ya esta corriendo: visor 3D en http://127.0.0.1:{puerto_visor}/")
+        anotados = puertos.leer()
+        puerto_dash = anotados.get("dashboard", args.puerto) if anotados.get("visor") == puerto_visor else args.puerto
         if args.abrir:
-            webbrowser.open(f"http://localhost:{puerto_visor}/" + (f"?{args.ver}" if args.ver else ""))
-        if args.abrir_dashboard and _esperar(f"http://127.0.0.1:{args.puerto}/", segundos=5):
-            webbrowser.open(f"http://127.0.0.1:{args.puerto}/")
+            webbrowser.open(f"http://127.0.0.1:{puerto_visor}/" + (f"?{args.ver}" if args.ver else ""))
+        if args.abrir_dashboard and _esperar(f"http://127.0.0.1:{puerto_dash}/", segundos=5):
+            webbrowser.open(f"http://127.0.0.1:{puerto_dash}/")
         return
+
+    # El dashboard tambien: si el 8501 lo tiene otro programa, Streamlit no arranca.
+    pedido_dash = args.puerto
+    args.puerto, ocupados_dash = puertos.primer_libre(pedido_dash)
+    if ocupados_dash:
+        print(f"AVISO: el puerto {', '.join(map(str, ocupados_dash))} esta ocupado; el dashboard usa el "
+              f"{args.puerto}: http://127.0.0.1:{args.puerto}/")
+    puertos.guardar(puerto_visor, args.puerto)
+    # El supervisor y el dashboard leen el puerto real del visor de aqui (app/puertos.py).
+    entorno = dict(os.environ, **{puertos.VARIABLE: str(puerto_visor)})
 
     cmd_supervisor = [sys.executable, "-m", "app.supervisor"]
     if args.auto:
@@ -107,12 +134,12 @@ def main() -> None:
                      "--server.port", str(args.puerto), "--server.address", "127.0.0.1"]
 
     comandos = {"supervisor": cmd_supervisor, "dashboard": cmd_dashboard}
-    procesos = {nombre: subprocess.Popen(cmd, cwd=RAIZ) for nombre, cmd in comandos.items()}
-    url_visor = f"http://localhost:{puerto_visor}/" + (f"?{args.ver}" if args.ver else "")
+    procesos = {nombre: subprocess.Popen(cmd, cwd=RAIZ, env=entorno) for nombre, cmd in comandos.items()}
+    url_visor = f"http://127.0.0.1:{puerto_visor}/" + (f"?{args.ver}" if args.ver else "")
     url_dashboard = f"http://127.0.0.1:{args.puerto}"
     print(f"Visor 3D en {url_visor}")
     print(f"Dashboard en {url_dashboard}  (Ctrl+C para cerrar todo)")
-    if args.abrir and _esperar(f"http://localhost:{puerto_visor}/"):
+    if args.abrir and _esperar(f"http://127.0.0.1:{puerto_visor}/"):
         webbrowser.open(url_visor)
     if args.abrir_dashboard and _esperar(url_dashboard + "/"):
         webbrowser.open(url_dashboard)
@@ -153,7 +180,7 @@ def main() -> None:
                 reinicios[nombre] += 1
                 print(f"{nombre} termino (codigo {p.returncode}); reiniciando ({reinicios[nombre]}/5)...")
                 cmd = [c for c in comandos[nombre] if c != "--auto" and c != args.auto] if nombre == "supervisor" else comandos[nombre]
-                procesos[nombre] = subprocess.Popen(cmd, cwd=RAIZ)
+                procesos[nombre] = subprocess.Popen(cmd, cwd=RAIZ, env=entorno)
     except KeyboardInterrupt:
         pass
     finally:

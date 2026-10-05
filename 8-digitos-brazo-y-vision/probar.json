@@ -18,6 +18,7 @@
       "id": "p1-sim",
       "nombre": "Punto 1: brazo dibujando (sin ESP32)",
       "tipo": "python",
+      "ventana": true,
       "script": "brazo_dibuja.py",
       "args": [],
       "cwd": "punto-1-teclado-brazo-dibujando",
@@ -53,6 +54,7 @@
       "id": "p2-mouse",
       "nombre": "Punto 2: reconocer un dígito dibujado con el mouse (sin cámara)",
       "tipo": "python",
+      "ventana": true,
       "script": "reconocer_digito.py",
       "args": ["--mouse"],
       "cwd": "punto-2-reconocimiento-oled-spi",
@@ -63,6 +65,7 @@
       "id": "p2-camara",
       "nombre": "Punto 2: reconocer con la webcam",
       "tipo": "python",
+      "ventana": true,
       "script": "reconocer_digito.py",
       "args": [],
       "cwd": "punto-2-reconocimiento-oled-spi",
@@ -78,6 +81,16 @@
       "cwd": "punto-2-reconocimiento-oled-spi",
       "descripcion": "No hace falta: el modelo entrenado (modelo_mnist_cnn.h5) ya viene en la carpeta. Esto descarga MNIST (unos 11 MB) la primera vez, entrena 10 épocas mostrando la precisión de cada una y sobrescribe modelo_mnist_cnn.h5. Tarda varios minutos (en CPU, unos 30 s por época: cerca de 5 minutos en total) y termina con una precisión de validación de alrededor del 99 %.",
       "cubre": ["Punto 2: cámara del PC + preprocesamiento con OpenCV + CNN (MNIST) que reconoce el dígito"]
+    },
+    {
+      "id": "p2-probar-esp-a",
+      "nombre": "Punto 2: probar el ESP-A solo (con la placa conectada)",
+      "tipo": "python",
+      "script": "probar_esp_a.py",
+      "args": [],
+      "cwd": "punto-2-reconocimiento-oled-spi",
+      "descripcion": "Sin cámara ni red: abre COM7, muestra lo que el ESP-A imprime al arrancar, le manda DIGIT:5 y muestra todo lo que conteste durante 5 segundos (debe salir REENVIADO:5 y la OLED del ESP-B mostrar un 5). Termina solo. Sin la placa dice 'No se pudo abrir COM7' y termina: es lo esperado.",
+      "cubre": ["Punto 2: el PC le manda el dígito por serial al ESP-A (maestro SPI)"]
     },
     {
       "id": "p2-preview",

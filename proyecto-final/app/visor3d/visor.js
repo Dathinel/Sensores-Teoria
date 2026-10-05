@@ -5849,9 +5849,10 @@ async function cargarJSON(url) {
 }
 
 async function iniciar() {
-  if (EN_ARCHIVO && await simulacionCorriendo(URL_VIVO)) {
-    // La simulacion ya estaba corriendo: directo al visor en vivo.
-    location.replace(URL_VIVO + location.search);
+  const urlCorriendo = EN_ARCHIVO ? await simulacionCorriendo(URL_VIVO) : null;
+  if (urlCorriendo) {
+    // La simulacion ya estaba corriendo (en el 8765 o, si estaba ocupado, en el siguiente libre).
+    location.replace(urlCorriendo + location.search);
     return;
   }
   if (!MODO_DEMO) {

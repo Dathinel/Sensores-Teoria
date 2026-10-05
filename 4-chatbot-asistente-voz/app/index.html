@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Asistente de voz · Tema 4</title>
+<link rel="stylesheet" href="/comun/app.css">
+<link rel="stylesheet" href="asistente.css">
+</head>
+<body class="app-tema4">
+
+<header class="cabecera">
+  <div class="cabecera-texto">
+    <span class="etiqueta">Tema 4 · Chatbot</span>
+    <h1>El asistente que prende dos LEDs con la voz</h1>
+    <p>Le dices una frase como <em>"enciende el rojo"</em> y la computadora entiende qué pediste, se lo traduce al
+      ESP32 en una orden cortita y el ESP32 prende o apaga los LEDs.</p>
+  </div>
+  <div class="mini-leds" aria-hidden="true"><span class="bulbo rojo"></span><span class="bulbo azul"></span></div>
+</header>
+
+<main id="pasos">
+
+  <!-- ============================ 1. PORTADA ============================ -->
+  <section class="paso" data-titulo="Qué hace">
+    <div class="portada">
+      <div>
+        <h2>Habla, y los LEDs obedecen</h2>
+        <p class="grande">Esta práctica convierte el <strong>chat de consola del profesor</strong> (que le pregunta cosas a
+          DeepSeek) en un <strong>asistente domótico</strong>: en vez de contestar con texto, contesta
+          <strong>prendiendo y apagando dos LEDs</strong> (uno rojo y uno azul) conectados a un ESP32.</p>
+        <ul class="puntos">
+          <li><span class="ico">🎙</span> Entiende frases dichas al micrófono o escritas.</li>
+          <li><span class="ico">🧠</span> Un modelo de lenguaje (DeepSeek) — o, sin clave, unas reglas por palabras clave — decide qué se pidió.</li>
+          <li><span class="ico">🔌</span> Le manda al ESP32 <code>10</code>, <code>01</code>, <code>11</code>, <code>00</code> o <code>SHOW</code> por el cable USB.</li>
+          <li><span class="ico">✨</span> Extra: un <strong>show de luces</strong> que alterna los LEDs y los deja como estaban.</li>
+        </ul>
+        <p class="nota">Para probarlo <strong>no necesitas</strong> el ESP32, ni micrófono, ni clave de DeepSeek: el paso
+          <em>Pruébalo</em> funciona solo con el teclado y dibuja los LEDs en la pantalla.</p>
+      </div>
+      <figure class="foto">
+        <img data-ampliar src="/repo/4-chatbot-asistente-voz/demo-led-rojo.gif" alt="Protoboard con el LED rojo encendido tras pedirlo por voz">
+        <figcaption>Montaje real: "enciende el rojo" dicho al micrófono.</figcaption>
+      </figure>
+    </div>
+    <div id="checklist"></div>
+  </section>
+
+  <!-- ============================ 2. CÓMO FUNCIONA ============================ -->
+  <section class="paso" data-titulo="Cómo funciona">
+    <h2>De una frase a un LED, en cinco pasos</h2>
+    <ol class="tuberia">
+      <li><span class="n">1</span><b>Voz</b><small>El micrófono graba hasta que dejas de hablar.</small></li>
+      <li><span class="n">2</span><b>Texto</b><small>Google la transcribe (español de Colombia).</small></li>
+      <li><span class="n">3</span><b>Intención (JSON)</b><small>DeepSeek responde solo un JSON: <code>{"led_rojo": true}</code>.</small></li>
+      <li><span class="n">4</span><b>Orden</b><small>El PC recuerda los dos LEDs y arma <code>10</code>…<code>00</code> o <code>SHOW</code>.</small></li>
+      <li><span class="n">5</span><b>LEDs</b><small>El ESP32 mueve GPIO25 y GPIO26 y contesta <code>OK 10</code>.</small></li>
+    </ol>
+
+    <div class="dos-col">
+      <div class="tarjeta">
+        <h3>¿Por qué un JSON y no una frase?</h3>
+        <p>Si el modelo contestara "listo, ya prendí el rojo", el programa tendría que adivinar qué significa. Por eso se
+          le pide <strong>únicamente</strong> un JSON con hasta tres claves: <code>led_rojo</code>, <code>led_azul</code> y
+          <code>show</code>. Luego una <strong>lista blanca</strong> descarta cualquier otra cosa antes de tocar un pin.</p>
+      </div>
+      <div class="tarjeta">
+        <h3>¿Por qué "recuerda" los LEDs?</h3>
+        <p>"Prende el azul" no dice nada del rojo. El programa guarda cómo quedó cada LED y solo cambia el que se
+          nombró: si el rojo ya estaba prendido, manda <code>11</code> y no <code>01</code>. La orden siempre lleva
+          <strong>los dos</strong> LEDs: primero el rojo, después el azul.</p>
+      </div>
+    </div>
+
+    <h3>Ejemplos (empezando con los dos apagados, en este orden)</h3>
+    <div class="tabla-envoltura">
+    <table class="ejemplos">
+      <thead><tr><th>Frase</th><th>Intención (JSON)</th><th>Orden al ESP32</th><th>LEDs</th></tr></thead>
+      <tbody id="tablaEjemplos"></tbody>
+    </table>
+    </div>
+    <p class="nota">La tabla la calcula esta página con las mismas reglas por palabras clave del programa. Con DeepSeek
+      el resultado es el mismo, pero el modelo además entiende frases mucho más libres ("dale luz al de color rojo").</p>
+  </section>
+
+  <!-- ============================ 3. CÓMO SE CONECTA ============================ -->
+  <section class="paso" data-titulo="Cómo se conecta">
+    <h2>El circuito: dos LEDs y dos resistencias</h2>
+    <p class="aviso-suave">Para probar en el computador <strong>no hace falta armar nada</strong>. Esto es solo para cuando
+      quieras usar el ESP32 de verdad.</p>
+    <div class="dos-col">
+      <figure class="foto">
+        <img data-ampliar src="/repo/4-chatbot-asistente-voz/diagrama-circuito.png" alt="Diagrama de referencia del circuito: dos LEDs con resistencia hacia el ESP32">
+        <figcaption>Esquema de referencia (Wokwi). En el montaje real: LED <b>rojo</b> en GPIO25, azul en GPIO26 y resistencias de 220 Ω.</figcaption>
+      </figure>
+      <div>
+        <div class="tabla-envoltura">
+        <table>
+          <thead><tr><th>Componente</th><th>Pata</th><th>Va a</th></tr></thead>
+          <tbody>
+            <tr><td><span class="punto rojo"></span>LED rojo</td><td>Ánodo (pata larga)</td><td>GPIO25, con 220 Ω en serie</td></tr>
+            <tr><td><span class="punto rojo"></span>LED rojo</td><td>Cátodo (pata corta)</td><td>GND</td></tr>
+            <tr><td><span class="punto azul"></span>LED azul</td><td>Ánodo (pata larga)</td><td>GPIO26, con 220 Ω en serie</td></tr>
+            <tr><td><span class="punto azul"></span>LED azul</td><td>Cátodo (pata corta)</td><td>GND (compartido)</td></tr>
+            <tr><td>ESP32</td><td>micro-USB</td><td>USB del computador (energía y órdenes)</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <ul class="puntos compacto">
+          <li><b>¿Por qué 25 y 26?</b> No intervienen en el arranque del chip y están uno al lado del otro.</li>
+          <li><b>¿Por qué 220 Ω?</b> (3,3 V − 2 V) / 220 Ω ≈ 6 mA: brilla bien y está lejos de los 20 mA de un pin.</li>
+          <li><b>Alimentación:</b> todo sale del mismo cable USB; no hace falta fuente externa.</li>
+        </ul>
+      </div>
+    </div>
+    <h3>Las órdenes que viajan por el cable</h3>
+    <div class="ordenes">
+      <div class="orden"><code>10</code><span class="par"><i class="bulbo rojo on"></i><i class="bulbo azul"></i></span>rojo</div>
+      <div class="orden"><code>01</code><span class="par"><i class="bulbo rojo"></i><i class="bulbo azul on"></i></span>azul</div>
+      <div class="orden"><code>11</code><span class="par"><i class="bulbo rojo on"></i><i class="bulbo azul on"></i></span>los dos</div>
+      <div class="orden"><code>00</code><span class="par"><i class="bulbo rojo"></i><i class="bulbo azul"></i></span>ninguno</div>
+      <div class="orden"><code>SHOW</code><span class="par show-demo"><i class="bulbo rojo"></i><i class="bulbo azul"></i></span>alterna 2,4 s</div>
+    </div>
+    <p class="nota">Cada orden termina en salto de línea y va a 115200 baudios. El ESP32 contesta <code>OK 10</code>,
+      <code>OK SHOW</code> o <code>IGNORADO …</code> si llega algo que no entiende.</p>
+  </section>
+
+  <!-- ============================ 4. PRUÉBALO ============================ -->
+  <section class="paso" data-titulo="Pruébalo">
+    <h2>Habla con el asistente (escribiendo)</h2>
+    <p>Pulsa <strong>Iniciar</strong>: arranca el programa real de la práctica en modo texto, sin micrófono, sin clave y
+      sin ESP32. Después toca una frase de ejemplo (se escribe sola y se envía) o escribe la tuya en la caja.
+      Los LEDs de abajo se prenden según la orden que <strong>el propio programa</strong> decide.</p>
+
+    <div class="probador">
+      <div class="col-izq">
+        <div id="panelTexto"></div>
+        <div class="frases">
+          <span class="frases-titulo">Frases de ejemplo</span>
+          <div id="botonesFrases"></div>
+        </div>
+      </div>
+      <div class="col-der">
+        <div class="tablero">
+          <div class="tablero-titulo">ESP32 dibujado <small>GPIO25 · GPIO26</small></div>
+          <div class="leds-grandes">
+            <div class="led-g rojo" id="gRojo"><div class="bombillo"></div><span>Rojo</span></div>
+            <div class="led-g azul" id="gAzul"><div class="bombillo"></div><span>Azul</span></div>
+          </div>
+          <div class="ultima">Última orden: <code id="gOrden">—</code></div>
+        </div>
+        <div class="chat" id="chat" aria-live="polite">
+          <div class="burbuja sistema">Aquí aparece la conversación: tu frase, lo que entendió el asistente y la orden que mandó.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ 5. SIMULADOR ============================ -->
+  <section class="paso" data-titulo="Simulador en el navegador">
+    <h2>El simulador (sin Python)</h2>
+    <p>Esta es la página <em>preview</em> de la práctica: el mismo intérprete por palabras clave, un ESP32 simulado
+      con la misma lógica del firmware (incluido el show de 2,4 s) y botones de orden directa. En Chrome/Edge el botón
+      <strong>Hablar</strong> usa el micrófono del navegador, y el modo <strong>Conectado</strong> habla con el ESP32 real
+      por Web Serial (cerrando Thonny antes).</p>
+    <div class="marco-sim">
+      <iframe id="simulador" title="Simulador del asistente (preview.html)" loading="lazy" allow="microphone; serial"></iframe>
+    </div>
+    <p class="nota"><button class="enlace" id="abrirSim" type="button">Abrir el simulador en una pestaña aparte</button>
+      (el modo Conectado y el micrófono funcionan mejor así).</p>
+  </section>
+
+  <!-- ============================ 6. MICRÓFONO Y DEEPSEEK ============================ -->
+  <section class="paso" data-titulo="Micrófono y DeepSeek (opcional)">
+    <h2>Con tu voz y con el modelo de verdad</h2>
+    <div class="dos-col">
+      <div class="tarjeta">
+        <h3>🎙 Qué necesita el modo micrófono</h3>
+        <ul class="puntos compacto">
+          <li>Un micrófono conectado (el del portátil sirve).</li>
+          <li><b>Internet</b>: la transcripción la hace el servicio gratuito de Google.</li>
+          <li>Nada más: si no hay micrófono, el programa avisa y deja escribir igual.</li>
+        </ul>
+        <p><b>Cómo se usa:</b> pulsa Iniciar, luego envía la caja <b>vacía</b> (Enter) — el programa dice
+          <code>Habla ahora...</code> — y di tu frase. Al detectar silencio la transcribe (<code>Se entendio: …</code>)
+          y sigue igual que en modo texto. También puedes escribir la frase.</p>
+      </div>
+      <div class="tarjeta">
+        <h3>🔑 La clave de DeepSeek (opcional)</h3>
+        <p>Sin clave todo funciona con las palabras clave. Con clave, la intención la decide el modelo y se ve
+          <code>DeepSeek respondio: {"led_rojo": true}</code>.</p>
+        <ol class="compacto">
+          <li>En la carpeta de la práctica (<code>4-chatbot-asistente-voz</code>), copia <code>.env.example</code> y
+            renombra la copia a <code>.env</code>.</li>
+          <li>Ábrelo con el Bloc de notas y cambia <code>tu_api_key_aqui</code> por tu clave:
+            <code>DEEPSEEK_API_KEY=sk-…</code></li>
+          <li>Guarda y vuelve a pulsar Iniciar aquí abajo.</li>
+        </ol>
+        <p class="aviso-suave">El <code>.env</code> está en el <code>.gitignore</code>: <strong>nunca se sube a GitHub</strong>.
+          No pegues la clave en el código ni en esta página; quien la tenga puede gastar tu saldo.</p>
+      </div>
+    </div>
+    <div class="probador una-col">
+      <div id="panelVoz"></div>
+    </div>
+  </section>
+
+  <!-- ============================ 7. ESP32 REAL ============================ -->
+  <section class="paso" data-titulo="Con el ESP32 real">
+    <h2>Con el ESP32 de verdad, paso a paso</h2>
+    <ol class="pasos-reales">
+      <li><b>Arma el circuito</b> del paso <em>Cómo se conecta</em> (LED rojo a GPIO25, azul a GPIO26, 220 Ω, GND común).</li>
+      <li><b>Graba el firmware una sola vez:</b> en Thonny, con el ESP32 por USB, abre <code>esp32_voz.py</code> y
+        guárdalo <em>en el dispositivo</em> con el nombre <code>main.py</code>. Desde ahí arranca solo al encender.
+        <div id="panelFw" class="mini-panel"></div></li>
+      <li><b>Cierra Thonny</b> (o desconéctalo de la placa): el puerto solo lo puede usar un programa a la vez.</li>
+      <li><b>Mira el puerto</b> en el Administrador de dispositivos → Puertos (COM y LPT). El programa usa
+        <code>COM7</code>; si el tuyo es otro, cámbialo en <code>PUERTO_SERIAL</code> de <code>comando_voz.py</code>.</li>
+      <li><b>Pulsa Iniciar</b> en <em>Pruébalo</em> (o en el modo micrófono). Ahora verás <code>ESP32 conectado en COM7</code> y,
+        tras cada orden, <code>ESP32 dice: OK 10</code>: los LEDs de la protoboard y los dibujados se mueven a la vez.</li>
+    </ol>
+    <div class="tarjeta">
+      <h3>Si "no pasa nada"</h3>
+      <ul class="puntos compacto">
+        <li><b>Nunca aparece "ESP32 dice"</b>: <code>main.py</code> no está corriendo (reinicia la placa) o el puerto es otro.</li>
+        <li><b>Aparece <code>IGNORADO …</code></b>: el cable está bien; llegó algo con otro formato.</li>
+        <li><b>"No se pudo abrir COM7"</b>: Thonny sigue conectado, o el ESP32 está en otro puerto.</li>
+      </ul>
+    </div>
+    <p class="nota">Otra opción sin Python: el <em>Simulador</em> en modo <strong>Conectado (Web Serial)</strong>.</p>
+  </section>
+
+  <!-- ============================ 8. RESULTADOS ============================ -->
+  <section class="paso" data-titulo="Resultados">
+    <h2>La demostración real, por voz</h2>
+    <p>Comandos dichos al micrófono uno tras otro: prender el rojo, prender también el azul, el show de luces y
+      apagar todo. Toca una imagen para verla grande.</p>
+    <div class="galeria">
+      <figure><img data-ampliar src="/repo/4-chatbot-asistente-voz/demo-led-rojo.gif" alt="LED rojo encendido por voz"><figcaption>"Enciende el rojo" → <code>10</code></figcaption></figure>
+      <figure><img data-ampliar src="/repo/4-chatbot-asistente-voz/demo-dos-leds.gif" alt="Los dos LEDs encendidos"><figcaption>"Prende también el azul" → <code>11</code></figcaption></figure>
+      <figure><img data-ampliar src="/repo/4-chatbot-asistente-voz/demo-show-luces-azul.gif" alt="Show de luces, azul encendido"><figcaption>Show de luces (instante azul) → <code>SHOW</code></figcaption></figure>
+      <figure><img data-ampliar src="/repo/4-chatbot-asistente-voz/demo-show-luces-rojo.gif" alt="Show de luces, rojo encendido"><figcaption>Show de luces (instante rojo)</figcaption></figure>
+      <figure><img data-ampliar src="/repo/4-chatbot-asistente-voz/img/preview-modo-prueba.png" alt="Simulador en modo prueba"><figcaption>Simulador: "prende los dos" → <code>11</code></figcaption></figure>
+    </div>
+    <div id="checklist2"></div>
+    <details class="tecnico">
+      <summary>Detalles técnicos</summary>
+      <ul>
+        <li>Programa del PC: <code>comando_voz.py</code> (modo texto: <code>--texto --sin-clave</code>; <code>--puerto COMx</code> cambia el puerto).</li>
+        <li>Firmware: <code>esp32_voz.py</code> (MicroPython, guardado como <code>main.py</code>), 115200 baudios.</li>
+        <li>Entorno: <code>entorno\</code> de la práctica, Python 3.12/3.13 (PyAudio no tiene rueda para 3.14).</li>
+        <li>Basado en <code>chatbot.py</code> del profesor (U_Militar, "3) chatbot"): se cambió <code>requests</code> por la librería
+          <code>openai</code> apuntando a DeepSeek, la clave pasó al <code>.env</code>, se forzó JSON y se agregó voz, serial y el ESP32.</li>
+        <li><button class="enlace" type="button" id="abrirReadme">Abrir el README completo</button></li>
+      </ul>
+    </details>
+  </section>
+</main>
+
+<script src="/comun/app.js"></script>
+<script src="asistente.js"></script>
+</body>
+</html>

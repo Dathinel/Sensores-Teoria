@@ -1600,3 +1600,36 @@ cifras, es un dato en vivo de la base, no de la documentación) y reglas 60/60; 
 60/60 (mediana 4,9 s). Al abrir una sesión en el proyecto final se cargan 9,5 k tokens de contexto en vez
 de ~25 k. Detalle de qué salió de dónde: `D:\cosas uni\Micros\historial\correspondencia-contextos.md`
 (fuera del repo).
+
+## 2026-10-05 — Arreglos para quien lo prueba por primera vez + app de la práctica (plan PLAN-APPS-PRACTICAS, P9)
+
+**Instalar antes de ver.** `visor.bat` sin `entorno\` abría la demo grabada sin decir nada: ahora avisa en su
+ventana ("no está instalado: se abre la DEMO GRABADA; para el modo en vivo, instalar.bat") y el README dice
+arriba, en "Cómo verlo", que primero hay que instalar, qué instala y cuánto ocupa. `instalar.bat` pregunta:
+1, mínima (`requirements-minimo.txt`, los 13 paquetes de `probar.json`: visor en vivo, dashboard, escenas,
+asistente escrito y pruebas; medido: 3 min 21 s y 0,7 GB con la caché de pip llena) o 2, completa (el lock, el
+firmware, Ollama, Whisper y el chequeo, como antes). Sin preguntar: `instalar.bat minima|completa`. Con la
+mínima (entorno temporal) pasan todas menos 2 que se omiten (las que compilan el firmware con `mpy-cross`).
+
+**Puerto 8765 ocupado.** En este PC lo tiene otro programa (`node ...\panel\server.js`, y Docker en IPv6): el
+supervisor seguía sin visor y la pestaña en vivo nunca aparecía. Nuevo `app/puertos.py`: el puerto sale de
+`--puerto-visor`, `PLANTA_PUERTO_VISOR` o la configuración; si lo tiene OTRO programa se usa el siguiente libre
+(hasta +20) y se dice; si lo tiene una corrida de este proyecto (se reconoce por `/api/geometria`) se reutiliza.
+`app.lanzar` pasa el puerto real al supervisor y al dashboard (variable de entorno), lo anota en
+`datos/puertos.json` (ignorado por git), abre el navegador en ese puerto y hace lo mismo con el 8501 del
+dashboard. El visor portable (file://) busca la simulación en 8765-8785 y solo acepta un JSON de estado (el
+404 del otro programa no lo engaña). `app.chequeo` ya no marca falla: avisa qué puerto se usará.
+Probado de verdad aquí: el visor quedó en 8766, el portable pasó solo a `http://127.0.0.1:8766/` y el
+dashboard mostró la línea trabajando.
+
+**Cifras unificadas** con su fuente: asistente 60 de 60 (local, mediana 4,9 s) y 60 de 60 (reglas), de
+`docs/pruebas-asistente.md` (2026-10-02); el README decía 50/50 y "39 preguntas". Pruebas: 936, el número real de
+`pytest -q` hoy con el entorno del proyecto (README, `logica-interna.md`, lock, `probar.json`); antes decían
+"más de 850", "590+" y 928. Suite completa: 936 passed.
+
+**App de la práctica** (`app-practica/`, declarada en `probar.json` con `"app"`): portada con video, checklist
+de lo que pide el enunciado, el recorrido interactivo de una pieza por las 4 estaciones (5 piezas, cada una con
+su causa de `control/reglas.py`), instalación y puertos, botones para el visor en vivo + dashboard (con los
+enlaces del puerto real que dice `app.lanzar`), las 4 escenas de PyBullet, el asistente (nuevo
+`app/charla.py`: reglas sin clave sobre una COPIA de la base; las órdenes no se mandan), el visor portable
+embebido, resultados (videos, pytest) y el estado del proyecto tal cual está en el README.

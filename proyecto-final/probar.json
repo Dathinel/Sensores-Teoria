@@ -1,5 +1,6 @@
 {
   "id": "★",
+  "app": "app-practica/index.html",
   "titulo": "Proyecto final: logística de monedas inteligentes (grupo 7, detector de monedas y vasos)",
   "resumen": "Una línea recibe piezas de una en una, filtra las monedas colombianas (rechaza botones, arandelas, bloques y monedas extranjeras), las guarda por denominación, las empaca en vasos tapados y un carro las lleva por una pista con tres muros hasta la meta. Todo corre en simulación con física real (PyBullet), se ve en un visor 3D, se sigue en un dashboard de Streamlit y tiene un asistente que responde y da órdenes, incluso sin internet ni clave.",
   "pide": [
@@ -39,19 +40,24 @@
       "modulo": "app.lanzar",
       "args": ["--auto", "prueba_completa", "--abrir", "--abrir-dashboard"],
       "cwd": ".",
-      "descripcion": "Arranca la simulación completa (escenario prueba_completa) y abre dos pestañas: el visor 3D en vivo (http://localhost:8765: planta, carro y pista; paneles En vivo, Pruebas, Paso a paso, Sensores y Componentes; botones de sabotaje y 'Ver la prueba de este sensor') y el dashboard (http://127.0.0.1:8501: Resumen, Monedas y vasos, Calidad del filtro, Línea en vivo, Carro y ruta, Pruebas, Montaje real, Asistente y Ayuda; la barra lateral tiene Empezar, Pausa, Paro y 'Probar un filtro'). Tarda unos 10 s en responder. Se detiene cerrando su consola (Ctrl+C cierra los dos procesos). Si la simulación ya estaba corriendo, solo abre las pestañas.",
+      "descripcion": "Arranca la simulación completa (escenario prueba_completa) y abre dos pestañas: el visor 3D en vivo (http://127.0.0.1:8765: planta, carro y pista; paneles En vivo, Pruebas, Paso a paso, Sensores y Componentes; botones de sabotaje y 'Ver la prueba de este sensor') y el dashboard (http://127.0.0.1:8501 o, si están ocupados, el siguiente libre: lo dice al arrancar; Resumen, Monedas y vasos, Calidad del filtro, Línea en vivo, Carro y ruta, Pruebas, Montaje real, Asistente y Ayuda; la barra lateral tiene Empezar, Pausa, Paro y 'Probar un filtro'). Tarda unos 10 s en responder. Se detiene cerrando su consola (Ctrl+C cierra los dos procesos). Si la simulación ya estaba corriendo, solo abre las pestañas.",
       "cubre": [
         "Contador de monedas, módulo de transporte y embalaje en vasos, y recolección de los vasos",
         "Vehículo que sigue una trayectoria con tres obstáculos hasta la meta",
         "Dashboard con el seguimiento de la ruta y el valor, peso y cantidad de las monedas procesadas",
+        "Aplicativo web en Streamlit comunicado de forma inalámbrica con el ESP32",
         "Grupo 7 (elemento diferencial): detector de elementos de monedas y vasos, cada filtro demostrable por separado"
       ]
     },
     {
       "id": "asistente",
-      "nombre": "Asistente (pestaña Asistente del dashboard)",
-      "tipo": "info",
-      "descripcion": "Con la acción anterior corriendo, en el dashboard ir a la pestaña Asistente y escribir, por ejemplo: '¿cuántas monedas se aceptaron?', '¿qué sensor detecta el metal?' o 'avanza 20 cm'. Sin clave de DeepSeek y sin Ollama responde el intérprete de reglas (sin internet, probado); con Ollama y qwen2.5:3b responde el modelo local, y con una clave en .env, DeepSeek. La voz (micrófono) es opcional.",
+      "nombre": "Asistente: charla de prueba (sin clave ni internet)",
+      "tipo": "python",
+      "modulo": "app.charla",
+      "args": [],
+      "cwd": ".",
+      "entrada": true,
+      "descripcion": "Se le escribe al asistente y responde el intérprete de reglas (sin clave de DeepSeek y sin internet) con las cifras de la última corrida guardada, por ejemplo: '¿cuántas monedas se aceptaron?', '¿qué sensor detecta el metal?' o 'avanza 20 cm'. Trabaja sobre una copia de la base: las órdenes se entienden pero NO se mandan a la línea. Para dar órdenes de verdad, con voz, el modelo local (Ollama) o DeepSeek (clave en .env): pestaña Asistente del dashboard, con el visor en vivo corriendo. 'salir' termina.",
       "cubre": ["Chatbot asistente que exponga los datos del proyecto"]
     },
     {
@@ -69,6 +75,7 @@
       "modulo": "sim.ver.filtro_monedas",
       "args": [],
       "cwd": ".",
+      "ventana": true,
       "descripcion": "Ventana de PyBullet con la cinta de monedas y el almacén: 18 piezas mezcladas (monedas, botones, arandelas, bloques, extranjeras), cada una con un rótulo de su material o su causa de rechazo, y cada tubo con su cuenta. En la ventana: espacio pausa, r reinicia, q sale.",
       "cubre": [
         "Grupo 7 (elemento diferencial): detector de elementos de monedas y vasos, cada filtro demostrable por separado",
@@ -82,6 +89,7 @@
       "modulo": "sim.ver.embalaje_vasos",
       "args": [],
       "cwd": ".",
+      "ventana": true,
       "descripcion": "Verificación del vaso, llenado por lotes, tapa, prensa, canaleta y los sabotajes (vaso retirado, cambiado, mano en la cortina). Espacio pausa, r reinicia, q sale.",
       "cubre": [
         "Contador de monedas, módulo de transporte y embalaje en vasos, y recolección de los vasos",
@@ -95,6 +103,7 @@
       "modulo": "sim.ver.carro_pista",
       "args": [],
       "cwd": ".",
+      "ventana": true,
       "descripcion": "El carro con motores y ruedas: sigue la línea, esquiva los tres muros, llega a la meta y vuelve de reversa al muelle. Espacio pausa, r reinicia, q sale.",
       "cubre": ["Vehículo que sigue una trayectoria con tres obstáculos hasta la meta"]
     },
@@ -105,6 +114,7 @@
       "modulo": "sim.ver.todo_junto",
       "args": [],
       "cwd": ".",
+      "ventana": true,
       "descripcion": "La corrida completa: la planta en una ventana de PyBullet y el carro en otra (PyBullet permite una ventana por proceso). Espacio pausa, r reinicia, q sale.",
       "cubre": [
         "Contador de monedas, módulo de transporte y embalaje en vasos, y recolección de los vasos",
@@ -130,8 +140,17 @@
       "modulo": "pytest",
       "args": ["-q"],
       "cwd": ".",
-      "descripcion": "Corre las más de 900 pruebas de tests/ (control, simulación, visor, dashboard, asistente y firmware contra una estación emulada). Tarda unos 4 minutos; al final dice cuántas pasaron (probado: 928 pasan, 2 se omiten).",
+      "descripcion": "Corre las 936 pruebas de tests/ (control, simulación, visor, dashboard, asistente y firmware contra una estación emulada). Tarda unos 4 minutos; al final dice cuántas pasaron (probado el 2026-10-05 con el entorno del proyecto: 936 pasan).",
       "cubre": ["Grupo 7 (elemento diferencial): detector de elementos de monedas y vasos, cada filtro demostrable por separado"]
+    },
+    {
+      "id": "chequeo",
+      "nombre": "Chequeo del PC (qué está listo y qué falta)",
+      "tipo": "python",
+      "modulo": "app.chequeo",
+      "args": ["--rapido"],
+      "cwd": ".",
+      "descripcion": "Revisa sin cambiar nada: Python y paquetes, puertos (y cuál se va a usar si el 8765 está ocupado), Ollama, Whisper, voz de Windows, internet, clave de DeepSeek, ESP32 conectados, driver del firmware, base de datos y visor portable. Cada línea dice cómo arreglarlo. Con la instalación mínima es normal que marque fallas en la voz, Ollama o el firmware: no hacen falta para verlo."
     },
     {
       "id": "enunciado",
@@ -144,20 +163,28 @@
       "nombre": "README del proyecto (arquitectura, decisiones, conexiones, costos)",
       "tipo": "info",
       "archivo": "README.md",
-      "descripcion": "La explicación completa: el elemento 7, el recorrido de una moneda, un vaso y el carro, los filtros, la parte eléctrica, el asistente, el firmware y lo que falta en físico."
+      "descripcion": "La explicación completa: el elemento 7, el recorrido de una moneda, un vaso y el carro, los filtros, la parte eléctrica, el asistente, el firmware y lo que falta en físico.",
+      "cubre": [
+        "Sistema logístico de monedas con ESP32 y estructuras mecánicas y electrónicas propias",
+        "Repositorio de GitHub con el paso a paso documentado"
+      ]
     },
     {
       "id": "firmware",
       "nombre": "Firmware de los dos ESP32 (MicroPython)",
       "tipo": "info",
       "archivo": "firmware/README.md",
-      "descripcion": "El ESP32 fijo (estación, por USB con el PC) y el del carro (por ESP-NOW). Se sube con `python -m firmware.subir`; no hace falta para probar: todo lo anterior corre en simulación. El circuito también está en Wokwi (carpeta wokwi/)."
+      "descripcion": "El ESP32 fijo (estación, por USB con el PC) y el del carro (por ESP-NOW). Se sube con `python -m firmware.subir`; no hace falta para probar: todo lo anterior corre en simulación. El circuito también está en Wokwi (carpeta wokwi/).",
+      "cubre": [
+        "Sistema logístico de monedas con ESP32 y estructuras mecánicas y electrónicas propias",
+        "Aplicativo web en Streamlit comunicado de forma inalámbrica con el ESP32"
+      ]
     }
   ],
   "notas": [
     "Sin hardware: todo corre en simulación (hardware.backend: sim en config/parametros.yaml). Sin clave de DeepSeek el asistente responde con reglas locales.",
     "PyBullet 3.2.7 no publica ruedas para Windows: pip lo compila, así que hace falta tener instaladas las Microsoft C++ Build Tools (Visual Studio Build Tools con 'Desarrollo para el escritorio con C++'). Si 'entorno/' ya existe (instalar.bat del proyecto, Python 3.14), se usa ese.",
-    "Usa los puertos 8765 (visor 3D) y 8501 (dashboard). Si otro programa ocupa el 8765, el visor en vivo no aparece: cerrar ese programa o cambiar supervisor.puerto_http en config/parametros.yaml. `python -m app.chequeo` lo detecta.",
-    "La instalación completa del proyecto (instalar.bat: torch, keras, Whisper, firmware, Ollama) es mucho más pesada y solo hace falta para la voz sin internet, entrenar la visión o subir el firmware."
+    "Usa los puertos 8765 (visor 3D) y 8501 (dashboard). Si otro programa ocupa alguno, usa el siguiente libre (8766, 8502…), lo dice en su salida y abre el navegador en ese puerto; el visor portable también lo encuentra solo. Para fijar otro: variable PLANTA_PUERTO_VISOR o --puerto-visor N (app/puertos.py). `python -m app.chequeo` y `python -m app.puertos` dicen cuál se va a usar.",
+    "instalar.bat del proyecto tiene dos opciones: 1, mínima (requirements-minimo.txt: los mismos paquetes de esta lista, ~0,7 GB, basta para el visor en vivo, el dashboard, las escenas, el asistente escrito y las pruebas) y 2, completa (requirements-lock.txt: además torch, keras, Whisper, firmware y Ollama, ~1,8 GB; solo hace falta para la voz sin internet, entrenar la visión o subir el firmware)."
   ]
 }

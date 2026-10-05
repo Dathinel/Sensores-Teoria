@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brazo con teclado</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/comun/app.css">
+<link rel="stylesheet" href="brazo.css">
+</head>
+<body>
+
+<header class="b-portada">
+  <div class="b-portada-texto">
+    <p class="b-etiqueta">Tema 7 · URDF + PyBullet + ESP32</p>
+    <h1>Mueve un brazo robot con un teclado</h1>
+    <p class="b-frase">Un teclado de 16 teclas conectado al ESP32 funciona como el mando de un robot industrial:
+      mientras mantienes una tecla, una parte del brazo se mueve. El ESP32 manda la posición al computador diez
+      veces por segundo y un simulador de física (PyBullet) mueve el brazo en 3D.
+      <strong>Sin la placa también se prueba:</strong> la ventana del simulador trae sus propios botones, y hay
+      una versión en el navegador con el teclado clicable.</p>
+    <div class="b-portada-botones">
+      <button class="b-boton b-boton-grande" data-ir="probar">Probarlo ya</button>
+      <button class="b-boton b-boton-sec" data-ir="teclado">Ver el teclado</button>
+    </div>
+  </div>
+  <figure class="b-portada-gif">
+    <img src="/repo/7-brazo-robotico-urdf/img/demo-jog.gif" alt="El brazo moviéndose en PyBullet con el jog del teclado" class="b-ampliable">
+    <figcaption>El brazo moviéndose con el teclado; abajo, la línea que manda el ESP32.</figcaption>
+  </figure>
+  <aside class="b-pide">
+    <div id="checklist"><p class="b-muted">Cargando la lista…</p></div>
+  </aside>
+</header>
+
+<main id="pasos" class="b-pasos">
+
+  <!-- 1 ─────────────────────────────────────────────────────────────── -->
+  <section class="paso" data-titulo="Qué es el jog" id="paso-jog">
+    <h2>1. Qué es mover un robot "por jog"</h2>
+    <p>En una fábrica, a un brazo robot se le enseña a mano con un control llamado <b>teach pendant</b>: tiene
+      botones de "más" y "menos" para cada articulación, y mientras mantienes uno, esa parte se mueve despacio.
+      Eso es el <b>jog</b>. Aquí el teach pendant es un teclado 4x4 de membrana, y el robot es el brazo que
+      compartió el profesor en un archivo <b>URDF</b> (la "receta" de piezas y articulaciones de un robot).</p>
+    <div class="b-partes">
+      <div class="b-parte" style="--c: var(--b-azul)">
+        <span class="b-parte-n">J1</span>
+        <h3>La base gira</h3>
+        <p>Todo el brazo da vueltas sobre su eje, como una silla giratoria. Entre −2,5 y +2,5 radianes (±143°).</p>
+      </div>
+      <div class="b-parte" style="--c: var(--b-verde)">
+        <span class="b-parte-n">J2</span>
+        <h3>El codo se dobla</h3>
+        <p>El segundo tramo sube o baja. Entre −2 y +2 radianes (±115°).</p>
+      </div>
+      <div class="b-parte" style="--c: var(--b-naranja)">
+        <span class="b-parte-n">G</span>
+        <h3>La pinza abre y cierra</h3>
+        <p>La pinza se desliza hasta 15 cm por el brazo y, a la vez, sus dos dedos se separan.</p>
+      </div>
+    </div>
+    <div class="b-poses">
+      <figure><img src="/repo/7-brazo-robotico-urdf/img/pose-codo-doblado.png" alt="Base y codo girados" class="b-ampliable"><figcaption>Base y codo girados</figcaption></figure>
+      <figure><img src="/repo/7-brazo-robotico-urdf/img/pose-pinza-abierta.png" alt="Pinza extendida y abierta" class="b-ampliable"><figcaption>Pinza extendida y abierta</figcaption></figure>
+      <figure><img src="/repo/7-brazo-robotico-urdf/img/pose-codo-atras.png" alt="Base y codo al otro lado" class="b-ampliable"><figcaption>Al otro lado</figcaption></figure>
+    </div>
+    <details class="b-detalle">
+      <summary>¿Qué es un URDF y cómo está armado este brazo? (del README)</summary>
+      <div id="mdUrdf" class="b-md"></div>
+    </details>
+  </section>
+
+  <!-- 2 ─────────────────────────────────────────────────────────────── -->
+  <section class="paso" data-titulo="El teclado" id="paso-teclado">
+    <h2>2. El teclado: qué hace cada tecla</h2>
+    <p>Las teclas siguen las flechas de un teclado numérico. <b>Mantén presionada</b> una tecla de color (con el
+      mouse o con los números de tu teclado) y mira cómo cambian los números: es lo mismo que hace el ESP32,
+      que suma un paso cada 100 ms mientras la tecla siga abajo.</p>
+    <div class="b-teclado-zona">
+      <div class="b-keypad" id="keypad" aria-label="Teclado 4x4"></div>
+      <div class="b-teclado-info">
+        <div class="b-leyenda">
+          <div style="--c: var(--b-azul)"><span class="b-ley-k">8</span><span class="b-ley-k">2</span> Base: gira + / −  <small>0,05 rad (~2,9°) por paso</small></div>
+          <div style="--c: var(--b-verde)"><span class="b-ley-k">6</span><span class="b-ley-k">4</span> Codo: + / −  <small>0,05 rad por paso</small></div>
+          <div style="--c: var(--b-naranja)"><span class="b-ley-k">9</span><span class="b-ley-k">7</span> Pinza: abre / cierra  <small>5 mm por paso</small></div>
+          <div style="--c: var(--b-rosa)"><span class="b-ley-k">5</span> Home: todo vuelve a cero</div>
+          <div style="--c: #3a3f45"><span class="b-ley-k b-ley-off">1</span> Las demás teclas no hacen nada</div>
+        </div>
+        <div class="b-lectura">
+          <div><span>Tecla</span><b id="lecTecla">—</b></div>
+          <div><span>J1 (base)</span><b id="lecJ1">0.000</b></div>
+          <div><span>J2 (codo)</span><b id="lecJ2">0.000</b></div>
+          <div><span>G (pinza)</span><b id="lecG">0.000</b></div>
+        </div>
+        <p class="b-chico b-muted">Lo que el ESP32 mandaría por el cable, diez veces por segundo:</p>
+        <pre class="b-linea" id="lineaSerial">J1:0.000,J2:0.000,G:0.000</pre>
+      </div>
+    </div>
+    <details class="b-detalle">
+      <summary>¿Cómo sabe el ESP32 qué tecla se apretó con solo 8 cables?</summary>
+      <p>Las 16 teclas forman una cuadrícula de 4 filas por 4 columnas. El ESP32 pone en 0 <b>una fila a la vez</b>
+        y mira las 4 columnas: si una columna también baja a 0, hay una tecla apretada justo en ese cruce.
+        Repite eso con las 4 filas, tan rápido que para quien aprieta es instantáneo. A eso se le llama
+        <b>barrer</b> el teclado.</p>
+    </details>
+  </section>
+
+  <!-- 3 ─────────────────────────────────────────────────────────────── -->
+  <section class="paso" data-titulo="Cómo se conecta" id="paso-conecta">
+    <h2>3. Cómo se conecta</h2>
+    <p class="b-nota"><b>Para probar no hace falta armar nada.</b> Esto es para cuando tengas el ESP32 y el teclado.
+      Solo van 8 cables, directo de la cinta del teclado al ESP32: sin resistencias ni nada más.</p>
+    <div class="b-fotos">
+      <figure><img src="/repo/7-brazo-robotico-urdf/img/foto-teclado.jpg" alt="El teclado 4x4 con su cinta de 8 pines" class="b-ampliable"><figcaption>El teclado y su cinta de 8 pines</figcaption></figure>
+      <figure><img src="/repo/7-brazo-robotico-urdf/img/foto-teclado-esp32.jpg" alt="Los 8 cables conectados al ESP32" class="b-ampliable"><figcaption>Montaje real: la cinta directo al ESP32</figcaption></figure>
+      <figure class="b-foto-ancha"><img src="/repo/7-brazo-robotico-urdf/img/montaje-3d.png" alt="Montaje 3D con cada cable rotulado" class="b-ampliable"><figcaption>El mismo montaje en 3D, con cada cable rotulado</figcaption></figure>
+    </div>
+    <p>Mirando el teclado de frente, los 8 pines de la cinta son, de izquierda a derecha:</p>
+    <div class="b-cinta" id="cinta"></div>
+    <table class="b-tabla">
+      <thead><tr><th>Cable</th><th>Une las teclas</th><th>Pin del ESP32</th><th>Cómo lo usa el ESP32</th></tr></thead>
+      <tbody>
+        <tr><td>R1 (fila)</td><td>1 2 3 A</td><td>GPIO14</td><td>salida</td></tr>
+        <tr><td>R2 (fila)</td><td>4 5 6 B</td><td>GPIO27</td><td>salida</td></tr>
+        <tr><td>R3 (fila)</td><td>7 8 9 C</td><td>GPIO26</td><td>salida</td></tr>
+        <tr><td>R4 (fila)</td><td>* 0 # D</td><td>GPIO25</td><td>salida</td></tr>
+        <tr><td>C1 (columna)</td><td>1 4 7 *</td><td>GPIO33</td><td>entrada con pull-up interna</td></tr>
+        <tr><td>C2 (columna)</td><td>2 5 8 0</td><td>GPIO32</td><td>entrada con pull-up interna</td></tr>
+        <tr><td>C3 (columna)</td><td>3 6 9 #</td><td>GPIO18</td><td>entrada con pull-up interna</td></tr>
+        <tr><td>C4 (columna)</td><td>A B C D</td><td>GPIO19</td><td>entrada con pull-up interna</td></tr>
+      </tbody>
+    </table>
+    <p class="b-chico b-muted">El ESP32 va al computador con su cable USB de siempre: por ahí recibe energía y manda los datos.
+      Si al apretar una tecla sale otra, el teclado trae los pines en otro orden: intercambia los cables.
+      Son los mismos pines del tema 8 y del taller: el montaje sirve para los tres.</p>
+  </section>
+
+  <!-- 4 ─────────────────────────────────────────────────────────────── -->
+  <section class="paso" data-titulo="Pruébalo" id="paso-probar">
+    <h2>4. Pruébalo</h2>
+
+    <div class="b-bloque">
+      <h3><span class="b-bloque-n">A</span> La simulación real en PyBullet</h3>
+      <div class="b-dos-col b-sim-col">
+        <div class="b-tarjeta b-botones-pyb">
+          <h4>Los botones de la ventana</h4>
+          <ul class="b-pyb">
+            <li><span style="--c: var(--b-azul)">joint_1 (base) +</span><span style="--c: var(--b-azul)">joint_1 (base) −</span> gira la base</li>
+            <li><span style="--c: var(--b-verde)">joint_2 (codo) +</span><span style="--c: var(--b-verde)">joint_2 (codo) −</span> dobla el codo</li>
+            <li><span style="--c: var(--b-naranja)">pinza +</span><span style="--c: var(--b-naranja)">pinza −</span> abre / cierra la pinza</li>
+            <li><span style="--c: var(--b-rosa)">Home (0, 0, 0)</span> todo a cero</li>
+          </ul>
+          <p class="b-chico b-muted">Cada clic mueve ~2,9° (o la pinza 5 mm): lo mismo que un paso del teclado.
+            Arriba de la ventana, en verde, la línea <code>Serial:</code> dice de dónde llegan las órdenes.</p>
+        </div>
+        <div class="b-aviso-compilar">
+          <b>La primera vez tarda (unos 10 minutos).</b> PyBullet no viene listo para Windows: el programa lo
+          <i>compila</i> (lo arma desde su código fuente) y para eso necesita las herramientas de C++ de Microsoft
+          (Visual Studio Build Tools). La app lo prepara sola y te va contando cómo va; si faltan las herramientas,
+          te dice cómo instalarlas. Después queda guardado y abre en segundos.
+        </div>
+      </div>
+      <div id="panelSim" class="b-panel-accion"></div>
+    </div>
+
+    <div class="b-bloque">
+      <h3><span class="b-bloque-n">B</span> La versión en el navegador (sin instalar nada)</h3>
+      <p>Una vista 3D simplificada del mismo brazo con <b>el mismo teclado 4x4 clicable</b>. En <b>Modo prueba</b> la
+        página hace de ESP32: mantén presionadas 8/2, 6/4, 9/7 o 5 y mira el monitor con las líneas que mandaría.
+        Con <b>Conectado</b> lee el ESP32 real por el cable (Chrome o Edge).</p>
+      <div class="b-marco"><iframe id="marcoPreview" title="Brazo en el navegador" allow="serial" loading="lazy"></iframe></div>
+      <div id="panelPreview" class="b-panel-accion"></div>
+    </div>
+  </section>
+
+  <!-- 5 ─────────────────────────────────────────────────────────────── -->
+  <section class="paso" data-titulo="Con el ESP32 real" id="paso-esp32">
+    <h2>5. Con el ESP32 real (opcional)</h2>
+    <ol class="b-pasos-esp">
+      <li><b>Conecta el teclado</b> como en el paso 3 (8 cables) y el ESP32 al computador por USB.</li>
+      <li><b>Carga el programa del ESP32</b> con Thonny: guárdalo <em>en la placa</em> con el nombre <code>main.py</code>
+        (botón de abajo para verlo). Así arranca solo cada vez que se conecta.</li>
+      <li><b>Cierra Thonny.</b> Windows deja usar el puerto USB a un solo programa a la vez.</li>
+      <li><b>La forma más fácil de comprobarlo:</b> en el bloque B del paso 4, pulsa <b>Conectado</b>, elige el puerto
+        de la placa y mantén presionadas las teclas físicas: el brazo de la página y el monitor deben moverse.</li>
+      <li><b>Con la simulación de PyBullet:</b> el programa busca la placa en <code>COM7</code>. Si tu ESP32 está en ese
+        puerto, inicia la simulación (paso 4 A): aquí abajo debe decir <i>"ESP32 conectado en COM7"</i> y el brazo
+        obedece al teclado real. Si está en otro puerto, mira "Detalles técnicos".</li>
+    </ol>
+    <div class="b-tarjeta b-diagnostico">
+      <h4>Si no pasa nada</h4>
+      <ul class="b-lista">
+        <li>La línea <code>Serial:</code> de la ventana se queda en <i>(sin datos todavia)</i>: la placa no está mandando
+          (¿el archivo se llama <code>main.py</code>? ¿Thonny sigue abierto?).</li>
+        <li>Llegan líneas <code>J1:…</code> pero no cambian al apretar: el cable USB anda; revisa el cableado del teclado
+          (una fila o columna suelta deja sin respuesta a sus 4 teclas).</li>
+      </ul>
+    </div>
+    <details class="b-detalle">
+      <summary>Ver el programa del ESP32 (MicroPython)</summary>
+      <pre class="b-codigo" id="codigoFw">Cargando…</pre>
+    </details>
+    <details class="b-detalle b-tecnico">
+      <summary>Detalles técnicos</summary>
+      <ul class="b-lista b-chico">
+        <li>Simulación: <code>brazo_pybullet.py</code> con <code>brazo.urdf</code> (sin modificar), entorno del tema con
+          <code>pybullet==3.2.7</code> y <code>pyserial==3.5</code>.</li>
+        <li>Puerto: la constante <code>PUERTO_SERIAL = "COM7"</code> al principio de <code>brazo_pybullet.py</code>. El COM de
+          la placa se ve en el Administrador de dispositivos de Windows (Puertos COM y LPT).</li>
+        <li>Firmware: <code>esp32_brazo.py</code> → <code>main.py</code>. Línea <code>J1:%.3f,J2:%.3f,G:%.3f</code> cada 100 ms a 115200 baudios.</li>
+        <li>La lectura del PC no espera: solo lee si hay bytes (<code>in_waiting</code>), así la física sigue a 240 pasos/s.</li>
+        <li>Compilar pybullet: Visual Studio 2022 Build Tools con C++; si dice <i>Unable to find a compatible Visual Studio
+          installation</i>, falta <code>C:\Program Files (x86)\Microsoft Visual Studio\Installer</code> en el PATH.</li>
+        <li>Navegador: <code>preview.html</code> (HTML + JS puro, cinemática directa del URDF, sin física).</li>
+      </ul>
+    </details>
+  </section>
+
+  <!-- 6 ─────────────────────────────────────────────────────────────── -->
+  <section class="paso" data-titulo="Resultados" id="paso-resultados">
+    <h2>6. Resultados</h2>
+    <div class="b-dos-col">
+      <figure><img src="/repo/7-brazo-robotico-urdf/img/demo-jog.gif" alt="El jog del teclado sobre la simulación real" class="b-ampliable"><figcaption>El jog sobre la simulación real: se sostiene 8, 6, 9, 4, 2, 7 y el 5 vuelve a home.</figcaption></figure>
+      <figure><img src="/repo/7-brazo-robotico-urdf/img/montaje-3d.png" alt="Montaje 3D" class="b-ampliable"><figcaption>El montaje: teclado directo al ESP32.</figcaption></figure>
+      <figure><img src="/repo/7-brazo-robotico-urdf/img/interfaz-web.png" alt="preview.html recién abierto" class="b-ampliable"><figcaption>La versión del navegador, recién abierta (home).</figcaption></figure>
+      <figure><img src="/repo/7-brazo-robotico-urdf/img/interfaz-web-jog.png" alt="preview.html después del jog" class="b-ampliable"><figcaption>Después del jog con 8, 9 y 6.</figcaption></figure>
+    </div>
+    <p><a class="b-enlace" href="https://github.com/Dathinel/Sensores-Teoria/tree/main/7-brazo-robotico-urdf" target="_blank" rel="noopener">Ver el tema completo en GitHub →</a></p>
+  </section>
+</main>
+
+<script src="/comun/app.js"></script>
+<script src="brazo.js"></script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 # Versiones EXACTAS del entorno que funciona (Python 3.14.3, Windows 11), 2026-09-27.
-# requirements.txt dice QUE se usa; este archivo fija CON QUE version se probo (590+ pruebas).
+# requirements.txt dice QUE se usa; este archivo fija CON QUE version se probo (936 pruebas pasan, 2026-10-05).
+# Instalacion minima (solo para verlo): requirements-minimo.txt (instalar.bat, opcion 1).
 # Instalar con instalar.bat o: python -m pip install -r requirements-lock.txt
 # Regenerar despues de actualizar algo: python -m pip freeze > requirements-lock.txt (y conservar estas lineas).
 # torch en version CPU (sin CUDA: mas liviano y suficiente para MobileNetV2):

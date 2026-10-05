@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enjambre de hormigas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/comun/app.css">
+<link rel="stylesheet" href="tema10.css">
+</head>
+<body>
+
+<!-- ================= PORTADA ================= -->
+<header class="t10-portada">
+  <div>
+    <div class="t10-etiqueta">Tema 10 · enjambre de robots</div>
+    <h1>Tres carritos ESP32 buscan la salida del laberinto <em>como lo harían las hormigas</em></h1>
+    <p class="t10-frase">
+      Cada carrito suelta "hormigas virtuales" que prueban caminos al azar y dejan un rastro (la <b>feromona</b>)
+      donde el camino fue corto. Los tres se pasan ese rastro por WiFi, y en pocas vueltas todos marcan la misma
+      ruta más corta. Un <b>gemelo digital</b> en el PC (PyBullet, dentro de Docker) repite todo con tres robots
+      virtuales y lo graba en video.
+    </p>
+    <div class="t10-chips">
+      <span><b>3</b> ESP32</span><span>laberinto <b>5 × 5</b> (1 m)</span><span>ruta óptima <b>2,40 m</b></span>
+      <span>WiFi <b>ENJAMBRE_ACO</b></span><span>UDP <b>4210 / 4211</b></span><span>se prueba <b>sin hardware</b></span>
+    </div>
+    <div class="t10-caja-pide">
+      <div id="checklist-portada"></div>
+      <p class="t10-nota" style="margin:0.5rem 0 0">Cada punto se marca solo cuando corres con éxito la prueba que lo demuestra (más abajo, en "Pruébalo").</p>
+    </div>
+    <div class="t10-botones-portada">
+      <button class="t10-boton primario" data-ir="Pruébalo: el algoritmo">Probarlo ya, sin hardware</button>
+      <button class="t10-boton" data-ir="Simulador en el navegador">Abrir el simulador del navegador</button>
+    </div>
+  </div>
+  <figure class="t10-figura">
+    <img class="t10-gif" src="/repo/10-enjambre-algoritmo-hormigas/video/gemelo-sin-hardware.gif"
+         alt="El gemelo digital: la feromona violeta se concentra en la ruta corta y los tres carritos la recorren">
+    <figcaption>El gemelo digital: primero la búsqueda (la franja violeta es la feromona, que se concentra en la
+      ruta corta) y después los tres carritos (rojo, azul, amarillo) recorriendo su ruta, uno cada 8 s.</figcaption>
+  </figure>
+</header>
+
+<main class="app-contenedor t10-principal"><div id="pasos">
+
+<!-- ================= 1. QUÉ ES EL ACO ================= -->
+<section class="paso" data-titulo="Qué es el algoritmo de hormigas">
+  <h2>Cómo encuentran las hormigas el camino más corto</h2>
+  <div class="t10-rejilla2">
+    <div>
+      <p>Ninguna hormiga conoce el mapa. Cada una camina un poco al azar, pero <b>prefiere los caminos que huelen
+        más a feromona</b>, y deja feromona por donde pasa. Por el camino corto se va y se vuelve más rápido, así
+        que ese camino se refuerza más veces por minuto. Y como la feromona <b>se evapora</b>, lo que no se refuerza
+        se borra. Al final casi todas van por el camino corto: es una memoria colectiva escrita en el suelo.</p>
+      <p>Mírelo en vivo a la derecha: dos caminos entre el hormiguero y la comida. Al principio se reparten
+        mitad y mitad; a los pocos segundos el corto se lleva casi todo.</p>
+      <h3 style="margin-top:1.2rem">La receta del algoritmo (lo que hace cada ESP32)</h3>
+      <ol class="t10-receta">
+        <li><b>El laberinto es un grafo:</b> cada celda es un punto y dos celdas sin pared en medio están unidas por un tramo de 20 cm. Todos los tramos empiezan con la misma feromona.</li>
+        <li><b>Suelta 4 hormigas</b> desde A. En cada celda la hormiga elige el siguiente tramo con una ruleta: más feromona = más probable. No vuelve a pisar una celda; si se encierra en un callejón, se descarta.</li>
+        <li><b>Mide</b> cuánto caminó cada hormiga que llegó a la meta.</li>
+        <li><b>Evapora:</b> toda la feromona se multiplica por 0,5 (ρ = 0,5).</li>
+        <li><b>Deposita:</b> solo la mejor hormiga de cada carrito deja feromona en su ruta, más cuanto más corta (100 / longitud).</li>
+        <li><b>Comparte:</b> cada carrito les manda a los otros dos lo que depositó; los tres suman lo mismo en el mismo orden y quedan con la misma tabla.</li>
+        <li><b>Repite</b> 30 veces. La ruta que sigue siempre el tramo con más feromona es la respuesta.</li>
+      </ol>
+    </div>
+    <div>
+      <canvas id="puente" class="t10-puente" width="640" height="330" aria-label="Animación: hormigas en dos caminos"></canvas>
+      <div class="t10-controles">
+        <button class="t10-boton" id="puente-reiniciar">Reiniciar</button>
+        <button class="t10-boton" id="puente-pausa">Pausa</button>
+        <label>evaporación ρ <input type="range" id="puente-rho" min="0.02" max="0.6" step="0.02" value="0.15"> <span id="puente-rho-v">0,15</span></label>
+      </div>
+      <div class="t10-controles">
+        <span>hormigas por el camino corto</span>
+        <div class="t10-medidor"><div id="puente-medidor"></div></div>
+        <span id="puente-pct">50 %</span>
+      </div>
+      <p class="t10-nota">Animación propia, hecha solo para explicar la idea (el "puente doble" de Deneubourg y Dorigo).
+        Con ρ muy alto la feromona se borra antes de reforzarse y las hormigas siguen indecisas; con ρ muy bajo tardan más en olvidar el camino largo.</p>
+      <div class="t10-aviso info">
+        <b>Lo que lo vuelve un enjambre:</b> no hay un computador central. Cada carrito es una pequeña colonia,
+        y lo único que comparten es la feromona. Si el carrito 2 o el 3 se apaga, los otros siguen solos.
+      </div>
+    </div>
+  </div>
+  <details class="t10-tecnico">
+    <summary>La fórmula, para quien la quiera</summary>
+    <p>La hormiga en la celda <i>i</i> elige el vecino <i>j</i> con probabilidad
+      p<sub>ij</sub> = τ<sub>ij</sub><sup>α</sup> · η<sub>ij</sub><sup>β</sup> / Σ τ<sub>il</sub><sup>α</sup> · η<sub>il</sub><sup>β</sup>,
+      con η = 1/d (visibilidad). Evaporación: τ ← (1 − ρ)·τ. Depósito de la mejor hormiga de cada nodo: Δτ = Q / L.
+      Parámetros: α = 1, β = 2, ρ = 0,5, Q = 100, 4 hormigas por nodo, 30 iteraciones, semilla 12345.
+      Como todas las celdas miden 20 cm, η es igual en todos los tramos y β no cambia nada en este laberinto.</p>
+    <p>El mismo código está en Python (<code>aco.py</code>), en C++ para el ESP32 (<code>firmware/esp32_aco_nodo/aco_core.h</code>) y en JavaScript (<code>preview.html</code>), y los tres dan exactamente lo mismo con la misma semilla (48 de 48 casos C++ = Python; 24 de 24 JS = Python).</p>
+  </details>
+</section>
+
+<!-- ================= 2. EL LABERINTO ================= -->
+<section class="paso" data-titulo="El laberinto">
+  <h2>El laberinto: un almacén de 5 × 5</h2>
+  <div class="t10-rejilla2">
+    <div class="t10-tarjeta">
+      <svg id="laberinto" class="t10-laberinto" viewBox="0 0 340 340" role="img" aria-label="Laberinto de 5 por 5"></svg>
+      <div class="t10-selector-rutas" id="selector-rutas">
+        <button class="t10-boton activo" data-ruta="ninguna">Solo el mapa</button>
+        <button class="t10-boton" data-ruta="optima">Una ruta óptima</button>
+        <button class="t10-boton" data-ruta="nodos">Las rutas de los 3 carritos</button>
+      </div>
+      <div class="t10-leyenda" id="leyenda-laberinto"></div>
+    </div>
+    <div>
+      <p>Celdas de 20 cm (un metro por lado). Se sale de <b>A</b>, abajo a la izquierda, y la meta <b>M</b> está
+        arriba a la derecha. Las líneas gruesas son paredes: las horizontales hacen de estanterías del almacén.</p>
+      <ul>
+        <li>Yendo derecho serían 8 pasos, pero las paredes no dejan: la ruta más corta mide <b>12 pasos = 2,40 m</b>, y hay cinco rutas distintas con esa longitud.</li>
+        <li>Hay 29 tramos entre celdas, 17 rutas posibles sin repetir celdas (de 12 a 22 pasos) y varios callejones donde una hormiga puede quedar atrapada.</li>
+        <li>El mapa se escribe <b>una sola vez</b> (en <code>maze.json</code>). De ahí lo leen la simulación, el gemelo y, traducido a C++, el firmware de los tres carritos. Cada ESP32 manda un código de control (CRC <code>A85E23EB</code>) para comprobar que todos tienen el mismo mapa.</li>
+      </ul>
+      <figure class="t10-figura">
+        <img class="t10-img" data-ampliar src="/repo/10-enjambre-algoritmo-hormigas/img/gemelo-ruta-final.png" alt="El laberinto en el gemelo con las rutas finales">
+        <figcaption>El mismo laberinto en el gemelo PyBullet al terminar: la franja violeta es la feromona; los números son el número de cada celda (5·y + x).</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 3. CÓMO SE CONECTAN ================= -->
+<section class="paso" data-titulo="Cómo se conectan los carritos">
+  <h2>Cómo se hablan los tres carritos y el PC</h2>
+  <div class="t10-aviso info">Para probar la práctica <b>no hace falta nada de esto</b>: el emulador hace de los tres ESP32 dentro del PC. Esta parte explica el montaje real.</div>
+  <div class="t10-rejilla2">
+    <div class="t10-tarjeta">
+      <svg id="red" class="t10-red" viewBox="0 0 520 360" role="img" aria-label="Diagrama de la red"></svg>
+    </div>
+    <div>
+      <p><b>El carrito 1 crea su propia red WiFi</b> (modo punto de acceso, AP) llamada <code>ENJAMBRE_ACO</code>, clave <code>hormigas123</code>.
+        Los carritos 2 y 3 y el PC se conectan a ella. No hace falta router ni internet: la red existe donde estén los carritos.
+        El carrito 1 hace las dos cosas a la vez: es la red y también suelta hormigas.</p>
+      <p><b>Se hablan por UDP</b>: paquetes de texto cortos, sin conexión, muy rápidos pero sin garantía de llegada. Por eso cada vuelta se cierra
+        con un mensaje <code>FIN</code> que dice cuántos depósitos se mandaron; si faltan, esa vuelta de ese compañero no se aplica a medias.</p>
+      <ul>
+        <li><b>Puerto 4210</b>: entre carritos (<code>HELLO</code>, <code>PHER</code> = feromona depositada, <code>FIN</code>, <code>PATH</code> = mejor ruta, <code>TAU</code>).</li>
+        <li><b>Puerto 4211</b>: telemetría hacia el PC, donde la recibe el gemelo digital.</li>
+      </ul>
+      <div class="t10-msj">HELLO;2;A85E23EB;0;ESPERA
+PHER;3;1;3;4;41.666666666666671
+FIN;3;1;12;1;3
+PATH;1;2.400;0,1,2,7,6,5,10,11,16,17,22,23,24
+ESTADO;1;BUSQUEDA;5;2.400;0;-48;1,2,3;12345</div>
+      <p class="t10-nota">Ejemplo de líneas reales: un saludo del nodo 2, un depósito del nodo 3 en el tramo 3→4, el cierre de su vuelta 1, la mejor ruta del nodo 1 y su estado.</p>
+      <div class="t10-aviso">El algoritmo no tiene centro, pero la red WiFi sí: si se apaga el carrito 1 (el AP) desaparece la red y los otros dos ya no pueden hablarse. Por eso la prueba de "apagar un nodo" se hace con el 2 o el 3.</div>
+    </div>
+  </div>
+
+  <h3 style="margin-top:1.4rem">Los tres carritos</h3>
+  <div class="t10-tabla-caja">
+  <table class="t10-tabla">
+    <tr><th>Carrito</th><th>NODO_ID</th><th>IP</th><th>Papel</th><th>Color en el gemelo</th></tr>
+    <tr><td>1</td><td>1</td><td><code>192.168.4.1</code></td><td>punto de acceso (la red) y hormigas</td><td><span class="t10-muestra" style="background:var(--nodo1)"></span> rojo</td></tr>
+    <tr><td>2</td><td>2</td><td><code>192.168.4.2</code></td><td>estación y hormigas</td><td><span class="t10-muestra" style="background:var(--nodo2)"></span> azul</td></tr>
+    <tr><td>3</td><td>3</td><td><code>192.168.4.3</code></td><td>estación y hormigas</td><td><span class="t10-muestra" style="background:var(--nodo3)"></span> amarillo</td></tr>
+    <tr><td>PC</td><td>—</td><td><code>192.168.4.100</code></td><td>gemelo digital (recibe por el puerto 4211)</td><td>—</td></tr>
+  </table>
+  </div>
+
+  <h3 style="margin-top:1.4rem">Pines de cada carrito (ESP32 → driver de motores TB6612FNG)</h3>
+  <p>Los tres carritos se arman igual: un ESP32, un driver TB6612FNG, dos motores TT, dos pilas 18650 (7,4 V) y un regulador a 5 V para el ESP32. El mismo programa va en los tres; solo cambia el número de nodo.</p>
+  <div class="t10-tabla-caja">
+  <table class="t10-tabla">
+    <tr><th>ESP32</th><th>TB6612FNG</th><th>Para qué</th></tr>
+    <tr><td>GPIO 25</td><td>PWMA</td><td>velocidad de la rueda izquierda (PWM 20 kHz)</td></tr>
+    <tr><td>GPIO 26 / 27</td><td>AIN1 / AIN2</td><td>sentido de la rueda izquierda</td></tr>
+    <tr><td>GPIO 33</td><td>PWMB</td><td>velocidad de la rueda derecha (PWM 20 kHz)</td></tr>
+    <tr><td>GPIO 14 / 13</td><td>BIN1 / BIN2</td><td>sentido de la rueda derecha</td></tr>
+    <tr><td>GPIO 32</td><td>STBY</td><td>habilita el driver (apagado hasta que hay red y mientras el carrito está quieto)</td></tr>
+    <tr><td>3V3</td><td>VCC</td><td>lógica del driver (a 3,3 V, no a 5 V, para que entienda las señales del ESP32)</td></tr>
+    <tr><td>GND</td><td>GND</td><td>tierra común con la batería</td></tr>
+    <tr><td>—</td><td>VM</td><td>batería de 7,4 V (motores), con condensadores de 470 µF + 100 nF</td></tr>
+    <tr><td>GPIO 2</td><td>LED de la placa</td><td>estado: lento = esperando, rápido = buscando, fijo = recorriendo</td></tr>
+  </table>
+  </div>
+  <details class="t10-tecnico">
+    <summary>Más detalles del montaje (alimentación, brownout, materiales)</summary>
+    <div id="md-conexiones"></div>
+  </details>
+
+  <h3 style="margin-top:1.4rem">Las placas de verdad</h3>
+  <div class="t10-rejilla3">
+    <figure class="t10-figura"><img class="t10-img" data-ampliar src="/repo/10-enjambre-algoritmo-hormigas/img/montaje-nodo-usb.jpg" alt="Un ESP32 en su base de expansión conectado por USB"><figcaption>Un nodo en su base de expansión, alimentado por el USB del portátil.</figcaption></figure>
+    <figure class="t10-figura"><img class="t10-img" data-ampliar src="/repo/10-enjambre-algoritmo-hormigas/img/montaje-nodo-placa-morada.jpg" alt="Otro ESP32 en una base morada"><figcaption>Otro nodo en otra base: el firmware es el mismo.</figcaption></figure>
+    <figure class="t10-figura"><img class="t10-img" data-ampliar src="/repo/10-enjambre-algoritmo-hormigas/img/montaje-mesa-nodos.jpg" alt="Las placas a los lados del portátil"><figcaption>Las placas sueltas en la mesa, cada una con su cable USB, antes de montar los carritos.</figcaption></figure>
+    <figure class="t10-figura"><img class="t10-img" data-ampliar src="/repo/10-enjambre-algoritmo-hormigas/img/montaje-subiendo-nodo3.jpg" alt="Arduino IDE subiendo el firmware al nodo 3"><figcaption>Subiendo el firmware al nodo 3 desde el Arduino IDE (solo cambia NODO_ID).</figcaption></figure>
+    <figure class="t10-figura"><img class="t10-img" data-ampliar src="/repo/10-enjambre-algoritmo-hormigas/img/montaje-gemelo-recibiendo.jpg" alt="El gemelo recibiendo telemetría real"><figcaption>El gemelo en el PC recibiendo por WiFi el HELLO y la ruta (PATH) de las placas reales.</figcaption></figure>
+  </div>
+</section>
+
+<!-- ================= 4. PRUÉBALO: EL ALGORITMO ================= -->
+<section class="paso" data-titulo="Pruébalo: el algoritmo">
+  <h2>Pruébalo: el algoritmo de los tres carritos (en un segundo)</h2>
+  <p>Esto corre en el PC <b>exactamente el mismo cálculo</b> que hacen los tres ESP32 (mismo azar, mismas sumas, bit a bit):
+    3 carritos × 4 hormigas × 30 vueltas sobre el laberinto. No necesita PyBullet ni hardware.</p>
+  <div class="t10-columna">
+    <div>
+      <h3 class="t10-titulo-num"><span class="t10-num">A</span>El enjambre completo</h3>
+      <div id="panel-aco"></div>
+      <div id="bonito-aco" class="t10-bonito"></div>
+    </div>
+    <div>
+      <h3 class="t10-titulo-num"><span class="t10-num">B</span>Las pruebas del algoritmo (6 a 11)</h3>
+      <div id="panel-pruebas"></div>
+      <div id="bonito-pruebas" class="t10-bonito t10-md"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 5. PRUÉBALO: EL GEMELO ================= -->
+<section class="paso" data-titulo="Pruébalo: el gemelo digital">
+  <h2>Pruébalo: el gemelo digital en PyBullet (sin hardware)</h2>
+  <p>El gemelo arma el laberinto en 3D, corre el mismo algoritmo, mueve tres robots virtuales y <b>graba un video</b>
+    con una cámara desde arriba. No abre ninguna ventana: trabaja por dentro y al final te ofrece el video aquí mismo.</p>
+  <div class="t10-aviso"><b>Tarda unos 4 a 5 minutos</b> (dibuja cada cuadro del video por software). Puedes seguir leyendo la app mientras tanto;
+    la barra de abajo muestra el avance. Si lo detienes antes, el video puede quedar incompleto.</div>
+  <div class="t10-columna">
+    <div>
+      <h3 class="t10-titulo-num"><span class="t10-num">A</span>Los tres carritos</h3>
+      <div id="panel-gemelo"></div>
+      <div id="bonito-gemelo" class="t10-bonito"></div>
+    </div>
+    <div>
+      <h3 class="t10-titulo-num"><span class="t10-num">B</span>Con el carrito 3 apagado a mitad de camino</h3>
+      <div id="panel-gemelo-apagado"></div>
+      <div id="bonito-gemelo-apagado" class="t10-bonito"></div>
+    </div>
+  </div>
+  <p class="t10-nota">La primera vez la app prepara el entorno de Python con PyBullet. En Windows PyBullet se compila (hacen falta las Build Tools de Visual Studio, unos 13 minutos); si no las tienes, usa el paso <b>Docker</b>, que no compila nada.</p>
+</section>
+
+<!-- ================= 6. GEMELO + EMULADOR ================= -->
+<section class="paso" data-titulo="Pruébalo: gemelo + emulador de los ESP32">
+  <h2>Pruébalo: el gemelo escuchando a tres ESP32 emulados</h2>
+  <p>Así se usa con los carritos de verdad, pero sin ellos: el gemelo se queda <b>escuchando la red</b> (UDP 4211) y un
+    <b>emulador</b> hace de los tres ESP32 dentro del PC, con el mismo protocolo del firmware y paquetes UDP reales.
+    El orden importa: primero el que escucha, después el que habla.</p>
+  <div class="t10-aviso info">
+    <button class="t10-boton primario" id="lanzar-ambos">Lanzar los dos en orden</button>
+    <span style="margin-left:0.6rem">o hazlo a mano con los pasos 1 y 2. Todo tarda alrededor de 1 minuto y medio y deja un video.</span>
+    <div id="estado-ambos" class="t10-nota" style="margin-top:0.4rem"></div>
+  </div>
+  <div class="t10-rejilla2">
+    <div class="t10-paso-bloque">
+      <h3 class="t10-titulo-num"><span class="t10-num">1</span>Primero: el gemelo, esperando a los carritos</h3>
+      <div id="panel-gemelo-hw"></div>
+      <div class="t10-vivos" id="vivos-hw">
+        <span style="--c:var(--nodo1)">nodo 1</span><span style="--c:var(--nodo2)">nodo 2</span><span style="--c:var(--nodo3)">nodo 3</span>
+      </div>
+      <div id="bonito-gemelo-hw" class="t10-bonito"></div>
+    </div>
+    <div class="t10-paso-bloque" id="bloque-emulador">
+      <div class="t10-bloqueado" id="candado-emulador">Primero inicia el paso 1 (el gemelo).<br>Cuando diga que está escuchando, este se habilita.</div>
+      <h3 class="t10-titulo-num"><span class="t10-num">2</span>Después: los tres ESP32 emulados</h3>
+      <div id="panel-emulador"></div>
+      <div id="bonito-emulador" class="t10-bonito"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 7. DOCKER ================= -->
+<section class="paso" data-titulo="Docker: el gemelo sin compilar nada">
+  <h2>Docker: el gemelo sin instalar Python ni compilar PyBullet</h2>
+  <p>La actividad pide que la parte virtual corra en <b>Docker</b>. Docker empaqueta el programa con todo lo que necesita
+    (Python 3.11 de Linux, PyBullet ya compilado, las librerías exactas) en una "caja" que corre igual en cualquier PC.
+    El video queda en la misma carpeta de resultados del tema.</p>
+  <div class="t10-aviso">Necesita <b>Docker Desktop abierto</b> (que diga "Engine running"). La primera vez descarga y construye la imagen (alrededor de 1 minuto, con internet).</div>
+  <div class="t10-rejilla2">
+    <div>
+      <h3 class="t10-titulo-num"><span class="t10-num">A</span>Gemelo sin hardware, en el contenedor</h3>
+      <p class="t10-nota">Unos 2 minutos. Lo mismo que el paso "el gemelo digital", pero dentro de Docker.</p>
+      <div id="panel-docker"></div>
+      <div id="bonito-docker" class="t10-bonito"></div>
+    </div>
+    <div>
+      <h3 class="t10-titulo-num"><span class="t10-num">B</span>Gemelo del contenedor escuchando la red</h3>
+      <p class="t10-nota">Deja el gemelo del contenedor escuchando el puerto 4211. Después lanza el <b>paso 2 del emulador</b> (paso anterior de la app) o enciende los carritos. No lo uses a la vez que el gemelo del paso anterior: comparten el puerto.</p>
+      <div id="panel-docker-hw"></div>
+    </div>
+  </div>
+  <details class="t10-tecnico">
+    <summary>Qué hace Docker por dentro y problemas típicos</summary>
+    <div id="md-docker"></div>
+  </details>
+</section>
+
+<!-- ================= 8. PREVIEW ================= -->
+<section class="paso" data-titulo="Simulador en el navegador">
+  <h2>El simulador del enjambre, aquí mismo</h2>
+  <p>El mismo algoritmo pasado a JavaScript: elige laberinto y parámetros y pulsa <b>Iniciar</b> (seguido) o <b>Paso</b> (una vuelta).
+    El grosor verde es la feromona; cada carrito tiene su color; los botones "Apagar nodo" simulan que un carrito se cae.
+    Abajo a la derecha ves los mensajes que mandaría la red.</p>
+  <p class="t10-nota">El modo "Conectado" lee por USB (Web Serial, Chrome o Edge) a <b>un</b> carrito enchufado; para eso es mejor
+    <button class="t10-boton" id="abrir-preview">abrirlo en su propia pestaña</button></p>
+  <iframe id="marco-preview" class="t10-marco" title="Simulador del enjambre" loading="lazy"
+          src="/repo/10-enjambre-algoritmo-hormigas/preview.html"></iframe>
+</section>
+
+<!-- ================= 9. CON LOS CARRITOS REALES ================= -->
+<section class="paso" data-titulo="Con los carritos reales">
+  <h2>Con los tres carritos de verdad, paso a paso</h2>
+  <div class="t10-aviso info">Opcional: todo lo anterior ya demuestra la práctica sin hardware.</div>
+  <ol class="t10-lista-pasos">
+    <li><span class="t10-num">1</span><div><h4>Preparar el Arduino IDE (una sola vez)</h4>
+      Archivo → Preferencias → "Gestor de URLs adicionales de tarjetas": agregar
+      <code>https://espressif.github.io/arduino-esp32/package_esp32_index.json</code>. Luego Herramientas → Placa → Gestor de tarjetas, buscar
+      <b>esp32</b> de Espressif e instalar una versión 3.x. No hace falta ninguna librería extra.</div></li>
+    <li><span class="t10-num">2</span><div><h4>Abrir el programa de los carritos</h4>
+      <button class="t10-boton" id="abrir-firmware">Abrir la carpeta del firmware</button>
+      y en ella <code>esp32_aco_nodo.ino</code>. El IDE abre también <code>config.h</code> como pestaña.
+      <div id="panel-fw" style="margin-top:0.5rem"></div></div></li>
+    <li><span class="t10-num">3</span><div><h4>Programar cada carrito, uno a la vez, con la batería apagada</h4>
+      Placa: <b>ESP32 Dev Module</b> (o DOIT ESP32 DEVKIT V1). Puerto: el COM que aparece al enchufarlo. En <code>config.h</code> poner
+      <code>#define NODO_ID 1</code> y Subir; repetir con el carrito 2 (<code>NODO_ID 2</code>) y el 3. Conviene marcar cada carrito con su número.</div></li>
+    <li><span class="t10-num">4</span><div><h4>Comprobar cada uno</h4>
+      Con el carrito enchufado, el Monitor Serie a 115200 debe decir "Enjambre ACO - nodo N ... (CRC A85E23EB)" y "Fase ESPERA".
+      El LED parpadea lento esperando a los compañeros, rápido buscando y queda fijo recorriendo.</div></li>
+    <li><span class="t10-num">5</span><div><h4>Armar el laberinto y encender</h4>
+      Laberinto de 1 m × 1 m igual al del paso "El laberinto". Carrito 1 en A mirando a la derecha; los otros dos esperan fuera, junto a la entrada.
+      Encender primero el 1 (crea la red) y después el 2 y el 3.</div></li>
+    <li><span class="t10-num">6</span><div><h4>Conectar el PC a la red <code>ENJAMBRE_ACO</code> y arrancar el gemelo</h4>
+      Clave <code>hormigas123</code>. Luego, en esta app, el <b>paso 1 de "gemelo + emulador"</b> (sin lanzar el emulador) o el gemelo en Docker que escucha la red.</div></li>
+    <li><span class="t10-num">7</span><div><h4>Mirar</h4>
+      Cuando los tres se ven 2 s, empiezan solos las 30 vueltas (unos 15 s). Después cada uno recorre su ruta, uno cada 8 s
+      (poner el 2 en A cuando el 1 la deja, y luego el 3). El gemelo graba el video y guarda la ruta de cada carrito para compararla.</div></li>
+  </ol>
+  <details class="t10-tecnico">
+    <summary>Detalles técnicos: compilar desde PowerShell y probar la red</summary>
+    <pre>firmware\compilar.ps1 -Nodos 1 -Subir -Puerto COM5     (y luego -Nodos 2, -Nodos 3)
+firmware\compilar.ps1 -SinMotores                       (sin mover las ruedas, placas sueltas en la mesa)
+python herramientas_red.py escuchar                     (tabla de cada nodo en vivo)
+python herramientas_red.py iniciar                      (arrancar con los que haya)
+python herramientas_red.py rtt --origen 1 --destino 2 --n 100   (latencia, pruebas 2 a 4)</pre>
+  </details>
+</section>
+
+<!-- ================= 10. RESULTADOS ================= -->
+<section class="paso" data-titulo="Resultados">
+  <h2>Resultados</h2>
+  <div class="t10-rejilla3">
+    <figure class="t10-figura"><video class="t10-video" controls preload="metadata" src="/repo/10-enjambre-algoritmo-hormigas/video/gemelo-sin-hardware.mp4"></video>
+      <figcaption>Gemelo sin hardware: búsqueda y recorrido de los tres carritos.</figcaption></figure>
+    <figure class="t10-figura"><video class="t10-video" controls preload="metadata" src="/repo/10-enjambre-algoritmo-hormigas/video/gemelo-apagado-nodo3.mp4"></video>
+      <figcaption>Prueba 14: el nodo 3 se apaga tras la vuelta 10 (gris) y los otros dos terminan.</figcaption></figure>
+    <figure class="t10-figura"><video class="t10-video" controls preload="metadata" src="/repo/10-enjambre-algoritmo-hormigas/video/gemelo-hardware-emulador.mp4"></video>
+      <figcaption>Gemelo en modo hardware alimentado por el emulador de los tres ESP32 (UDP real).</figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:1.4rem">Las pruebas</h3>
+  <div class="t10-tabla-caja">
+  <table class="t10-tabla">
+    <tr><th>#</th><th>Prueba</th><th>Resultado</th><th>Detalle</th></tr>
+    <tr><td>6</td><td>Laberinto sin paredes (ruta de 8 pasos)</td><td><span class="t10-insignia no">no cumple por una semilla</span></td><td>halla la ruta en 90 % de 20 semillas; el criterio pedía 95 %</td></tr>
+    <tr><td>7</td><td>Un único camino</td><td><span class="t10-insignia si">cumple</span></td><td>100 %; los callejones no reciben feromona</td></tr>
+    <tr><td>8</td><td>Dos caminos de distinta longitud</td><td><span class="t10-insignia si">cumple</span></td><td>converge al corto en 100 %, desde la primera vuelta</td></tr>
+    <tr><td>9</td><td>20 semillas en el laberinto</td><td><span class="t10-insignia si">cumple</span></td><td>95 % (19 de 20); converge en 1,47 vueltas de media</td></tr>
+    <tr><td>10, 11</td><td>Barridos de ρ, α y β</td><td><span class="t10-insignia si">registrados</span></td><td>α es el que manda; β no cambia nada (celdas iguales)</td></tr>
+    <tr><td>12</td><td>Ruta física = ruta virtual</td><td><span class="t10-insignia pend">falta con carritos</span></td><td>con el emulador: rutas y feromona idénticas a <code>aco.py</code></td></tr>
+    <tr><td>13</td><td>El contenedor corre y deja el video</td><td><span class="t10-insignia si">aprobada</span></td><td>código 0 en 117 s, mp4 de 631 KB</td></tr>
+    <tr><td>14</td><td>Se apaga un nodo y siguen los otros</td><td><span class="t10-insignia pend">falta con carritos</span></td><td>con el emulador y el gemelo: aprobada</td></tr>
+    <tr><td>15</td><td>10 corridas del contenedor, misma ruta</td><td><span class="t10-insignia si">aprobada</span></td><td>las diez idénticas, también iguales a las nativas</td></tr>
+    <tr><td>1–5</td><td>Red: asociación, latencia, pérdida, reconexión</td><td><span class="t10-insignia pend">falta con carritos</span></td><td>la lógica ya probada con el emulador</td></tr>
+  </table>
+  </div>
+
+  <div class="t10-rejilla2" style="margin-top:1.2rem">
+    <figure class="t10-figura"><img class="t10-img" data-ampliar src="/repo/10-enjambre-algoritmo-hormigas/img/convergencia-rho.png" alt="Convergencia según rho">
+      <figcaption>Prueba 10: con ρ = 0,1, 0,5 y 0,9 la colonia converge igual (95 %); cambia cuánto explora.</figcaption></figure>
+    <figure class="t10-figura"><img class="t10-img" data-ampliar src="/repo/10-enjambre-algoritmo-hormigas/img/preview-final.png" alt="El simulador del navegador al terminar">
+      <figcaption>El simulador del navegador al terminar, con las tres rutas.</figcaption></figure>
+  </div>
+  <p style="margin-top:1rem">
+    <button class="t10-boton" id="abrir-resultados">Abrir la carpeta de resultados</button>
+    <button class="t10-boton" id="abrir-repo">Ver el README completo en GitHub</button>
+  </p>
+</section>
+
+<!-- ================= 11. CHECKLIST ================= -->
+<section class="paso" data-titulo="Lo que pide la actividad">
+  <h2>¿Está todo lo que pide la actividad?</h2>
+  <p>Cada punto se marca solo cuando la prueba que lo demuestra terminó bien en esta app. También puedes marcarlo a mano.</p>
+  <div id="checklist-final"></div>
+  <figure class="t10-figura" style="margin-top:1rem; max-width:760px">
+    <img class="t10-img" data-ampliar src="/repo/10-enjambre-algoritmo-hormigas/enunciado-actividad.png" alt="Enunciado de la actividad">
+    <figcaption>El enunciado de la actividad.</figcaption>
+  </figure>
+</section>
+
+</div></main>
+
+<script src="/comun/app.js"></script>
+<script src="tema10.js"></script>
+</body>
+</html>

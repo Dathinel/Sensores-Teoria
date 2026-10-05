@@ -16,11 +16,18 @@ def test_el_lock_fija_python_y_paquetes():
     assert python.count(".") == 2 and "streamlit" in paquetes and "pybullet" in paquetes
 
 
-def test_un_puerto_ocupado_por_otro_programa_es_falla(monkeypatch):
-    monkeypatch.setattr(chequeo, "_abierto", lambda puerto: True)
-
-    def nadie(*a, **k):
-        raise OSError("no es nuestro")
-
-    monkeypatch.setattr(chequeo.urllib.request, "urlopen", nadie)
+def test_todos_los_puertos_ocupados_por_otro_programa_es_falla(monkeypatch):
+    from app import puertos
+    monkeypatch.setattr(puertos, "escuchando", lambda puerto: True)
+    monkeypatch.setattr(puertos, "es_nuestro", lambda puerto: False)
     assert all(marca == chequeo.FALLA for marca, _, _ in chequeo.puertos())
+
+
+def test_si_otro_programa_tiene_el_8765_avisa_cual_se_usara(monkeypatch):
+    from app import puertos
+    monkeypatch.delenv(puertos.VARIABLE, raising=False)
+    monkeypatch.setattr(puertos, "escuchando", lambda puerto: puerto == 8765)
+    monkeypatch.setattr(puertos, "es_nuestro", lambda puerto: False)
+    monkeypatch.setattr(puertos, "libre", lambda puerto: puerto != 8765)
+    marca, que, detalle = chequeo.puertos()[0]
+    assert marca == chequeo.AVISO and "8765" in que and "8766" in detalle

@@ -31,7 +31,7 @@ flowchart TB
     HAL --> REAL[backend_real.py<br/>ESP32 por USB serial]
 ```
 
-Por eso la misma lógica corre en la simulación, en las más de 850 pruebas automáticas y (fase 8) contra el
+Por eso la misma lógica corre en la simulación, en las 936 pruebas automáticas (2026-10-05) y (fase 8) contra el
 hardware real cambiando una sola línea de configuración (`hardware.backend: real`). Lo que se ve en
 el visor no es una animación aparte: es esta lógica decidiendo sobre sensores simulados.
 

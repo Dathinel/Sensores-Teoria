@@ -34,7 +34,10 @@ TOLERANCIA_COHERENCIA_MM = float(PARAMETROS["filtrado"]["tolerancia_coherencia_m
 
 
 def url_supervisor() -> str:
-    return f"http://127.0.0.1:{PARAMETROS['supervisor']['puerto_http']}"
+    # El puerto REAL del visor: app.lanzar lo pasa en PLANTA_PUERTO_VISOR si el de la
+    # configuración (8765) estaba ocupado por otro programa (app/puertos.py).
+    from app import puertos
+    return f"http://127.0.0.1:{puertos.puerto_pedido(PARAMETROS)}"
 
 
 # ---------------------------------------------------------------------------

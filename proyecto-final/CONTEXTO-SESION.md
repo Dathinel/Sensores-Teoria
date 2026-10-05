@@ -41,6 +41,23 @@ tarda 4,1 s en media vuelta (`tiempos_ms.carrusel_giro: 4096`): los 2 chequeos d
 `D:\cosas uni\Micros\PLAN-ORDEN-CONTEXTOS.md`. Punto A aprobado por el usuario (plan en
 `~\.claude\plans\busque-plan-orden-contextos-giggly-spindle.md`). - [x] A, B1-B5 y C1-C6 TERMINADOS (detalle en `docs/bitacora.md`, 2026-10-02). Sin commit: el usuario decide cuándo se sube.
 
+**Pedido EN CURSO del 2026-10-05 (agente P9 del plan `github\PLAN-APPS-PRACTICAS.md`).** Textual del usuario:
+> "corrija eso, y el tema de que se abran con un solo click tiene que ser por practica, y no que mire, un acceso
+> directo, tiene que ser mas amigable para un usuario, un tipo programa por practica que dentro tenga todos los
+> componentes que se piden de una forma amigable, cada interfaz tiene que ir acomodada a su logica de la practica, si
+> es investigacion simplemente leer o que lo mande el repo, si es la camara o asi que sea un tipo aplicacion que diga
+> que hace, como se conecta todo amigable y no, abra este .py para saber la simulacion, asi, mas amigable, que con un
+> click se puede ver todo lo que pide la practica y que se lleve al usuario mas de la mano igual el tema de los agentes"
+
+Puntos de este proyecto ("corrija eso" = hallazgos del proyecto final + su app):
+- [x] 1a. `visor.bat` sin `entorno\` abre la demo grabada sin avisar → que avise; README "Cómo verlo": instalar primero (qué y cuánto tarda); instalador mínimo vs completo.
+- [x] 1b. Puerto 8765 fijo (en este PC lo ocupa otro programa) → configurable y, si está ocupado, otro libre automático, dicho claro, y el navegador/dashboard usan el puerto real.
+- [x] 1c. Cifras que no coinciden (asistente 50/50, 39 preguntas, 60/60; "más de 850" / "590+" / 928 pruebas) → unificar con el dato real y su fuente.
+- [x] 2. App amigable del proyecto en `app-practica/index.html` (portada, recorrido de una moneda, Pruébalo, escenas, asistente, visor portable, resultados, estado honesto, checklist).
+  TERMINADOS (P9, 2026-10-05; detalle en `docs/bitacora.md`): `app/puertos.py` (8765 ocupado → siguiente libre, probado aquí: 8766),
+  `visor.bat` avisa sin entorno, `instalar.bat` mínima/completa (`requirements-minimo.txt`), cifras 60/60 y 936 pruebas,
+  `app/charla.py` + `app-practica/`. Sin commit. La app escondida NO se relanzó (lo hace la sesión principal).
+
 Pedidos cerrados (2 a 17): `docs/historial-pedidos.md`.
 
 ## 1. Reglas estrictas del usuario (no negociables)
@@ -80,7 +97,7 @@ PARO solo con "paro"/urgencia; asistente 60/60. Dashboard en 127.0.0.1 con chequ
 Siguiente (cuando el usuario diga): montaje físico, medir los PROVISIONALES, visión real (fase 5), clave
 válida de DeepSeek.
 
-- Pruebas: `entorno/Scripts/python -m pytest -q` → todas deben pasar (930 el 2026-09-29, ~3,5 min).
+- Pruebas: `entorno/Scripts/python -m pytest -q` → todas deben pasar (936 el 2026-10-05, ~4 min).
   Están por capa en `tests/control`, `tests/sim`, `tests/visor`, `tests/app` y `tests/firmware`
   (una sola capa: `... -m pytest -q tests/control`).
 - Paso a paso (`docs/paso-a-paso.yaml`, 17 puntos): 1-15 aprobados; **16 y 17 en pausa (montaje real)**.

@@ -11,8 +11,16 @@
     "Repositorio con el paso a paso, imágenes en Docker Hub y video funcionando"
   ],
   "python": {
-    "versiones": ["3.13", "3.12", "3.14"],
-    "paquetes": ["paho-mqtt==2.1.0", "numpy==2.5.3", "matplotlib==3.11.2"]
+    "versiones": [
+      "3.13",
+      "3.12",
+      "3.14"
+    ],
+    "paquetes": [
+      "paho-mqtt==2.1.0",
+      "numpy==2.5.3",
+      "matplotlib==3.11.2"
+    ]
   },
   "acciones": [
     {
@@ -20,11 +28,51 @@
       "nombre": "Levantar el laboratorio (16 contenedores, ESP32 emulados)",
       "tipo": "docker",
       "compose": "docker-compose.yml",
-      "args": ["--profile", "emulado", "up", "-d", "--build"],
+      "args": [
+        "--profile",
+        "emulado",
+        "up",
+        "-d",
+        "--build"
+      ],
       "abrir": "http://localhost:8080",
-      "detener": ["--profile", "emulado", "stop"],
+      "detener": [
+        "--profile",
+        "emulado",
+        "stop"
+      ],
       "descripcion": "Construye y levanta router, admin, pista, 3 jugadores, 3 robots y los 7 ESP32 emulados. La primera vez tarda varios minutos (baja PyBullet y los modelos de los robots); después unos segundos. Al terminar abre el dashboard del admin, donde los 6 servicios deben quedar en OK. 'Detener' los para sin borrarlos.",
-      "cubre": ["Zona Gamer (VLAN 1)", "Zona Robótica (VLAN 2)", "Plano de administración (VLAN 3)", "Router inter-VLAN"]
+      "cubre": [
+        "Zona Gamer (VLAN 1)",
+        "Zona Robótica (VLAN 2)",
+        "Plano de administración (VLAN 3)",
+        "Router inter-VLAN"
+      ]
+    },
+    {
+      "id": "stack_hub",
+      "nombre": "Levantar el laboratorio con las imágenes de Docker Hub (sin construir)",
+      "tipo": "docker",
+      "compose": "docker-compose.yml",
+      "args": [
+        "--profile",
+        "emulado",
+        "up",
+        "-d"
+      ],
+      "abrir": "http://localhost:8080",
+      "detener": [
+        "--profile",
+        "emulado",
+        "stop"
+      ],
+      "descripcion": "Levanta los 16 contenedores usando las imágenes que ya haya en el PC; si faltan, Docker las baja de Docker Hub (cuenta dathinel, unos 2,4 GB la primera vez) y solo construye si no puede bajarlas. Es el camino más rápido la primera vez. Después tarda unos segundos.",
+      "cubre": [
+        "Zona Gamer (VLAN 1)",
+        "Zona Robótica (VLAN 2)",
+        "Plano de administración (VLAN 3)",
+        "Router inter-VLAN"
+      ]
     },
     {
       "id": "dashboard",
@@ -32,7 +80,10 @@
       "tipo": "url",
       "url": "http://localhost:8080",
       "descripcion": "Con el laboratorio arriba: cada contenedor de las tres VLAN con su estado (OK/LENTO/CAIDO), RTT, jitter y disponibilidad medidos a través del router, los 6 'LED' de la ESP32 esclava y los latidos de los ESP32. Arriba hay enlaces a los cuatro visores.",
-      "cubre": ["Plano de administración (VLAN 3)", "Validación experimental: latencia, jitter y disponibilidad"]
+      "cubre": [
+        "Plano de administración (VLAN 3)",
+        "Validación experimental: latencia, jitter y disponibilidad"
+      ]
     },
     {
       "id": "pista",
@@ -40,7 +91,9 @@
       "tipo": "url",
       "url": "http://localhost:8010",
       "descripcion": "La carrera en vivo: 3 carros de jugadores manejados por sus ESP32 emulados (con piloto automático) y 3 autónomos, con la tabla de posiciones y una cámara de persecución.",
-      "cubre": ["Zona Gamer (VLAN 1)"]
+      "cubre": [
+        "Zona Gamer (VLAN 1)"
+      ]
     },
     {
       "id": "spot",
@@ -48,7 +101,9 @@
       "tipo": "url",
       "url": "http://localhost:8011",
       "descripcion": "El Rex (pequeño Spot) moviendo la pose del cuerpo según los 3 ángulos de su ESP32 emulado, con el error real-to-sim.",
-      "cubre": ["Zona Robótica (VLAN 2)"]
+      "cubre": [
+        "Zona Robótica (VLAN 2)"
+      ]
     },
     {
       "id": "pepper",
@@ -56,7 +111,9 @@
       "tipo": "url",
       "url": "http://localhost:8012",
       "descripcion": "Pepper copiando hombro, codo y cabeza de su ESP32 emulado (sin las mallas de SoftBank se dibuja como esqueleto).",
-      "cubre": ["Zona Robótica (VLAN 2)"]
+      "cubre": [
+        "Zona Robótica (VLAN 2)"
+      ]
     },
     {
       "id": "nao",
@@ -64,7 +121,9 @@
       "tipo": "url",
       "url": "http://localhost:8013",
       "descripcion": "NAO copiando hombro, codo y cabeza de su ESP32 emulado; el botón hace un saludo.",
-      "cubre": ["Zona Robótica (VLAN 2)"]
+      "cubre": [
+        "Zona Robótica (VLAN 2)"
+      ]
     },
     {
       "id": "preview",
@@ -72,7 +131,12 @@
       "tipo": "html",
       "archivo": "preview.html",
       "descripcion": "Simulación en una sola página, sin instalar nada: mapa de las tres VLAN con el router y sus contadores, la pista con un joystick virtual (o flechas/WASD y espacio), los tres robots con deslizadores, 'Meter fallas' (retardo, jitter, pérdida) para ver LENTO y CAIDO, 'detener' contenedores y el ping prohibido de player-1 a sim-nao que descarta el router. El modo 'Conectado' habla por Web Serial con una ESP32 real.",
-      "cubre": ["Router inter-VLAN", "Plano de administración (VLAN 3)", "Zona Gamer (VLAN 1)", "Zona Robótica (VLAN 2)"]
+      "cubre": [
+        "Router inter-VLAN",
+        "Plano de administración (VLAN 3)",
+        "Zona Gamer (VLAN 1)",
+        "Zona Robótica (VLAN 2)"
+      ]
     },
     {
       "id": "video",
@@ -80,17 +144,23 @@
       "tipo": "archivo",
       "archivo": "video/demo-stack.mp4",
       "descripcion": "El stack completo: la pista, los tres robots y los LED de la esclava; a mitad del video se detiene sim-pepper, el admin lo marca CAIDO y luego vuelve a OK.",
-      "cubre": ["Repositorio con el paso a paso, imágenes en Docker Hub y video funcionando"]
+      "cubre": [
+        "Repositorio con el paso a paso, imágenes en Docker Hub y video funcionando"
+      ]
     },
     {
       "id": "unitarias",
       "nombre": "Pruebas del protocolo (sin Docker)",
       "tipo": "python",
       "script": "pruebas/test_protocolo.py",
-      "args": ["-v"],
+      "args": [
+        "-v"
+      ],
       "cwd": ".",
       "descripcion": "40 pruebas unitarias de los mensajes CTRL, JOINTS, HB y PING/PONG, del conteo de perdidos por secuencia y del jitter RFC 3550. No necesitan el laboratorio.",
-      "cubre": ["Validación experimental: latencia, jitter y disponibilidad"]
+      "cubre": [
+        "Validación experimental: latencia, jitter y disponibilidad"
+      ]
     },
     {
       "id": "aislamiento",
@@ -100,7 +170,9 @@
       "args": [],
       "cwd": ".",
       "descripcion": "Con el laboratorio arriba (unos 30 s): pings y conexiones TCP de la zona gamer a la robótica y al revés (sin ruta y con ruta forzada por el router), contadores DROP del router, ping del admin a todas las zonas con ttl=63 y traceroute. Deben aprobarse los 45 casos. Reescribe pruebas/resultados/aislamiento.json.",
-      "cubre": ["Router inter-VLAN"]
+      "cubre": [
+        "Router inter-VLAN"
+      ]
     },
     {
       "id": "disponibilidad",
@@ -110,17 +182,27 @@
       "args": [],
       "cwd": ".",
       "descripcion": "Con el laboratorio arriba (unos 3 min): detiene y vuelve a arrancar sim-pepper, player-2 y el admin, y mide cuánto tarda el admin en marcar CAIDO y en volver a OK, y que las demás zonas sigan funcionando. Al terminar todo queda arriba otra vez. Reescribe pruebas/resultados/disponibilidad.json.",
-      "cubre": ["Validación experimental: latencia, jitter y disponibilidad", "Plano de administración (VLAN 3)"]
+      "cubre": [
+        "Validación experimental: latencia, jitter y disponibilidad",
+        "Plano de administración (VLAN 3)"
+      ]
     },
     {
       "id": "red_base",
       "nombre": "Medir latencia y jitter (escenario base, 5 min)",
       "tipo": "python",
       "script": "pruebas/medir_red.py",
-      "args": ["--escenario", "base", "--minutos", "5"],
+      "args": [
+        "--escenario",
+        "base",
+        "--minutos",
+        "5"
+      ],
       "cwd": ".",
       "descripcion": "Con el laboratorio arriba: 5 minutos de ping desde el admin a cada servicio a través del router, más lo que publica el admin por MQTT. Saca RTT promedio, p95, máximo, jitter, pérdida y disponibilidad, con gráficas en pruebas/resultados/red_base_*.png (reescribe esos archivos).",
-      "cubre": ["Validación experimental: latencia, jitter y disponibilidad"]
+      "cubre": [
+        "Validación experimental: latencia, jitter y disponibilidad"
+      ]
     },
     {
       "id": "montaje",
@@ -128,6 +210,35 @@
       "tipo": "archivo",
       "archivo": "img/montaje-3d-gamer.png",
       "descripcion": "El tema se entrega en simulación. Renders del montaje con los pines exactos del firmware: img/montaje-3d-gamer.png (joystick KY-023), img/montaje-3d-robot.png (3 potenciómetros y pulsador) e img/montaje-3d-esclava.png (6 LED con resistencias)."
+    },
+    {
+      "id": "parar",
+      "nombre": "Detener el laboratorio (sin borrarlo)",
+      "tipo": "docker",
+      "compose": "docker-compose.yml",
+      "args": [
+        "--profile",
+        "emulado",
+        "stop"
+      ],
+      "detener": [
+        "--profile",
+        "emulado",
+        "stop"
+      ],
+      "descripcion": "Para los 16 contenedores (docker compose --profile emulado stop). No borra nada: las imágenes, los contenedores y las redes quedan, y la próxima vez el laboratorio arranca en segundos."
+    },
+    {
+      "id": "vivo",
+      "nombre": "Estado en vivo del laboratorio (lo usa la app)",
+      "tipo": "python",
+      "script": "app/estado_vivo.py",
+      "args": [
+        "--rendirse",
+        "20"
+      ],
+      "cwd": ".",
+      "descripcion": "Lee cada segundo el resumen del dashboard del admin (http://localhost:8080/api/resumen.json) y se lo pasa a la app, que dibuja los 6 LED y la latencia de cada servicio. Solo lee: no se conecta al broker ni toca contenedores. Se cierra solo a los 30 minutos."
     },
     {
       "id": "fw",

@@ -1,0 +1,380 @@
+/* Consola de mando del tema 9: estilos propios encima de /comun/app.css.
+   Identidad: el teclado 4x4 es el protagonista (teclas como botones físicos) y cada
+   simulación tiene su color: drones cian, Baxter rojo (el color del robot real), Atlas ámbar. */
+
+:root {
+  --c9-fondo: #0d1013;
+  --c9-panel: #15191d;
+  --c9-panel-2: #1b2026;
+  --c9-borde: #262b31;
+  --c9-texto: #e7e9ec;
+  --c9-suave: #8b929b;
+  --c9-drones: #4fb6d9;
+  --c9-baxter: #e0625c;
+  --c9-atlas: #e8b930;
+  --c9-jog: #5b9bd5;
+  --c9-golpe: #e8b930;
+  --c9-sostener: #4caf7d;
+  --c9-objetivo: #a98bdb;
+  --c9-nada: #3a4048;
+  --c9-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --c9-sans: "Space Grotesk", system-ui, sans-serif;
+  --sim: var(--c9-drones);
+  --acento: #e8b930;
+}
+
+body.consola9 {
+  background: var(--c9-fondo);
+  color: var(--c9-texto);
+  font-family: var(--c9-sans);
+  margin: 0;
+}
+
+.c9-envoltura { max-width: 1180px; margin: 0 auto; padding: 0 16px 60px; }
+
+/* ---------- portada ---------- */
+.c9-portada {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 28px;
+  padding: 28px 0 20px;
+  align-items: start;
+}
+.c9-etiqueta {
+  font-family: var(--c9-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--c9-atlas);
+}
+.c9-portada h1 {
+  font-size: clamp(1.7rem, 3.4vw, 2.6rem);
+  line-height: 1.08;
+  margin: 8px 0 12px;
+  font-weight: 700;
+}
+.c9-portada h1 em { font-style: normal; color: var(--c9-atlas); }
+.c9-portada .c9-frase { color: #c4c9cf; font-size: 1.02rem; line-height: 1.55; max-width: 58ch; }
+.c9-botones-portada { display: flex; gap: 10px; flex-wrap: wrap; margin: 18px 0 6px; }
+.c9-btn {
+  font-family: var(--c9-sans);
+  font-weight: 600;
+  font-size: 0.95rem;
+  border-radius: 8px;
+  padding: 10px 16px;
+  border: 1px solid var(--c9-borde);
+  background: var(--c9-panel-2);
+  color: var(--c9-texto);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.c9-btn:hover { border-color: var(--c9-atlas); }
+.c9-btn.principal { background: var(--c9-atlas); color: #15120a; border-color: var(--c9-atlas); }
+.c9-btn.principal:hover { filter: brightness(1.08); }
+
+.c9-flujo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  font-family: var(--c9-mono);
+  font-size: 0.74rem;
+  color: var(--c9-suave);
+}
+.c9-flujo span.caja {
+  border: 1px solid var(--c9-borde);
+  background: var(--c9-panel);
+  border-radius: 6px;
+  padding: 5px 8px;
+  color: var(--c9-texto);
+}
+.c9-flujo span.flecha { color: var(--c9-atlas); }
+
+.c9-sims { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.c9-sim {
+  background: var(--c9-panel);
+  border: 1px solid var(--c9-borde);
+  border-top: 3px solid var(--sim);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+}
+.c9-sim:hover { border-color: var(--sim); }
+.c9-sim video, .c9-sim img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: #000; }
+.c9-sim .txt { padding: 9px 10px 11px; }
+.c9-sim b { display: block; font-size: 0.92rem; }
+.c9-sim small { color: var(--c9-suave); font-size: 0.78rem; line-height: 1.35; display: block; margin-top: 3px; }
+.c9-sim.drones { --sim: var(--c9-drones); }
+.c9-sim.baxter { --sim: var(--c9-baxter); }
+.c9-sim.atlas { --sim: var(--c9-atlas); }
+
+.c9-pide { margin-top: 16px; }
+.c9-pide h2 { font-size: 0.95rem; margin: 0 0 8px; }
+
+/* ---------- textos de cada paso ---------- */
+.paso h2 { font-size: 1.45rem; margin: 0 0 6px; }
+.paso h3 { font-size: 1.08rem; margin: 22px 0 8px; }
+.paso p, .paso li { line-height: 1.6; color: #d3d7dc; }
+.c9-intro { color: #c4c9cf; max-width: 75ch; }
+.c9-nota {
+  border-left: 3px solid var(--c9-atlas);
+  background: rgba(232, 185, 48, 0.07);
+  padding: 10px 14px;
+  border-radius: 0 8px 8px 0;
+  margin: 12px 0;
+  font-size: 0.93rem;
+  line-height: 1.55;
+}
+.c9-nota.info { border-left-color: var(--c9-jog); background: rgba(91, 155, 213, 0.08); }
+.c9-nota.ok { border-left-color: var(--c9-sostener); background: rgba(76, 175, 125, 0.08); }
+kbd, .c9-k {
+  font-family: var(--c9-mono);
+  font-size: 0.82em;
+  border: 1px solid #3b424b;
+  border-bottom-width: 3px;
+  border-radius: 5px;
+  padding: 0 6px;
+  background: #20262d;
+  color: var(--c9-texto);
+  white-space: nowrap;
+}
+
+.c9-tres { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 12px 0; }
+.c9-dos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 12px 0; }
+.c9-tarjeta {
+  background: var(--c9-panel);
+  border: 1px solid var(--c9-borde);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.c9-tarjeta h4 { margin: 0 0 6px; font-size: 0.98rem; display: flex; align-items: center; gap: 8px; }
+.c9-tarjeta p { margin: 0; font-size: 0.9rem; }
+.c9-punto { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+
+/* diagrama real-to-sim */
+.c9-diagrama {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+  align-items: stretch;
+  gap: 8px;
+  margin: 16px 0;
+}
+.c9-diagrama .bloque {
+  background: var(--c9-panel);
+  border: 1px solid var(--c9-borde);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+.c9-diagrama .bloque b { display: block; margin-bottom: 4px; font-size: 0.92rem; }
+.c9-diagrama .bloque code { font-family: var(--c9-mono); font-size: 0.78rem; color: var(--c9-atlas); }
+.c9-diagrama .via {
+  align-self: center;
+  font-family: var(--c9-mono);
+  font-size: 0.7rem;
+  color: var(--c9-suave);
+  text-align: center;
+}
+.c9-diagrama .via::before { content: "→"; display: block; font-size: 1.3rem; color: var(--c9-atlas); }
+
+/* ---------- el teclado ---------- */
+.c9-mando { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 22px; align-items: start; margin-top: 10px; }
+.c9-pestanas { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 14px; }
+.c9-pestanas button {
+  font-family: var(--c9-mono);
+  font-size: 0.8rem;
+  padding: 7px 12px;
+  border-radius: 7px;
+  border: 1px solid var(--c9-borde);
+  background: transparent;
+  color: var(--c9-suave);
+  cursor: pointer;
+}
+.c9-pestanas button[aria-selected="true"] { color: var(--c9-texto); border-color: var(--sim); background: var(--c9-panel-2); }
+.c9-pestanas button[data-sim="drones"] { --sim: var(--c9-drones); }
+.c9-pestanas button[data-sim="baxter"] { --sim: var(--c9-baxter); }
+.c9-pestanas button[data-sim="atlas"] { --sim: var(--c9-atlas); }
+
+.c9-teclado {
+  width: max-content;
+  max-width: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, 74px);
+  gap: 8px;
+  padding: 14px;
+  background: linear-gradient(180deg, #1c2127, #141819);
+  border: 1px solid var(--c9-borde);
+  border-radius: 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.c9-tecla {
+  height: 74px;
+  border-radius: 9px;
+  border: 1px solid #353c45;
+  border-bottom: 4px solid var(--tipo, var(--c9-nada));
+  background: #232931;
+  color: var(--c9-texto);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 4px;
+  font-family: var(--c9-sans);
+  transition: transform 0.06s ease, background 0.12s ease;
+}
+.c9-tecla .s { font-family: var(--c9-mono); font-size: 1.25rem; font-weight: 600; line-height: 1; }
+.c9-tecla .q { font-size: 0.62rem; line-height: 1.15; color: var(--c9-suave); text-align: center; max-height: 2.4em; overflow: hidden; }
+.c9-tecla.vacia .s { color: #59616b; }
+.c9-tecla:hover { background: #2a313a; }
+.c9-tecla.activa { background: #2f3741; outline: 2px solid var(--sim); outline-offset: 1px; transform: translateY(1px); }
+.c9-tecla.pulso { transform: translateY(3px); border-bottom-width: 1px; }
+
+.c9-leyenda { max-width: 360px; display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.78rem; color: var(--c9-suave); margin-top: 10px; }
+.c9-leyenda span { display: inline-flex; align-items: center; gap: 5px; }
+.c9-leyenda i { width: 14px; height: 4px; border-radius: 2px; display: inline-block; }
+
+.c9-detalle {
+  background: var(--c9-panel);
+  border: 1px solid var(--c9-borde);
+  border-radius: 12px;
+  padding: 14px 16px;
+  min-height: 260px;
+}
+.c9-detalle .grande { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.c9-detalle .grande .c9-k { font-size: 1.5rem; padding: 2px 12px; }
+.c9-detalle .grande b { font-size: 1.1rem; }
+.c9-detalle .tipo { font-family: var(--c9-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.c9-detalle .otros { margin-top: 14px; border-top: 1px solid var(--c9-borde); padding-top: 10px; }
+.c9-detalle .otros div { display: flex; gap: 8px; font-size: 0.86rem; margin: 5px 0; color: #c4c9cf; }
+.c9-detalle .otros div b { min-width: 74px; font-weight: 600; }
+.c9-detalle .boton-ventana { font-family: var(--c9-mono); font-size: 0.8rem; color: var(--c9-suave); margin-top: 8px; }
+
+/* ---------- tablas ---------- */
+.c9-tabla { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin: 10px 0; }
+.c9-tabla th, .c9-tabla td { border-bottom: 1px solid var(--c9-borde); padding: 7px 8px; text-align: left; vertical-align: top; }
+.c9-tabla th { color: var(--c9-suave); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.c9-tabla td code { font-family: var(--c9-mono); color: var(--c9-atlas); }
+.c9-tabla-scroll { overflow-x: auto; }
+
+/* ---------- fotos ---------- */
+.c9-foto { margin: 0; background: var(--c9-panel); border: 1px solid var(--c9-borde); border-radius: 10px; overflow: hidden; }
+.c9-foto img, .c9-foto video { width: 100%; display: block; cursor: zoom-in; background: #000; }
+.c9-foto video { cursor: default; }
+.c9-foto figcaption { padding: 8px 12px 10px; font-size: 0.84rem; color: #c4c9cf; line-height: 1.45; }
+
+/* ---------- bloques de "pruébalo" ---------- */
+.c9-prueba {
+  border: 1px solid var(--c9-borde);
+  border-left: 4px solid var(--sim);
+  border-radius: 10px;
+  background: #11151a;
+  padding: 14px 16px;
+  margin: 16px 0;
+}
+.c9-prueba.drones { --sim: var(--c9-drones); }
+.c9-prueba.baxter { --sim: var(--c9-baxter); }
+.c9-prueba.atlas { --sim: var(--c9-atlas); }
+.c9-prueba.neutro { --sim: #6b7480; }
+.c9-prueba > h3 { margin-top: 0; }
+.c9-prueba .c9-que { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 10px 0 12px; }
+.c9-prueba .c9-que > div { background: var(--c9-panel); border-radius: 8px; padding: 9px 11px; font-size: 0.86rem; line-height: 1.5; }
+.c9-prueba .c9-que > div > b { display: block; font-family: var(--c9-mono); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--sim); margin-bottom: 4px; }
+.c9-prueba .c9-que ol, .c9-prueba .c9-que ul { margin: 0; padding-left: 18px; }
+.c9-prueba .c9-que li { line-height: 1.45; color: #d3d7dc; }
+
+/* resumen de la prueba rápida de drones */
+.c9-ruta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
+.c9-ruta div {
+  border: 1px solid var(--c9-borde);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--c9-panel);
+  font-size: 0.82rem;
+  color: var(--c9-suave);
+}
+.c9-ruta div b { display: block; font-family: var(--c9-mono); font-size: 1.1rem; color: var(--c9-texto); }
+.c9-ruta div.llego { border-color: var(--c9-sostener); color: var(--c9-texto); }
+.c9-ruta div.llego b { color: var(--c9-sostener); }
+.c9-ruta div.falla { border-color: var(--c9-baxter); }
+
+/* preview embebido */
+.c9-marco {
+  width: 100%;
+  height: 760px;
+  border: 1px solid var(--c9-borde);
+  border-radius: 10px;
+  background: #0d1013;
+}
+
+details.c9-tecnico { margin-top: 16px; border: 1px solid var(--c9-borde); border-radius: 10px; padding: 8px 14px; background: var(--c9-panel); }
+details.c9-tecnico summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+details.c9-tecnico pre {
+  font-family: var(--c9-mono);
+  font-size: 0.78rem;
+  background: #0b0e11;
+  border: 1px solid var(--c9-borde);
+  border-radius: 8px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  line-height: 1.5;
+}
+
+.c9-pasos-esp32 { counter-reset: n; list-style: none; padding: 0; }
+.c9-pasos-esp32 > li { counter-increment: n; position: relative; padding: 10px 12px 10px 48px; margin: 8px 0; background: var(--c9-panel); border: 1px solid var(--c9-borde); border-radius: 10px; }
+.c9-pasos-esp32 > li::before {
+  content: counter(n);
+  position: absolute;
+  left: 12px;
+  top: 10px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--c9-atlas);
+  color: #15120a;
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.c9-sinapp { padding: 14px; border: 1px solid var(--c9-baxter); border-radius: 10px; margin: 12px 0; display: none; }
+
+@media (max-width: 900px) {
+  .c9-portada, .c9-mando { grid-template-columns: 1fr; }
+  .c9-tres, .c9-prueba .c9-que { grid-template-columns: 1fr; }
+  .c9-diagrama { grid-template-columns: 1fr; }
+  .c9-diagrama .via::before { content: "↓"; }
+  .c9-ruta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .c9-sims, .c9-dos { grid-template-columns: 1fr; }
+  .c9-teclado { grid-template-columns: repeat(4, minmax(0, 1fr)); width: auto; }
+  .c9-tecla { height: 64px; }
+  .c9-marco-env { height: 640px; }
+}
+
+.c9-foto-portada img { aspect-ratio: 16 / 10; object-fit: cover; object-position: center 62%; }
+.c9-dos .c9-foto img, .c9-tres .c9-foto img { max-height: 460px; object-fit: cover; object-position: center 62%; }
+
+/* El panel común trae su propio título: aquí ya lo da el h3 del bloque. */
+.c9-prueba .app-panel-cab { display: none; }
+.c9-texto-panel ol, .c9-texto-panel ul { margin: 4px 0 0; padding-left: 18px; }
+.c9-texto-panel li { line-height: 1.45; }
+
+/* El preview se dibuja a 1240 px de ancho (su diseño de tres columnas) y se escala al recuadro. */
+.c9-marco-env { position: relative; overflow: hidden; height: 620px; border: 1px solid var(--c9-borde); border-radius: 10px; background: #0d1013; }
+.c9-marco-env .c9-marco { border: 0; border-radius: 0; position: absolute; top: 0; left: 0; transform-origin: 0 0; }

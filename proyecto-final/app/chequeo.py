@@ -14,9 +14,7 @@ from __future__ import annotations
 import importlib.metadata
 import os
 import platform
-import socket
 import sys
-import urllib.request
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -67,31 +65,37 @@ def python_y_paquetes() -> list[tuple[str, str, str]]:
     return out
 
 
-def _abierto(puerto: int) -> bool:
-    with socket.socket() as s:
-        s.settimeout(0.5)
-        return s.connect_ex(("127.0.0.1", puerto)) == 0
-
-
 def puertos() -> list[tuple[str, str, str]]:
-    from app.configuracion import cargar_parametros
+    """El del visor 3D (8765 o PLANTA_PUERTO_VISOR) y el del dashboard (8501). Si los tiene otro
+    programa ya no es una falla: app.lanzar usa el siguiente libre y lo dice (app/puertos.py)."""
+    from app import puertos as p
 
-    visor = cargar_parametros()["supervisor"]["puerto_http"]
     out = []
-    for puerto, nombre, prueba in ((visor, "visor 3D", "/api/estado"), (8501, "dashboard", "/")):
-        if not _abierto(puerto):
-            out.append((BIEN, f"Puerto {puerto} ({nombre})", "libre: visor.bat lo va a usar"))
-            continue
-        try:
-            with urllib.request.urlopen(f"http://127.0.0.1:{puerto}{prueba}", timeout=2) as r:
-                es_nuestro = r.status == 200
-        except OSError:
-            es_nuestro = False
-        if es_nuestro:
-            out.append((BIEN, f"Puerto {puerto} ({nombre})", "ya lo usa esta app (corriendo)"))
+    pedido = p.puerto_pedido()
+    puerto, como, ocupados = p.elegir(pedido)
+    que = f"Puerto {pedido} (visor 3D)"
+    if como == "nuestro":
+        out.append((BIEN, f"Puerto {puerto} (visor 3D)", "ya lo usa esta app (la simulación está corriendo)"
+                    + (f"; el {pedido} lo tiene otro programa" if ocupados else "")))
+    elif como == "ninguno":
+        out.append((FALLA, que, f"del {pedido} al {pedido + p.INTENTOS} todos ocupados por otros programas: "
+                    f"cerrar alguno o elegir otro con la variable {p.VARIABLE}"))
+    elif ocupados:
+        out.append((AVISO, que, f"lo ocupa OTRO programa: visor.bat usará solo el {puerto} (y lo dice en su "
+                    f"ventana); para fijar uno, la variable {p.VARIABLE} o --puerto-visor"))
+    else:
+        out.append((BIEN, que, "libre: visor.bat lo va a usar"))
+    anotado = p.leer().get("dashboard") if como == "nuestro" else None
+    if anotado:
+        out.append((BIEN, f"Puerto {anotado} (dashboard)", "lo usa la corrida en marcha"))
+    else:
+        dash, ocupados_dash = p.primer_libre(8501)
+        if not ocupados_dash:
+            out.append((BIEN, "Puerto 8501 (dashboard)", "libre: visor.bat lo va a usar"))
+        elif dash != 8501:
+            out.append((AVISO, "Puerto 8501 (dashboard)", f"ocupado: el dashboard usará el {dash}"))
         else:
-            out.append((FALLA, f"Puerto {puerto} ({nombre})", "lo ocupa OTRO programa: cerrarlo o cambiar el "
-                        "puerto en config/parametros.yaml (supervisor.puerto_http)"))
+            out.append((FALLA, "Puerto 8501 (dashboard)", "ocupado, y los siguientes también"))
     return out
 
 

@@ -1,0 +1,135 @@
+/* Estilo propio de la app del tema 10 (enjambre de hormigas). Va encima de /comun/app.css:
+   solo agrega la identidad del tema (feromona violeta, colores de los tres nodos) y las piezas
+   propias (laberinto, animación del puente doble, tarjetas de nodo, salida "bonita"). */
+:root {
+  --acento: #9d6cff;
+  --acento-suave: #c4a8ff;
+  --acento-fondo: #1b1530;
+  --t10-fondo: #0d1013;
+  --t10-panel: #15191d;
+  --t10-borde: #262b31;
+  --t10-texto: #e7e9ec;
+  --t10-tenue: #8b929b;
+  --t10-feromona: #9d6cff;
+  --t10-feromona-suave: #2a1f45;
+  --t10-ok: #4caf7d;
+  --t10-mal: #d9534f;
+  --t10-aviso: #e8b930;
+  --nodo1: #e5534b;
+  --nodo2: #4f8fce;
+  --nodo3: #e8b930;
+  --t10-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+body { background: var(--t10-fondo); color: var(--t10-texto); }
+
+/* ---------- portada ---------- */
+.t10-portada { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 1.6rem; align-items: center;
+  max-width: 1180px; margin: 0 auto; padding: 1.6rem 1.4rem 0.5rem; }
+@media (max-width: 860px) { .t10-portada { grid-template-columns: 1fr; } }
+.t10-etiqueta { font-family: var(--t10-mono); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--t10-feromona); }
+.t10-portada h1 { font-size: clamp(1.5rem, 3.2vw, 2.3rem); line-height: 1.15; margin: 0.4rem 0 0.8rem; }
+.t10-portada h1 em { font-style: normal; color: var(--t10-feromona); }
+.t10-frase { font-size: 1.05rem; line-height: 1.55; color: #c9cdd2; margin: 0 0 1rem; }
+.t10-chips { display: flex; flex-wrap: wrap; gap: 0.45rem; margin: 0 0 1rem; }
+.t10-chips span { font-family: var(--t10-mono); font-size: 0.72rem; border: 1px solid var(--t10-borde); border-radius: 999px; padding: 0.2rem 0.65rem; color: var(--t10-tenue); }
+.t10-chips span b { color: var(--t10-texto); font-weight: 500; }
+.t10-gif { width: 100%; border-radius: 10px; border: 1px solid var(--t10-borde); display: block; background: #000; }
+.t10-pie { font-family: var(--t10-mono); font-size: 0.7rem; color: var(--t10-tenue); margin-top: 0.4rem; }
+.t10-caja-pide { background: var(--t10-panel); border: 1px solid var(--t10-borde); border-radius: 10px; padding: 0.9rem 1rem; }
+.t10-caja-pide h2 { font-size: 0.95rem; margin: 0 0 0.5rem; }
+.t10-botones-portada { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1rem; }
+
+/* ---------- comunes ---------- */
+.t10-columna { display: grid; gap: 1.6rem; }
+.t10-columna > div > h3 { margin-top: 0.4rem; }
+.t10-rejilla2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.1rem; align-items: start; }
+.t10-rejilla3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.8rem; }
+@media (max-width: 900px) { .t10-rejilla2, .t10-rejilla3 { grid-template-columns: 1fr; } }
+.t10-tarjeta { background: var(--t10-panel); border: 1px solid var(--t10-borde); border-radius: 10px; padding: 0.9rem 1rem; min-width: 0; }
+.t10-tarjeta h3 { margin: 0 0 0.45rem; font-size: 1rem; }
+.t10-tarjeta p { line-height: 1.55; }
+.t10-nota { font-family: var(--t10-mono); font-size: 0.74rem; color: var(--t10-tenue); line-height: 1.55; }
+.t10-aviso { border-left: 3px solid var(--t10-aviso); background: #1d1a10; padding: 0.6rem 0.8rem; border-radius: 6px; line-height: 1.5; margin: 0.7rem 0; }
+.t10-aviso.info { border-left-color: var(--t10-feromona); background: #17132a; }
+.t10-aviso.ok { border-left-color: var(--t10-ok); background: #10201a; }
+.t10-num { display: inline-flex; width: 1.7rem; height: 1.7rem; border-radius: 50%; align-items: center; justify-content: center;
+  background: var(--t10-feromona); color: #0d1013; font-weight: 700; font-size: 0.9rem; margin-right: 0.45rem; flex: none; }
+.t10-titulo-num { display: flex; align-items: center; margin: 0 0 0.5rem; font-size: 1.05rem; }
+.t10-img { width: 100%; border-radius: 8px; border: 1px solid var(--t10-borde); display: block; cursor: zoom-in; }
+.t10-figura { margin: 0; }
+.t10-figura figcaption { font-family: var(--t10-mono); font-size: 0.7rem; color: var(--t10-tenue); margin-top: 0.35rem; line-height: 1.45; }
+table.t10-tabla { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+table.t10-tabla th, table.t10-tabla td { border-bottom: 1px solid var(--t10-borde); padding: 0.4rem 0.5rem; text-align: left; vertical-align: top; }
+table.t10-tabla th { font-family: var(--t10-mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--t10-tenue); font-weight: 500; }
+table.t10-tabla td code { font-family: var(--t10-mono); font-size: 0.8rem; }
+.t10-tabla-caja { overflow-x: auto; }
+details.t10-tecnico { margin-top: 0.8rem; border: 1px dashed var(--t10-borde); border-radius: 8px; padding: 0.4rem 0.8rem; }
+details.t10-tecnico summary { cursor: pointer; font-family: var(--t10-mono); font-size: 0.75rem; color: var(--t10-tenue); }
+details.t10-tecnico pre, details.t10-tecnico code { font-family: var(--t10-mono); font-size: 0.75rem; }
+details.t10-tecnico pre { background: #0a0d10; padding: 0.6rem; border-radius: 6px; overflow-x: auto; }
+.t10-insignia { display: inline-block; white-space: nowrap; font-family: var(--t10-mono); font-size: 0.72rem; border-radius: 999px; padding: 0.12rem 0.6rem; border: 1px solid var(--t10-borde); }
+.t10-insignia.si { color: var(--t10-ok); border-color: var(--t10-ok); }
+.t10-insignia.no { color: var(--t10-mal); border-color: var(--t10-mal); }
+.t10-insignia.pend { color: var(--t10-aviso); border-color: var(--t10-aviso); }
+.t10-boton { font-family: var(--t10-mono); font-size: 0.8rem; background: #1c2126; color: var(--t10-texto); border: 1px solid var(--t10-borde);
+  border-radius: 7px; padding: 0.5rem 0.9rem; cursor: pointer; }
+.t10-boton:hover:not(:disabled) { border-color: var(--t10-feromona); color: var(--t10-feromona); }
+.t10-boton.primario { border-color: var(--t10-feromona); color: var(--t10-feromona); }
+.t10-boton:disabled { opacity: 0.45; cursor: default; }
+.t10-oculto { display: none !important; }
+
+/* ---------- animación del puente doble ---------- */
+.t10-puente { width: 100%; height: auto; display: block; background: #0a0d10; border: 1px solid var(--t10-borde); border-radius: 10px; }
+.t10-controles { display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; align-items: center; margin-top: 0.6rem; font-family: var(--t10-mono); font-size: 0.75rem; color: var(--t10-tenue); }
+.t10-controles input[type=range] { accent-color: var(--t10-feromona); width: 130px; }
+.t10-medidor { height: 8px; background: #0a0d10; border: 1px solid var(--t10-borde); border-radius: 4px; overflow: hidden; flex: 1; min-width: 120px; }
+.t10-medidor div { height: 100%; background: var(--t10-feromona); width: 50%; transition: width 0.2s; }
+.t10-receta { counter-reset: r; list-style: none; padding: 0; margin: 0; }
+.t10-receta li { counter-increment: r; position: relative; padding: 0.35rem 0 0.35rem 2.2rem; line-height: 1.5; }
+.t10-receta li::before { content: counter(r); position: absolute; left: 0; top: 0.35rem; width: 1.5rem; height: 1.5rem; border-radius: 50%;
+  border: 1px solid var(--t10-feromona); color: var(--t10-feromona); font-family: var(--t10-mono); font-size: 0.75rem; display: flex; align-items: center; justify-content: center; }
+
+/* ---------- laberinto ---------- */
+.t10-laberinto { width: 100%; max-width: 440px; height: auto; display: block; margin: 0 auto; }
+.t10-leyenda { display: flex; flex-wrap: wrap; gap: 0.35rem 1rem; justify-content: center; font-family: var(--t10-mono); font-size: 0.72rem; color: var(--t10-tenue); margin-top: 0.5rem; }
+.t10-leyenda span { display: inline-flex; align-items: center; gap: 0.35rem; }
+.t10-muestra { display: inline-block; width: 18px; height: 4px; border-radius: 2px; }
+.t10-selector-rutas { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: center; margin-top: 0.6rem; }
+.t10-selector-rutas button.activo { border-color: var(--t10-feromona); color: var(--t10-feromona); }
+
+/* ---------- red ---------- */
+.t10-red { width: 100%; height: auto; display: block; }
+.t10-msj { font-family: var(--t10-mono); font-size: 0.78rem; background: #0a0d10; border: 1px solid var(--t10-borde); border-radius: 6px; padding: 0.55rem 0.7rem; white-space: pre; overflow-x: auto; color: #b9c0c8; }
+
+/* ---------- salida "bonita" ---------- */
+.t10-bonito { margin-top: 0.9rem; }
+.t10-bonito:empty { display: none; }
+.t10-nodos { display: grid; gap: 0.5rem; }
+.t10-nodo { border: 1px solid var(--t10-borde); border-left: 4px solid var(--c); border-radius: 7px; padding: 0.5rem 0.7rem; font-family: var(--t10-mono); font-size: 0.76rem; color: var(--t10-tenue); }
+.t10-nodo .f1 { display: flex; justify-content: space-between; gap: 0.5rem; color: var(--t10-texto); margin-bottom: 0.2rem; }
+.t10-nodo .f1 b { color: var(--c); }
+.t10-nodo .ruta { word-break: break-all; }
+.t10-progreso { height: 10px; border-radius: 5px; background: #0a0d10; border: 1px solid var(--t10-borde); overflow: hidden; margin: 0.4rem 0; }
+.t10-progreso div { height: 100%; width: 0; background: linear-gradient(90deg, #5b3fb0, var(--t10-feromona)); transition: width 0.4s; }
+.t10-md h4 { margin: 1rem 0 0.35rem; font-size: 0.95rem; color: var(--t10-feromona); }
+.t10-md p { margin: 0.3rem 0; line-height: 1.5; font-size: 0.88rem; }
+.t10-md table { margin: 0.3rem 0 0.5rem; }
+.t10-video { width: 100%; border-radius: 8px; border: 1px solid var(--t10-borde); background: #000; display: block; }
+
+/* ---------- gemelo + emulador ---------- */
+.t10-paso-bloque { position: relative; }
+.t10-bloqueado { position: absolute; inset: 0; background: rgba(13, 16, 19, 0.82); border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  text-align: center; padding: 1rem; z-index: 2; font-size: 0.95rem; line-height: 1.5; border: 1px dashed var(--t10-borde); }
+.t10-flecha { text-align: center; font-family: var(--t10-mono); color: var(--t10-feromona); font-size: 0.8rem; margin: 0.4rem 0; }
+.t10-vivos { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.4rem 0; }
+.t10-vivos span { font-family: var(--t10-mono); font-size: 0.74rem; border-radius: 999px; padding: 0.15rem 0.6rem; border: 1px solid var(--c); color: var(--c); opacity: 0.35; }
+.t10-vivos span.on { opacity: 1; }
+
+/* ---------- preview embebido ---------- */
+.t10-marco { width: 100%; height: 1500px; border: 1px solid var(--t10-borde); border-radius: 10px; background: #0d1013; display: block; }
+
+/* ---------- pasos con los carritos ---------- */
+.t10-lista-pasos { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.7rem; }
+.t10-lista-pasos > li { display: flex; gap: 0.6rem; align-items: flex-start; background: var(--t10-panel); border: 1px solid var(--t10-borde); border-radius: 10px; padding: 0.8rem 0.9rem; }
+.t10-lista-pasos > li > div { min-width: 0; line-height: 1.55; }
+.t10-lista-pasos h4 { margin: 0 0 0.25rem; font-size: 0.98rem; }

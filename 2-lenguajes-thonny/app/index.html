@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thonny o Arduino: MicroPython frente a C/C++</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/comun/app.css">
+<link rel="stylesheet" href="lenguajes.css">
+</head>
+<body class="leng">
+
+<header class="app-encabezado">
+  <span class="app-num">Tema 2</span>
+  <h1>Thonny o Arduino: <span class="mp">MicroPython</span> frente a <span class="cc">C/C++</span></h1>
+  <nav>
+    <a class="app-btn" href="https://github.com/Dathinel/Sensores-Teoria/tree/main/2-lenguajes-thonny" target="_blank" rel="noopener">Ver en GitHub ↗</a>
+  </nav>
+</header>
+
+<div class="app-contenedor">
+
+  <!-- PORTADA -->
+  <section class="portada-leng">
+    <div>
+      <p class="lema">El mismo ESP32 se puede programar de dos maneras: <b class="cc">compilando</b> C/C++ con el Arduino IDE,
+        o <b class="mp">interpretando</b> Python dentro del chip con Thonny. Aquí se ven las dos lado a lado, con dos
+        ejemplos que puedes correr en el navegador (Wokwi) y la guía para instalar MicroPython en tu placa.</p>
+      <div class="portada-botones">
+        <button class="app-btn app-btn-grande primario" data-ir="comparar">Ver la comparación →</button>
+        <button class="app-btn" data-ir="ejemplo-7seg">Probar en Wokwi</button>
+        <button class="app-btn" data-ir="instalar">Instalar MicroPython</button>
+      </div>
+      <div id="checklist"></div>
+    </div>
+    <div class="duelo" aria-label="Los dos caminos">
+      <div class="lado lado-cc">
+        <div class="lado-cab">Arduino IDE · <b>C/C++</b></div>
+        <ol class="tubo">
+          <li>Escribes el <code>.ino</code></li>
+          <li>El <b>compilador</b> lo traduce entero</li>
+          <li>Se graba un <b>binario</b> en la flash</li>
+          <li>El chip ejecuta instrucciones de máquina</li>
+        </ol>
+        <div class="veredicto">Rápido · hay que recompilar cada cambio</div>
+      </div>
+      <div class="vs">vs</div>
+      <div class="lado lado-mp">
+        <div class="lado-cab">Thonny · <b>MicroPython</b></div>
+        <ol class="tubo">
+          <li>El ESP32 ya tiene el <b>intérprete</b> (firmware)</li>
+          <li>Thonny manda el <code>.py</code> por USB</li>
+          <li>El intérprete lo lee <b>línea por línea</b></li>
+          <li>Pruebas al instante en la Shell (<code>&gt;&gt;&gt;</code>)</li>
+        </ol>
+        <div class="veredicto">Más lento · cambias y pruebas en segundos</div>
+      </div>
+    </div>
+  </section>
+
+  <div id="guia">
+
+    <!-- 1. QUÉ ES -->
+    <section class="paso" data-titulo="Qué es Thonny y qué es MicroPython" id="que-es">
+      <h2>Qué es Thonny y qué es MicroPython</h2>
+      <div class="app-tarjetas">
+        <div class="app-tarjeta acento-mp">
+          <h3>Thonny</h3>
+          <p>Un editor de Python pensado para principiantes (Universidad de Tartu, 2015). Desde la versión 3.0 habla
+            con placas que corren MicroPython, entre ellas el ESP32.</p>
+        </div>
+        <div class="app-tarjeta acento-mp">
+          <h3>MicroPython</h3>
+          <p>Un <b>firmware</b>: un intérprete de Python escrito en C y grabado en la flash del ESP32 (Damien George,
+            2014). Con él, el chip queda esperando código Python. El módulo clave es <code>machine</code> (de ahí sale <code>Pin</code>).</p>
+        </div>
+        <div class="app-tarjeta acento-cc">
+          <h3>Compilar frente a interpretar</h3>
+          <p><b>Compilar</b>: traducir todo el programa antes, a instrucciones del chip. <b>Interpretar</b>: otro programa
+            lo va leyendo y ejecutando mientras corre. Lo primero es más rápido; lo segundo, más flexible.</p>
+        </div>
+      </div>
+
+      <h3 class="sub">Thonny conectado al ESP32: las tres partes que se usan</h3>
+      <div class="thonny-mock" aria-label="Ventana de Thonny dibujada">
+        <div class="tm-barra"><span></span><span></span><span></span> Thonny</div>
+        <div class="tm-cuerpo">
+          <div class="tm-archivos"><b>Archivos</b><small>Dispositivo MicroPython</small><div>main.py</div><div>boot.py</div><em>Lo guardado aquí como main.py arranca solo al encender.</em></div>
+          <div class="tm-derecha">
+            <div class="tm-editor"><b>Editor</b><pre>from machine import Pin
+rojo = Pin(5, Pin.OUT)
+rojo.value(1)</pre><em>F5 manda el archivo a la placa y lo corre ahí.</em></div>
+            <div class="tm-shell"><b>Shell (REPL del ESP32)</b><pre>MicroPython v1.2x on ESP32
+&gt;&gt;&gt; rojo.value(0)
+&gt;&gt;&gt; <span class="cursor">▌</span></pre><em>Lo que escribas aquí lo ejecuta el chip al instante; los print() salen aquí.</em></div>
+          </div>
+        </div>
+        <div class="tm-pie">MicroPython (ESP32) · COM7 <small>← abajo a la derecha se elige el intérprete y el puerto</small></div>
+      </div>
+
+      <h3 class="sub">La comparación en una tabla</h3>
+      <div class="tabla-duelo">
+        <div class="fila cab"><div></div><div class="cc">C/C++ (Arduino, ESP-IDF)</div><div class="mp">MicroPython (Thonny)</div></div>
+        <div class="fila"><div>Cómo se ejecuta</div><div>Compilado a instrucciones nativas</div><div>Interpretado dentro del chip</div></div>
+        <div class="fila"><div>Velocidad</div><div class="gana">Mucho más rápido</div><div>Más lento, suficiente para aprender</div></div>
+        <div class="fila"><div>Memoria</div><div class="gana">Muy eficiente</div><div>El intérprete ocupa RAM</div></div>
+        <div class="fila"><div>Probar un cambio</div><div>Compilar y grabar todo otra vez</div><div class="gana">Segundos, desde la Shell</div></div>
+        <div class="fila"><div>Aprenderlo</div><div>Punteros, tipos, compilación</div><div class="gana">Sintaxis simple, errores claros</div></div>
+        <div class="fila"><div>Cuándo conviene</div><div>Tiempos críticos, exprimir el chip</div><div>Aprender, prototipar rápido</div></div>
+      </div>
+      <p class="app-tenue">Ojo: el ESP32 tiene <b>un solo firmware a la vez</b>. Grabar un sketch de Arduino borra MicroPython, y al revés.</p>
+
+      <details class="app-plegado">
+        <summary>Leer la explicación completa del README</summary>
+        <div id="mdQueEs"></div>
+      </details>
+    </section>
+
+    <!-- 2. LADO A LADO -->
+    <section class="paso" data-titulo="Lado a lado: el mismo programa" id="comparar">
+      <h2>Lado a lado: el mismo programa en los dos lenguajes</h2>
+      <p>El display de siete segmentos que muestra un <b>"2"</b>, escrito dos veces con exactamente la misma lógica.
+        Pasa el ratón (o toca) cada idea para ver dónde está en cada código.</p>
+      <div class="ideas" id="ideas">
+        <button class="idea" data-idea="traer">Traer lo necesario</button>
+        <button class="idea" data-idea="declarar">Declarar los pines</button>
+        <button class="idea" data-idea="salida">Configurarlos como salida</button>
+        <button class="idea" data-idea="prender">Prender / apagar un segmento</button>
+        <button class="idea" data-idea="repetir">Repetir para siempre</button>
+      </div>
+      <p class="explica-idea" id="explicaIdea">Elige una idea de arriba.</p>
+      <div class="codigos">
+        <div class="cod cod-cc">
+          <div class="cod-cab"><span class="cc">C/C++ · siete_segmentos.ino</span></div>
+          <pre id="cod7c">Cargando…</pre>
+        </div>
+        <div class="cod cod-mp">
+          <div class="cod-cab"><span class="mp">MicroPython · siete_segmentos.py</span></div>
+          <pre id="cod7p">Cargando…</pre>
+        </div>
+      </div>
+      <h3 class="sub">Y así se ve en Wokwi</h3>
+      <div class="capturas">
+        <figure><img src="/repo/2-lenguajes-thonny/wokwi-arduino-c.png" alt="Wokwi: el display mostrando el 2 con el código C/C++ de Arduino"><figcaption><span class="cc">C/C++</span>: <code>pinMode</code> en <code>setup()</code>, <code>digitalWrite</code>, y <code>loop()</code> lo repite el framework.</figcaption></figure>
+        <figure><img src="/repo/2-lenguajes-thonny/wokwi-micropython.png" alt="Wokwi: el mismo display con el código MicroPython"><figcaption><span class="mp">MicroPython</span>: <code>Pin(n, Pin.OUT)</code>, <code>.value(1)</code>, y el <code>while True</code> se escribe a mano.</figcaption></figure>
+      </div>
+    </section>
+
+    <!-- 3. EJEMPLO SIETE SEGMENTOS -->
+    <section class="paso" data-titulo="Ejemplo 1: siete segmentos en Wokwi" id="ejemplo-7seg">
+      <h2>Ejemplo 1: el "2" en un display de siete segmentos</h2>
+      <p>Wokwi simula un ESP32 completo en el navegador (necesita internet, no instala nada). Elige el lenguaje y sigue los pasos.</p>
+      <div class="selector-leng" data-ejemplo="7seg">
+        <button class="sl activo" data-leng="mp">MicroPython</button>
+        <button class="sl" data-leng="cc">C/C++ (Arduino)</button>
+      </div>
+      <div class="ejemplo">
+        <ol class="pasitos">
+          <li><b>Abre un proyecto nuevo en Wokwi.</b>
+            <span class="solo-mp">Tipo "MicroPython on ESP32".</span><span class="solo-cc">Tipo "ESP32" (Arduino).</span>
+            <div><button class="app-btn primario" data-wokwi="7seg">Abrir Wokwi ↗</button></div></li>
+          <li><b>Arma el circuito</b> con el botón azul <b>"+"</b>: un <i>7 Segment</i> de <b>cátodo común</b> (en sus atributos,
+            <code>common: cathode</code>), el pin <b>COM</b> a <b>GND</b>, y cada segmento a su GPIO según la tabla (en la placa real, cada uno con 220 Ω).</li>
+          <li><b>Copia el código</b> y pégalo reemplazando todo
+            <span class="solo-mp"><code>main.py</code></span><span class="solo-cc"><code>sketch.ino</code></span>.
+            <div><button class="app-btn" data-copiar="7seg">Copiar el código</button></div></li>
+          <li><b>Dale al botón verde ▶</b> (Start the simulation).</li>
+          <li><b>Qué deberías ver:</b> el display muestra un <b>"2"</b> fijo (segmentos a, b, g, e y d encendidos; c y f apagados).</li>
+        </ol>
+        <div class="ejemplo-lado">
+          <svg class="display7" viewBox="0 0 160 230" role="img" aria-label="Display de siete segmentos mostrando un 2">
+            <rect x="5" y="5" width="150" height="220" rx="10" fill="#1a1a1a" stroke="#333"/>
+            <g class="seg on"><polygon points="45,25 115,25 105,37 55,37"/><text x="80" y="20">a·17</text></g>
+            <g class="seg on"><polygon points="118,28 128,38 124,105 114,112 108,104 111,40"/><text x="140" y="70">b·16</text></g>
+            <g class="seg"><polygon points="114,124 124,131 120,198 110,208 104,196 107,132"/><text x="140" y="170">c·32</text></g>
+            <g class="seg on"><polygon points="40,211 100,211 110,199 52,199"/><text x="75" y="226">d·33</text></g>
+            <g class="seg on"><polygon points="35,124 45,131 42,198 32,208 26,196 29,132"/><text x="14" y="170">e·25</text></g>
+            <g class="seg"><polygon points="40,28 50,38 47,105 37,112 31,104 34,40"/><text x="14" y="70">f·14</text></g>
+            <g class="seg on"><polygon points="52,112 108,112 116,118 106,124 50,124 42,118"/><text x="80" y="140">g·12</text></g>
+          </svg>
+          <table class="app-pines">
+            <thead><tr><th>Segmento</th><th>GPIO</th><th>Para el "2"</th></tr></thead>
+            <tbody>
+              <tr><td>a (arriba)</td><td>17</td><td class="on">encendido</td></tr>
+              <tr><td>b (arriba der.)</td><td>16</td><td class="on">encendido</td></tr>
+              <tr><td>c (abajo der.)</td><td>32</td><td>apagado</td></tr>
+              <tr><td>d (abajo)</td><td>33</td><td class="on">encendido</td></tr>
+              <tr><td>e (abajo izq.)</td><td>25</td><td class="on">encendido</td></tr>
+              <tr><td>f (arriba izq.)</td><td>14</td><td>apagado</td></tr>
+              <tr><td>g (centro)</td><td>12</td><td class="on">encendido</td></tr>
+              <tr><td>COM</td><td>GND</td><td>cátodo común</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. EJEMPLO SEMÁFORO -->
+    <section class="paso" data-titulo="Ejemplo 2: el semáforo que mide su velocidad" id="ejemplo-semaforo">
+      <h2>Ejemplo 2: el semáforo que mide su propia velocidad</h2>
+      <p>Tres LEDs hacen tres ciclos de semáforo y después el rojo se prende y apaga <b>20 000 veces</b> lo más rápido
+        posible, midiendo cuántos microsegundos cuesta cada cambio. Mismo circuito, mismo pin, misma medición: solo cambia el lenguaje.</p>
+      <div class="selector-leng" data-ejemplo="semaforo">
+        <button class="sl activo" data-leng="mp">MicroPython</button>
+        <button class="sl" data-leng="cc">C/C++ (Arduino)</button>
+      </div>
+      <div class="ejemplo">
+        <ol class="pasitos">
+          <li><b>Abre un proyecto nuevo en Wokwi</b>
+            (<span class="solo-mp">"MicroPython on ESP32"</span><span class="solo-cc">"ESP32"</span>).
+            <div><button class="app-btn primario" data-wokwi="semaforo">Abrir Wokwi ↗</button></div></li>
+          <li><b>Arma el circuito</b> con "+": tres <i>LED</i> con el <b>ánodo</b> (pata larga) en <b>GPIO5</b> (rojo),
+            <b>GPIO17</b> (amarillo) y <b>GPIO16</b> (verde), y el cátodo a <b>GND</b>. En Wokwi la resistencia se puede
+            omitir; en la protoboard va siempre (220 Ω).</li>
+          <li><b>Copia el código</b> y pégalo en <span class="solo-mp"><code>main.py</code></span><span class="solo-cc"><code>sketch.ino</code></span>.
+            <div><button class="app-btn" data-copiar="semaforo">Copiar el código</button></div></li>
+          <li><b>Dale al ▶.</b> Verás verde 1,5 s, amarillo 0,5 s y rojo 1,5 s, tres veces (unos 10 s).</li>
+          <li><b>Qué deberías ver al final</b>, en la consola de Wokwi:
+            <pre class="salida solo-mp">MicroPython: 20000 cambios en N us -&gt; X us por cambio
+MicroPython (metodo local): Y us por cambio</pre>
+            <pre class="salida solo-cc">C/C++: 20000 cambios en N us -&gt; X us por cambio</pre>
+            <p class="app-tenue">En Wokwi esos números <b>no sirven para comparar</b>: el simulador no reproduce los tiempos del chip.
+              Los que valen salen en la placa real (y todavía están pendientes de anotar en el README).</p></li>
+        </ol>
+        <div class="ejemplo-lado">
+          <div class="semaforo" aria-label="Animación de la secuencia del semáforo">
+            <div class="luz rojo"><span>GPIO5</span></div>
+            <div class="luz amarillo"><span>GPIO17</span></div>
+            <div class="luz verde"><span>GPIO16</span></div>
+          </div>
+          <p class="app-tenue centrado">Así se ve la secuencia (en tiempo real).</p>
+          <figure class="cap-circuito"><img src="/repo/2-lenguajes-thonny/circuito-comparacion-leds.png" alt="Los tres LEDs del semáforo conectados al ESP32 en Wokwi"><figcaption>El circuito en Wokwi.</figcaption></figure>
+        </div>
+      </div>
+      <details class="app-plegado">
+        <summary>¿Por qué el truco del "método local" sale más rápido?</summary>
+        <p>En MicroPython, cada <code>ROJO.value(1)</code> obliga al intérprete a buscar el nombre <code>ROJO</code> y después
+          <code>value</code> dentro de él, en cada vuelta. Guardando <code>encender = ROJO.on</code> antes del bucle, esa búsqueda se
+          hace una sola vez. Si sale más rápido, la diferencia era tiempo del intérprete buscando nombres, no del pin.
+          En C/C++ no existe ese costo: el compilador ya resolvió todo antes.</p>
+      </details>
+    </section>
+
+    <!-- 5. INSTALAR -->
+    <section class="paso" data-titulo="Instalar MicroPython en tu ESP32" id="instalar">
+      <h2>Instalar MicroPython en tu ESP32</h2>
+      <p>Hace falta una sola vez por placa (o de nuevo si le grabaste un sketch de Arduino). La guía del profesor es
+        para el ESP8266; aquí está pasada al ESP32. Ve marcando cada paso.</p>
+      <ol class="instalacion" id="instalacion">
+        <li><label><input type="checkbox"><span><b>Instala Thonny</b> (versión 3.0 o más nueva) desde
+          <a href="https://thonny.org" target="_blank" rel="noopener">thonny.org</a>.</span></label></li>
+        <li><label><input type="checkbox"><span><b>Conecta la placa por USB</b> y revisa que Windows la vea: <i>Administrador de
+          dispositivos → Puertos (COM y LPT)</i> debe mostrar algo como <i>Silicon Labs CP210x (COM7)</i> o <i>USB-SERIAL CH340</i>.</span></label>
+          <div class="si-falla">¿No aparece? Instala el driver del CP2102 o del CH340, y prueba otro cable: muchos solo cargan y no tienen hilos de datos.</div></li>
+        <li><label><input type="checkbox"><span>En Thonny: <b>Herramientas → Opciones → Intérprete</b>, elige <b>"MicroPython (ESP32)"</b> y el puerto de tu placa.</span></label></li>
+        <li><label><input type="checkbox"><span>Pulsa <b>"Instalar o actualizar MicroPython (esptool)"</b> (abajo a la derecha de esa ventana).
+          Elige el puerto, la familia <b>ESP32</b> y la variante <b>Espressif • ESP32 / WROOM</b>, y pulsa <b>Instalar</b>. Thonny descarga y graba el firmware solo.</span></label>
+          <div class="si-falla">¿Se queda en "Connecting…"? Mantén presionado el botón <b>BOOT</b> de la placa hasta que empiece a escribir.</div></li>
+        <li><label><input type="checkbox"><span>Cierra esa ventana con <b>Aceptar</b>. En la Shell debe aparecer <code>MicroPython v… on … ESP32</code> y el <code>&gt;&gt;&gt;</code>.</span></label></li>
+        <li><label><input type="checkbox"><span><b>Pruébalo</b>: escribe <code>print("hola")</code> en la Shell y Enter. Si responde <code>hola</code>, la placa está lista para los temas siguientes.</span></label></li>
+      </ol>
+      <div class="listo" id="instListo" hidden>Listo: tu ESP32 ya corre MicroPython. Prueba el semáforo con F5 (paso 4) o vuelve al
+        <a href="/app/1-esp32-investigacion/#placa" target="_blank" rel="noopener">script de la ficha técnica del tema 1 ↗</a>.</div>
+      <details class="app-plegado">
+        <summary>Detalles técnicos: hacerlo con esptool por consola (lo que hace la guía original)</summary>
+        <p>Después de <code>pip install esptool</code> y de bajar el <code>.bin</code> de
+          <a href="https://micropython.org/download/ESP32_GENERIC/" target="_blank" rel="noopener">micropython.org/download/ESP32_GENERIC</a>:</p>
+        <pre class="salida">esptool --chip esp32 --port COM7 erase_flash
+esptool --chip esp32 --port COM7 --baud 460800 write_flash -z 0x1000 ESP32_GENERIC-&lt;version&gt;.bin</pre>
+        <p><code>erase_flash</code> borra todo; <code>write_flash</code> graba el intérprete a partir de <code>0x1000</code> (en el ESP8266 es
+          <code>0</code>: esa es la diferencia con la guía del profesor). <code>COM7</code> es el puerto que nos tocó; el tuyo sale en el
+          Administrador de dispositivos.</p>
+      </details>
+      <details class="app-plegado">
+        <summary>Y para la versión C/C++ en la placa real (Arduino IDE)</summary>
+        <ol>
+          <li>En Thonny pulsa <b>Stop</b> (o ciérralo) para soltar el puerto.</li>
+          <li>En el Arduino IDE instala el soporte de placas <b>esp32</b> de Espressif (Herramientas → Placa → Gestor de tarjetas).</li>
+          <li>Elige <b>ESP32 Dev Module</b> y el mismo puerto, y sube el <code>.ino</code>.</li>
+          <li>Abre el Monitor Serie a <b>115200</b> y presiona <b>EN</b> en la placa: sale la línea <code>C/C++: …</code>.</li>
+          <li>Al terminar, <b>reinstala MicroPython</b> (pasos de arriba): grabar el sketch lo borró.</li>
+        </ol>
+      </details>
+    </section>
+
+    <!-- 6. PROBLEMAS -->
+    <section class="paso" data-titulo="Si algo falla" id="problemas">
+      <h2>Si algo falla</h2>
+      <div class="problemas">
+        <details open><summary>La placa no aparece en Thonny ni en el Administrador de dispositivos</summary>
+          <p>Falta el driver del chip USB (CP2102 o CH340) o el cable solo carga. Instala el driver y prueba otro cable.</p></details>
+        <details><summary>Thonny no muestra la opción "MicroPython (ESP32)"</summary>
+          <p>Es una versión vieja de Thonny: el soporte de MicroPython llegó en la 3.0. Actualízalo.</p></details>
+        <details><summary>Conecta al puerto pero da errores raros al correr cualquier cosa</summary>
+          <p>El firmware no corresponde al chip (por ejemplo, uno de ESP32 genérico en un S2 o S3). Graba la variante correcta.
+            La velocidad del puerto no hay que tocarla: MicroPython usa 115200 y Thonny ya la usa sola.</p></details>
+        <details><summary>Después de usar el Arduino IDE, Thonny ya no conecta</summary>
+          <p>Grabar un sketch borra MicroPython. Reinstálalo (paso "Instalar MicroPython").</p></details>
+        <details><summary>El Arduino IDE (u otro programa) no puede abrir el puerto COM</summary>
+          <p>Thonny lo tiene tomado mientras está conectado: pulsa Stop o cierra Thonny.</p></details>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script src="/comun/app.js"></script>
+<script src="lenguajes.js"></script>
+</body>
+</html>

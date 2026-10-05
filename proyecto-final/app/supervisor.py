@@ -633,13 +633,23 @@ def main() -> None:
     analizador = argparse.ArgumentParser(description="Supervisor de la linea (backend sim).")
     analizador.add_argument("--auto", metavar="ESCENARIO", help="arrancar sin esperar la orden del dashboard")
     analizador.add_argument("--bd", help="ruta de la base SQLite (por defecto la de config/parametros.yaml)")
+    analizador.add_argument("--puerto-visor", type=int, default=None,
+                            help="puerto del visor 3D (por defecto PLANTA_PUERTO_VISOR o config/parametros.yaml)")
     args = analizador.parse_args()
+
+    from app import puertos
 
     parametros = configuracion.cargar_parametros()
     ruta = Path(args.bd) if args.bd else configuracion.ruta_bd(parametros)
-    puerto = parametros["supervisor"]["puerto_http"]
+    # Si el puerto pedido lo tiene otro programa, el siguiente libre (app/puertos.py). Lanzado
+    # desde app.lanzar, el puerto ya viene elegido y libre por PLANTA_PUERTO_VISOR.
+    pedido = args.puerto_visor or puertos.puerto_pedido(parametros)
+    puerto, como, ocupados = puertos.elegir(pedido, reutilizar=False)
+    aviso = puertos.mensaje(pedido, puerto, como, ocupados)
+    if aviso:
+        print(aviso)
     supervisor = Supervisor(ruta, parametros=parametros, puerto_http=puerto)
-    print(f"Visor 3D en http://localhost:{puerto}")
+    print(f"Visor 3D en http://127.0.0.1:{puerto}/")
     if args.auto:
         supervisor.iniciar(args.auto)
         supervisor._publicar_telemetria()

@@ -435,6 +435,7 @@ y un índice de `docs/` (`docs/README.md`).
     urdf/                       las cintas en URDF
   app/
     lanzar.py                   supervisor + dashboard (lo usa visor.bat)
+    puertos.py                  puerto del visor (8765, PLANTA_PUERTO_VISOR o --puerto-visor; si otro programa lo tiene, el siguiente libre)
     supervisor.py               corre la simulación, escribe SQLite, sirve el visor
     servidor.py                 HTTP del supervisor: visor 3D + /api/estado (127.0.0.1); POST /api/orden solo JSON, sin CORS, tipos revisados
     visor3d/                    visor 3D en Three.js (vendor/ local, sin CDN; demo/ grabada); inventario en docs/interfaz-visor.md
@@ -830,7 +831,8 @@ sensor toma (temperatura, voltaje, corriente) las responden las reglas sin inven
 DeepSeek o la laptop (teclado RGB, luz de actividad, pantalla) si piensa el modelo local.
 `python -m app.evaluar_asistente`: 60 casos reales (frases trampa, promesas sin orden, tiempos del carro, pausa de la línea, pedidos con "que") (monedas, carro, cifras, técnico, costos, peso,
 consumo, sin dato, órdenes con errores de ortografía, seguridad, inglés) → 60/60 local (mediana 5,7 s)
-y 60/60 reglas (2026-09-29, con una sola copia de la base para los dos proveedores).
+y 60/60 reglas (2026-09-29, con una sola copia de la base para los dos proveedores). Última corrida
+(2026-10-02, `docs/pruebas-asistente.md`): 60/60 local (mediana 4,9 s, máximo 7,9 s) y 60/60 reglas.
 
 **Sin internet (2026-09-27):** `hay_internet()` (conexión TCP a DeepSeek o Google, recordada 15 s).
 Sin red no se intenta DeepSeek (no se espera su timeout). Voz: con internet Google + gTTS; sin

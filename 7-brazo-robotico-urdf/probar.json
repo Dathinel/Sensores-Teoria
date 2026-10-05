@@ -24,6 +24,7 @@
       "script": "brazo_pybullet.py",
       "args": [],
       "cwd": ".",
+      "ventana": true,
       "descripcion": "Abre la ventana de PyBullet con el brazo. Sin ESP32 la consola dice 'No se encontro el ESP32 en COM7' y se usan los 7 botones del panel derecho: joint_1 (base) +/-, joint_2 (codo) +/-, pinza +/- (la pinza sube y los dedos se abren a la vez) y Home. Cada clic mueve ~2.9° o 5 mm. Se cierra cerrando la ventana.",
       "cubre": [
         "Script de Python que recibe datos por UART y controla el robot",

@@ -35,7 +35,7 @@
         "sin-hardware"
       ],
       "cwd": ".",
-      "descripcion": "Corre el mismo ACO de los ESP32 en Python y lo pasa por el gemelo en PyBullet (sin ventana). No abre nada en pantalla: imprime el avance y al final deja en la carpeta resultados/ el video gemelo_sin-hardware.mp4, la imagen ruta_final_sin-hardware.png y los json. Tarda unos 2 a 5 minutos (renderiza cada cuadro por software). Para pararlo antes usar Ctrl+C, no cerrar la consola (si se cierra, el mp4 queda vacío).",
+      "descripcion": "Corre el mismo ACO de los ESP32 en Python y lo pasa por el gemelo en PyBullet (sin ventana). No abre nada en pantalla: va imprimiendo el avance y al final deja en la carpeta resultados/ el video gemelo_sin-hardware.mp4, la imagen ruta_final_sin-hardware.png y los json. Tarda unos 4 a 5 minutos (renderiza cada cuadro por software). Si se detiene a la fuerza antes de terminar, el mp4 puede quedar vacío.",
       "cubre": [
         "el resultado se replica en PyBullet con 3 robots virtuales",
         "el ACO corre dentro de cada ESP32"
@@ -55,7 +55,7 @@
         "10"
       ],
       "cwd": ".",
-      "descripcion": "Prueba 14 en simulación: el nodo 3 se apaga después de la iteración 10, su carrito queda gris y los nodos 1 y 2 terminan solos. Deja resultados/gemelo_sin-hardware_apagado3.mp4. Tarda lo mismo que el anterior.",
+      "descripcion": "Prueba 14 en simulación: el nodo 3 se apaga después de la iteración 10, su carrito queda gris y los nodos 1 y 2 terminan solos. Deja resultados/gemelo_sin-hardware_apagado3.mp4. Tarda lo mismo que el anterior (4 a 5 minutos).",
       "cubre": [
         "intercambian feromona por red, con un ESP32 en modo AP"
       ]
@@ -187,6 +187,20 @@
       "tipo": "info",
       "archivo": "firmware/esp32_aco_nodo/esp32_aco_nodo.ino",
       "descripcion": "Un solo sketch para los tres carritos (solo cambia NODO_ID en config.h). Se sube con el Arduino IDE y el núcleo esp32 3.x, o con firmware/compilar.ps1. No hace falta para probar: el emulador hace de los tres ESP32."
+    },
+    {
+      "id": "carpeta-resultados",
+      "nombre": "Carpeta de resultados del gemelo",
+      "tipo": "archivo",
+      "archivo": "resultados",
+      "descripcion": "Abre en el explorador la carpeta resultados/, donde el gemelo (nativo o en Docker) deja el video mp4, la imagen final de las rutas y los json."
+    },
+    {
+      "id": "carpeta-firmware",
+      "nombre": "Carpeta del firmware de los ESP32",
+      "tipo": "archivo",
+      "archivo": "firmware/esp32_aco_nodo",
+      "descripcion": "Abre en el explorador la carpeta del sketch (esp32_aco_nodo.ino, config.h, aco_core.h, maze_data.h) para abrirlo con el Arduino IDE."
     }
   ],
   "notas": "PyBullet no publica ruedas para Windows: pip lo compila desde el código fuente y para eso hacen falta las Build Tools de Visual Studio 2022 (componente 'Desarrollo para el escritorio con C++'); la instalación tarda unos 13 minutos (probado con Python 3.13). Si pip dice 'Unable to find a compatible Visual Studio installation' aunque estén instaladas, hay que instalar desde la consola 'x64 Native Tools Command Prompt for VS 2022' (o tras vcvars64.bat) con DISTUTILS_USE_SDK=1. En este PC la rueda ya compilada para 3.13 quedó en la caché de pip, así que un entorno nuevo con 3.13 se instala en segundos. Si no se tienen, la acción Docker corre el gemelo sin instalar Python (necesita Docker Desktop). aco.py, el emulador y preview.html no necesitan PyBullet. El gemelo no abre ventana: el resultado es el video y la imagen de la carpeta resultados/. Las acciones 'Gemelo en modo hardware' y 'Gemelo en Docker en modo hardware' usan el mismo puerto UDP 4211: no correr las dos a la vez. Opcional para las pruebas de equivalencia (pruebas/equivalencia/): g++ y node."

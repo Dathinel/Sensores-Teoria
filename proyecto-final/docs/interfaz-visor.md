@@ -180,6 +180,6 @@ de este sensor" (orden rechazada: la línea estaba terminada, no se cambió la c
 sensor de la escena, cables con su leyenda y el panel cerrado, `?componente=`, `?sensor=` +
 `?cables` a 800 px, `?paso=12&panel=0`, demo (`?demo`, controles desactivados), demo sin red (chip
 SIN INTERNET), sin conexión con el supervisor (4 fallos: chip rojo y aviso grande), portable como
-`file://` con la simulación corriendo (pasa solo a `http://127.0.0.1:8765/` en ~5 s) y una copia
+`file://` con la simulación corriendo (pasa solo a `http://127.0.0.1:8765/` en ~5 s; si otro programa tiene el 8765, app.lanzar usa el siguiente libre y el portable lo busca en 8765-8785) y una copia
 apuntando a un puerto muerto (se queda en la demo, "esperando la simulación de este PC", botones
 desactivados).

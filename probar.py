@@ -52,7 +52,18 @@ CONTRATO de probar.json (el del plan, con las precisiones de este lanzador):
   } ]
 }
 
+CAMPOS AÑADIDOS para las apps por práctica (ver apps-comun/LEEME.md):
+  nivel superior  "app": ruta del index.html de la app (por defecto "app/index.html").
+  cada acción     "entrada": true (lee del teclado: la app muestra una caja de texto),
+                  "ventana": true (abre su propia ventana), "modo": "app" | "consola".
+  Desde una app (`/app/<carpeta>/`), las acciones python corren SIN consola: su salida va a
+  un buffer que la página lee por partes (/api/salida?tid=N&desde=M) y, si "entrada", su
+  stdin queda abierto (/api/entrada). "modo": "consola" conserva la consola de siempre.
+  Desde el hub las acciones python siguen abriéndose en su consola.
+
 Opciones de línea de comandos (sobre todo para desarrollar/probar el lanzador):
+  --practica DIR    abre la app de esa práctica (o su tarjeta del hub si aún no tiene app);
+                    si ya hay un lanzador abierto con la misma raíz, lo reutiliza
   --puerto N        puerto preferido (8099 por defecto; si está ocupado busca otro libre)
   --raiz DIR        carpeta donde buscar */probar.json (por defecto la del repo)
   --entornos DIR    crear/usar los entornos en DIR/<carpeta>/entorno en vez de en cada práctica
@@ -61,6 +72,8 @@ Opciones de línea de comandos (sobre todo para desarrollar/probar el lanzador):
 """
 
 import argparse
+import codecs
+import itertools
 import json
 import mimetypes
 import os
@@ -144,6 +157,7 @@ def leer_manifiesto(carpeta):
         "pide": [], "notas": [], "python": None, "acciones": [], "errores": [],
         "readme": (carpeta / "README.md").is_file(),
         "github": GITHUB + urllib.parse.quote(carpeta.name) + "/README.md",
+        "app": None,
     }
     try:
         datos = json.loads(archivo.read_text(encoding="utf-8-sig"))
@@ -162,6 +176,12 @@ def leer_manifiesto(carpeta):
     p["resumen"] = str(datos.get("resumen") or "")
     p["pide"] = como_lista(datos.get("pide"))
     p["notas"] = como_lista(datos.get("notas"))
+    # App de la práctica (apps-comun/LEEME.md): "app" o, por defecto, app/index.html.
+    rel_app = str(datos.get("app") or "app/index.html").replace("\\", "/")
+    f_app = ruta_dentro(carpeta, rel_app)
+    p["app_declarada"] = rel_app
+    if f_app is not None and f_app.is_file() and f_app.suffix.lower() in (".html", ".htm"):
+        p["app"] = "/app/" + urllib.parse.quote(carpeta.name) + "/" + (urllib.parse.quote(f_app.name) if f_app.name.lower() != "index.html" else "")
     if not datos.get("titulo"):
         p["errores"].append("Falta \"titulo\".")
 
@@ -196,8 +216,19 @@ def validar_accion(carpeta, a, i, vistos):
         "descripcion": str(a.get("descripcion") or ""),
         "cubre": como_lista(a.get("cubre")),
         "error": None,
+        # Añadidos para las apps: lee del teclado, abre su propia ventana, dónde se ve la salida.
+        "entrada": bool(a.get("entrada")),
+        "ventana": bool(a.get("ventana")),
+        "modo": str(a.get("modo") or "app"),
+        # Texto propio para el recuadro de error de la app (qué hacer si falla ESTA acción).
+        "si_falla": str(a.get("si_falla") or ""),
+        # Acción interna de una app (no sale en el hub) y si se para sola al cerrar la app.
+        "oculta": bool(a.get("oculta") or a.get("solo_app")),
+        "vida": "app" if str(a.get("vida") or "") == "app" else "",
     }
     errores = []
+    if acc["modo"] not in ("app", "consola"):
+        errores.append(f"modo \"{acc['modo']}\" desconocido (válidos: app, consola)")
     if acc["id"] in vistos:
         errores.append(f"id repetido \"{acc['id']}\"")
         acc["id"] = f"{acc['id']}-{i}"
@@ -316,28 +347,79 @@ def buscar_accion(practica, accion_id):
 # Trabajos: cada botón pulsado es un "trabajo" con estado y log, que la página consulta
 # --------------------------------------------------------------------------------------
 
+ANSI = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")   # colores/cursor de docker y otros: fuera del log
+CONTADOR_TID = itertools.count(1)
+
+
 class Trabajo:
-    def __init__(self, carpeta, accion, nombre):
+    """Un botón pulsado: estado + salida numerada (la página la pide por partes con desde=N).
+
+    Cada línea lleva un tipo: "sis" (mensajes del lanzador), "pip" (lo que imprime pip o
+    venv mientras se prepara el entorno), "prog" (lo que imprime el programa) e "in" (lo
+    que el usuario le escribió desde la app)."""
+
+    def __init__(self, carpeta, accion, nombre, modo="consola", entrada=False):
+        self.tid = next(CONTADOR_TID)
         self.carpeta, self.accion, self.nombre = carpeta, accion, nombre
         self.estado = "preparando"     # preparando | instalando | lanzada | terminada | error | detenida
+        self.fase = ""                 # revisando | creando | instalando | compilando | docker | corriendo
         self.mensaje = ""
         self.pid = None
         self.codigo = None
         self.inicio = time.time()
+        self.lanzado = None            # cuándo arrancó el programa (tras preparar el entorno)
         self.fin = None
-        self.log = deque(maxlen=400)   # solo las últimas líneas: pip puede escupir miles
+        self.lineas = deque(maxlen=5000)   # (n, tipo, texto): pip puede escupir miles
+        self.total = 0
+        self.parcial = ""              # texto sin salto de línea todavía (p. ej. la pregunta de un input())
         self.proceso = None
+        self.stdin = None
+        self.modo = modo               # "app" (salida en la página) o "consola" (ventana aparte)
+        self.entrada = entrada
+        self.abrir = ""                # docker en modo app: dirección a abrir al terminar
+        self.cancelado = False
+        self.fallo_en = None           # "preparar" | "programa"
+        self.vida_app = False          # "vida": "app": se detiene si la app se cierra
         self.seguimiento = True        # False si no podemos saber cuándo termina (Terminal de macOS)
         self.cerrojo = threading.Lock()
 
-    def escribir(self, linea):
+    def escribir(self, linea, tipo="sis"):
         with self.cerrojo:
-            self.log.append(linea.rstrip("\r\n")[:500])
+            self._agregar(tipo, linea.rstrip("\r\n"))
 
-    def poner(self, estado, mensaje=None):
+    def _agregar(self, tipo, texto):
+        self.total += 1
+        self.lineas.append((self.total, tipo, ANSI.sub("", texto)[:2000]))
+
+    def alimentar(self, texto, tipo="prog"):
+        """Trozos crudos de la salida de un programa (pueden cortar una línea por la mitad)."""
+        with self.cerrojo:
+            s = (self.parcial + ANSI.sub("", texto)).replace("\r\n", "\n")
+            *completas, resto = s.split("\n")
+            for l in completas:
+                # \r sin \n = barra de progreso que se reescribe: queda lo último.
+                partes = [x for x in l.split("\r") if x.strip()]
+                self._agregar(tipo, partes[-1] if partes else "")
+            if len(resto) > 4000:
+                self._agregar(tipo, resto)
+                resto = ""
+            self.parcial = resto
+
+    def cerrar_parcial(self, tipo="prog"):
+        with self.cerrojo:
+            if self.parcial.strip():
+                partes = [x for x in self.parcial.split("\r") if x.strip()]
+                self._agregar(tipo, partes[-1])
+            self.parcial = ""
+
+    def poner(self, estado, mensaje=None, fase=None):
+        if self.cancelado and estado != "detenida":
+            return   # tras Detener, lo que siga haciendo el hilo de la acción ya no cambia el estado
         self.estado = estado
         if mensaje is not None:
             self.mensaje = mensaje
+        if fase is not None:
+            self.fase = fase
         if estado in ("terminada", "error", "detenida"):
             self.fin = time.time()
 
@@ -345,18 +427,44 @@ class Trabajo:
     def activo(self):
         return self.estado in ("preparando", "instalando", "lanzada")
 
+    def resumen(self):
+        return {"tid": self.tid, "carpeta": self.carpeta, "accion": self.accion, "nombre": self.nombre,
+                "estado": self.estado, "fase": self.fase, "mensaje": self.mensaje, "pid": self.pid,
+                "codigo": self.codigo, "inicio": self.inicio, "lanzado": self.lanzado, "fin": self.fin,
+                "modo": self.modo, "entrada": self.entrada and self.stdin is not None and self.estado == "lanzada",
+                "abrir": self.abrir, "fallo_en": self.fallo_en, "parcial": self.parcial.split("\r")[-1][-500:]}
+
     def a_dict(self):
+        """Para el hub: el resumen + las últimas 400 líneas como texto."""
         with self.cerrojo:
-            log = list(self.log)
-        return {"carpeta": self.carpeta, "accion": self.accion, "nombre": self.nombre,
-                "estado": self.estado, "mensaje": self.mensaje, "pid": self.pid,
-                "codigo": self.codigo, "inicio": self.inicio, "fin": self.fin, "log": log}
+            log = [x for (_, _, x) in list(self.lineas)[-400:]]
+        d = self.resumen()
+        d["log"] = log
+        return d
+
+    def salida(self, desde):
+        """Las líneas con número > desde (y "siguiente" para la próxima petición)."""
+        with self.cerrojo:
+            lineas = [{"n": n, "t": t, "x": x} for (n, t, x) in self.lineas if n > desde]
+            total = self.total
+        d = self.resumen()
+        d.update(lineas=lineas, siguiente=total)
+        return d
 
 
 TRABAJOS = {}                 # (carpeta, accion) -> último Trabajo
+POR_TID = {}                  # tid -> Trabajo (los últimos 300)
 TRABAJOS_LOCK = threading.Lock()
 ENTORNO_LOCKS = {}            # un cerrojo por carpeta: dos botones no crean el mismo entorno a la vez
 ESTADO_ENTORNOS = {}          # carpeta -> {"estado": ..., "detalle": ...} para el aviso de la tarjeta
+
+
+def registrar(t):
+    with TRABAJOS_LOCK:
+        TRABAJOS[(t.carpeta, t.accion)] = t
+        POR_TID[t.tid] = t
+        while len(POR_TID) > 300:
+            POR_TID.pop(min(POR_TID))
 
 
 def cerrojo_entorno(carpeta):
@@ -373,16 +481,21 @@ def entorno_hijo():
     return env
 
 
-def correr_con_log(trabajo, cmd, cwd=None):
+def correr_con_log(trabajo, cmd, cwd=None, tipo="pip"):
     """Corre un comando sin ventana y va pasando su salida, línea a línea, al log del trabajo."""
-    trabajo.escribir("$ " + " ".join(str(c) for c in cmd))
+    if trabajo.cancelado:
+        raise ErrorClaro("Detenido.")   # pulsaron Detener mientras se preparaba: no seguir
+    trabajo.escribir("$ " + " ".join(str(c) for c in cmd), tipo)
+    env = entorno_hijo()
+    env.setdefault("COMPOSE_ANSI", "never")       # docker compose sin colores ni cursores
+    env.setdefault("BUILDKIT_PROGRESS", "plain")
     p = subprocess.Popen([str(c) for c in cmd], cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                          stdin=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace",
-                         creationflags=SIN_VENTANA, env=entorno_hijo())
+                         creationflags=SIN_VENTANA, env=env)
     trabajo.proceso = p
     for linea in p.stdout:
         if linea.strip():
-            trabajo.escribir(linea)
+            trabajo.escribir(linea, tipo)
     return p.wait()
 
 
@@ -521,7 +634,8 @@ def instalar_paquetes(trabajo, python, paquetes):
                # --progress-bar off: la barra de pip usa \r y en el log saldría como basura.
                "--progress-bar", "off", *paquetes]
     if not necesita_compilar(paquetes):
-        trabajo.poner("instalando", f"Instalando {len(paquetes)} paquete(s) con pip (puede tardar unos minutos la primera vez)…")
+        trabajo.poner("instalando", f"Instalando {len(paquetes)} librería(s) de Python (puede tardar unos minutos la primera vez)…",
+                      fase="instalando")
         codigo = correr_con_log(trabajo, comando)
     else:
         # Se comprueba ANTES de llamar a pip: sin compilador, pip fallaría tras varios minutos
@@ -530,7 +644,7 @@ def instalar_paquetes(trabajo, python, paquetes):
         if not vcvars:
             raise ErrorClaro(MENSAJE_BUILD_TOOLS)
         trabajo.poner("instalando", "Instalando paquetes y COMPILANDO PyBullet: la primera vez tarda unos 10-15 minutos "
-                                    "(las siguientes es inmediato, pip guarda lo compilado en su caché)…")
+                                    "(las siguientes es inmediato, pip guarda lo compilado en su caché)…", fase="compilando")
         # pip tiene que correr DENTRO del entorno del compilador (vcvars64.bat): solo poner el
         # compilador en el PATH no basta. DISTUTILS_USE_SDK=1 le dice a setuptools que use ese
         # entorno ya preparado en vez de buscar Visual Studio por su cuenta (lo que fallaba).
@@ -661,7 +775,7 @@ def preparar_entorno(trabajo, practica, accion=None):
             ESTADO_ENTORNOS[carpeta] = {"estado": "sin-python", "detalle": ", ".join(versiones)}
             raise ErrorClaro(mensaje_instalar_python(versiones))
 
-        trabajo.poner("instalando", f"Creando el entorno con Python {version} (solo la primera vez)…")
+        trabajo.poner("instalando", f"Creando el entorno de Python {version} de esta práctica (solo la primera vez)…", fase="creando")
         env.parent.mkdir(parents=True, exist_ok=True)
         if correr_con_log(trabajo, [base, "-m", "venv", str(env)]) != 0 or not py.exists():
             raise ErrorClaro(f"No se pudo crear el entorno en {env} con Python {version}. "
@@ -681,37 +795,46 @@ def preparar_entorno(trabajo, practica, accion=None):
         return str(py)
 
 
-def revisar_entornos_en_segundo_plano():
-    """Al arrancar, mira cada entorno para que la tarjeta diga "listo" o "se creará la primera
-    vez". En un hilo aparte: con 12 prácticas tarda unos segundos y la página no debe esperar."""
-    for d in carpetas_con_manifiesto():
-        try:
-            p = leer_manifiesto(d)
-            conf = p.get("python")
-            if not conf or not conf["paquetes"]:
-                continue
-            env = ruta_entorno(p["carpeta"])
-            py = python_del_entorno(env)
-            subs = [Path(a["cwd"]) / "entorno" for a in p["acciones"]
-                    if a["tipo"] == "python" and a.get("cwd") and Path(a["cwd"]).resolve() != d.resolve()]
-            if not env.exists() and not Config.entornos and any(python_del_entorno(x).exists() for x in subs):
-                ESTADO_ENTORNOS[p["carpeta"]] = {"estado": "subcarpetas", "detalle": ""}
-                continue
-            if not env.exists():
-                v = next((v for v in conf["versiones"] if buscar_python(v)), None)
-                ESTADO_ENTORNOS[p["carpeta"]] = (
-                    {"estado": "nuevo", "detalle": f"Python {v}"} if v or not conf["versiones"]
-                    else {"estado": "sin-python", "detalle": ", ".join(conf["versiones"])})
-                continue
-            est = revisar_entorno(py, conf["paquetes"]) if py.exists() else None
-            if est is None:
-                ESTADO_ENTORNOS[p["carpeta"]] = {"estado": "roto", "detalle": str(env)}
-            elif est["faltan"]:
-                ESTADO_ENTORNOS[p["carpeta"]] = {"estado": "faltan", "detalle": ", ".join(est["faltan"])}
-            else:
-                ESTADO_ENTORNOS[p["carpeta"]] = {"estado": "listo", "detalle": f"Python {est['version']}"}
-        except Exception as e:  # un fallo aquí solo deja la tarjeta sin aviso
-            ESTADO_ENTORNOS[d.name] = {"estado": "desconocido", "detalle": str(e)}
+def revisar_entorno_de(d):
+    """Mira el entorno de UNA práctica y deja en ESTADO_ENTORNOS si está "listo", si "se creará
+    la primera vez", etc. (para el aviso de la tarjeta y del panel de la app)."""
+    try:
+        p = leer_manifiesto(d)
+        conf = p.get("python")
+        if not conf or not conf["paquetes"]:
+            return
+        env = ruta_entorno(p["carpeta"])
+        py = python_del_entorno(env)
+        subs = [Path(a["cwd"]) / "entorno" for a in p["acciones"]
+                if a["tipo"] == "python" and a.get("cwd") and Path(a["cwd"]).resolve() != d.resolve()]
+        if not env.exists() and not Config.entornos and any(python_del_entorno(x).exists() for x in subs):
+            ESTADO_ENTORNOS[p["carpeta"]] = {"estado": "subcarpetas", "detalle": ""}
+            return
+        if not env.exists():
+            v = next((v for v in conf["versiones"] if buscar_python(v)), None)
+            ESTADO_ENTORNOS[p["carpeta"]] = (
+                {"estado": "nuevo", "detalle": f"Python {v}"} if v or not conf["versiones"]
+                else {"estado": "sin-python", "detalle": ", ".join(conf["versiones"])})
+            return
+        est = revisar_entorno(py, conf["paquetes"]) if py.exists() else None
+        if est is None:
+            ESTADO_ENTORNOS[p["carpeta"]] = {"estado": "roto", "detalle": str(env)}
+        elif est["faltan"]:
+            ESTADO_ENTORNOS[p["carpeta"]] = {"estado": "faltan", "detalle": ", ".join(est["faltan"])}
+        else:
+            ESTADO_ENTORNOS[p["carpeta"]] = {"estado": "listo", "detalle": f"Python {est['version']}"}
+    except Exception as e:  # un fallo aquí solo deja la tarjeta sin aviso
+        ESTADO_ENTORNOS[d.name] = {"estado": "desconocido", "detalle": str(e)}
+
+
+def revisar_entornos_en_segundo_plano(primero=None):
+    """Al arrancar, mira cada entorno. En un hilo aparte: con 12 prácticas tarda unos segundos
+    y la página no debe esperar. `primero`: la práctica que se abre con --practica va antes."""
+    carpetas = carpetas_con_manifiesto()
+    carpetas.sort(key=lambda d: d.name != primero)
+    for d in carpetas:
+        if d.name not in ESTADO_ENTORNOS:
+            revisar_entorno_de(d)
 
 
 # --------------------------------------------------------------------------------------
@@ -760,18 +883,99 @@ def lanzar_en_consola(trabajo, cmd, cwd, titulo, pausa="error"):
     return p
 
 
-def vigilar(trabajo, p, al_terminar=None):
-    """Hilo que espera a que la consola se cierre y deja el trabajo como terminado."""
+def vigilar(trabajo, p, al_terminar=None, lector=None):
+    """Hilo que espera a que el programa (o su consola) termine y deja el trabajo terminado."""
     codigo = p.wait()
+    if lector:
+        lector.join(timeout=5)     # que llegue a la página lo último que imprimió
+        trabajo.cerrar_parcial()
     trabajo.codigo = codigo
-    if trabajo.estado == "detenida":
+    if trabajo.stdin:
+        try:
+            trabajo.stdin.close()
+        except OSError:
+            pass
+        trabajo.stdin = None
+    if trabajo.estado == "detenida" or trabajo.cancelado:
         return
     if codigo == 0:
         trabajo.poner("terminada", "Terminó bien.")
         if al_terminar:
             al_terminar()
     else:
-        trabajo.poner("error", f"Terminó con error (código {codigo}). La ventana muestra el detalle.")
+        trabajo.fallo_en = "programa"
+        if trabajo.modo == "app":
+            trabajo.poner("error", f"El programa terminó con error (código {codigo}).")
+        else:
+            trabajo.poner("error", f"Terminó con error (código {codigo}). La ventana muestra el detalle.")
+
+
+# --------------------------------------------------------------------------------------
+# Modo app: sin consola, la salida va al buffer del trabajo y la página la lee por partes
+# --------------------------------------------------------------------------------------
+
+def lanzar_en_app(trabajo, cmd, cwd, entrada=False, env_extra=None):
+    """Corre `cmd` SIN ventana de consola (las ventanas propias del programa, PyBullet u
+    OpenCV, se abren igual). stdout y stderr van juntos, en el orden en que salen, al buffer
+    del trabajo; stdin queda abierto si la acción declara "entrada"."""
+    env = entorno_hijo()
+    env.update(env_extra or {})
+    opciones = {}
+    if ES_WINDOWS:
+        opciones["creationflags"] = SIN_VENTANA
+    else:
+        opciones["start_new_session"] = True   # grupo propio: Detener mata también a los hijos
+    p = subprocess.Popen([str(c) for c in cmd], cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                         stdin=subprocess.PIPE if entrada else subprocess.DEVNULL, env=env, **opciones)
+    trabajo.proceso = p
+    trabajo.pid = p.pid
+    trabajo.stdin = p.stdin if entrada else None
+    trabajo.lanzado = time.time()
+    if trabajo.cancelado:          # Detener llegó mientras arrancaba
+        matar_arbol(p.pid)
+
+    def leer():
+        # Se lee por trozos (read1), no por líneas: así una pregunta sin salto de línea, como
+        # la de input("Escribe: "), aparece en la página enseguida.
+        dec = codecs.getincrementaldecoder("utf-8")("replace")
+        while True:
+            try:
+                datos = p.stdout.read1(65536)
+            except (OSError, ValueError):
+                break
+            if not datos:
+                break
+            trabajo.alimentar(dec.decode(datos))
+        trabajo.alimentar(dec.decode(b"", final=True))
+
+    lector = threading.Thread(target=leer, daemon=True)
+    lector.start()
+    trabajo.poner("lanzada", "En marcha.", fase="corriendo")
+    return p, lector
+
+
+def escribir_entrada(carpeta, accion_id, texto):
+    """Lo que el usuario escribe en la caja de la app va al stdin del programa (+ Enter)."""
+    with TRABAJOS_LOCK:
+        t = TRABAJOS.get((carpeta, accion_id))
+    if not t or t.estado != "lanzada" or t.modo != "app":
+        raise ErrorClaro("El programa no está en marcha: pulsa Iniciar primero.")
+    if not t.stdin:
+        raise ErrorClaro("Este programa no lee del teclado (su acción no tiene \"entrada\": true).")
+    texto = str(texto).replace("\r", "").replace("\n", " ")[:4000]
+    try:
+        t.stdin.write((texto + "\n").encode("utf-8"))
+        t.stdin.flush()
+    except (OSError, ValueError):
+        raise ErrorClaro("El programa ya no acepta texto (¿terminó?).")
+    # La pregunta que estaba a medias (input("Escribe: ")) queda como línea propia y debajo lo
+    # que contestó el usuario, como se vería en una consola.
+    with t.cerrojo:
+        pregunta, t.parcial = t.parcial.split("\r")[-1], ""
+        if pregunta.strip():
+            t._agregar("pregunta", pregunta)   # la página la pinta en la misma línea que la respuesta
+        t._agregar("in", texto)
+    return t
 
 
 def abrir_con_sistema(ruta):
@@ -803,23 +1007,35 @@ def comprobar_docker():
 # Ejecutar una acción (en un hilo: la petición HTTP vuelve enseguida y la página sondea)
 # --------------------------------------------------------------------------------------
 
-def iniciar_accion(carpeta, accion_id, detener=False):
+def iniciar_accion(carpeta, accion_id, detener=False, desde_app=False):
+    """desde_app: la pide una app (/app/...). Entonces las acciones python y docker corren
+    sin consola con la salida en la página, salvo que la acción diga "modo": "consola"."""
     practica = buscar_practica(carpeta)
     accion = buscar_accion(practica, accion_id)
     clave = (carpeta, accion_id)
+    en_app = desde_app and accion.get("modo", "app") != "consola" and accion["tipo"] in ("python", "docker")
     with TRABAJOS_LOCK:
         previo = TRABAJOS.get(clave)
         if not detener and previo and previo.activo and previo.seguimiento:
             raise ErrorClaro(f"\"{accion['nombre']}\" ya está en marcha. Ciérrala (o pulsa Detener) antes de lanzarla otra vez.")
-        if detener and accion["tipo"] == "python":
-            if not previo or not previo.activo or not previo.pid:
-                raise ErrorClaro("No hay nada en marcha que detener.")
-            matar_arbol(previo.pid)
-            previo.poner("detenida", "Detenida desde el lanzador.")
-            return previo
+        if detener and previo and previo.activo:
+            # Detener lo que está corriendo: el programa con todos sus hijos, o el pip/venv que
+            # está preparando el entorno. Se marca cancelado ANTES: si el programa todavía no
+            # arrancó (revisando el entorno), ya no se lanza, y si arranca justo ahora,
+            # lanzar_en_app lo mata en cuanto existe (un solo clic en Detener basta).
+            previo.cancelado = True
+            if previo.pid or previo.proceso:
+                matar_arbol(previo.pid or previo.proceso.pid)
+            previo.poner("detenida", "Detenido." if previo.modo == "app" else "Detenida desde el lanzador.")
+            if accion["tipo"] != "docker":
+                return previo
+        elif detener and accion["tipo"] == "python":
+            raise ErrorClaro("No hay nada en marcha que detener.")
         nombre = accion["nombre"] + (" (detener)" if detener else "")
-        t = Trabajo(carpeta, accion_id + (":detener" if detener else ""), nombre)
-        TRABAJOS[(carpeta, t.accion)] = t
+        t = Trabajo(carpeta, accion_id + (":detener" if detener else ""), nombre,
+                    modo="app" if en_app else "consola", entrada=bool(accion.get("entrada")) and en_app)
+        t.vida_app = en_app and accion.get("vida") == "app"
+    registrar(t)
     threading.Thread(target=ejecutar, args=(t, practica, accion, detener), daemon=True).start()
     return t
 
@@ -829,29 +1045,41 @@ def ejecutar(t, practica, accion, detener):
         tipo = accion["tipo"]
         titulo = f"{practica['id']} · {accion['nombre']}"
         if tipo == "python":
+            t.poner("preparando", "Revisando el entorno de Python…", fase="revisando")
             python = preparar_entorno(t, practica, accion)
+            if t.cancelado:
+                return
             if accion.get("modulo"):
                 cmd = [python, "-m", accion["modulo"], *accion["args"]]
             else:
                 cmd = [python, accion["script"], *accion["args"]]
             t.escribir("Lanzo: " + accion.get("muestra", ""))
+            if t.modo == "app":
+                p, lector = lanzar_en_app(t, cmd, accion["cwd"], entrada=t.entrada)
+                vigilar(t, p, lector=lector)
+                return
             # La ventana queda abierta al terminar ("Pulsa Enter"): varios scripts solo imprimen
             # un resultado y terminan (el gemelo del tema 10), y si se cerrara sola no se vería.
             p = lanzar_en_consola(t, cmd, accion["cwd"], titulo, pausa="siempre")
+            if p and t.cancelado:
+                matar_arbol(p.pid)
             if p:
                 vigilar(t, p)
         elif tipo == "archivo":
             abrir_con_sistema(accion["ruta"])
             t.poner("terminada", "Abierto con el programa del sistema.")
         elif tipo == "docker":
+            t.poner("preparando", "Comprobando que Docker Desktop esté abierto (puede tardar unos segundos)…", fase="docker")
             ok, msg = comprobar_docker()
             t.escribir(msg)
             if not ok:
                 raise ErrorClaro(msg)
             carpeta = str(Config.raiz / practica["carpeta"])
+            tipo_log = "prog" if t.modo == "app" else "pip"
             if detener:
-                t.poner("lanzada", "Deteniendo los contenedores…")
-                codigo = correr_con_log(t, ["docker", "compose", "-f", accion["compose"], *accion["detener"]], cwd=carpeta)
+                t.poner("lanzada", "Deteniendo los contenedores…", fase="corriendo")
+                codigo = correr_con_log(t, ["docker", "compose", "-f", accion["compose"], *accion["detener"]],
+                                        cwd=carpeta, tipo=tipo_log)
                 t.codigo = codigo
                 if codigo != 0:
                     raise ErrorClaro("docker compose no pudo detener el laboratorio (mira el registro).")
@@ -859,12 +1087,25 @@ def ejecutar(t, practica, accion, detener):
                 return
             cmd = ["docker", "compose", "-f", accion["compose"], *accion["args"]]
             t.escribir("Lanzo: " + " ".join(cmd))
+            abrir = accion.get("abrir")
+            if t.modo == "app":
+                # Sin consola: lo que imprime compose (construir la imagen, la simulación) se ve
+                # en la página. Al terminar bien, la página muestra el botón para abrir "abrir".
+                p, lector = lanzar_en_app(t, cmd, carpeta,
+                                          env_extra={"COMPOSE_ANSI": "never", "BUILDKIT_PROGRESS": "plain"})
+                t.poner("lanzada", "Trabajando con Docker…")
+
+                def al_terminar_app():
+                    if abrir:
+                        t.abrir = abrir
+                        t.poner("terminada", "Laboratorio levantado.")
+                vigilar(t, p, al_terminar_app, lector=lector)
+                return
             # Con `up -d` compose vuelve enseguida y la consola puede cerrarse sola (luego se abre
             # "abrir"); sin -d (p. ej. `run --rm simulacion`) lo que importa es lo que imprime,
             # así que la ventana queda abierta al terminar para poder leerlo.
             separado = any(x in ("-d", "--detach") for x in accion["args"])
             p = lanzar_en_consola(t, cmd, carpeta, titulo, pausa="error" if separado else "siempre")
-            abrir = accion.get("abrir")
 
             def al_terminar():
                 if abrir:
@@ -876,22 +1117,31 @@ def ejecutar(t, practica, accion, detener):
             # html, url e info los abre la propia página (window.open); aquí no hay nada que hacer.
             t.poner("terminada", "Abierto en el navegador.")
     except ErrorClaro as e:
+        if t.cancelado:
+            return
         t.escribir(str(e))
+        t.fallo_en = "preparar" if not t.lanzado else "programa"
         t.poner("error", str(e))
     except Exception as e:  # cualquier otra cosa: mensaje corto, no una traza
+        if t.cancelado:
+            return
         t.escribir(f"{type(e).__name__}: {e}")
+        t.fallo_en = "preparar" if not t.lanzado else "programa"
         t.poner("error", f"Algo falló al lanzar la acción: {e}")
 
 
 def matar_arbol(pid):
-    """Cierra la consola y todo lo que corre dentro (el script y sus hijos)."""
+    """Cierra el programa (o su consola) y todo lo que corre dentro (sus procesos hijos)."""
     if ES_WINDOWS:
         correr_corto(["taskkill", "/PID", str(pid), "/T", "/F"], timeout=15)
     else:
         try:
-            os.kill(pid, 15)
-        except OSError:
-            pass
+            os.killpg(os.getpgid(pid), 15)   # modo app: el programa tiene su propio grupo
+        except (OSError, AttributeError):
+            try:
+                os.kill(pid, 15)
+            except OSError:
+                pass
 
 
 # --------------------------------------------------------------------------------------
@@ -963,17 +1213,59 @@ MIME = {".html": "text/html; charset=utf-8", ".htm": "text/html; charset=utf-8",
 
 def archivo_prohibido(rel):
     """Lo que el servidor de archivos nunca entrega aunque se lo pidan: secretos (.env), los
-    entornos, git, y los PDF/Word privados que el .gitignore ya excluye del repo."""
+    entornos, git, las bases de datos locales y los PDF/Word privados que el .gitignore ya
+    excluye del repo. Vale para /repo/ y para /app/."""
     partes = [x.lower() for x in Path(rel).parts]
     if any(x in ("entorno", ".git", "respaldos", "__pycache__", ".claude") for x in partes):
         return True
     nombre = partes[-1] if partes else ""
-    return (nombre.startswith(".env") or nombre.endswith(".db") or "umng.pdf" in nombre
-            or nombre.startswith("enlace readme"))
+    return (nombre.startswith(".env") or re.search(r"\.(db|sqlite3?)(-wal|-shm|-journal)?$", nombre) is not None
+            or "umng.pdf" in nombre or nombre.startswith("enlace readme"))
+
+
+ESTADO_VIDA = {"ultimo": time.time()}   # última petición recibida (para el cierre solo en modo --practica)
+LATIDOS = {}   # carpeta -> última vez que una página de su app dio señales de vida
+SIN_LATIDO_S = 90   # holgado: Chrome frena los temporizadores de una pestaña oculta (hasta 1 por minuto)
+
+
+def vigilar_latidos():
+    """Acciones con "vida": "app" lanzadas desde una app: si la app se cierra (sin latido en
+    SIN_LATIDO_S segundos, o 10 s tras el aviso de cierre de la página), se detienen solas."""
+    while True:
+        time.sleep(5)
+        ahora = time.time()
+        with TRABAJOS_LOCK:
+            candidatos = [t for t in TRABAJOS.values() if getattr(t, "vida_app", False) and t.activo]
+        for t in candidatos:
+            if ahora - LATIDOS.get(t.carpeta, t.inicio) > SIN_LATIDO_S and ahora - t.inicio > 15:
+                t.cancelado = True
+                if t.pid or t.proceso:
+                    matar_arbol(t.pid or t.proceso.pid)
+                t.poner("detenida", "Detenido: se cerró la app.")
+APPS_COMUN = ESTE_ARCHIVO.parent / "apps-comun"
+
+
+def carpeta_de_app(practica):
+    """Carpeta servida en /app/<carpeta>/: la del index.html de la app (campo "app")."""
+    if not practica.get("app"):
+        return None
+    f = ruta_dentro(Config.raiz / practica["carpeta"], practica["app_declarada"])
+    return f.parent if f is not None else None
+
+
+def inyectar_meta(html, carpeta):
+    """A cada página de una app se le agregan el token y la carpeta: así /comun/app.js puede
+    lanzar acciones sin que la app sepa nada del token."""
+    meta = (f'<meta name="probar-token" content="{Config.token}">'
+            f'<meta name="probar-carpeta" content="{json.dumps(carpeta)[1:-1]}">')
+    m = re.search(r"<head[^>]*>", html, re.I)
+    if m:
+        return html[:m.end()] + meta + html[m.end():]
+    return meta + html
 
 
 class Manejador(BaseHTTPRequestHandler):
-    server_version = "LanzadorSensores/1.0"
+    server_version = "LanzadorSensores/2.0"
 
     def log_message(self, formato, *args):
         pass  # sin una línea por petición en la consola del lanzador
@@ -996,22 +1288,58 @@ class Manejador(BaseHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             pass
 
+    def redirigir(self, destino):
+        self.send_response(302)
+        self.send_header("Location", destino)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def host_valido(self):
         # Defensa contra "DNS rebinding": una web externa no puede hablarle a este servidor
         # aunque consiga que su dominio apunte a 127.0.0.1, porque el Host no coincidiría.
         host = (self.headers.get("Host") or "").split(":")[0].lower()
         return host in ("127.0.0.1", "localhost")
 
-    # --- GET --------------------------------------------------------------------------
+    def origen_valido(self):
+        # Además del token: si el navegador manda Origin (siempre en un POST con fetch), tiene
+        # que ser este mismo servidor. Otra web abierta no puede disparar acciones.
+        origen = self.headers.get("Origin")
+        if not origen:
+            return True
+        return origen in (f"http://127.0.0.1:{Config.puerto}", f"http://localhost:{Config.puerto}")
+
+    # Un fallo dentro de una petición nunca debe tumbar el lanzador: se responde 500 y sigue.
     def do_GET(self):
+        self._sin_caerse(self._get)
+
+    def do_POST(self):
+        self._sin_caerse(self._post)
+
+    def _sin_caerse(self, f):
+        try:
+            f()
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            pass
+        except Exception as e:
+            try:
+                self.responder(500, {"error": f"Error inesperado del lanzador: {type(e).__name__}: {e}"})
+            except Exception:
+                pass
+
+    # --- GET --------------------------------------------------------------------------
+    def _get(self):
         if not self.host_valido():
             return self.responder(403, {"error": "Host no permitido"})
+        ESTADO_VIDA["ultimo"] = time.time()
         ruta = urllib.parse.urlparse(self.path)
         camino = urllib.parse.unquote(ruta.path)
+        q = urllib.parse.parse_qs(ruta.query)
         if camino in ("/", "/index.html"):
             return self.responder(200, HUB_HTML.replace("__TOKEN__", Config.token), "text/html; charset=utf-8")
         if camino == "/api/ping":
-            return self.responder(200, {"firma": FIRMA})
+            if q.get("app"):
+                LATIDOS[q["app"][0]] = time.time()
+            return self.responder(200, {"firma": FIRMA, "api": API_VERSION, "raiz": str(Config.raiz)})
         if camino == "/api/practicas":
             return self.responder(200, {
                 "practicas": cargar_practicas(), "entornos": ESTADO_ENTORNOS,
@@ -1019,10 +1347,37 @@ class Manejador(BaseHTTPRequestHandler):
                 "build_tools": ESTADO_SISTEMA.get("build_tools"),
                 "raiz": str(Config.raiz), "sistema": "windows" if ES_WINDOWS else ("mac" if ES_MAC else "linux"),
             })
+        if camino.startswith("/api/practica/"):
+            try:
+                p = buscar_practica(camino[len("/api/practica/"):].strip("/"))
+            except ErrorClaro as e:
+                return self.responder(404, {"error": str(e)})
+            LATIDOS[p["carpeta"]] = time.time()
+            if p["carpeta"] not in ESTADO_ENTORNOS:
+                revisar_entorno_de(Config.raiz / p["carpeta"])
+            with TRABAJOS_LOCK:
+                trabajos = [t.resumen() for t in TRABAJOS.values() if t.carpeta == p["carpeta"]]
+            return self.responder(200, {
+                "practica": p, "entorno": ESTADO_ENTORNOS.get(p["carpeta"]), "trabajos": trabajos,
+                "python": "%d.%d.%d" % sys.version_info[:3], "pythons": PYTHONS_VISTOS,
+                "build_tools": ESTADO_SISTEMA.get("build_tools"),
+                "sistema": "windows" if ES_WINDOWS else ("mac" if ES_MAC else "linux"),
+            })
         if camino == "/api/trabajos":
             with TRABAJOS_LOCK:
                 lista = [t.a_dict() for t in TRABAJOS.values()]
             return self.responder(200, lista)
+        if camino == "/api/salida":
+            try:
+                tid, desde = int(q.get("tid", ["0"])[0]), int(q.get("desde", ["0"])[0])
+            except ValueError:
+                return self.responder(400, {"error": "tid y desde deben ser números"})
+            t = POR_TID.get(tid)
+            if t:
+                LATIDOS[t.carpeta] = time.time()
+            if not t:
+                return self.responder(404, {"error": "Ese trabajo ya no existe (¿se reinició el lanzador?)."})
+            return self.responder(200, t.salida(desde))
         if camino.startswith("/readme/"):
             carpeta = camino[len("/readme/"):].strip("/")
             d = ruta_dentro(Config.raiz, carpeta)
@@ -1034,43 +1389,131 @@ class Manejador(BaseHTTPRequestHandler):
             return self.responder(200, pagina, "text/html; charset=utf-8")
         if camino.startswith("/repo/"):
             return self.servir_archivo(camino[len("/repo/"):])
+        if camino.startswith("/comun/"):
+            return self.servir_archivo(camino[len("/comun/"):], base=APPS_COMUN)
+        if camino.startswith("/app/"):
+            return self.servir_app(camino[len("/app/"):])
         return self.responder(404, {"error": "No existe"})
 
-    def servir_archivo(self, rel):
+    def servir_app(self, resto):
+        carpeta, _, rel = resto.partition("/")
+        try:
+            p = buscar_practica(carpeta)
+        except ErrorClaro as e:
+            return self.responder(404, str(e), "text/plain; charset=utf-8")
+        base = carpeta_de_app(p)
+        if base is None:
+            # Todavía no tiene app: se muestra su tarjeta en el hub (no un error).
+            return self.redirigir("/?practica=" + urllib.parse.quote(carpeta) + "#p-" + urllib.parse.quote(carpeta))
+        if "/" not in resto:
+            # Sin la barra final, las rutas relativas de la app (./estilo.css) se romperían.
+            return self.redirigir("/app/" + urllib.parse.quote(carpeta) + "/")
+        if not rel:
+            rel = Path(p["app_declarada"]).name
+        return self.servir_archivo(rel, base=base, carpeta_app=carpeta)
+
+    def servir_archivo(self, rel, base=None, carpeta_app=None):
         """Sirve los archivos del repo (previews HTML, imágenes, README) para que se abran por
         http://127.0.0.1 en vez de file://: Web Serial, la cámara y fetch() lo necesitan."""
+        base = base or Config.raiz
         if archivo_prohibido(rel):
             return self.responder(403, "Ese archivo no se sirve (privado o del entorno).", "text/plain; charset=utf-8")
-        f = ruta_dentro(Config.raiz, rel)
+        f = ruta_dentro(base, rel)
         if f is not None and f.is_dir():
             f = f / "index.html"
         if f is None or not f.is_file():
             return self.responder(404, "No existe.", "text/plain; charset=utf-8")
-        tipo = MIME.get(f.suffix.lower()) or mimetypes.guess_type(str(f))[0] or "application/octet-stream"
         try:
-            datos = f.read_bytes()
+            if archivo_prohibido(str(f.relative_to(Config.raiz.resolve()))):
+                return self.responder(403, "Ese archivo no se sirve (privado o del entorno).", "text/plain; charset=utf-8")
+        except ValueError:
+            pass   # apps-comun con --raiz en otra carpeta
+        tipo = MIME.get(f.suffix.lower()) or mimetypes.guess_type(str(f))[0] or "application/octet-stream"
+        if carpeta_app and f.suffix.lower() in (".html", ".htm"):
+            try:
+                datos = f.read_bytes()
+            except OSError:
+                return self.responder(500, "No se pudo leer.", "text/plain; charset=utf-8")
+            datos = inyectar_meta(datos.decode("utf-8", "replace"), carpeta_app).encode("utf-8")
+            return self.responder(200, datos, tipo)
+        self.enviar_por_partes(f, tipo)
+
+    def enviar_por_partes(self, f, tipo):
+        """Archivo en bloques y con soporte de Range (206): Chrome lo necesita para reproducir
+        y adelantar un <video> mp4; así tampoco se carga un video entero en memoria."""
+        try:
+            tam = f.stat().st_size
+            inicio, fin, codigo = 0, tam - 1, 200
+            rango = (self.headers.get("Range") or "").strip()
+            m = re.match(r"^bytes=(\d*)-(\d*)$", rango)
+            if m and (m.group(1) or m.group(2)):
+                if m.group(1):
+                    inicio = int(m.group(1))
+                    fin = min(int(m.group(2)), tam - 1) if m.group(2) else tam - 1
+                else:   # "bytes=-500": los últimos 500
+                    inicio = max(0, tam - int(m.group(2)))
+                if inicio >= tam or inicio > fin:
+                    self.send_response(416)
+                    self.send_header("Content-Range", f"bytes */{tam}")
+                    self.send_header("Content-Length", "0")
+                    self.end_headers()
+                    return
+                codigo = 206
+            largo = max(0, fin - inicio + 1)
+            with open(f, "rb") as arch:
+                self.send_response(codigo)
+                self.send_header("Content-Type", tipo)
+                self.send_header("Content-Length", str(largo))
+                self.send_header("Accept-Ranges", "bytes")
+                self.send_header("Cache-Control", "no-store")
+                if codigo == 206:
+                    self.send_header("Content-Range", f"bytes {inicio}-{fin}/{tam}")
+                self.end_headers()
+                arch.seek(inicio)
+                falta = largo
+                while falta > 0:
+                    trozo = arch.read(min(262144, falta))
+                    if not trozo:
+                        break
+                    self.wfile.write(trozo)
+                    falta -= len(trozo)
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            pass   # el navegador cortó (normal al adelantar un video)
         except OSError:
-            return self.responder(500, "No se pudo leer.", "text/plain; charset=utf-8")
-        self.responder(200, datos, tipo)
+            self.responder(500, "No se pudo leer.", "text/plain; charset=utf-8")
 
     # --- POST -------------------------------------------------------------------------
-    def do_POST(self):
-        if not self.host_valido():
-            return self.responder(403, {"error": "Host no permitido"})
-        # El token solo lo conoce la página servida por este proceso: sin él, nada se ejecuta.
-        if not secrets.compare_digest(self.headers.get("X-Token", ""), Config.token):
-            return self.responder(403, {"error": "Token inválido: recarga la página del lanzador."})
+    def _post(self):
+        if not self.host_valido() or not self.origen_valido():
+            return self.responder(403, {"error": "Host u origen no permitido"})
         try:
             largo = int(self.headers.get("Content-Length") or 0)
             datos = json.loads(self.rfile.read(min(largo, 65536)) or b"{}")
+            if not isinstance(datos, dict):
+                raise ValueError
         except (ValueError, OSError):
             return self.responder(400, {"error": "Petición mal formada."})
         camino = urllib.parse.urlparse(self.path).path
+        # El token solo lo conoce la página servida por este proceso: sin él, nada se ejecuta.
+        # (/api/adios llega por navigator.sendBeacon, que no puede poner cabeceras: va en el cuerpo.)
+        token = str(datos.get("token", "")) if camino == "/api/adios" else self.headers.get("X-Token", "")
+        if not secrets.compare_digest(token, Config.token):
+            return self.responder(403, {"error": "Token inválido: recarga la página (el lanzador se reinició)."})
+        ESTADO_VIDA["ultimo"] = time.time()
         try:
             if camino in ("/api/accion", "/api/detener"):
                 t = iniciar_accion(str(datos.get("carpeta", "")), str(datos.get("accion", "")),
-                                   detener=camino == "/api/detener")
+                                   detener=camino == "/api/detener", desde_app=datos.get("modo") == "app")
                 return self.responder(200, t.a_dict())
+            if camino == "/api/adios":
+                # La página de una app se está cerrando (o recargando): si en 10 s no vuelve a
+                # dar señales, sus acciones "vida": "app" se detienen.
+                c = str(datos.get("carpeta", ""))
+                LATIDOS[c] = time.time() - SIN_LATIDO_S + 10
+                return self.responder(200, {"ok": True})
+            if camino == "/api/entrada":
+                t = escribir_entrada(str(datos.get("carpeta", "")), str(datos.get("accion", "")), datos.get("texto", ""))
+                return self.responder(200, {"ok": True, "tid": t.tid})
             if camino == "/api/docker":
                 ok, msg = comprobar_docker()
                 return self.responder(200, {"ok": ok, "mensaje": msg})
@@ -1078,7 +1521,20 @@ class Manejador(BaseHTTPRequestHandler):
                 practica = buscar_practica(str(datos.get("carpeta", "")))
                 abrir_con_sistema(Config.raiz / practica["carpeta"])
                 return self.responder(200, {"ok": True})
+            if camino == "/api/ventana":
+                # Botón del hub "Abrir la app": en una ventana tipo programa si hay Edge/Chrome.
+                practica = buscar_practica(str(datos.get("carpeta", "")))
+                if not practica.get("app"):
+                    raise ErrorClaro("Esta práctica todavía no tiene app.")
+                ok = abrir_ventana(f"http://127.0.0.1:{Config.puerto}{practica['app']}", como_app=True, solo_app=True)
+                return self.responder(200, {"ok": ok, "url": practica["app"]})
             if camino == "/api/salir":
+                # Puede haber varias apps (o el hub) usando este mismo lanzador: si algo está en
+                # marcha, no se cierra sin confirmarlo.
+                with TRABAJOS_LOCK:
+                    activos = [t.nombre for t in TRABAJOS.values() if t.activo]
+                if activos and not datos.get("forzar"):
+                    return self.responder(409, {"error": "Hay acciones en marcha: " + ", ".join(activos), "activos": activos})
                 self.responder(200, {"ok": True})
                 threading.Thread(target=self.server.shutdown, daemon=True).start()
                 return None
@@ -1091,24 +1547,110 @@ class Manejador(BaseHTTPRequestHandler):
 
 PYTHONS_VISTOS = []
 ESTADO_SISTEMA = {}  # build_tools: True/False en Windows (None mientras se busca o fuera de Windows)
+API_VERSION = 2      # 2 = con apps por práctica (/app/, /comun/, /api/salida, /api/entrada)
 
 
-def hub_ya_abierto(puerto):
-    """Si ya hay un lanzador en ese puerto (doble clic dos veces), se reutiliza."""
+def ping(puerto):
+    """El /api/ping de un lanzador en ese puerto, o None si ahí no hay uno."""
     try:
-        with urllib.request.urlopen(f"http://127.0.0.1:{puerto}/api/ping", timeout=1.5) as r:
-            return json.loads(r.read().decode("utf-8")).get("firma") == FIRMA
+        with urllib.request.urlopen(f"http://127.0.0.1:{puerto}/api/ping", timeout=1.0) as r:
+            d = json.loads(r.read().decode("utf-8"))
+            return d if d.get("firma") == FIRMA else None
     except Exception:
-        return False
+        return None
+
+
+def buscar_lanzador_abierto(preferido):
+    """Un lanzador ya abierto (doble clic dos veces, o PROBAR.bat y luego un ABRIR.bat) con la
+    MISMA raíz y que ya sepa servir apps: se reutiliza en vez de levantar otro."""
+    for puerto in range(preferido, preferido + 10):
+        d = ping(puerto)
+        if d and d.get("api", 1) >= API_VERSION and Path(d.get("raiz", "")).resolve() == Config.raiz.resolve():
+            return puerto
+    return None
+
+
+class Servidor(ThreadingHTTPServer):
+    # En Windows SO_REUSEADDR deja abrir un puerto que YA usa otro programa (y entonces las
+    # peticiones van a parar a cualquiera de los dos): sin él, el puerto ocupado da error y se
+    # prueba el siguiente.
+    allow_reuse_address = not ES_WINDOWS
+    daemon_threads = True
 
 
 def crear_servidor(preferido):
     for puerto in [preferido, *range(preferido + 1, preferido + 30), 0]:
         try:
-            return ThreadingHTTPServer(("127.0.0.1", puerto), Manejador)
+            return Servidor(("127.0.0.1", puerto), Manejador)
         except OSError:
             continue
     raise SystemExit("No encontré ningún puerto libre para el lanzador.")
+
+
+def buscar_navegador_app():
+    """Edge o Chrome, para abrir la app en una ventana propia (--app=URL), sin pestañas ni
+    barra de direcciones: se ve como un programa. None si no hay (u otro sistema)."""
+    if not ES_WINDOWS:
+        return None
+    pf = [os.environ.get(k) for k in ("ProgramFiles(x86)", "ProgramFiles", "LOCALAPPDATA")]
+    candidatos = []
+    for base in filter(None, pf):
+        candidatos += [Path(base) / "Microsoft" / "Edge" / "Application" / "msedge.exe",
+                       Path(base) / "Google" / "Chrome" / "Application" / "chrome.exe"]
+    for c in candidatos:
+        if c.is_file():
+            return c
+    return None
+
+
+def abrir_ventana(url, como_app=True, solo_app=False):
+    """Abre la URL como programa (Edge/Chrome --app) o, si no hay, en el navegador por defecto.
+    solo_app: si no hay Edge/Chrome no abre nada y devuelve False (el hub abre una pestaña)."""
+    exe = buscar_navegador_app() if como_app else None
+    if exe:
+        try:
+            subprocess.Popen([str(exe), f"--app={url}", "--window-size=1280,900"], stdin=subprocess.DEVNULL,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=SIN_VENTANA)
+            return True
+        except OSError:
+            pass
+    if solo_app:
+        return False
+    webbrowser.open(url)
+    return True
+
+
+def minimizar_consola():
+    """En modo --practica la consola solo mantiene vivo el servidor: se minimiza para que se
+    vea la app y no una ventana negra (sigue en la barra de tareas; cerrarla apaga la app)."""
+    if not ES_WINDOWS:
+        return
+    try:
+        import ctypes
+        hwnd = ctypes.windll.kernel32.GetConsoleWindow()
+        if hwnd:
+            ctypes.windll.user32.ShowWindow(hwnd, 6)   # SW_MINIMIZE
+    except Exception:
+        pass
+
+
+def cerrar_si_nadie_usa(servidor, minutos):
+    """Modo --practica: si en `minutos` ninguna página le habla al lanzador (las apps mandan
+    un latido cada 20 s) y no hay nada en marcha, se apaga solo (no queda colgado)."""
+    while True:
+        time.sleep(15)
+        with TRABAJOS_LOCK:
+            hay_activos = any(t.activo for t in TRABAJOS.values())
+        if not hay_activos and time.time() - ESTADO_VIDA["ultimo"] > minutos * 60:
+            print(f"Nadie usa la app desde hace {minutos} minutos: cierro el lanzador.")
+            servidor.shutdown()
+            return
+
+
+def destino_practica(carpeta):
+    """Ruta a abrir para --practica: la app si existe; si no, su tarjeta en el hub."""
+    p = buscar_practica(carpeta)
+    return p["app"] or ("/?practica=" + urllib.parse.quote(p["carpeta"]) + "#p-" + urllib.parse.quote(p["carpeta"])), bool(p["app"])
 
 
 def comprobar_manifiestos():
@@ -1121,7 +1663,8 @@ def comprobar_manifiestos():
     for p in practicas:
         errores = list(p["errores"]) + [f"acción {a['id']}: {a['error']}" for a in p["acciones"] if a["error"]]
         marca = "OK " if not errores else "MAL"
-        print(f"[{marca}] {p['carpeta']}: {p['titulo']} ({len(p['acciones'])} acciones)")
+        app = "con app" if p["app"] else "sin app todavía"
+        print(f"[{marca}] {p['carpeta']}: {p['titulo']} ({len(p['acciones'])} acciones, {app})")
         for e in errores:
             print(f"       - {e}")
         malos += bool(errores)
@@ -1138,6 +1681,7 @@ def main():
     ap.add_argument("--puerto", type=int, default=8099)
     ap.add_argument("--raiz")
     ap.add_argument("--entornos")
+    ap.add_argument("--practica", help="abre la app de esa práctica (nombre de su carpeta)")
     ap.add_argument("--no-navegador", action="store_true")
     ap.add_argument("--comprobar", action="store_true")
     ap.add_argument("--hijo", action="store_true", help=argparse.SUPPRESS)
@@ -1163,28 +1707,51 @@ def main():
     if args.comprobar:
         sys.exit(comprobar_manifiestos())
 
-    if hub_ya_abierto(args.puerto):
-        url = f"http://127.0.0.1:{args.puerto}/"
-        print(f"El lanzador ya estaba abierto en {url} (lo abro en el navegador).")
+    destino, es_app = "/", False
+    if args.practica:
+        nombre = args.practica.strip().strip("\\/").replace("\\", "/").split("/")[-1]
+        try:
+            destino, es_app = destino_practica(nombre)
+        except ErrorClaro:
+            print(f"No hay ninguna práctica \"{nombre}\" con probar.json en {Config.raiz}.")
+            print("Prácticas disponibles: " + ", ".join(d.name for d in carpetas_con_manifiesto()))
+            sys.exit(1)
+
+    abierto = buscar_lanzador_abierto(args.puerto)
+    if abierto:
+        url = f"http://127.0.0.1:{abierto}{destino}"
+        print(f"El lanzador ya estaba abierto: abro {url}")
         if not args.no_navegador:
-            webbrowser.open(url)
+            abrir_ventana(url, como_app=es_app)
         return
 
     servidor = crear_servidor(args.puerto)
     Config.puerto = servidor.server_address[1]
-    url = f"http://127.0.0.1:{Config.puerto}/"
-    threading.Thread(target=revisar_entornos_en_segundo_plano, daemon=True).start()
+    url = f"http://127.0.0.1:{Config.puerto}{destino}"
+    threading.Thread(target=revisar_entornos_en_segundo_plano, args=(args.practica,), daemon=True).start()
+    threading.Thread(target=vigilar_latidos, daemon=True).start()
     threading.Thread(target=lambda: PYTHONS_VISTOS.extend(versiones_instaladas()), daemon=True).start()
     if ES_WINDOWS:
         threading.Thread(target=lambda: ESTADO_SISTEMA.update(build_tools=buscar_build_tools() is not None),
                          daemon=True).start()
-    print("Lanzador de Sensores-Teoria")
-    print(f"  Página: {url}")
-    print(f"  Prácticas con probar.json: {len(carpetas_con_manifiesto())} (en {Config.raiz})")
-    print("  Deja esta ventana abierta mientras pruebas; ciérrala (o Ctrl+C) para apagar el lanzador.")
-    print("  Lo que ya se lanzó en otras ventanas sigue abierto aunque cierres esta.")
+    if args.practica:
+        print("Sensores-Teoria · " + (f"app de la práctica {args.practica}" if es_app
+                                      else f"práctica {args.practica} (todavía sin app propia: abro su tarjeta del lanzador)"))
+        print(f"  Página: {url}")
+        print("  Esta ventana mantiene la app funcionando: déjala abierta (minimizada) mientras la usas.")
+        print("  Para cerrar: cierra esta ventana. Si nadie usa la app en 10 minutos, se cierra sola.")
+        if not args.no_navegador:   # con --no-navegador (pruebas) no se cierra solo
+            threading.Thread(target=cerrar_si_nadie_usa, args=(servidor, 10), daemon=True).start()
+    else:
+        print("Lanzador de Sensores-Teoria")
+        print(f"  Página: {url}")
+        print(f"  Prácticas con probar.json: {len(carpetas_con_manifiesto())} (en {Config.raiz})")
+        print("  Deja esta ventana abierta mientras pruebas; ciérrala (o Ctrl+C) para apagar el lanzador.")
+        print("  Lo que ya se lanzó en otras ventanas sigue abierto aunque cierres esta.")
     if not args.no_navegador:
-        webbrowser.open(url)
+        abrir_ventana(url, como_app=es_app)
+        if args.practica:
+            minimizar_consola()
     try:
         servidor.serve_forever(poll_interval=0.5)
     except KeyboardInterrupt:
@@ -1288,6 +1855,12 @@ HUB_HTML = r"""<!DOCTYPE html>
   .vacio { max-width: 1400px; margin: 2rem auto; color: var(--text-muted); font-family: var(--mono); font-size: 0.8rem; text-align: center; }
   .aviso-global { max-width: 1400px; margin: 0 auto 1rem; padding: 0.6rem 0.8rem; border-radius: 6px; font-family: var(--mono); font-size: 0.74rem; display: none; }
   .aviso-global.mal { display: block; background: #1d1314; border: 1px solid #5a2a29; color: #e58a87; }
+  .btn-app { display: block; width: 100%; margin: 0.2rem 0 0.8rem; background: var(--accent); color: #0b0f13; border: 1px solid var(--accent);
+    border-radius: 8px; padding: 0.75rem 1rem; font-family: "Space Grotesk", system-ui, sans-serif; font-size: 1rem; font-weight: 600; cursor: pointer; text-align: center; }
+  .btn-app:hover { filter: brightness(1.12); }
+  .btn-app small { display: block; font-weight: 400; font-size: 0.72rem; opacity: 0.8; }
+  .sin-app { font-family: var(--mono); font-size: 0.68rem; color: var(--text-muted); margin: 0 0 0.6rem; }
+  .tarjeta.resaltada { border-color: var(--accent); box-shadow: 0 0 0 2px #2a4766; }
   .aviso-global.ok { display: block; background: #112019; border: 1px solid #2c5a43; color: var(--verde-ok); }
 </style>
 </head>
@@ -1299,7 +1872,8 @@ HUB_HTML = r"""<!DOCTYPE html>
       <p class="sub">Una tarjeta por práctica: <b>qué pide la actividad</b> y <b>botones para probarla sin hardware</b>
         (sin ESP32 ni sensores). Los programas en Python se abren en <b>su propia ventana</b>; la primera vez el lanzador
         prepara solo su entorno e instala lo que necesitan (tarda unos minutos, se ve el progreso aquí). Deja abierta la
-        consola del lanzador mientras pruebas.</p>
+        consola del lanzador mientras pruebas. Cada práctica tiene además <b>su app</b>, que lleva paso a paso: el botón
+        azul de su tarjeta, o doble clic en el <b>ABRIR.bat</b> de su carpeta.</p>
       <div class="chips-sis" id="sistema"></div>
     </div>
     <div class="botones"><button class="btn" id="btnDocker">Comprobar Docker</button><button class="btn rojo" id="btnSalir">Cerrar lanzador</button></div>
@@ -1411,10 +1985,12 @@ function htmlTarjeta(p) {
   return `<article id="p-${esc(p.carpeta)}" class="tarjeta ${p.errores.length ? "rota" : ""} ${final ? "final" : ""}" data-carpeta="${esc(p.carpeta)}">
     <div class="tit"><span class="num">${esc(final ? "★" : p.id)}</span><h2>${esc(p.titulo)}</h2></div>
     <div class="carpeta">${esc(p.carpeta)}/</div>
+    ${p.app ? `<button class="btn-app" data-app="${esc(p.app)}">Abrir la app de esta práctica<small>todo lo que pide la actividad, paso a paso y con un clic (también: doble clic en ${esc(p.carpeta)}\\ABRIR.bat)</small></button>`
+      : (new URLSearchParams(location.search).get("practica") === p.carpeta ? `<p class="sin-app">Esta práctica todavía no tiene app propia: se prueba desde esta tarjeta.</p>` : "")}
     ${p.resumen ? `<p class="resumen">${esc(p.resumen)}</p>` : ""}
     ${p.errores.length ? `<div class="errores">probar.json con errores:<br>${p.errores.map(esc).join("<br>")}</div>` : ""}
     ${p.pide.length ? `<div class="seccion">Qué pide la actividad</div><ul class="pide">${p.pide.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
-    ${p.acciones.length ? `<div class="seccion">Probar</div>${p.acciones.map((a) => htmlAccion(p, a)).join("")}` : ""}
+    ${p.acciones.some((a) => !a.oculta) ? `<div class="seccion">Probar</div>${p.acciones.filter((a) => !a.oculta).map((a) => htmlAccion(p, a)).join("")}` : ""}
     ${ent ? `<div class="entorno ${ent.cls}" data-entorno>${esc(ent.txt)}</div>` : ""}
     ${p.notas.length ? `<div class="notas">${p.notas.map((n) => `<p>${esc(n)}</p>`).join("")}</div>` : ""}
     <div class="pie">
@@ -1470,6 +2046,9 @@ async function cargar() {
   document.getElementById("indice").innerHTML = DATOS.practicas.map((p) =>
     `<a href="#p-${esc(p.carpeta)}" data-c="${esc(p.carpeta)}" title="${esc(p.titulo)}">${esc(/^\d/.test(p.carpeta) ? p.id : "★ final")}</a>`).join("");
   pintarSistema(); aplicarFiltros(); pintarTrabajos();
+  // Venir de un ABRIR.bat de una práctica sin app (o de un enlace #p-...): ir a su tarjeta.
+  const destino = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+  if (destino) { destino.classList.add("resaltada"); destino.scrollIntoView({ block: "start" }); }
 }
 
 // Los avisos de entorno y la lista de Pythons se calculan en segundo plano al arrancar:
@@ -1535,6 +2114,13 @@ document.getElementById("rejilla").addEventListener("click", async (ev) => {
   const tarjeta = b.closest(".tarjeta"); const carpeta = tarjeta.dataset.carpeta;
   const p = DATOS.practicas.find((x) => x.carpeta === carpeta);
   if (b.dataset.ver) { window.open(b.dataset.ver, "_blank", "noopener"); return; }
+  if (b.dataset.app) {
+    // En Windows se abre como programa (Edge/Chrome --app); si no hay, en una pestaña.
+    if (DATOS.sistema !== "windows") { window.open(b.dataset.app, "_blank", "noopener"); return; }
+    try { const r = await api("/api/ventana", { carpeta }); if (!r.ok) location.href = b.dataset.app; }
+    catch (e) { location.href = b.dataset.app; }
+    return;
+  }
   if (b.hasAttribute("data-carpeta-abrir")) {
     try { await api("/api/carpeta", { carpeta }); } catch (e) { aviso(e.message); } return;
   }
@@ -1567,8 +2153,12 @@ document.getElementById("btnDocker").addEventListener("click", async (ev) => {
   ev.target.disabled = false;
 });
 document.getElementById("btnSalir").addEventListener("click", async () => {
-  if (!confirm("¿Cerrar el lanzador? Lo que ya abriste en otras ventanas sigue abierto.")) return;
-  try { await api("/api/salir", {}); } catch (e) { /* ya se cerró */ }
+  const activos = Object.values(TRABAJOS).filter((t) => ["preparando", "instalando", "lanzada"].includes(t.estado)).map((t) => t.nombre);
+  const texto = activos.length
+    ? "OJO: hay acciones en marcha (" + activos.join(", ") + "), quizá desde las apps de las prácticas, que usan este mismo lanzador. Si lo cierras, las apps dejan de funcionar. ¿Cerrarlo igual?"
+    : "¿Cerrar el lanzador? Las apps de las prácticas abiertas dejan de funcionar; lo que ya abriste en otras ventanas sigue abierto.";
+  if (!confirm(texto)) return;
+  try { await api("/api/salir", { forzar: true }); } catch (e) { /* ya se cerró */ }
   document.body.innerHTML = '<p class="vacio">Lanzador cerrado. Para volver a abrirlo: doble clic en PROBAR.bat.</p>';
 });
 

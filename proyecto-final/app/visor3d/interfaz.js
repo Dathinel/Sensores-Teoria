@@ -17,11 +17,27 @@ const $ = (sel, raiz = document) => raiz.querySelector(sel);
 const $$ = (sel, raiz = document) => [...raiz.querySelectorAll(sel)];
 
 // ¿La simulación de este PC ya responde? (vigía del visor portable, sin internet: servidor local)
-export async function simulacionCorriendo(urlVivo) {
+// Devuelve la URL donde responde, o null. Si otro programa del PC tiene el puerto configurado
+// (8765), app.lanzar usa el siguiente libre (app/puertos.py): por eso se pregunta también en los
+// PUERTOS_EXTRA siguientes y gana el más bajo que conteste con un estado JSON de la planta.
+const PUERTOS_EXTRA = 20;
+async function respondeEn(url) {
   try {
-    const r = await fetch(urlVivo + 'api/estado', { cache: 'no-store', signal: AbortSignal.timeout(1500) });
-    return r.ok;
+    const r = await fetch(url + 'api/estado', { cache: 'no-store', signal: AbortSignal.timeout(1500) });
+    if (!r.ok) return false;
+    const e = await r.json();
+    return !!e && typeof e === 'object' && !Array.isArray(e);
   } catch (e) { return false; }
+}
+export async function simulacionCorriendo(urlVivo) {
+  let base;
+  try { base = new URL(urlVivo); } catch (e) { return null; }
+  const p0 = Number(base.port || 80);
+  const urls = [];
+  for (let i = 0; i <= PUERTOS_EXTRA; i++) urls.push(`${base.protocol}//${base.hostname}:${p0 + i}/`);
+  const vivos = await Promise.all(urls.map(respondeEn));
+  const i = vivos.indexOf(true);
+  return i < 0 ? null : urls[i];
 }
 
 // ---------------------------------------------------------------------------
@@ -795,10 +811,11 @@ export function crearInterfaz(ctx) {
   function vigilarSimulacion() {
     const chip = $('#chipEstado');
     const revisar = async () => {
-      if (await simulacionCorriendo(ctx.urlVivo)) {
+      const url = await simulacionCorriendo(ctx.urlVivo);
+      if (url) {
         chip.textContent = 'simulación encontrada · abriendo en vivo…';
         chip.className = 'chip corriendo';
-        location.replace(ctx.urlVivo + location.search);
+        location.replace(url + location.search);
         return;
       }
       setTimeout(revisar, 3000);
