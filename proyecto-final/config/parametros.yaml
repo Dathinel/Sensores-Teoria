@@ -402,7 +402,7 @@ puesto_pc:
 # ---------------------------------------------------------------------
 
 # Protocolo (punto 15): mensajes numerados y confirmados, latido y reglas del
-# enlace. Logica en control/protocolo.py; contrato en CLAUDE.md, 10.1.
+# enlace. Logica en control/protocolo.py; contrato en docs/especificacion.md, 10.1.
 protocolo:
   pc_reintento_ms: 300          # PC -> ESP32 fijo: sin ack, un reintento y despues fallo
   pc_reintentos: 1

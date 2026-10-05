@@ -326,7 +326,7 @@ class _PuertoMudo:
 
 
 def test_real_sin_esp32_pausa_la_linea(supervisor_real):
-    """CLAUDE.md 10.1: si el PC no oye al ESP32, pausa la linea y da la alarma sin_esp32 (antes solo
+    """docs/especificacion.md 10.1: si el PC no oye al ESP32, pausa la linea y da la alarma sin_esp32 (antes solo
     la alarma: el dashboard seguia diciendo "corriendo")."""
     s = supervisor_real
     s.aplicar_orden({"cmd": "iniciar"})

@@ -1,4 +1,4 @@
-"""Proceso supervisor (CLAUDE.md, seccion 8): corre la linea y escribe en
+"""Proceso supervisor (docs/especificacion.md, seccion 8): corre la linea y escribe en
 SQLite. Es el UNICO proceso que toca la simulacion (y, en la fase 8, el
 puerto serial); el dashboard de Streamlit corre en otro proceso, solo lee
 de SQLite y deja ordenes en la tabla `ordenes`, que este proceso consume.
@@ -408,7 +408,7 @@ class Supervisor:
             self._publicar_telemetria()
 
     def _pausar_si_no_oye_al_esp32(self, t: int) -> bool:
-        """CLAUDE.md 10.1: "Si el PC no oye al ESP32, pausa la línea y da la alarma sin_esp32".
+        """docs/especificacion.md 10.1: "Si el PC no oye al ESP32, pausa la línea y da la alarma sin_esp32".
         Antes solo se daba la alarma y la línea seguía "corriendo" en el dashboard. Se cuenta desde
         lo último que se oyó o, si todavía no se oyó nada, desde que arrancó/siguió la línea (la
         primera respuesta de la placa puede tardar unas vueltas). Sale con "reanudar" (a mano, como

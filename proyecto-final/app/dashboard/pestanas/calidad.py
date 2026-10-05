@@ -1,4 +1,4 @@
-"""Pestaña Calidad del filtro (Inspección y Rechazos de CLAUDE.md §13): qué tan
+"""Pestaña Calidad del filtro (Inspección y Rechazos de docs/especificacion.md §13): qué tan
 bien separa la línea las monedas colombianas del resto, por qué rechazó cada
 cosa (evidencia de que los filtros se complementan) y lo que midió la cámara."""
 

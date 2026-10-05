@@ -12,7 +12,8 @@ es un gancho que se llama despues de cada paso de fisica (`_paso_fisica` en
   `p.getCameraImage` (render por software, ER_TINY_RENDERER: funciona sin
   ventana ni tarjeta de video) y la escribe en el video.
 
-Limitacion conocida de PyBullet (CLAUDE.md de la carpeta Micros): los textos
+Limitacion conocida de PyBullet (regla de PyBullet de la carpeta Micros,
+`.claude/rules/pybullet.md`): los textos
 y lineas de depuracion (`addUserDebugText/Line`) se ven en la ventana pero NO
 salen en `getCameraImage`. Por eso en los videos el rotulo (estacion, causa,
 destino) se dibuja encima de cada fotograma, con el mismo contenido que los

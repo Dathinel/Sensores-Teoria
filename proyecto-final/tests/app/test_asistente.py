@@ -87,7 +87,7 @@ def test_validar_descarta_lo_que_no_esta_permitido(accion):
 def test_lee_toda_la_documentacion_y_encuentra_lo_relacionado():
     secciones = asistente.corpus(recargar=True)
     archivos = {s.archivo for s in secciones}
-    assert {"README.md", "CLAUDE.md", "docs/sensores.md", "docs/conexiones.md", "config/parametros.yaml"} <= archivos
+    assert {"README.md", "docs/especificacion.md", "docs/sensores.md", "docs/conexiones.md", "config/parametros.yaml"} <= archivos
     encontradas = asistente.buscar("sensor inductivo metal")
     assert any("nductivo" in s.titulo or "nductivo" in s.texto for s in encontradas[:3])
     assert sum(len(s.texto) for s in encontradas) <= asistente.MAX_CARACTERES_DOCS

@@ -1,6 +1,6 @@
 nombre: mixto_20
 descripcion: >
-  Escenario mixto largo (CLAUDE.md seccion 11 y criterio de la fase 3):
+  Escenario mixto largo (docs/especificacion.md seccion 11 y criterio de la fase 3):
   20 elementos combinando las 6 causas de rechazo de la seccion 7, dos
   casillas vacias y 8 monedas colombianas validas cubriendo 8 de las 9
   denominaciones de la tabla de referencia. Es el escenario contra el que

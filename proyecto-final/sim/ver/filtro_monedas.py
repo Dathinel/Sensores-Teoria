@@ -4,7 +4,7 @@
     python -m sim.ver.filtro_monedas --sin-ventana --segundos 30   verificar sin abrir nada
 
 Corre el escenario `pruebas_aisladas/mixto_20` (20 elementos: las 6 causas de
-rechazo de CLAUDE.md seccion 7, dos casillas vacias y 8 monedas validas) con
+rechazo de docs/especificacion.md seccion 7, dos casillas vacias y 8 monedas validas) con
 la MISMA planta del supervisor (`sim/planta.py`): E1 presencia, E2 material
 (capacitivo e inductivo), E3 vision (oraculo con su ruido) y E4 descarga, que
 manda lo aceptado al tubo de su denominacion en el carrusel del almacen y

@@ -18,12 +18,12 @@ gTTS
 faster-whisper
 pyttsx3
 
-# dependencias de desarrollo (no listadas en CLAUDE.md seccion 19, necesarias
+# dependencias de desarrollo (no listadas en docs/especificacion.md seccion 19, necesarias
 # para correr las pruebas unitarias de las fases 1 en adelante)
 pytest
 
 # agregar tensorflow u onnxruntime solo en la fase 5, segun como se entrene
-# el modelo de vision (CLAUDE.md, seccion 19)
+# el modelo de vision (docs/especificacion.md, seccion 19)
 
 # fase 8 (firmware): subir a la placa sin Thonny y compilar para MicroPython
 mpremote

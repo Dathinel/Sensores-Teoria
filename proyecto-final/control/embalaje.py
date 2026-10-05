@@ -1,4 +1,4 @@
-"""Maquina de estados de la cinta de vasos (CLAUDE.md, seccion 5, pasos 9 a
+"""Maquina de estados de la cinta de vasos (docs/especificacion.md, seccion 5, pasos 9 a
 14, y seccion 7 tabla de estados).
 
 Codigo puro, igual que `linea.py`. Cada estacion relee sus sensores antes

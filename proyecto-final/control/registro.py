@@ -3,7 +3,7 @@
 Una casilla es la unidad atomica de cada cinta: una posicion fisica que
 puede contener un elemento y acumula lo que cada estacion descubre sobre
 el. Ninguna estacion puede revertir un rechazo escrito por una estacion
-anterior (CLAUDE.md, seccion 7).
+anterior (docs/especificacion.md, seccion 7).
 """
 
 from dataclasses import dataclass

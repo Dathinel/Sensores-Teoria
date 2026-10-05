@@ -1,6 +1,6 @@
 nombre: perforado
 descripcion: >
-  Filtro aislado de contornos internos, CLAUDE.md seccion 7: se lleva
+  Filtro aislado de contornos internos, docs/especificacion.md seccion 7: se lleva
   arandelas y botones con ojales. Botones metalicos redondos, de diametro
   de moneda, pero con un agujero (contornos_internos=1, el valor por
   defecto de un boton_metalico en sim/mundo.py).

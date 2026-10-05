@@ -1,4 +1,4 @@
-"""Maquina de estados de la cinta de monedas (CLAUDE.md, seccion 5, pasos
+"""Maquina de estados de la cinta de monedas (docs/especificacion.md, seccion 5, pasos
 1 a 8).
 
 Grupo (2026-09-25): "filtro total". La cinta tiene 4 estaciones --

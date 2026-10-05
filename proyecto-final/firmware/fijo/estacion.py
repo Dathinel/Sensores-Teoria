@@ -20,7 +20,7 @@
 #     despejarla) y falla del lado SEGURO: sin mediciones nuevas del VL53L0X
 #     (cable I2C flojo, sensor muerto) la cortina queda ACTIVA.
 #   - Canaleta: el escape suelta un vaso solo si el carro esta en el muelle
-#     con la cuna vacia (`protocolo.puede_soltar_vaso`, CLAUDE.md 10.1).
+#     con la cuna vacia (`protocolo.puede_soltar_vaso`, docs/especificacion.md 10.1).
 #   - Prensa y empujador NUNCA se mueven a la vez, y eso lo asegura la PLACA,
 #     no solo el orden de comandos del PC (ver EXCLUYENTES).
 #   - Carrusel y obturador tampoco se estorban (2026-09-29): el obturador no
@@ -31,7 +31,7 @@
 #     ESP-NOW y se REINTENTA hasta que el carro contesta `respuesta_orden` (o
 #     se avisa `carro_sin_respuesta`); lo que manda el carro se reenvia al PC.
 #
-# Contrato completo de los mensajes: CLAUDE.md, seccion 10.1.
+# Contrato completo de los mensajes: docs/especificacion.md, seccion 10.1.
 
 try:
     import protocolo                      # en el ESP32: protocolo.mpy en la raiz
@@ -408,7 +408,7 @@ class Estacion:
         return self._ciclo("obturador", t_ms)
 
     def _soltar_vaso(self, m, t_ms):
-        # Regla de la estacion (CLAUDE.md 10.1, protocolo.puede_soltar_vaso):
+        # Regla de la estacion (docs/especificacion.md 10.1, protocolo.puede_soltar_vaso):
         # la decide la PLACA con lo ultimo que oyo del carro, no el PC (que en
         # modo real no lo revisaba: soltaba el vaso al piso si el carro no
         # estaba). Enlace vivo + estado fresco + carro en el muelle + cuna vacia.

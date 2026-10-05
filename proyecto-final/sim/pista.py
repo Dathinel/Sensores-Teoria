@@ -1,4 +1,4 @@
-"""Trazado de la pista del vehiculo (CLAUDE.md, seccion 4 y fase 6).
+"""Trazado de la pista del vehiculo (docs/especificacion.md, seccion 4 y fase 6).
 
 La pista se describe en `config/parametros.yaml` (bloque `pista`) como una
 lista de tramos -- rectas y curvas de radio constante --, igual que se

@@ -6,7 +6,7 @@ seguir existiendo en la versión nueva (`app/dashboard/`). La columna "Dónde qu
 módulo y en qué lugar de la pantalla quedó; "Prueba" dice qué prueba automática lo cubre
 (`tests/app/test_dashboard.py`), si la hay.
 
-Reglas que no cambian (CLAUDE.md §8 y §13): el dashboard SOLO lee SQLite y escribe órdenes en la
+Reglas que no cambian (docs/especificacion.md §8 y §13): el dashboard SOLO lee SQLite y escribe órdenes en la
 tabla `ordenes`; no importa PyBullet ni abre el puerto serial; se refresca con
 `st.fragment(run_every=dashboard.refresco_s)`, sin bucles infinitos; gráficas con Plotly.
 

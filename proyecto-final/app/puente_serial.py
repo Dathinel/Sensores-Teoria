@@ -1,4 +1,4 @@
-"""Puente PC <-> ESP32 fijo por USB serial (fase 8, CLAUDE.md 10.1).
+"""Puente PC <-> ESP32 fijo por USB serial (fase 8, docs/especificacion.md 10.1).
 
 Del lado del PC hace lo mismo que el firmware del otro lado, con la misma
 logica (control/protocolo.py):
@@ -7,7 +7,8 @@ logica (control/protocolo.py):
   su ack; sin ack en `pc_reintento_ms` lo reenvia UNA vez y despues lo marca
   como `fallo_comunicacion`.
 - `atender(t_ms)`: DRENA todo lo que haya en el puerto (no una sola linea por
-  vuelta: si no, se va quedando atras; ver CLAUDE.md del repo), cuenta los
+  vuelta: si no, se va quedando atras; ver la regla de comunicacion serial de la
+  carpeta Micros, `.claude/rules/serial.md`), cuenta los
   mensajes perdidos por huecos en `n`, guarda la ultima telemetria, los
   eventos y la ultima linea CRUDA recibida (la mejor herramienta cuando "no
   llega nada": si la linea cruda no cambia, el ESP32 no esta mandando; si
@@ -167,7 +168,7 @@ class PuenteESP32:
                 # Sin ESP32: la estacion emulada (mismo firmware, hardware falso).
                 self.emulada = EstacionEmulada(parametros)
                 self.ser = self.emulada
-        # Sesion (CLAUDE.md 10.1): va en cada comando y en el latido; si el PC
+        # Sesion (docs/especificacion.md 10.1): va en cada comando y en el latido; si el PC
         # se reinicia y el ESP32 no, sus ids vuelven a 1 y sin esto el ESP32
         # los tomaria por repetidos (ack sin ejecutar).
         self.emisor = protocolo.Emisor(p["pc_reintento_ms"], p.get("pc_reintentos", 1),
@@ -197,7 +198,8 @@ class PuenteESP32:
         if self.emulada is not None:
             self.emulada.correr_hasta(t_ms)
         # Se DRENA todo lo que haya (no una sola linea por vuelta) a un buffer propio y se parte por
-        # "\n". NO se usa `readline()`: con timeout=0 (para no frenar el bucle, CLAUDE.md del repo)
+        # "\n". NO se usa `readline()`: con timeout=0 (para no frenar el bucle; ver la regla de comunicacion serial de la carpeta Micros,
+        # `.claude/rules/serial.md`)
         # devuelve lo que haya llegado aunque la linea este a medias, y esa media linea se contaba
         # como mala y se perdia (el resto llegaba en la vuelta siguiente, tambien "malo"). A 115200
         # baudios una linea de 150 bytes tarda ~13 ms: que llegue partida entre dos vueltas del

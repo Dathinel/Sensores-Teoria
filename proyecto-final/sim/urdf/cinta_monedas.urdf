@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
-  Cinta indexada de la estacion de filtrado y conteo (CLAUDE.md, seccion 4 y
+  Cinta indexada de la estacion de filtrado y conteo (docs/especificacion.md, seccion 4 y
   seccion 5, pasos 2 a 8). Modela solo la estructura fisica: bancada y cinta
   negra mate con separadores cada 40 mm. Grupo (2026-09-25): "filtro total"
   -- 4 estaciones (presencia, material, vision, descarga) y UNA sola salida

@@ -1,4 +1,4 @@
-"""Carga de escenarios reproducibles desde YAML (CLAUDE.md, seccion 11):
+"""Carga de escenarios reproducibles desde YAML (docs/especificacion.md, seccion 11):
 
 "Defina archivos YAML de escenario que listen la secuencia de elementos a
 inyectar... Asi la sustentacion es repetible y las pruebas automaticas

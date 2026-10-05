@@ -1,11 +1,11 @@
 nombre: no_reconocida
 descripcion: >
-  Filtro aislado de clasificacion, CLAUDE.md seccion 7 (confianza minima
+  Filtro aislado de clasificacion, docs/especificacion.md seccion 7 (confianza minima
   0.85, clase 'otro'). Discos metalicos redondos, sin agujero, de diametro
   valido -- geometricamente pasarian -- pero sin clase_real (el oraculo
   siempre los clasifica como 'otro', como pasaria con una moneda
   extranjera o un boton que ningun modelo reconoce). El primer elemento
-  usa el diametro de una moneda de un euro (23.25 mm, CLAUDE.md seccion 6):
+  usa el diametro de una moneda de un euro (23.25 mm, docs/especificacion.md seccion 6):
   cae justo en el rango de las de 500 pesos, para dejar claro que la
   decision es por reconocimiento de cara, no por geometria.
 

@@ -1,4 +1,4 @@
-"""Asistente del proyecto (fase 7, CLAUDE.md seccion 14).
+"""Asistente del proyecto (fase 7, docs/especificacion.md seccion 14).
 
 Misma idea que el tema 4 del repositorio (4-chatbot-asistente-voz/comando_voz.py):
 una frase en palabras normales (escrita o dicha) va a la API de DeepSeek, que
@@ -13,7 +13,7 @@ actua. Aca el JSON trae dos cosas:
   monedas por denominacion, rechazos por causa, vasos, carro, alarmas, lo que
   acaba de pasar) y (2) la documentacion del proyecto que tiene que ver con la
   pregunta. "Lee todo el proyecto" por busqueda: todos los documentos (README,
-  CLAUDE.md, docs/*.md, la configuracion) se parten en secciones y se mandan las
+  docs/especificacion.md, docs/*.md, la configuracion) se parten en secciones y se mandan las
   que mas palabras comparten con la pregunta. Mandar los ~300 kB completos en
   cada pregunta seria lento y caro, y no mejora la respuesta.
 - `acciones`: ordenes para la linea o el carro, las MISMAS que dejan los botones
@@ -55,7 +55,7 @@ URL_DEEPSEEK = "https://api.deepseek.com"
 MODELO = os.environ.get("DEEPSEEK_MODELO", "deepseek-chat")
 
 # Documentos que el asistente puede consultar (todo lo escrito del proyecto).
-DOCUMENTOS = ["README.md", "CLAUDE.md", "docs/paso-a-paso.md", "docs/sensores.md", "docs/componentes.md",
+DOCUMENTOS = ["README.md", "docs/especificacion.md", "docs/paso-a-paso.md", "docs/sensores.md", "docs/componentes.md",
               "docs/conexiones.md", "docs/replicacion.md", "docs/revision-final.md", "docs/costos.md",
               "docs/bitacora.md",
               # Documentos del 2026-09-28 (si todavia no existen, se saltan).
@@ -107,7 +107,7 @@ def _capacidad_tubo() -> int:
         from app.configuracion import cargar_parametros
 
         return int(cargar_parametros()["planta"]["capacidad_tubo"])
-    except Exception:   # sin config legible, el valor documentado (CLAUDE.md, seccion 5)
+    except Exception:   # sin config legible, el valor documentado (docs/especificacion.md, seccion 5)
         return 25
 
 
@@ -530,7 +530,7 @@ Reglas:
 
 def _umbrales_filtrado() -> dict:
     """Los umbrales del filtrado para el prompt, leidos de config/parametros.yaml (fuente unica;
-    ningun numero magico en el codigo). Si la configuracion no se puede leer, los de CLAUDE.md sec. 7."""
+    ningun numero magico en el codigo). Si la configuracion no se puede leer, los de docs/especificacion.md sec. 7."""
     try:
         from app.configuracion import cargar_parametros
 
@@ -992,7 +992,7 @@ def _pesos(v) -> str:
 
 NOMBRE_CAUSA = {"no_metalico": "no metálico", "fuera_de_rango": "fuera de rango", "no_circular": "no circular",
                 "perforado": "perforado", "no_reconocida": "no reconocida", "incoherente": "incoherente"}
-# Qué estación detecta cada causa de rechazo y con qué regla (CLAUDE.md sec. 7). Los umbrales
+# Qué estación detecta cada causa de rechazo y con qué regla (docs/especificacion.md sec. 7). Los umbrales
 # se rellenan con los de config/parametros.yaml (_umbrales_filtrado).
 EXPLICA_CAUSA = {
     "no_metalico": "E2 (material): el capacitivo la ve y el inductivo no, así que no es metal",

@@ -1,6 +1,6 @@
 """Todo lo que el dashboard lee (SQLite, el servidor del supervisor, la
 configuración) y la única forma de escribir: `enviar()` deja una orden en la
-tabla `ordenes` (CLAUDE.md §8: este proceso NO corre la línea).
+tabla `ordenes` (docs/especificacion.md §8: este proceso NO corre la línea).
 
 Las pestañas no escriben SQL: piden aquí lo que necesitan.
 """
@@ -57,7 +57,7 @@ def consulta(sql: str, params: tuple = ()) -> pd.DataFrame:
 
 
 def telemetria() -> dict | None:
-    """El último estado completo de la planta (evento `tel`, CLAUDE.md §10.4)."""
+    """El último estado completo de la planta (evento `tel`, docs/especificacion.md §10.4)."""
     return db.ultima_telemetria(conexion())
 
 

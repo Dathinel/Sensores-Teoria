@@ -1,4 +1,4 @@
-r"""Entrenamiento del clasificador de monedas (fase 5, CLAUDE.md sección 12): Keras + MobileNetV2.
+r"""Entrenamiento del clasificador de monedas (fase 5, docs/especificacion.md sección 12): Keras + MobileNetV2.
 
 Se corre UNA vez, cuando ya hay fotos (python -m vision.capturar_dataset), en el MISMO entorno del
 proyecto. TensorFlow no tiene versión para Python 3.14, pero Keras 3 ya no depende de él: corre sobre
@@ -32,7 +32,7 @@ DATASET = RAIZ / "vision" / "dataset"
 MODELOS = RAIZ / "vision" / "modelos"
 RESULTADOS = RAIZ / "vision" / "resultados"
 
-# 96x96 píxeles (CLAUDE.md sección 12): la cámara, la distancia y la luz son siempre las mismas, así
+# 96x96 píxeles (docs/especificacion.md sección 12): la cámara, la distancia y la luz son siempre las mismas, así
 # que el modelo no necesita ver la moneda en grande; con 96 px una moneda de 17 mm (la más chica)
 # todavía muestra su cara, y la red corre en el portátil en unos pocos milisegundos.
 LADO = 96

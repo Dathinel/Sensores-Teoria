@@ -1,4 +1,4 @@
-"""Pestaña Asistente (fase 7, CLAUDE.md §14): se le pregunta por escrito o por
+"""Pestaña Asistente (fase 7, docs/especificacion.md §14): se le pregunta por escrito o por
 voz por las cifras de la corrida o por cualquier parte del proyecto, y se le
 puede pedir que mueva el carro o la línea. La lógica está en `app/asistente.py`
 (DeepSeek → modelo local → reglas, lista blanca de órdenes, voz); aquí solo

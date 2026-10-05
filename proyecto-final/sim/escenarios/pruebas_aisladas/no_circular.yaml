@@ -1,6 +1,6 @@
 nombre: no_circular
 descripcion: >
-  Filtro aislado de circularidad, CLAUDE.md seccion 7 (umbral 0.90): se
+  Filtro aislado de circularidad, docs/especificacion.md seccion 7 (umbral 0.90): se
   lleva bloques y fichas irregulares. Usa un bloque METALICO a proposito
   (metal=true) para que pase la estacion de material y el rechazo se deba
   solo a la forma, no al material -- un bloque de plastico normal ya

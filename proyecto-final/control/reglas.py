@@ -1,4 +1,4 @@
-"""Reglas de decision del filtrado de monedas (CLAUDE.md, seccion 7).
+"""Reglas de decision del filtrado de monedas (docs/especificacion.md, seccion 7).
 
 Cada funcion corresponde a una etapa independiente y devuelve la causa de
 rechazo o None si la etapa deja pasar el elemento. `evaluar_moneda` las
@@ -19,7 +19,7 @@ CAUSA_NO_RECONOCIDA = "no_reconocida"
 CAUSA_INCOHERENTE = "incoherente"
 
 # Exactamente las causas de la seccion 7. No se inventan causas nuevas sin
-# actualizar CLAUDE.md (seccion 10.2).
+# actualizar docs/especificacion.md (seccion 10.2).
 CAUSAS_VALIDAS = (
     CAUSA_NO_METALICO,
     CAUSA_FUERA_DE_RANGO,

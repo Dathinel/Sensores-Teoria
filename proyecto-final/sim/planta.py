@@ -1,5 +1,5 @@
 """Planta completa en simulacion: cinta de monedas + cinta de vasos
-funcionando JUNTAS, paso a paso (CLAUDE.md, seccion 5, pasos 1 a 14).
+funcionando JUNTAS, paso a paso (docs/especificacion.md, seccion 5, pasos 1 a 14).
 
 Es LA simulacion de la linea: las dos cintas, el almacen, la canaleta y el
 carro, conectados como en la linea real:
@@ -1096,7 +1096,7 @@ class PlantaSimulada:
                     # `no_reconocida` (seccion 7: "rechazar lo que no reconoce"):
                     # antes quedaba NULL en `elementos`, y el conteo por causa
                     # del dashboard lo perdia. Las causas son SOLO las de la
-                    # seccion 7 (CLAUDE.md 10.2); el detalle de que fallaron
+                    # seccion 7 (docs/especificacion.md 10.2); el detalle de que fallaron
                     # los sensores queda en el evento (`motivo: sin_registro`).
                     registro.rechazar(reglas.CAUSA_NO_RECONOCIDA)
                     self._a_rechazo(elemento, id_registro, "sin_registro")

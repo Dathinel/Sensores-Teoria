@@ -1578,3 +1578,25 @@ lotes, todos a 0 mm de la boca/agujero y 0° de giro en el segundo previo, sin e
 primera tapa se suelta otra: dos intentos = 2 × (500 + 3 × 60) = 1360 ms, que no cabían en 800. El grupo
 prefirió alargar la pausa en vez de hacer esperar a la cinta de vasos: los lotes llegan mucho más lento que
 un ciclo de vasos, así que no frena al almacén. El chequeo "Reintento de la tapa" pasa a OK (1360 de 1400).
+
+## 2026-10-02 — Orden de los contextos: la especificación sale de CLAUDE.md (plan PLAN-ORDEN-CONTEXTOS)
+
+**Hecho:** `CLAUDE.md` pasó de 1062 a 77 líneas. La especificación numerada (secciones 1-16, 18 y 19, sin
+cambiar texto ni números) vive ahora en `docs/especificacion.md`; `CLAUDE.md` queda con las instrucciones
+para Claude Code, una tabla de "dónde leer según lo que se toque" y la sección 17 (reglas del agente; la de
+commits pasa a "no hacer commit ni push sin que el usuario lo pida", decisión del usuario).
+`CONTEXTO-SESION.md` (379 → 131 líneas) queda en orden 0-5 con las reglas permanentes juntas en la sección 0;
+los pedidos cerrados 2-17 están en `docs/historial-pedidos.md`, textuales.
+
+**Referencias:** 80 citas "CLAUDE.md, sección N" en 55 archivos (código, config, escenarios, URDF, pruebas,
+docs, README) pasan a `docs/especificacion.md`; las de la regla/sección 17 siguen en `CLAUDE.md`. Esta
+bitácora no se tocó (es historial: sus citas viejas se refieren al `CLAUDE.md` de ese momento, con la misma
+numeración). `app/asistente.py` indexa `docs/especificacion.md` en lugar de `CLAUDE.md`
+(`tests/app/test_asistente.py` ajustado). Regenerados `paso-a-paso.md` y `visor-portable.html`.
+
+**Pruebas:** suite completa 930/930 (3:52). Batería real del asistente (`app.evaluar_asistente`): primera
+corrida ollama 59/60 (falló "¿cuál fue la última moneda que revisó la cámara?": el modelo chico no dio las
+cifras, es un dato en vivo de la base, no de la documentación) y reglas 60/60; segunda corrida 60/60 y
+60/60 (mediana 4,9 s). Al abrir una sesión en el proyecto final se cargan 9,5 k tokens de contexto en vez
+de ~25 k. Detalle de qué salió de dónde: `D:\cosas uni\Micros\historial\correspondencia-contextos.md`
+(fuera del repo).

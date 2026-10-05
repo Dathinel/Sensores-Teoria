@@ -1,6 +1,6 @@
 """Protocolo de comunicacion (punto 15): mensajes numerados y confirmados,
 latido y reglas del enlace. Python puro: lo usa la simulacion hoy y es la
-misma logica que va en el firmware (fase 8). Contrato en CLAUDE.md, 10.1.
+misma logica que va en el firmware (fase 8). Contrato en docs/especificacion.md, 10.1.
 
 Tres enlaces:
 

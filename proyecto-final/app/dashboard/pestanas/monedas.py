@@ -1,4 +1,4 @@
-"""Pestaña Monedas y vasos (la "Producción" de CLAUDE.md §13): cuántas monedas
+"""Pestaña Monedas y vasos (la "Producción" de docs/especificacion.md §13): cuántas monedas
 de cada denominación, el valor acumulado, qué hay en cada tubo del almacén y
 los vasos de la corrida."""
 

@@ -53,7 +53,7 @@ def _cargar_pasos() -> list[dict]:
 def generar_paso_a_paso(pasos: list[dict]) -> str:
     catalogo = {s["numero"]: s for s in CATALOGO_SENSORES}
     lineas = [AVISO, "# Paso a paso del sistema\n",
-              "Cada punto de la secuencia de operación (sección 5 de `CLAUDE.md`), con el sensor que usa, "
+              "Cada punto de la secuencia de operación (sección 5 de `docs/especificacion.md`), con el sensor que usa, "
               "qué entra, qué decide y qué sale. El estado de revisión dice si el grupo ya confirmó la lógica.\n",
               "Para verlo en 3D: doble clic en `visor.bat` (pestaña Paso a paso del visor).\n",
               "| # | Punto | Sensores | Revisión |", "|---|---|---|---|"]

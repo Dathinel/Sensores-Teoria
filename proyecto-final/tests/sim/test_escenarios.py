@@ -1,4 +1,4 @@
-"""Cada filtro por separado y el escenario mixto de 20 elementos (CLAUDE.md,
+"""Cada filtro por separado y el escenario mixto de 20 elementos (docs/especificacion.md,
 seccion 16, fase 3): corridos en la planta completa, en modo DIRECT y con la
 camara oraculo sin ruido, cada elemento tiene que terminar donde dice el
 escenario. Los escenarios estan en sim/escenarios/pruebas_aisladas/ (la

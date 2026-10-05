@@ -3,7 +3,7 @@
 
 # Paso a paso del sistema
 
-Cada punto de la secuencia de operación (sección 5 de `CLAUDE.md`), con el sensor que usa, qué entra, qué decide y qué sale. El estado de revisión dice si el grupo ya confirmó la lógica.
+Cada punto de la secuencia de operación (sección 5 de `docs/especificacion.md`), con el sensor que usa, qué entra, qué decide y qué sale. El estado de revisión dice si el grupo ya confirmó la lógica.
 
 Para verlo en 3D: doble clic en `visor.bat` (pestaña Paso a paso del visor).
 
@@ -77,7 +77,7 @@ La casilla queda quieta bajo una cámara cenital con anillo de luz (lo que el ma
 
 - **Entra:** Dos imágenes de la casilla.
 - **Decide:** 1) Geometría (promedio de las dos fotos): diámetro fuera de 16,5-27,5 mm → fuera_de_rango; circularidad < 0,90 → no_circular; con agujeros → perforado. 2) Clasificación con las dos fotos: si las que reconocen (confianza ≥ 0,85) dicen la misma clase → esa clase, aunque la otra foto no haya reconocido por un reflejo; si reconocen clases distintas → no_reconocida; si ninguna reconoce → no_reconocida. 3) Coherencia: si el diámetro nominal de la clase difiere más de 1,2 mm del medido → incoherente. Si pasa todo → aceptada, con su denominación, valor y masa nominal.
-- **Sale:** Veredicto de visión (sección 10.2 de CLAUDE.md), con las dos lecturas y cómo se combinaron. En la misma imagen la cámara mide si la cinta de monedas quedó en su casilla (separadores); si se corrió, se corrige con micropasos.
+- **Sale:** Veredicto de visión (sección 10.2 de docs/especificacion.md), con las dos lecturas y cómo se combinaron. En la misma imagen la cámara mide si la cinta de monedas quedó en su casilla (separadores); si se corrió, se corrige con micropasos.
 - **Sensores:** [4. Cámara cenital](sensores.md#4-cámara-cenital)
 
 ```json
@@ -312,7 +312,7 @@ Con el vaso cargado, el carro sale del muelle siguiendo la línea negra con sus 
 
 **Revisión:** ✅ aprobado
 
-El ESP32 fijo manda cada evento por USB serial al PC (y reenvía los del carro que le llegan por ESP-NOW). En el PC, el supervisor guarda todo en SQLite; el dashboard y este visor 3D lo muestran en vivo. Todos los mensajes van numerados y se confirman (ack), y hay latido en los dos sentidos. Contrato completo en CLAUDE.md, 10.1.
+El ESP32 fijo manda cada evento por USB serial al PC (y reenvía los del carro que le llegan por ESP-NOW). En el PC, el supervisor guarda todo en SQLite; el dashboard y este visor 3D lo muestran en vivo. Todos los mensajes van numerados y se confirman (ack), y hay latido en los dos sentidos. Contrato completo en docs/especificacion.md, 10.1.
 
 - **Entra:** Líneas JSON por serial a 115200 baudios; mensajes del carro por ESP-NOW.
 - **Decide:** Comando sin ack en 300 ms: un reintento y después fallo de comunicación. El ESP32 fijo sin el PC por 2 s: parada segura (cintas quietas, prensa arriba, desvío al rechazo). Carro sin enlace: termina la vuelta y queda en el muelle, guardando sus mensajes. La estación suelta un vaso al carro solo con el enlace vivo, un estado fresco del carro, el carro en el muelle y la cuna vacía (infrarrojo 12). Ese mismo infrarrojo confirma en la meta que sacaron el vaso.

@@ -1,4 +1,4 @@
-"""Dashboard de Streamlit (CLAUDE.md, sección 13), en módulos:
+"""Dashboard de Streamlit (docs/especificacion.md, sección 13), en módulos:
 
     inicio.py     punto de entrada (lo corre `streamlit run app/dashboard/inicio.py`)
     estilo.py     sistema de diseño: colores, CSS, tarjetas, chips, avisos, tema de Plotly

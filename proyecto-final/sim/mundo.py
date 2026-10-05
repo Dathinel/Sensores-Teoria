@@ -1,4 +1,4 @@
-"""Construccion de la escena de PyBullet (CLAUDE.md, seccion 11, fase 2).
+"""Construccion de la escena de PyBullet (docs/especificacion.md, seccion 11, fase 2).
 
 Este modulo es el unico lugar de todo el proyecto, junto con el resto de
 `sim/`, que puede importar `pybullet`. La capa de control (`control/`) no lo

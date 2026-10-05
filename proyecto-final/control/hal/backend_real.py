@@ -1,6 +1,6 @@
 """Backend REAL de la HAL (fase 8): las mismas interfaces que backend_sim.py,
 pero cada lectura sale de la telemetria del ESP32 fijo y cada accion es un
-comando numerado por el USB serial (CLAUDE.md 10.1).
+comando numerado por el USB serial (docs/especificacion.md 10.1).
 
 No importa pyserial (regla de `control/`): recibe un "puente" ya abierto
 (`app.puente_serial.PuenteESP32`, o cualquier objeto con `tel`, `comando` y

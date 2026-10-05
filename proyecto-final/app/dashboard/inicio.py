@@ -1,4 +1,4 @@
-"""Punto de entrada del dashboard de Streamlit (CLAUDE.md, sección 13).
+"""Punto de entrada del dashboard de Streamlit (docs/especificacion.md, sección 13).
 
 Este proceso SOLO LEE de SQLite y escribe órdenes en la tabla `ordenes`
 (sección 8). No importa PyBullet ni abre la simulación: la línea la corre

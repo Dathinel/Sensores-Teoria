@@ -2,7 +2,7 @@
 
 - CATALOGO_SENSORES: los sensores numerados (estacion fija y carro): modelo
   real propuesto, que lo activa, que recibe, que entrega, que mensaje viaja
-  al PC (seccion 10.1 de CLAUDE.md), como se replica y como se simula.
+  al PC (seccion 10.1 de docs/especificacion.md), como se replica y como se simula.
 - COMPONENTES / CATEGORIAS: la lista de materiales. Cada componente tiene un
   `id` que el visor 3D usa para resaltarlo, cuantos hay, el modelo propuesto,
   para que sirve y su estado en la simulacion ("simulado", "solo visual" o

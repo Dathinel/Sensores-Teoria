@@ -1,6 +1,6 @@
 nombre: fuera_de_rango
 descripcion: >
-  Filtro aislado de geometria (diametro), CLAUDE.md seccion 7: rango
+  Filtro aislado de geometria (diametro), docs/especificacion.md seccion 7: rango
   valido 16.5 a 27.5 mm. Discos metalicos redondos y sin agujero -- pasan
   material sin problema -- pero de un diametro que ya no es de moneda.
   Circularidad y contornos internos se dejan "perfectos" a proposito para

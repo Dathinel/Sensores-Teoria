@@ -875,7 +875,7 @@ abaratar, ninguna aplicada sin aprobarla) y [`docs/peso.md`](docs/peso.md).
 **Falta, en documentación y software** (de la revisión final del 2026-09-27):
 
 - **Entregable 1:** un documento de arquitectura con los requerimientos funcionales y no funcionales
-  y un diagrama de bloques por módulo (hoy está repartido en este README, `CLAUDE.md` y
+  y un diagrama de bloques por módulo (hoy está repartido en este README, `docs/especificacion.md` y
   `docs/revision-final.md`).
 - **Entregable 2:** planos acotados (vistas del modelo 3D con medidas). La parte eléctrica ya está
   punto por punto y simulada ([`docs/electrica.md`](docs/electrica.md)), pin a pin
@@ -889,7 +889,7 @@ abaratar, ninguna aplicada sin aprobarla) y [`docs/peso.md`](docs/peso.md).
 mismo portátil (las versiones exactas están en `requirements-lock.txt`); hacerle una pregunta de
 calentamiento al modelo local; empezar una corrida nueva. Y llevar preparado el argumento de lo
 inalámbrico: el PC habla con el ESP32 fijo por USB y lo inalámbrico es ESP-NOW entre las dos placas
-(ver [`CLAUDE.md`](CLAUDE.md), sección 15), que no depende del router del salón.
+(ver [`docs/especificacion.md`](docs/especificacion.md), sección 15), que no depende del router del salón.
 
 ## Instalar en otro PC
 
@@ -957,7 +957,8 @@ Aquí está cada archivo, qué hace y cuándo se usa.
 | `requirements.txt` / `requirements-lock.txt` | Dependencias, y las versiones exactas con las que se probó todo. |
 | `pytest.ini` | Configura las pruebas: carpeta `tests/` y la raíz importable sin instalar nada. |
 | `.env.example` | Cómo poner la clave de DeepSeek (el `.env` real no se sube). |
-| `CLAUDE.md` | El documento maestro de diseño: requisitos, secuencia de operación, contratos de datos, reglas. |
+| `docs/especificacion.md` | El documento maestro de diseño: requisitos, secuencia de operación, contratos de datos, reglas. |
+| `CLAUDE.md` | Instrucciones para Claude Code (reglas del agente, sección 17). |
 | `CONTEXTO-SESION.md` | Reglas del grupo y en qué va el trabajo, sesión a sesión. |
 
 ### `config/`: todos los números del diseño

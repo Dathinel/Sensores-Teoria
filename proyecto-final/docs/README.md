@@ -28,6 +28,8 @@ Con su propio comando:
 
 ## Escritos a mano
 
+- `especificacion.md` — la especificación del proyecto, secciones 1-19 (antes en el `CLAUDE.md` de la raíz).
+- `historial-pedidos.md` — pedidos del usuario ya cerrados (salieron de `CONTEXTO-SESION.md`).
 - `paso-a-paso.yaml` — fuente única de los 17 puntos (de aquí salen `paso-a-paso.md` y parte de
   `sensores.md`).
 - `bitacora.md` — avance y decisiones sesión por sesión. Es el historial: las rutas viejas que

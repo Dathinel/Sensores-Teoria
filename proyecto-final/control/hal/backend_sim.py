@@ -1,4 +1,4 @@
-"""Backend `sim` de la HAL (CLAUDE.md, seccion 8).
+"""Backend `sim` de la HAL (docs/especificacion.md, seccion 8).
 
 Traduce cada interfaz abstracta de `control/hal/interfaces.py` a comandos
 sobre `sim/mundo.py`, `sim/sensores_sim.py`. Junto con

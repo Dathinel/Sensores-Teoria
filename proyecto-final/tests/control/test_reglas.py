@@ -73,7 +73,7 @@ def test_evaluar_moneda_aceptada():
 def test_evaluar_moneda_moneda_extranjera_de_diametro_similar_se_rechaza():
     # Un euro mide 23.25 mm, muy cerca del rango de las de 500, pero el
     # clasificador debe devolver 'otro' porque no es una clase colombiana
-    # (CLAUDE.md, seccion 6): la decision final es por reconocimiento de
+    # (docs/especificacion.md, seccion 6): la decision final es por reconocimiento de
     # cara, no por geometria.
     veredicto = reglas.evaluar_moneda(
         metal=True,

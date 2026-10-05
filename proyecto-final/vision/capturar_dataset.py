@@ -1,4 +1,4 @@
-"""Captura del dataset de monedas con la webcam del montaje (fase 5, CLAUDE.md sección 12).
+"""Captura del dataset de monedas con la webcam del montaje (fase 5, docs/especificacion.md sección 12).
 
 El clasificador se entrena con fotos DEL PROPIO MONTAJE: misma cámara, misma altura (~15 cm sobre
 E3), mismo anillo de luz y la cinta negra de fondo. Así el modelo no tiene que aprender a ignorar

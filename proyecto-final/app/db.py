@@ -1,4 +1,4 @@
-"""Esquema y acceso a SQLite (CLAUDE.md, seccion 10.3).
+"""Esquema y acceso a SQLite (docs/especificacion.md, seccion 10.3).
 
 Este modulo solo abre la conexion y crea el esquema si falta. El proceso
 supervisor es el unico que escribe eventos aqui; el dashboard de Streamlit

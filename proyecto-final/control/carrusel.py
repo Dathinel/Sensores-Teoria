@@ -1,4 +1,4 @@
-"""Carrusel del almacen tipo revolver (CLAUDE.md, seccion 5, pasos 8 y 10):
+"""Carrusel del almacen tipo revolver (docs/especificacion.md, seccion 5, pasos 8 y 10):
 DONDE esta y CUANDO llega. Python puro, sin PyBullet ni pyserial.
 
 Por que existe (pedido del usuario 2026-09-28, "la moneda pasa sin que se

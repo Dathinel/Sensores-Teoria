@@ -1,6 +1,6 @@
 nombre: incoherente
 descripcion: >
-  Filtro aislado de coherencia, CLAUDE.md seccion 7 (tolerancia 1.2 mm):
+  Filtro aislado de coherencia, docs/especificacion.md seccion 7 (tolerancia 1.2 mm):
   cruza la clase predicha contra el diametro medido. clase_real es una
   denominacion valida (asi que la clasificacion sola la aceptaria) pero
   diametro_mm se fuerza a un valor que no le corresponde a esa clase.

@@ -1,4 +1,4 @@
-# Tabla de referencia de monedas colombianas (CLAUDE.md, seccion 6).
+# Tabla de referencia de monedas colombianas (docs/especificacion.md, seccion 6).
 #
 # Se lee en control/monedas.py. Cada fila es una CLASE del clasificador de
 # vision ("<denominacion>_<familia>") y un tubo o compartimiento de destino
@@ -13,7 +13,7 @@
 #   historica    series anteriores (anos 70 y 80)
 #
 # `verificado: true` = valor nominal de referencia (tabla original de
-# CLAUDE.md). `verificado: false` = PROVISIONAL: valor aproximado puesto
+# la especificación, sección 6). `verificado: false` = PROVISIONAL: valor aproximado puesto
 # para poder simular, SIN VERIFICAR. Antes de entrenar el clasificador o
 # fijar los rangos de filtrado hay que medir monedas reales: diametro con
 # calibrador (±0,02 mm) en 3 direcciones y masa con bascula de 0,01 g, al

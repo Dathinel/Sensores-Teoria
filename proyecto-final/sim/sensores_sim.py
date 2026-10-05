@@ -1,4 +1,4 @@
-"""Emulacion de sensores sobre el mundo de PyBullet (CLAUDE.md, seccion 11).
+"""Emulacion de sensores sobre el mundo de PyBullet (docs/especificacion.md, seccion 11).
 
 Implementa `control.hal.interfaces.SensorDiscreto` contra `sim/mundo.py`.
 Dos familias:
@@ -440,7 +440,7 @@ def sensor_cortina(
 # Camara de monedas (E3) en modo oraculo
 # ---------------------------------------------------------------------
 #
-# Clasificador en modo oraculo (CLAUDE.md, seccion 11 y seccion 12).
+# Clasificador en modo oraculo (docs/especificacion.md, seccion 11 y seccion 12).
 #
 # "Para las fases tempranas, el clasificador corre en modo oraculo: lee la
 # clase real del cuerpo y le aplica un ruido configurable de confusion, de
@@ -456,7 +456,7 @@ def sensor_cortina(
 # creo (no hay ruido de segmentacion todavia, eso tambien es fase 5). El
 # unico ruido configurable aqui es el de CLASIFICACION -- que es, ademas, el
 # que de verdad importa probar: la geometria sola no distingue una moneda
-# colombiana de una extranjera de diametro parecido (CLAUDE.md, seccion 6).
+# colombiana de una extranjera de diametro parecido (docs/especificacion.md, seccion 6).
 
 
 

@@ -1,6 +1,6 @@
 nombre: no_metalico
 descripcion: >
-  Filtro aislado de la estacion 2 (material, CLAUDE.md seccion 7). Solo
+  Filtro aislado de la estacion 2 (material, docs/especificacion.md seccion 7). Solo
   botones de plastico: capacitivo activo, inductivo inactivo. Deben salir
   todos por el la bandeja de rechazo sin llegar nunca a la estacion de vision.
 

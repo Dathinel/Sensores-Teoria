@@ -168,7 +168,7 @@ sequenceDiagram
         A->>R: responder_local(): ¿ya tengo la cifra exacta?
         R-->>A: DATO VERIFICADO (o nada)
         A->>DOC: buscar(pregunta), ~9000 caracteres, peso extra a monedas y carro
-        DOC-->>A: secciones de README, CLAUDE.md, docs/*.md, config
+        DOC-->>A: secciones de README, docs/*.md, config
         A->>O: prompt: instrucciones + docs + estado en vivo + dato verificado + PREGUNTA al final
         O-->>A: JSON {"respuesta": "...", "acciones": [...]}
     end

@@ -3,7 +3,7 @@
 La tabla vive en config/monedas.yaml (cuatro generaciones: nueva, antigua,
 muy_antigua e historica); aqui solo se carga y se consulta. Los valores son
 nominales; el desgaste real mueve decimas de milimetro en diametro y algo
-mas en masa (CLAUDE.md, seccion 6). Se usan para el calculo de peso
+mas en masa (docs/especificacion.md, seccion 6). Se usan para el calculo de peso
 estimado y como compuerta previa de la vision, nunca como criterio unico de
 aceptacion: con monedas extranjeras y varias generaciones en juego el
 diametro deja de ser discriminante (una moneda de un euro cae dentro del

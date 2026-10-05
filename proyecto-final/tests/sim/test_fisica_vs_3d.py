@@ -781,7 +781,7 @@ que NO se corrigió):
   y encima va la electrónica. Largo y ancho coinciden; la altura no se compara porque la caja no es
   la placa.
 - **Pestaña del vaso**: la configuración y el visor usan 62 + 2 × 8 = **78 mm**; el texto de
-  `CLAUDE.md` (sección 6, "Modelo físico") decía "la pestaña del reborde, 72 mm" (corregido el 2026-09-28). Era un error del
+  `docs/especificacion.md` (sección 6, "Modelo físico") decía "la pestaña del reborde, 72 mm" (corregido el 2026-09-28). Era un error del
   texto, no de la simulación (la prueba física usa 78 mm y el vaso cuelga).
 - **Banda de la cinta de vasos**: 395 mm en el URDF y 400 mm en el visor (de separador a
   separador): 2,5 mm por lado, dentro de la tolerancia.

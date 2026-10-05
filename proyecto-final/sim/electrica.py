@@ -8,7 +8,7 @@ Que hace este modulo (Python puro: numpy y, si esta, matplotlib; NO usa PyBullet
    marcados como tales: todavia no se midieron en el montaje).
 2. Recorre en el tiempo, con paso de 10 ms, un ciclo REAL de la planta (las dos
    cintas con los tiempos de `config/parametros.yaml`, los servos en el orden de la
-   seccion 5 de CLAUDE.md, prensa y empujador nunca a la vez) y un recorrido del
+   seccion 5 de docs/especificacion.md, prensa y empujador nunca a la vez) y un recorrido del
    carro (arranque, rectas, curvas, evasion de los 3 muros, meta, vuelta, muelle).
    Resultado: corriente de cada riel contra el tiempo, pico, promedio, margen de
    cada fusible y regulador, disipacion, consumo desde la red y autonomia.

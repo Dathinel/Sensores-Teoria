@@ -1,4 +1,4 @@
-# Paso a paso del sistema, punto por punto (CLAUDE.md, seccion 5).
+# Paso a paso del sistema, punto por punto (docs/especificacion.md, seccion 5).
 #
 # Fuente unica: la leen el visor 3D (recorrido guiado), la pestana "Paso a
 # paso" del dashboard y `python -m app.documentos`, que genera
@@ -108,7 +108,7 @@ pasos:
       si ninguna reconoce → no_reconocida. 3) Coherencia: si el diámetro nominal de la clase
       difiere más de 1,2 mm del medido → incoherente. Si pasa todo → aceptada, con su
       denominación, valor y masa nominal.
-    sale: Veredicto de visión (sección 10.2 de CLAUDE.md), con las dos lecturas y cómo se combinaron. En la misma imagen la cámara mide si la cinta de monedas quedó en su casilla (separadores); si se corrió, se corrige con micropasos.
+    sale: Veredicto de visión (sección 10.2 de docs/especificacion.md), con las dos lecturas y cómo se combinaron. En la misma imagen la cámara mide si la cinta de monedas quedó en su casilla (separadores); si se corrió, se corrige con micropasos.
     mensaje: '{"casilla":17,"diametro_mm":23.68,"circularidad":0.981,"clase":"500_nueva","confianza":0.95,"fotos":[["500_nueva",0.95],["otro",0.4]],"combinacion":"reconocida en 1 de 2 las fotos","veredicto":"aceptada"}'
     como_esta_hoy: >
       Modo oráculo hasta la fase 5 (por foto: diámetro ±0,08 mm, 2 % de no reconocer, 0,5 % de
@@ -580,7 +580,7 @@ pasos:
       El ESP32 fijo manda cada evento por USB serial al PC (y reenvía los del carro que le
       llegan por ESP-NOW). En el PC, el supervisor guarda todo en SQLite; el dashboard y este
       visor 3D lo muestran en vivo. Todos los mensajes van numerados y se confirman (ack), y hay
-      latido en los dos sentidos. Contrato completo en CLAUDE.md, 10.1.
+      latido en los dos sentidos. Contrato completo en docs/especificacion.md, 10.1.
     entra: Líneas JSON por serial a 115200 baudios; mensajes del carro por ESP-NOW.
     decide: >
       Comando sin ack en 300 ms: un reintento y después fallo de comunicación. El ESP32 fijo sin
