@@ -109,7 +109,10 @@ const cfg = { pez3: { dx: -0.08, dy: 0 }, pez5: { dx: -0.03, dy: 0 } };  // valo
 let DESP_X = -0.08, DESP_Y = 0, INV_X = false, INV_Y = false;
 let recortes = 0;
 
-const limitar = v => { if (v < 0 || v > 1) recortes++; return v < 0 ? 0 : v > 1 ? 1 : v; };
+// Igual que limitar() de los .py: recorta a 0-1. "recortado" marca si el punto actual
+// tocó el borde (se cuenta por PUNTO, no por coordenada, en convertir()).
+let recortado = false;
+const limitar = v => { if (v < 0 || v > 1) recortado = true; return v < 0 ? 0 : v > 1 ? 1 : v; };
 function convX(x) { x = limitar(x + DESP_X); if (INV_X) x = 1 - x; return Math.trunc(DAC_MIN + x * (DAC_MAX - DAC_MIN)); }
 function convY(y) { y = limitar(y + DESP_Y); if (INV_Y) y = 1 - y; return Math.trunc(DAC_MIN + y * (DAC_MAX - DAC_MIN)); }
 
@@ -124,7 +127,12 @@ function bezier(x0, y0, x1, y1, x2, y2, n) {
   const r = []; for (let i = 0; i <= n; i++) { const t = i / n, u = 1 - t;
     r.push([u*u*x0 + 2*u*t*x1 + t*t*x2, u*u*y0 + 2*u*t*y1 + t*t*y2]); } return r;
 }
-const convertir = tray => tray.map(([x, y]) => [convX(x), convY(y)]);
+const convertir = tray => tray.map(([x, y]) => {
+  recortado = false;
+  const p = [convX(x), convY(y)];
+  if (recortado) recortes++;
+  return p;
+});
 
 // Cada pieza lleva su "espera" relativa: la pupila se dibuja más lento (más brillo), como en los .py.
 function piezasPez3() {

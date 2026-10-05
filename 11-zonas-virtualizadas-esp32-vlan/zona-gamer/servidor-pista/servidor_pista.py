@@ -710,14 +710,27 @@ class ServidorPista:
 
 
 PAGINA = """<!doctype html><html lang="es"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><title>Pista Zona Gamer</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Pista · Zona Gamer (VLAN 1)</title>
 <style>body{margin:0;background:#14161c;color:#e8e9ee;font-family:system-ui,sans-serif}
-main{max-width:1280px;margin:auto;padding:12px}img{width:100%;height:auto;display:block;border-radius:6px}
-small{color:#969ba8}</style></head><body><main>
-<h3>Servidor de pista (Zona Gamer, VLAN 1)</h3>
+main{max-width:1280px;margin:auto;padding:12px 16px}img{width:100%;height:auto;display:block;border-radius:6px}
+h1{font-size:1.25rem;margin:6px 0 2px}p{margin:4px 0;color:#b9bdc8;font-size:.9rem;line-height:1.5}
+small{color:#969ba8}b{color:#e8e9ee;font-weight:600}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}nav a{color:#e8e9ee;text-decoration:none;font-size:.82rem;
+border:1px solid #2c303a;border-radius:8px;padding:5px 10px;background:#1b1e26}nav a:hover{border-color:#e8b930}
+nav a.aqui{border-color:#e8b930;color:#e8b930}#e{font-family:ui-monospace,monospace}</style></head><body><main>
+<nav id="nav"><a data-p="8080">Dashboard del admin</a><a data-p="8010" class="aqui">Pista</a><a data-p="8011">Spot</a>
+<a data-p="8012">Pepper</a><a data-p="8013">NAO</a></nav>
+<h1>Servidor de pista · Zona Gamer (VLAN 1)</h1>
+<p>Simulación en <b>PyBullet</b> (física a 240 Hz, sin ventana) de una pista ovalada con seis carros:
+<b>P1, P2 y P3</b> los manejan los contenedores <b>player-1..3</b>, que reciben el mando de su ESP32 por UDP
+(aquí, ESP32 emulados con piloto automático) y se lo pasan al servidor por WebSocket; <b>A1, A2 y A3</b> son
+autónomos que siguen la línea central. A la derecha, la tabla de posiciones y una cámara que rota entre los carros.
+Si un jugador deja de recibir su mando durante 1 s, su carro frena (failsafe).</p>
 <img id="c" src="/cuadro.jpg" alt="vista cenital de la pista">
 <p><small id="e">cargando...</small></p></main>
 <script>
+// Enlaces a los otros visores: mismo host con el que se abrió esta página, otro puerto publicado por Docker.
+document.querySelectorAll('#nav a').forEach(a => a.href = location.protocol + '//' + (location.hostname || 'localhost') + ':' + a.dataset.p + '/');
 // Pide el cuadro nuevo apenas termina de cargar el anterior (sin acumular pedidos si la red va lenta).
 const img = document.getElementById('c');
 img.onload = img.onerror = () => setTimeout(() => img.src = '/cuadro.jpg?t=' + Date.now(), 150);

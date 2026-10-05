@@ -1,0 +1,137 @@
+{
+  "id": "9",
+  "titulo": "Taller segundo corte: drones, Baxter y Atlas en PyBullet con un teclado 4x4 en el ESP32",
+  "resumen": "Tres simulaciones de robots en PyBullet manejadas con el mismo teclado matricial 4x4 conectado a un ESP32 (real-to-sim): cinco drones en V que vuelan con física real entre los puntos A, B y C; el robot Baxter moviendo sus dos brazos para coger y llevar un cubo; y el humanoide Atlas caminando, con un asistente de equilibrio que se prende y se apaga. Sin el ESP32, cada ventana trae botones que hacen lo mismo que las teclas.",
+  "pide": [
+    "a) Mover los drones de un lugar A a un lugar B y a un lugar C, con el control desde el ESP32",
+    "b) Consola de mandos con el ESP32 para mover a Baxter con fluidez: movilidad real de los brazos, posicionamiento y coger y mover un objeto",
+    "c) Consola de mandos con el ESP32 para una movilidad real del robot (la imagen del enunciado es Atlas, el humanoide de atlas.py)",
+    "Entrega: README con la arquitectura, el análisis, el paso a paso, videos del funcionamiento y los códigos explicados"
+  ],
+  "python": {
+    "versiones": ["3.13", "3.14", "3.12"],
+    "paquetes": ["pybullet==3.2.7", "pyserial==3.5"]
+  },
+  "acciones": [
+    {
+      "id": "modelos",
+      "nombre": "Descargar los modelos de Baxter y Atlas (una vez)",
+      "tipo": "python",
+      "script": "descargar_modelos.py",
+      "args": [],
+      "cwd": ".",
+      "descripcion": "Baja de GitHub (repositorio pybullet_robots del profesor) las mallas reales de Baxter y Atlas, unos 37 MB, a la carpeta modelos/ (no se sube a git). Hace falta internet. Si ya están, no las vuelve a bajar. Las simulaciones de Baxter y Atlas también lo corren solas la primera vez si faltan.",
+      "cubre": ["b) Baxter", "c) Atlas"]
+    },
+    {
+      "id": "drones",
+      "nombre": "a) Drones a mano (ventana con botones)",
+      "tipo": "python",
+      "script": "punto-a-drones-waypoints/drones_pybullet.py",
+      "args": [],
+      "cwd": ".",
+      "descripcion": "Abre PyBullet con cinco drones en el piso (física real: gravedad y la fuerza de los 4 motores de cada uno). Sin ESP32 se manejan con los 14 botones del panel derecho (Params): Despegar, jog en X, Y y Z, Ir a A / B / C, Home, Aterrizar y Mision A -> B -> C. Cada click equivale a una pulsación de la tecla. Se cierra cerrando la ventana.",
+      "cubre": ["a) Mover los drones de A a B y a C"]
+    },
+    {
+      "id": "drones-mision",
+      "nombre": "a) Drones: misión A → B → C automática",
+      "tipo": "python",
+      "script": "punto-a-drones-waypoints/drones_pybullet.py",
+      "args": ["--mision"],
+      "cwd": ".",
+      "descripcion": "La misma ventana, pero despega sola y al segundo vuela la misión A → B → C (las esferas azul, naranja y verde); el líder rojo deja un trazo amarillo y los cuatro azules lo siguen en V. Al terminar sigue el control normal con los botones.",
+      "cubre": ["a) Mover los drones de A a B y a C"]
+    },
+    {
+      "id": "drones-prueba",
+      "nombre": "a) Drones: prueba sin ventana",
+      "tipo": "python",
+      "script": "punto-a-drones-waypoints/drones_pybullet.py",
+      "args": ["--prueba"],
+      "cwd": ".",
+      "descripcion": "Sin ventana: vuela la misión A → B → C, imprime en cuántos segundos llegó a cada punto y la inclinación máxima, y termina con PRUEBA OK (unos segundos).",
+      "cubre": ["a) Mover los drones de A a B y a C"]
+    },
+    {
+      "id": "baxter",
+      "nombre": "b) Baxter: dos brazos, coger y mover el cubo",
+      "tipo": "python",
+      "script": "punto-b-brazo-tipo-baxter/brazo_pybullet.py",
+      "args": [],
+      "cwd": ".",
+      "descripcion": "Abre PyBullet con el robot Baxter real frente a una mesa con un cubo. Necesita los modelos (si faltan, los baja solo la primera vez). Sin ESP32 se maneja con los 13 botones del panel derecho: 'Demo: coger y mover [D]' hace todo el punto de un click; también hay jog X/Y/Z de la pinza (1,5 cm por click), abrir/cerrar pinza, cambiar de brazo [*] y reponer el cubo [0].",
+      "cubre": ["b) Movilidad de los dos brazos y posicionamiento", "b) Coger y mover un objeto"]
+    },
+    {
+      "id": "baxter-prueba",
+      "nombre": "b) Baxter: prueba sin ventana",
+      "tipo": "python",
+      "script": "punto-b-brazo-tipo-baxter/probar_baxter.py",
+      "args": [],
+      "cwd": ".",
+      "descripcion": "Sin ventana: mide la cinemática inversa de los dos brazos, la demo de coger y mover el cubo con cada brazo, la regla de flancos del teclado y los choques. Termina con 'Todas las pruebas pasaron.'. Necesita los modelos (los baja solo si faltan).",
+      "cubre": ["b) Coger y mover un objeto"]
+    },
+    {
+      "id": "atlas",
+      "nombre": "c) Atlas: humanoide con asistente de equilibrio",
+      "tipo": "python",
+      "script": "punto-c-atlas/atlas_pybullet.py",
+      "args": [],
+      "cwd": ".",
+      "descripcion": "Abre PyBullet con el humanoide Atlas real, de pie y con el asistente de equilibrio prendido. Necesita los modelos (si faltan, los baja solo la primera vez). Sin ESP32 hay 16 botones: caminar y girar se prenden con un click y se apagan con el siguiente; 'Asistente ON/OFF (A)' para comparar, 'Ponerlo de pie (B)' si se cae, poses (saludar, agacharse, brazos arriba) y jog de juntas por grupos.",
+      "cubre": ["c) Movilidad real del robot (Atlas)"]
+    },
+    {
+      "id": "atlas-prueba",
+      "nombre": "c) Atlas: prueba de estrés con y sin asistente",
+      "tipo": "python",
+      "script": "punto-c-atlas/probar_atlas.py",
+      "args": [],
+      "cwd": ".",
+      "descripcion": "Sin ventana (alrededor de un minuto): de pie, caminar, arrancar y frenar, girar, retroceder y poses, con y sin asistente; imprime cuándo se cae y cuánto avanzó. Necesita los modelos (los baja solo si faltan).",
+      "cubre": ["c) Movilidad real del robot (Atlas)"]
+    },
+    {
+      "id": "preview",
+      "nombre": "Preview en el navegador (las tres consolas)",
+      "tipo": "html",
+      "archivo": "preview.html",
+      "descripcion": "Página suelta, sin Python: un teclado 4x4 clicable con las tres configuraciones (drones, Baxter, Atlas) en un esquema 2D, con las mismas teclas y la misma regla de flancos que los scripts. En 'Modo prueba' se juega con el mouse; 'Conectado (Web Serial)' usa el ESP32 real en Chrome o Edge y muestra las líneas TECLA:x que llegan.",
+      "cubre": ["a) Drones", "b) Baxter", "c) Atlas"]
+    },
+    {
+      "id": "video-drones",
+      "nombre": "Video: drones volando A → B → C",
+      "tipo": "archivo",
+      "archivo": "punto-a-drones-waypoints/video/drones-mision.mp4"
+    },
+    {
+      "id": "video-baxter",
+      "nombre": "Video: Baxter coge y lleva el cubo",
+      "tipo": "archivo",
+      "archivo": "punto-b-brazo-tipo-baxter/video/baxter-demo.mp4"
+    },
+    {
+      "id": "video-atlas-con",
+      "nombre": "Video: Atlas con asistente",
+      "tipo": "archivo",
+      "archivo": "punto-c-atlas/video/atlas-con-asistente.mp4"
+    },
+    {
+      "id": "video-atlas-sin",
+      "nombre": "Video: Atlas sin asistente (se cae y se levanta)",
+      "tipo": "archivo",
+      "archivo": "punto-c-atlas/video/atlas-sin-asistente.mp4"
+    },
+    {
+      "id": "fw",
+      "nombre": "Firmware del ESP32 (el mismo para los tres puntos)",
+      "tipo": "info",
+      "archivo": "esp32_teclado.py",
+      "descripcion": "MicroPython: barre el teclado 4x4 (filas GPIO 14, 27, 26, 25; columnas GPIO 33, 32, 18, 19 con pull-up interna) y manda 'TECLA:x' por USB cada 50 ms a 115200 baudios. Se guarda como main.py con Thonny. No hace falta para probar: sin ESP32 los scripts usan botones."
+    }
+  ],
+  "notas": "pybullet 3.2.7 no publica ruedas para Windows: pip lo compila desde el código fuente (hace falta Visual Studio Build Tools con C++ y que la carpeta 'Microsoft Visual Studio\\Installer' esté en el PATH, porque vcvarsall.bat llama a vswhere.exe; tarda varios minutos la primera vez). Baxter y Atlas necesitan internet la primera vez para bajar sus modelos (unos 37 MB). Con el ESP32 conectado el puerto por defecto es COM7 (drones: --puerto COMx; Baxter y Atlas: constante PUERTO_SERIAL)."
+}

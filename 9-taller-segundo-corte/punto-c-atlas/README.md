@@ -48,7 +48,7 @@ Las mallas de Atlas no vienen en el paquete `pybullet_data`, así que se bajan u
 entorno\Scripts\python descargar_modelos.py
 ```
 
-Baja unos 14 MB del repositorio del profesor a `9-taller-segundo-corte/modelos/`, que no se sube a GitHub (está en el `.gitignore`). Si falta, `atlas_pybullet.py` avisa qué comando correr y se cierra. La plataforma azul de la imagen (`boston_box.urdf`) tampoco viene en `pybullet_data`; no la pusimos porque Atlas camina y se caería del borde.
+Baja unos 14 MB del repositorio del profesor a `9-taller-segundo-corte/modelos/`, que no se sube a GitHub (está en el `.gitignore`). Si falta, `atlas_pybullet.py` corre solo el descargador una vez; si no hay internet, avisa qué comando correr y se cierra. La plataforma azul de la imagen (`boston_box.urdf`) tampoco viene en `pybullet_data`; no la pusimos porque Atlas camina y se caería del borde.
 
 | De pie, con el asistente | Caminando | Sin asistente, en el piso |
 |---|---|---|
@@ -265,7 +265,7 @@ El módulo se puede importar sin abrir ventana (todo vive en un objeto `Estado`,
 
 ## La prueba de estrés
 
-`probar_atlas.py` corre todo en modo `DIRECT` (sin ventana, menos de un minuto) pasando por las mismas funciones que la ventana y simulando el protocolo del ESP32 (una línea `TECLA:x` cada 50 ms). Hace, con y sin asistente, las pruebas de la tabla de [Qué esperar con y sin asistente](#qué-esperar-con-y-sin-asistente), y además:
+`probar_atlas.py` corre todo en modo `DIRECT` (sin ventana, alrededor de un minuto) pasando por las mismas funciones que la ventana y simulando el protocolo del ESP32 (una línea `TECLA:x` cada 50 ms). Hace, con y sin asistente, las pruebas de la tabla de [Qué esperar con y sin asistente](#qué-esperar-con-y-sin-asistente), y además:
 
 - **Ponerlo de pie:** lo tira 3 veces con un empujón de costado (1500 N durante 0,2 s, asistente apagado) y las 3 veces `B` lo dejó de pie. Después el asistente volvió a OFF y se sostuvo solo los 5 s siguientes.
 - **Flanco:** 10 líneas `TECLA:A` seguidas (sostener `A` medio segundo) conmutaron el asistente **una sola vez**.
@@ -310,7 +310,7 @@ Los comandos van desde la carpeta del taller (`9-taller-segundo-corte\`), usando
 3. Cambiar `PUERTO_SERIAL = "COM7"` al principio de `atlas_pybullet.py` por el COM que muestre el Administrador de dispositivos.
 4. `entorno\Scripts\python punto-c-atlas\atlas_pybullet.py`. Sostener `8` lo hace caminar y al soltarla frena. Los botones de la ventana siguen funcionando a la par.
 
-**La prueba de estrés:** `entorno\Scripts\python punto-c-atlas\probar_atlas.py` (sin ventana, menos de un minuto) imprime las tablas de arriba.
+**La prueba de estrés:** `entorno\Scripts\python punto-c-atlas\probar_atlas.py` (sin ventana, alrededor de un minuto) imprime las tablas de arriba.
 
 | Tecla | Efecto | Cómo reacciona |
 |---|---|---|

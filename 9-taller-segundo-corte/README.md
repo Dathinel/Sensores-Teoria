@@ -192,7 +192,7 @@ Para no cargar el repositorio con esas mallas, **`descargar_modelos.py`** las ba
 entorno\Scripts\python descargar_modelos.py
 ```
 
-Un detalle que explica el código de los dos puntos: Baxter nombra sus mallas como `package://baxter_description/meshes/...` (una convención de ROS). PyBullet quita el `package://` y busca el resto dentro de su ruta de búsqueda adicional, así que el script de Baxter pone esa ruta en `modelos/baxter_common/` y carga el URDF con su ruta absoluta (PyBullet guarda **una sola** ruta de búsqueda adicional a la vez). Si `modelos/` no existe, los scripts lo dicen y piden correr `descargar_modelos.py` en vez de fallar con un error raro.
+Un detalle que explica el código de los dos puntos: Baxter nombra sus mallas como `package://baxter_description/meshes/...` (una convención de ROS). PyBullet quita el `package://` y busca el resto dentro de su ruta de búsqueda adicional, así que el script de Baxter pone esa ruta en `modelos/baxter_common/` y carga el URDF con su ruta absoluta (PyBullet guarda **una sola** ruta de búsqueda adicional a la vez). Si `modelos/` no existe, los scripts corren solos `descargar_modelos.py` una vez antes de abrir la ventana; si no hay internet, lo dicen y piden correrlo después, en vez de fallar con un error raro.
 
 ## La idea general
 
@@ -327,6 +327,8 @@ No hacen falta resistencias externas (las columnas usan la pull-up interna del E
 ├─ esp32_teclado.py             firmware único del ESP32 (se guarda como main.py)
 ├─ descargar_modelos.py         baja las mallas reales de Baxter y Atlas a modelos/
 ├─ capturar_modelos.py          genera las imágenes de los README (PyBullet sin ventana)
+├─ grabar_videos.py             graba los GIF y MP4 de video/ (PyBullet sin ventana + ffmpeg)
+├─ probar.json                  receta del lanzador del repo (PROBAR.bat en la raíz)
 ├─ preview.html                 simulador web de las tres consolas (modo prueba y Web Serial)
 ├─ img/                         fotos del montaje real (ESP32 + teclado) y capturas del preview
 ├─ modelos/                     mallas de Baxter y Atlas (no se sube: la crea descargar_modelos.py)
@@ -355,6 +357,7 @@ No hacen falta resistencias externas (las columnas usan la pull-up interna del E
 
 - **`esp32_teclado.py`**: se usa en los tres puntos, sin cambios. Barre el teclado por GPIO directo y manda `TECLA:x` cada 50 ms. Es lo único que se carga en el ESP32.
 - **`descargar_modelos.py`**: se corre una vez antes de los puntos b) y c); ver "Los modelos 3D reales".
+- **`capturar_modelos.py`** y **`grabar_videos.py`**: regeneran las capturas de `img/` y los videos de `video/` sin abrir ventana (PyBullet `DIRECT` con el renderizador por software). Los videos simulan al ESP32 mandando `TECLA:x` cada 50 ms por las mismas funciones de cada punto; necesitan `numpy` y `ffmpeg` (en el PATH o instalado con winget). No hacen falta para probar el taller.
 - **`entorno/`**: entorno virtual de Python 3.14 con `pybullet`, `pyserial` y `numpy`. Los tres scripts corren con él. No se sube a GitHub; quien clone el repo tiene que crearlo (ver "Cómo probarlo").
 - **`drones_pybullet.py`, `brazo_pybullet.py`, `atlas_pybullet.py`**: un script por punto. Cada uno intenta abrir el puerto serial dentro de un `try/except serial.SerialException`; si no encuentra el ESP32, avisa por consola y sigue funcionando con botones en la ventana de PyBullet. Su lógica está explicada en el README de cada punto.
 - **`preview.html`**: una página suelta (sin instalar nada) con las tres consolas: un teclado 4x4 clicable que simula cada punto en el navegador ("modo prueba") o se conecta de verdad al ESP32 por Web Serial y muestra lo que llega. Sirve para probar el teclado y la lógica de flanco sin abrir PyBullet:
@@ -376,10 +379,12 @@ Si se clona el repo y `entorno\` no existe:
 
 ```
 python -m venv entorno
-entorno\Scripts\python -m pip install pybullet pyserial numpy
+entorno\Scripts\python -m pip install pybullet==3.2.7 pyserial==3.5 numpy
 ```
 
-Antes de los puntos b) y c), bajar una vez los modelos reales (unos 36 MB):
+`pybullet` no publica ruedas (paquetes ya compilados) para Windows: pip lo compila desde el código fuente, lo que tarda varios minutos y necesita **Visual Studio Build Tools** con la carga "Desarrollo para el escritorio con C++". Si falla con `Unable to find a compatible Visual Studio installation` aunque las Build Tools estén instaladas, es que el instalador de Visual Studio no está en el PATH (su `vcvarsall.bat` llama a `vswhere.exe`); se arregla en esa misma consola con `set PATH=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer;%PATH%` y repitiendo el `pip install`. `numpy` solo lo usan `capturar_modelos.py` y `grabar_videos.py`; las simulaciones no lo necesitan.
+
+Antes de los puntos b) y c), bajar una vez los modelos reales (unos 37 MB; si se olvida, los scripts lo hacen solos la primera vez):
 
 ```
 entorno\Scripts\python descargar_modelos.py
@@ -393,7 +398,8 @@ entorno\Scripts\python descargar_modelos.py
    entorno\Scripts\python punto-c-atlas\atlas_pybullet.py
    ```
 2. En consola sale `No se encontro el ESP32 en COM7: usa los botones de la ventana.` y la ventana de PyBullet abre igual. Los botones están en el panel de la derecha ("Params"); cada click equivale a una pulsación de la tecla correspondiente.
-3. Para comprobar sin abrir ventana: `entorno\Scripts\python punto-a-drones-waypoints\drones_pybullet.py --prueba` (vuela la misión A → B → C y termina con `PRUEBA OK`), `entorno\Scripts\python punto-b-brazo-tipo-baxter\probar_baxter.py` y `entorno\Scripts\python punto-c-atlas\probar_atlas.py`.
+3. Para ver la misión de los drones sin tocar nada: `entorno\Scripts\python punto-a-drones-waypoints\drones_pybullet.py --mision` (despega solo y vuela A → B → C).
+4. Para comprobar sin abrir ventana: `entorno\Scripts\python punto-a-drones-waypoints\drones_pybullet.py --prueba` (vuela la misión A → B → C y termina con `PRUEBA OK`), `entorno\Scripts\python punto-b-brazo-tipo-baxter\probar_baxter.py` y `entorno\Scripts\python punto-c-atlas\probar_atlas.py`.
 
 **Con ESP32 conectado:**
 1. Armar las conexiones de arriba y guardar `esp32_teclado.py` como `main.py` en el ESP32 (con Thonny: abrir el archivo, "Guardar como" → dispositivo MicroPython → `main.py`).

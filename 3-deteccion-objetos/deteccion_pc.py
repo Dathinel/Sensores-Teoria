@@ -10,13 +10,20 @@
 #   python deteccion_pc.py               -> silla (GPIO25) y celular (GPIO26)
 #   python deteccion_pc.py --carro-moto  -> carro (GPIO25, LED rojo) y moto (GPIO26, LED verde)
 #
+# Sin camara web (las dos opciones se combinan con --carro-moto):
+#   python deteccion_pc.py --imagen                  -> fotos de ejemplo de img/ejemplos/
+#   python deteccion_pc.py --imagen foto1.jpg ...    -> fotos propias
+#   python deteccion_pc.py --video archivo.mp4       -> un video (o un .gif), en bucle
+#
 # Si el ESP32 no esta conectado (o el puerto esta ocupado por Thonny), el
 # script NO se cae: sigue mostrando la camara con las detecciones y escribe
 # en pantalla el mensaje que le habria mandado, para poder probar la parte
 # de vision sin el hardware a la mano.
 
+import argparse
 import sys
 import time
+from pathlib import Path
 
 import cv2
 import serial
@@ -25,15 +32,37 @@ from ultralytics import YOLO
 PUERTO_SERIAL = "COM7"
 BAUDIOS = 115200  # tiene que ser el mismo del lado del ESP32 (por USB, MicroPython usa 115200)
 
+# Carpeta de este archivo: el modelo y las fotos de ejemplo se buscan aqui y
+# no en la carpeta desde donde se lanzo el comando, asi funciona igual si se
+# corre desde otro lado (por ejemplo desde el lanzador de la raiz del repo).
+CARPETA = Path(__file__).resolve().parent
+
+parser = argparse.ArgumentParser(description="YOLOv8 -> LEDs del ESP32 por serial")
+parser.add_argument("--carro-moto", action="store_true",
+                    help="detectar carro y moto en vez de silla y celular")
+# nargs="*": "--imagen" solo (sin archivos) usa las fotos de ejemplo del repo.
+parser.add_argument("--imagen", nargs="*", metavar="ARCHIVO",
+                    help="usar fotos en vez de la camara (sin archivos: las de ejemplo)")
+parser.add_argument("--video", metavar="ARCHIVO",
+                    help="usar un video (o gif) en vez de la camara; se repite en bucle")
+args = parser.parse_args()
+
 # Nombres exactos de las clases dentro del dataset COCO con el que se entreno
 # YOLOv8. El ORDEN importa: el primer objetivo es el primer caracter del
 # mensaje (LED en GPIO25) y el segundo es el segundo caracter (LED en GPIO26).
 # COCO ya trae "car" y "motorcycle", asi que la directiva del carro y la moto
 # no necesita entrenar nada nuevo: solo cambiar esta lista.
-if "--carro-moto" in sys.argv:
+if args.carro_moto:
     OBJETIVOS = ["car", "motorcycle"]
+    EJEMPLOS = ["ejemplo-carro.jpg", "ejemplo-moto.jpg", "ejemplo-carro-y-moto.jpg"]
 else:
     OBJETIVOS = ["chair", "cell phone"]
+    EJEMPLOS = ["ejemplo-silla.jpg", "ejemplo-celular.jpg", "ejemplo-silla-y-celular.jpg"]
+
+# Con --imagen se pasa de una foto a la siguiente cada tantos segundos. Las de
+# ejemplo estan en ese orden a proposito (solo el primero, solo el segundo,
+# los dos) para que se vea el mensaje pasar por "10", "01" y "11".
+SEGUNDOS_POR_IMAGEN = 3.0
 
 # Confianza minima para aceptar una deteccion. YOLO devuelve para cada caja un
 # numero entre 0 y 1 de que tan seguro esta; por debajo de 0.4 aparecen muchos
@@ -50,7 +79,7 @@ REENVIO_S = 0.5
 
 # "n" = nano: la version mas liviana de YOLOv8, la unica que corre fluida sin
 # GPU. Si el archivo no esta en la carpeta, ultralytics lo descarga solo.
-model = YOLO("yolov8n.pt")
+model = YOLO(str(CARPETA / "yolov8n.pt"))
 
 # --- Puerto serial, con respaldo si no hay ESP32 ---------------------------
 try:
@@ -62,33 +91,70 @@ try:
     print(f"ESP32 conectado en {PUERTO_SERIAL}.")
 except serial.SerialException as error:
     ser = None
-    print(f"Sin ESP32 ({error}). Se sigue solo con la camara: el mensaje "
+    print(f"Sin ESP32 ({error}). Se sigue solo con la vision: el mensaje "
           "que se mandaria aparece escrito en la ventana.")
 
-# --- Camara ------------------------------------------------------------------
-cap = cv2.VideoCapture(0)
-# 640x480 (la misma del ejemplo del profesor): YOLO reescala todo a 640 por
-# dentro, asi que pedirle a la camara mas resolucion solo gasta tiempo en
-# capturar y dibujar sin mejorar la deteccion de objetos de este tamano.
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+# --- De donde salen las imagenes: camara, video o fotos ------------------------
+# El resto del programa (YOLO, mensaje, serial) es exactamente el mismo en los
+# tres casos: solo cambia de donde sale cada fotograma.
+cap = None
+imagenes = []
+if args.imagen is not None:
+    rutas = args.imagen or [str(CARPETA / "img" / "ejemplos" / n) for n in EJEMPLOS]
+    for ruta in rutas:
+        img = cv2.imread(ruta)  # devuelve None (no una excepcion) si no puede leerla
+        if img is None:
+            print(f"No se pudo leer la imagen {ruta}")
+            sys.exit(1)
+        imagenes.append(img)
+    fuente = f"FOTOS ({len(imagenes)}, cambia cada {SEGUNDOS_POR_IMAGEN:.0f} s)"
+elif args.video:
+    cap = cv2.VideoCapture(args.video)
+    fuente = f"VIDEO {Path(args.video).name}"
+else:
+    cap = cv2.VideoCapture(0)
+    # 640x480 (la misma del ejemplo del profesor): YOLO reescala todo a 640 por
+    # dentro, asi que pedirle a la camara mas resolucion solo gasta tiempo en
+    # capturar y dibujar sin mejorar la deteccion de objetos de este tamano.
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    fuente = "CAMARA"
 
-if not cap.isOpened():
-    print("Error al abrir la camara")
+if cap is not None and not cap.isOpened():
+    print("Error al abrir la camara" if not args.video else f"No se pudo abrir el video {args.video}")
+    if not args.video:
+        print("Sin camara web se puede probar igual con fotos: "
+              "python deteccion_pc.py --imagen")
     sys.exit(1)
 
-print(f"Objetivos: {OBJETIVOS}. Presiona 'q' en la ventana para salir.")
+print(f"Objetivos: {OBJETIVOS}. Fuente: {fuente}. Presiona 'q' en la ventana para salir.")
 estado_anterior = None
 ultimo_envio = 0.0
 ultima_linea_esp = "(nada todavia)"
+inicio = time.time()
+cache_fotos = {}  # indice de foto -> resultado de YOLO (una foto quieta no cambia)
 
 while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
+    if imagenes:
+        # Que foto toca segun el tiempo transcurrido; vuelve a la primera al final.
+        indice = int((time.time() - inicio) / SEGUNDOS_POR_IMAGEN) % len(imagenes)
+        if indice not in cache_fotos:
+            # Una foto no cambia entre vueltas del bucle: YOLO se corre una sola
+            # vez por foto y se reutiliza, en vez de gastar CPU en lo mismo.
+            cache_fotos[indice] = model(imagenes[indice], verbose=False)
+        results = cache_fotos[indice]
+    else:
+        ret, frame = cap.read()
+        if not ret:
+            if args.video:
+                # Se acabo el video: vuelve al primer fotograma (bucle infinito).
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                ret, frame = cap.read()
+            if not ret:
+                break
+        # Una sola pasada de la red por fotograma (de ahi "You Only Look Once").
+        results = model(frame, verbose=False)
 
-    # Una sola pasada de la red por fotograma (de ahi "You Only Look Once").
-    results = model(frame, verbose=False)
     annotated_frame = results[0].plot()
 
     # De todas las clases que YOLO reconoce (80 en COCO) solo interesan las de
@@ -111,7 +177,7 @@ while True:
             try:
                 ser.write((estado + "\n").encode())
             except serial.SerialException:
-                print("Se perdio el ESP32 (cable desconectado). Sigue solo la camara.")
+                print("Se perdio el ESP32 (cable desconectado). Sigue solo la vision.")
                 ser = None
         estado_anterior = estado
         ultimo_envio = ahora
@@ -131,21 +197,23 @@ while True:
             ser = None
 
     # Texto de estado sobre la imagen (fondo negro para que se lea siempre).
-    modo = f"ESP32 en {PUERTO_SERIAL}" if ser is not None else "SIN ESP32 (solo camara)"
+    modo = f"ESP32 en {PUERTO_SERIAL}" if ser is not None else "SIN ESP32 (solo vision)"
     textos = [
         f"{OBJETIVOS[0]}: {estado[0]}   {OBJETIVOS[1]}: {estado[1]}   -> '{estado}'",
-        modo,
+        f"{modo}  |  {fuente}",
         f"ESP32 dice: {ultima_linea_esp}" if ser is not None else "",
     ]
     for i, texto in enumerate(t for t in textos if t):
         y = 24 + i * 24
-        cv2.rectangle(annotated_frame, (0, y - 18), (640, y + 6), (0, 0, 0), -1)
+        cv2.rectangle(annotated_frame, (0, y - 18), (annotated_frame.shape[1], y + 6), (0, 0, 0), -1)
         cv2.putText(annotated_frame, texto, (8, y), cv2.FONT_HERSHEY_SIMPLEX,
                     0.55, (255, 255, 255), 1, cv2.LINE_AA)
 
     cv2.imshow("Deteccion en tiempo real", annotated_frame)
 
-    if cv2.waitKey(1) & 0xFF == ord("q"):
+    # Con fotos quietas no hace falta ir a toda velocidad: 30 ms entre vueltas
+    # bastan para que la ventana responda y el reenvio de 500 ms se cumpla.
+    if cv2.waitKey(30 if imagenes else 1) & 0xFF == ord("q"):
         break
 
 # Al salir se mandan los LEDs a cero en vez de esperar los 2 s del apagado de
@@ -156,5 +224,6 @@ if ser is not None:
     except serial.SerialException:
         pass
     ser.close()
-cap.release()
+if cap is not None:
+    cap.release()
 cv2.destroyAllWindows()

@@ -119,6 +119,8 @@ flowchart TD
 - **`deteccion_pc.py`**: el programa de la computadora. Abre la cámara, corre YOLO en cada fotograma, decide si se ve cada uno de los dos objetos, le manda el estado al ESP32 por serial y muestra la ventana con las cajas y una franja de texto con el estado, el modo (con o sin ESP32) y la última respuesta del ESP32. Se corre cada vez que se quiere usar el proyecto, con o sin la opción `--carro-moto`.
 - **`esp32_leds.py`**: el firmware del ESP32, en MicroPython. Se guarda **una sola vez** en el ESP32 con el nombre `main.py` (desde Thonny) y desde ahí arranca solo cada vez que la placa recibe energía. Escucha el puerto serial, prende o apaga los LEDs de GPIO25 y GPIO26, contesta lo que hizo y aplica el apagado de seguridad.
 - **`yolov8n.pt`**: los pesos del modelo YOLOv8 nano ya entrenado con COCO. `deteccion_pc.py` lo carga al arrancar; si faltara, `ultralytics` lo descarga solo la primera vez (eso sí necesita internet).
+- **`preview.html`**: una página que se abre con doble clic en el navegador (sin instalar nada) y simula el sistema completo: botones que hacen de "YOLO vio la silla / el celular", un ESP32 simulado con la misma lógica que `esp32_leds.py` (LEDs, respuesta `LEDS xy` y apagado de seguridad) y un monitor serial. Con el ESP32 de verdad, el botón **Conectar ESP32 (Web Serial)** le habla al puerto con el mismo protocolo (Chrome o Edge).
+- **`img/ejemplos/`**: seis fotos pequeñas para probar la detección sin cámara web (`--imagen`): silla, celular, silla y celular, carro, moto, carro y moto. Los créditos están al final de este README.
 - **`diagrama-circuito-carro-moto.png`**: el esquema de referencia de la directiva del carro y la moto (Wokwi), que se explica más abajo.
 - **`demo-*.gif`**: las grabaciones de la demostración.
 - **`entorno/`**: el entorno virtual de Python de este tema, con `ultralytics`, `opencv-python` y `pyserial`. No se sube al repositorio (tiene su propio `.gitignore` con `*`).
@@ -170,7 +172,7 @@ except serial.SerialException as error:
 
 Si el ESP32 no está conectado, o Thonny tiene el puerto tomado, `serial.Serial` lanza la excepción y en vez de cerrarse el script sigue con `ser = None`: la cámara y YOLO funcionan igual y el mensaje que se habría mandado se ve escrito en la ventana. El `time.sleep(2)` está porque abrir el puerto reinicia al ESP32 (la línea DTR del USB está cableada a su pin EN) y el chip necesita ese tiempo para arrancar y dejar `main.py` escuchando. `timeout=0` hace que las lecturas nunca se queden esperando.
 
-**4. Cámara.** `cv2.VideoCapture(0)` abre la cámara por defecto y se fija la resolución a 640×480, la misma del ejemplo del profesor. YOLO reescala internamente cada imagen a 640 píxeles de lado, así que pedirle más resolución a la cámara solo gasta tiempo capturando y dibujando sin mejorar la detección (la primera versión pedía por error 1902×1080).
+**4. Cámara (o fotos, o video).** Por defecto, `cv2.VideoCapture(0)` abre la cámara y se fija la resolución a 640×480, la misma del ejemplo del profesor. YOLO reescala internamente cada imagen a 640 píxeles de lado, así que pedirle más resolución a la cámara solo gasta tiempo capturando y dibujando sin mejorar la detección (la primera versión pedía por error 1902×1080). Con `--imagen` las fotos se leen con `cv2.imread` y se pasa a la siguiente cada `SEGUNDOS_POR_IMAGEN` (3 s); como una foto no cambia, YOLO se corre una sola vez por foto y el resultado se reutiliza. Con `--video` se usa `cv2.VideoCapture(archivo)` y, al llegar al final, vuelve al primer fotograma. El resto del bucle es idéntico en los tres casos.
 
 **5. El bucle principal.** Por cada fotograma pasa esto, en orden:
 
@@ -195,7 +197,7 @@ Si el ESP32 no está conectado, o Thonny tiene el puerto tomado, `serial.Serial`
 
   Mandar en cada fotograma sería tráfico de más, pero mandar solo en los cambios choca con el apagado de seguridad del ESP32: una silla quieta dejaría de generar mensajes y su LED se apagaría a los 2 s. La primera versión tenía justo ese problema. Repitiendo cada 500 ms llegan cuatro mensajes dentro de la ventana de 2 s, que sigue siendo muy poco tráfico. Si el cable se desconecta a mitad de camino, el `write` falla, se atrapa la excepción y el script sigue solo con la cámara.
 - Se lee lo que haya contestado el ESP32, vaciando **todo** el buffer pero solo si hay algo esperando (`while ser.in_waiting > 0: ...`). Un `readline()` a secas se quedaría esperando datos y congelaría la cámara. La última línea cruda se guarda para mostrarla.
-- Se escriben en la ventana, sobre una franja negra para que se lean siempre, tres líneas: el estado de cada objetivo con el mensaje (`chair: 1   cell phone: 0   -> '10'`), el modo (`ESP32 en COM7` o `SIN ESP32 (solo camara)`) y `ESP32 dice: ...` con la última respuesta. Esa última línea es la herramienta de diagnóstico: si se queda en `(nada todavia)`, el ESP32 no está recibiendo o no tiene `main.py` corriendo; si cambia pero no es lo esperado, el problema es de formato y no de cable.
+- Se escriben en la ventana, sobre una franja negra para que se lean siempre, tres líneas: el estado de cada objetivo con el mensaje (`chair: 1   cell phone: 0   -> '10'`), el modo (`ESP32 en COM7` o `SIN ESP32 (solo vision)`) junto con la fuente de las imágenes (`CAMARA`, `FOTOS` o `VIDEO`) y `ESP32 dice: ...` con la última respuesta. Esa última línea es la herramienta de diagnóstico: si se queda en `(nada todavia)`, el ESP32 no está recibiendo o no tiene `main.py` corriendo; si cambia pero no es lo esperado, el problema es de formato y no de cable.
 
 **6. Al salir con `q`.** Manda `00` para apagar los LEDs de una vez en vez de esperar los 2 s del apagado de seguridad, y libera cámara, ventana y puerto.
 
@@ -238,6 +240,7 @@ Cualquier mensaje corrupto o incompleto se ignora en vez de hacer que el program
 | Objetivos por defecto | `"chair"` (1.er carácter, GPIO25) y `"cell phone"` (2.º carácter, GPIO26) | `OBJETIVOS` |
 | Objetivos con `--carro-moto` | `"car"` (GPIO25, LED rojo) y `"motorcycle"` (GPIO26, LED verde) | `OBJETIVOS` |
 | Cámara | 640×480 | `deteccion_pc.py` |
+| Sin cámara | `--imagen` (fotos de `img/ejemplos/`, una cada 3 s) o `--video archivo` (en bucle) | `SEGUNDOS_POR_IMAGEN` |
 | Confianza mínima | 0,4 (por debajo se ignora la caja) | `CONFIANZA_MINIMA` |
 | Serial | 115200 baudios; un mensaje en cuanto cambia algo y, además, cada 500 ms | `BAUDIOS`, `REENVIO_S` |
 | Apagado de seguridad | 2000 ms sin mensajes → los dos LEDs se apagan | `esp32_leds.py` (`TIEMPO_LIMITE_MS`) |
@@ -278,7 +281,7 @@ python -m venv entorno
 entorno\Scripts\python -m pip install ultralytics opencv-python pyserial
 ```
 
-Nosotros lo creamos con Python 3.14 y las tres librerías se instalaron sin problema. `ultralytics` trae el modelo de YOLO listo para usarse (e instala PyTorch como dependencia), `opencv-python` maneja la cámara y la ventana, y `pyserial` es la que permite que el script de Python hable con el ESP32 por el puerto serial. Usamos siempre `entorno\Scripts\python -m ...` en vez de activar el entorno o llamar a `pip.exe` directamente, porque así funciona aunque la carpeta se haya movido de lugar.
+Nosotros lo creamos con Python 3.14 y las tres librerías se instalaron sin problema; también se probó desde cero con Python 3.13 y estas versiones: `ultralytics==8.4.121` (con `torch==2.14.1` y `torchvision==0.29.1`), `opencv-python==5.0.0.93` y `pyserial==3.5`. La descarga de PyTorch pesa varios cientos de MB y el script tarda unos 10-15 s en arrancar (lo que más demora es cargar PyTorch), así que no es que se haya colgado. `ultralytics` trae el modelo de YOLO listo para usarse (e instala PyTorch como dependencia), `opencv-python` maneja la cámara y la ventana, y `pyserial` es la que permite que el script de Python hable con el ESP32 por el puerto serial. Usamos siempre `entorno\Scripts\python -m ...` en vez de activar el entorno o llamar a `pip.exe` directamente, porque así funciona aunque la carpeta se haya movido de lugar.
 
 ## Cómo probarlo
 
@@ -290,7 +293,28 @@ Todos los comandos se corren desde la carpeta `3-deteccion-objetos`.
 entorno\Scripts\python deteccion_pc.py
 ```
 
-(o con `--carro-moto` al final). Si no encuentra el puerto, avisa en la consola con `Sin ESP32 (...). Se sigue solo con la camara` y sigue: la ventana muestra la cámara con las cajas de YOLO y, arriba, el estado de cada objetivo, el mensaje de dos caracteres que se le mandaría al ESP32 (`'10'`, `'01'`...) y el modo `SIN ESP32 (solo camara)`. Así se comprueba toda la parte de visión, incluido qué tan bien reconoce el modelo cada objeto con la luz del cuarto, sin tener la protoboard armada. Se sale con `q` sobre la ventana.
+(o con `--carro-moto` al final). Si no encuentra el puerto, avisa en la consola con `Sin ESP32 (...). Se sigue solo con la vision` y sigue: la ventana muestra la cámara con las cajas de YOLO y, arriba, el estado de cada objetivo, el mensaje de dos caracteres que se le mandaría al ESP32 (`'10'`, `'01'`...) y el modo `SIN ESP32 (solo vision)`. Así se comprueba toda la parte de visión, incluido qué tan bien reconoce el modelo cada objeto con la luz del cuarto, sin tener la protoboard armada. Se sale con `q` sobre la ventana.
+
+*Sin cámara web.* El mismo programa puede leer fotos o un video en vez de la cámara; todo lo demás (YOLO, el mensaje, el envío por serial si hay ESP32) funciona igual:
+
+```
+entorno\Scripts\python deteccion_pc.py --imagen
+entorno\Scripts\python deteccion_pc.py --carro-moto --imagen
+entorno\Scripts\python deteccion_pc.py --imagen foto1.jpg foto2.jpg
+entorno\Scripts\python deteccion_pc.py --video grabacion.mp4
+```
+
+`--imagen` sin archivos usa las fotos de `img/ejemplos/`, que van en un orden pensado para ver el mensaje cambiar cada 3 s: solo el primer objetivo (`'10'`), solo el segundo (`'01'`) y los dos (`'11'`). Así se ve con `--carro-moto`, en la foto que tiene los dos objetivos:
+
+![Ventana de deteccion_pc.py con la foto de ejemplo de carro y moto: mensaje '11'](img/deteccion-fotos-carro-moto.jpg)
+
+*Sin instalar nada: `preview.html`.* Abriéndolo con doble clic en el navegador se prueba la lógica completa del protocolo sin Python ni ESP32: los botones **silla en cuadro** / **celular en cuadro** hacen de YOLO, el ESP32 de la derecha está simulado con la misma lógica que `esp32_leds.py` y el monitor muestra cada línea que va (`→ 11`) y vuelve (`← LEDS 11`), con el reenvío cada 500 ms. El selector de arriba cambia a carro y moto, y **Usar cámara (COCO-SSD)** corre en el navegador un detector entrenado con las mismas 80 clases de COCO (no es YOLO, pero sirve para ver la idea con la webcam).
+
+![preview.html en modo prueba con los dos objetivos en cuadro y los dos LEDs encendidos](img/preview-modo-prueba.png)
+
+Con **Simular cable desconectado** la página deja de mandar y, a los 2 s, el ESP32 simulado apaga los LEDs y contesta `APAGADO_SEGURIDAD`, igual que el firmware real:
+
+![preview.html tras simular el cable desconectado: LEDs apagados y APAGADO_SEGURIDAD en el monitor](img/preview-apagado-seguridad.png)
 
 **Con ESP32 conectado**
 
@@ -325,7 +349,7 @@ Además del gif del principio, así se ve el montaje desde otro ángulo, con la 
 
 La ventana de detección marcando los objetos que YOLO reconoce frente a la cámara, junto con la puntuación de confianza de cada uno, reconociendo la silla y el teléfono:
 
-![Ventana de detección reconociendo persona, silla y mesa](demo-deteccion.gif)
+![Ventana de detección reconociendo persona, silla, mesa y celular](demo-deteccion.gif)
 
 La protoboard en reposo, reconociendo la silla con una sensibilidad muy alta:
 
@@ -339,4 +363,14 @@ Y la protoboard con los LEDs encendidos en el momento en que la cámara reconoce
 
 - Los gifs de arriba son de la versión que mandaba el estado solo al cambiar. Falta grabar un video corto con la versión actual (repetición cada 500 ms), donde se vea el LED quedarse encendido con la silla quieta más de dos segundos y apagarse solo al cerrar el script.
 - Falta un video con `--carro-moto` usando un carro y una moto de juguete, con el LED rojo en GPIO25 y el verde en GPIO26.
-- Se hicieron pruebas adicionales del protocolo sin hardware, simulando el ESP32.
+
+## Créditos de las fotos de ejemplo
+
+Las fotos de `img/ejemplos/` vienen de Wikimedia Commons, reducidas a 640 px o menos para que pesen poco y quepan en la pantalla (la de silla y celular es la unión de dos de ellas):
+
+- `ejemplo-silla.jpg`: [Japanese police interrogation room - movie set - October 2014](https://commons.wikimedia.org/wiki/File:Japanese_police_interrogation_room_-_movie_set_-_October_2014.jpg), de nesnad, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
+- `ejemplo-celular.jpg`: [Businessman holds smartphone while sitting with a laptop closeup](https://commons.wikimedia.org/wiki/File:Businessman_holds_smartphone_while_sitting_with_a_laptop_closeup.jpg), de Shixart1985, [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/).
+- `ejemplo-silla-y-celular.jpg`: las dos anteriores, una encima de la otra (mismas licencias).
+- `ejemplo-carro.jpg`: [20250123 174548 Car accident from West in Dali, Taichung](https://commons.wikimedia.org/wiki/File:20250123_174548_Car_accident_from_West_in_Dali,_Taichung.jpg), de Saimmx, CC0.
+- `ejemplo-moto.jpg`: [GD Zhongshan Dong District XingZheng Road police motorbike parking August 2024 R12S 01](https://commons.wikimedia.org/wiki/File:GD_%E5%BB%A3%E6%9D%B1_ZS_%E4%B8%AD%E5%B1%B1%E5%B8%82_Zhongshan_%E6%9D%B1%E5%8D%80_Dong_District_%E8%88%88%E6%94%BF%E8%B7%AF_XingZheng_Road_police_motorbike_parking_August_2024_R12S_01.jpg), de HHAFOL Moratim LUNG, CC0.
+- `ejemplo-carro-y-moto.jpg`: [Mix of traffic on Pune roads](https://commons.wikimedia.org/wiki/File:Mix_of_traffic_on_Pune_roads.jpg), de Ganesh Dhamodkar, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).

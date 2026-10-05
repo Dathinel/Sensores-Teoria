@@ -1,0 +1,90 @@
+{
+  "id": "4",
+  "titulo": "Chatbot: asistente de voz que prende dos LEDs (DeepSeek + ESP32)",
+  "resumen": "Uno dice o escribe una frase (\"enciende el rojo\", \"prende los dos\", \"haz un show de luces\"), un modelo de lenguaje (DeepSeek) o, sin clave, un intérprete por palabras clave la convierte en un JSON de intención, y el PC le manda al ESP32 la orden de dos caracteres (10, 01, 11, 00) o SHOW. Sin ESP32 la orden solo se muestra en pantalla.",
+  "pide": [
+    "Partir del chatbot.py del profesor (chat de consola con la API de DeepSeek)",
+    "Chatbot domótico: encender y apagar un LED por comandos de voz",
+    "Voz a texto (SpeechRecognition, Google es-CO) y texto a intención (DeepSeek, respuesta en JSON)",
+    "Orden al ESP32 por serial; el ESP32 prende o apaga los LEDs (GPIO25 rojo, GPIO26 azul) y contesta OK",
+    "Extra: show de luces que alterna los LEDs y los deja como estaban"
+  ],
+  "python": {
+    "versiones": ["3.13", "3.12"],
+    "paquetes": [
+      "openai==3.2.0",
+      "pyserial==3.5",
+      "SpeechRecognition==3.17.0",
+      "PyAudio==0.2.14",
+      "python-dotenv==1.2.3"
+    ]
+  },
+  "acciones": [
+    {
+      "id": "texto",
+      "nombre": "Asistente escribiendo frases (sin micrófono ni clave)",
+      "tipo": "python",
+      "script": "comando_voz.py",
+      "args": ["--texto", "--sin-clave"],
+      "cwd": ".",
+      "descripcion": "Consola: escribir una frase y Enter (enciende el rojo, prende los dos, apaga el azul, enciende el rojo y apaga el azul, haz un show de luces, apaga todo). Muestra el texto, la orden que saldría al ESP32 ([sin ESP32] se habria enviado: 10) y, si la frase no tiene que ver con los LEDs, que no hace nada. Usa el intérprete por palabras clave aunque haya clave en el .env. salir = terminar.",
+      "cubre": ["texto a intención (JSON)", "orden al ESP32 por serial", "show de luces", "patrón sin ESP32"]
+    },
+    {
+      "id": "voz",
+      "nombre": "Asistente con micrófono (y DeepSeek si hay clave)",
+      "tipo": "python",
+      "script": "comando_voz.py",
+      "args": [],
+      "cwd": ".",
+      "descripcion": "Igual, pero Enter vacío graba por el micrófono (Habla ahora...) y transcribe con Google (necesita internet); escribir una frase también sirve. Si el .env tiene DEEPSEEK_API_KEY, la intención la decide el modelo (se ve DeepSeek respondio: {...}); si no, usa las palabras clave. Si el ESP32 está en COM7 con esp32_voz.py como main.py, la orden sale por el cable y se ve ESP32 dice: OK 10.",
+      "cubre": ["comandos de voz", "voz a texto", "DeepSeek con JSON de intención"]
+    },
+    {
+      "id": "preview",
+      "nombre": "Preview en el navegador",
+      "tipo": "html",
+      "archivo": "preview.html",
+      "descripcion": "Sin Python: escribir una frase (o Hablar, con la voz del navegador en Chrome/Edge) y ver el texto, el JSON de intención, la orden, la respuesta de un ESP32 simulado y los dos LEDs (incluido el show). Botones 10/01/11/00/SHOW para la orden directa. Modo Conectado (Web Serial) para mandarle de verdad al ESP32 (cerrar Thonny antes).",
+      "cubre": ["texto a intención (JSON)", "orden al ESP32", "show de luces"]
+    },
+    {
+      "id": "gif-rojo",
+      "nombre": "Video: LED rojo por voz",
+      "tipo": "archivo",
+      "archivo": "demo-led-rojo.gif"
+    },
+    {
+      "id": "gif-dos",
+      "nombre": "Video: los dos LEDs encendidos",
+      "tipo": "archivo",
+      "archivo": "demo-dos-leds.gif"
+    },
+    {
+      "id": "gif-show-azul",
+      "nombre": "Video: show de luces (azul)",
+      "tipo": "archivo",
+      "archivo": "demo-show-luces-azul.gif"
+    },
+    {
+      "id": "gif-show-rojo",
+      "nombre": "Video: show de luces (rojo)",
+      "tipo": "archivo",
+      "archivo": "demo-show-luces-rojo.gif"
+    },
+    {
+      "id": "circuito",
+      "nombre": "Diagrama del circuito",
+      "tipo": "archivo",
+      "archivo": "diagrama-circuito.png"
+    },
+    {
+      "id": "fw",
+      "nombre": "Firmware del ESP32",
+      "tipo": "info",
+      "archivo": "esp32_voz.py",
+      "descripcion": "MicroPython. Se guarda en el ESP32 con Thonny con el nombre main.py; escucha 10/01/11/00/SHOW a 115200 por USB y contesta OK ... o IGNORADO .... No hace falta para probar en el PC."
+    }
+  ],
+  "notas": "La clave de DeepSeek es OPCIONAL: sin ella todo funciona con el intérprete por palabras clave. Para usar el modelo: copiar .env.example como .env en esta carpeta y cambiar tu_api_key_aqui por la clave real (DEEPSEEK_API_KEY=...). El .env está en el .gitignore de la raíz: nunca se sube ni se pega en el código. El micrófono y la transcripción de Google necesitan internet; sin micrófono se escribe la frase. Con ESP32: puerto COM7 por defecto (cambiarlo con --puerto COMx o en PUERTO_SERIAL). PyAudio no tiene wheel para Python 3.14: usar 3.13 o 3.12."
+}

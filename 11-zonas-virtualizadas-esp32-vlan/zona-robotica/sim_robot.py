@@ -87,18 +87,41 @@ ANCHO_PANEL = 320          # 640 + 320 = 960: múltiplo de 16, lo que pide el c�
 # Proceso de render: copia visual + panel + visor HTTP + video
 # =====================================================================================================
 PAGINA = """<!doctype html><html lang="es"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><title>sim-{robot}</title>
-<style>body{{margin:0;background:#16181e;color:#e8e9ee;font-family:system-ui,sans-serif;text-align:center}}
-img{{max-width:100%;height:auto;margin-top:8px;border:1px solid #333}}pre{{text-align:left;display:inline-block;
-font-size:13px;color:#9aa}}</style></head><body><h3>sim-{robot}: real-to-sim en vivo</h3>
-<img id="c" src="cuadro.jpg" alt="último cuadro de la simulación"><br><pre id="e"></pre>
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>sim-__ROBOT__ · Zona Robótica (VLAN 2)</title>
+<style>body{margin:0;background:#16181e;color:#e8e9ee;font-family:system-ui,sans-serif}
+main{max-width:1000px;margin:auto;padding:12px 16px}h1{font-size:1.25rem;margin:6px 0 2px}
+p{margin:4px 0;color:#b9bdc8;font-size:.9rem;line-height:1.5}b{color:#e8e9ee;font-weight:600}
+img{width:100%;max-width:960px;height:auto;display:block;margin:10px auto 6px;border:1px solid #333;border-radius:6px}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}nav a{color:#e8e9ee;text-decoration:none;font-size:.82rem;
+border:1px solid #2c303a;border-radius:8px;padding:5px 10px;background:#1b1e26}nav a:hover{border-color:#4f8fce}
+nav a.aqui{border-color:#4f8fce;color:#7fb2e6}details{margin-top:6px;color:#9aa}summary{cursor:pointer;font-size:.85rem}
+pre{font-size:12px;color:#9aa;overflow-x:auto}</style></head><body><main>
+<nav id="nav"><a data-p="8080">Dashboard del admin</a><a data-p="8010">Pista</a><a data-p="8011">Spot</a>
+<a data-p="8012">Pepper</a><a data-p="8013">NAO</a></nav>
+<h1>sim-__ROBOT__ · real-to-sim en vivo (Zona Robótica, VLAN 2)</h1>
+<p id="intro"></p>
+<img id="c" src="cuadro.jpg" alt="último cuadro de la simulación">
+<details><summary>Ver el estado crudo (estado.json)</summary><pre id="e"></pre></details></main>
 <script>
+const ROBOT = '__ROBOT__';
+const PUERTOS = {spot: '8011', pepper: '8012', nao: '8013'};
+// Enlaces a los otros visores: mismo host con el que se abrió esta página, otro puerto publicado por Docker.
+document.querySelectorAll('#nav a').forEach(a => {
+  a.href = location.protocol + '//' + (location.hostname || 'localhost') + ':' + a.dataset.p + '/';
+  if (a.dataset.p === PUERTOS[ROBOT]) a.className = 'aqui';
+});
+const QUE = ROBOT === 'spot'
+  ? '<b>Rex</b> (un "pequeño Spot" de rex-gym). Los tres ángulos mueven la <b>pose del cuerpo</b> con cinemática inversa: j1 = altura, j2 = cabeceo, j3 = alabeo; el botón lo pone a <b>trotar</b> o lo detiene'
+  : '<b>' + (ROBOT === 'nao' ? 'NAO' : 'Pepper') + '</b> de SoftBank (URDF de qiBullet; sin las mallas se dibuja como esqueleto). j1 = hombro derecho, j2 = codo derecho (el brazo celeste), j3 = giro de la cabeza; el botón hace un <b>saludo</b>';
+document.getElementById('intro').innerHTML = 'Simulación en <b>PyBullet</b> (240 Hz) del ' + QUE +
+  '. Los ángulos llegan por UDP desde su <b>ESP32 maestra</b> (potenciómetros; aquí, un ESP32 emulado que mueve senos lentos) y el robot los copia en tiempo real. ' +
+  'El panel muestra, para cada ángulo, lo pedido (comando), lo que acepta el robot (objetivo) y lo que consiguió (medido); su diferencia es el <b>error real-to-sim</b>. Si deja de llegar el mando durante 1 s, vuelve a reposo.';
 // Se pide un cuadro nuevo apenas termina de cargar el anterior (y como mucho ~8 por segundo):
 // así no se acumulan pedidos si la red o el contenedor van lentos.
 const img = document.getElementById('c');
 img.onload = img.onerror = () => setTimeout(() => img.src = 'cuadro.jpg?t=' + Date.now(), 120);
 setInterval(() => fetch('estado.json').then(r => r.json())
-  .then(d => document.getElementById('e').textContent = JSON.stringify(d, null, 1)).catch(() => {{}}), 1000);
+  .then(d => document.getElementById('e').textContent = JSON.stringify(d, null, 1)).catch(() => {}), 1000);
 </script></body></html>"""
 
 
@@ -131,7 +154,7 @@ def servidor_http(compartido):
             elif ruta == "/estado.json":
                 cuerpo, tipo = json.dumps(estado).encode(), "application/json"
             elif ruta in ("/", "/index.html"):
-                cuerpo, tipo = PAGINA.format(robot=ROBOT).encode(), "text/html; charset=utf-8"
+                cuerpo, tipo = PAGINA.replace("__ROBOT__", ROBOT).encode(), "text/html; charset=utf-8"
             else:
                 self.send_error(404)
                 return

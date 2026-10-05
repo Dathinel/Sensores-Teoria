@@ -1,6 +1,6 @@
 # Display de siete segmentos (catodo comun) en MicroPython, el mismo codigo
 # de la captura wokwi-micropython.png. Se puede pegar tal cual en Wokwi
-# (proyecto "ESP32 MicroPython") o correr en Thonny con el circuito real.
+# (proyecto "MicroPython on ESP32") o correr en Thonny con el circuito real.
 #
 # Segmentos de un display de 7 segmentos:
 #      aaa

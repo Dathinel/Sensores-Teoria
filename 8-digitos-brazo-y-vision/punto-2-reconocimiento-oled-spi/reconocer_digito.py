@@ -19,6 +19,13 @@
 # Administrador de dispositivos. Si no se encuentra el ESP-A, el
 # reconocimiento sigue funcionando igual en pantalla, simplemente no le
 # manda nada a nadie.
+#
+# Sin camara: `python reconocer_digito.py --mouse` (o si la camara no
+# abre, que pasa solo) cambia la camara por un lienzo blanco donde se
+# dibuja el digito con el mouse, como si fuera la hoja de papel. Todo lo
+# demas (preprocesamiento, CNN, ventana de votos, envio al ESP-A) es
+# exactamente el mismo codigo: el lienzo solo reemplaza de DONDE sale
+# cada frame. Ver la seccion 3.
 
 # ------------------------------------------------------------------
 # 0. Silenciar mensajes de TensorFlow (deben ir ANTES de importar TF)
@@ -28,6 +35,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'    # Solo errores
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'   # Desactiva oneDNN
 
 import math
+import sys
 import time
 
 import cv2
@@ -225,21 +233,44 @@ print("Modelo cargado. Presiona 'q' para salir.")
 
 
 # ------------------------------------------------------------------
-# 3. Abrir la camara
+# 3. Abrir la camara (o, sin camara, un lienzo para dibujar con el mouse)
 # ------------------------------------------------------------------
-cap = cv2.VideoCapture(0)
-if not cap.isOpened():
-    print("No se pudo abrir la camara.")
-    exit()
+# Mismo espiritu que el patron "sin ESP32" del repo: si falta el
+# hardware (aca, la webcam), el programa no se cierra, sigue con una
+# entrada manual. El lienzo es blanco con trazo negro a proposito: asi
+# se parece a la hoja de papel que veria la camara, y pasa por el MISMO
+# preprocesar_digito() (que invierte a fondo negro / trazo blanco como
+# MNIST). Si el lienzo ya fuera negro con trazo blanco, se estaria
+# saltando justo la parte del codigo que mas importa probar.
+MODO_MOUSE = "--mouse" in sys.argv
+cap = None
+if not MODO_MOUSE:
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        print("No se pudo abrir la camara: se sigue con un lienzo para dibujar con el mouse.")
+        cap.release()
+        cap = None
+        MODO_MOUSE = True
 
-# Pedir mas resolucion a la camara: mientras mas nitida la imagen que
-# entrega el sensor, menos ruido/moire aparece al fotografiar un digito
-# chico (por ejemplo, mostrado en la pantalla de un celular en vez de
-# en papel). Si la camara no soporta 1280x720 , el pedido se ignora
-# solo y sigue con la resolucion que tenia por defecto — no hace falta
-# revisar el resultado.
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+if cap is not None:
+    # Pedir mas resolucion a la camara: mientras mas nitida la imagen que
+    # entrega el sensor, menos ruido/moire aparece al fotografiar un digito
+    # chico (por ejemplo, mostrado en la pantalla de un celular en vez de
+    # en papel). Si la camara no soporta 1280x720 , el pedido se ignora
+    # solo y sigue con la resolucion que tenia por defecto — no hace falta
+    # revisar el resultado.
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    ancho_frame = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    alto_frame = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+else:
+    # 800x600: con el recuadro del 60 % queda un cuadro de 360 px, comodo
+    # para dibujar con el mouse, y el recuadro arranca en y = 120, justo
+    # debajo del panel del HUD (que llega hasta y = 118): con 640x480 el
+    # panel tapaba la esquina de arriba a la izquierda del recuadro.
+    ancho_frame, alto_frame = 800, 600
+    print("Modo mouse: dibuja el digito con el clic izquierdo DENTRO del recuadro;"
+          " clic derecho o 'c' borra el lienzo.")
 
 # Region de interes (ROI): el rectangulo verde fijo que se ve en la
 # ventana. Solo se procesa lo que hay ADENTRO de ese rectangulo — todo
@@ -248,12 +279,51 @@ cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 # REAL que acepto la camara (cap.get, no los numeros que se pidieron
 # arriba) — asi el recuadro sigue bien ubicado sin importar si la
 # camara acepto los 1280x720 pedidos o se quedo en su resolucion nativa.
-ancho_frame = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-alto_frame = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 lado = int(min(ancho_frame, alto_frame) * 0.6)
 cx_frame, cy_frame = ancho_frame // 2, alto_frame // 2
 x1, y1 = cx_frame - lado // 2, cy_frame - lado // 2
 x2, y2 = x1 + lado, y1 + lado
+
+# ------------------------------------------------------------------
+# 3.1 Lienzo del modo mouse (solo se usa si no hay camara)
+# ------------------------------------------------------------------
+# GROSOR_LAPIZ: en MNIST el trazo mide unos 2-3 px sobre un digito de
+# 20 px (un 10-15 % de su alto). Con lado // 16 (22 px en el recuadro
+# de 360) un digito dibujado de buen tamano queda en esa misma
+# proporcion; un trazo mucho mas fino desaparece al reducir a 20x20 y
+# uno mucho mas grueso lo adelgaza el paso 1.7.
+GROSOR_LAPIZ = max(8, lado // 16)
+VENTANA_PRINCIPAL = 'Reconocimiento de digitos'
+lienzo_mouse = np.full((alto_frame, ancho_frame, 3), 255, dtype=np.uint8)
+punto_anterior_mouse = None  # None = el boton izquierdo no esta apretado
+
+
+def al_mover_mouse(evento, x, y, flags, param):
+    """Callback de OpenCV para el mouse: con el boton izquierdo apretado
+    une con una linea el punto anterior y el actual (si solo se pintara
+    un circulo por evento, un movimiento rapido dejaria un trazo
+    punteado, porque Windows no manda un evento por cada pixel
+    recorrido). Clic derecho borra todo el lienzo."""
+    global punto_anterior_mouse
+    if evento == cv2.EVENT_LBUTTONDOWN:
+        punto_anterior_mouse = (x, y)
+        cv2.circle(lienzo_mouse, (x, y), GROSOR_LAPIZ // 2, (0, 0, 0), -1)
+    elif evento == cv2.EVENT_MOUSEMOVE and punto_anterior_mouse is not None:
+        cv2.line(lienzo_mouse, punto_anterior_mouse, (x, y), (0, 0, 0), GROSOR_LAPIZ, cv2.LINE_AA)
+        punto_anterior_mouse = (x, y)
+    elif evento == cv2.EVENT_LBUTTONUP:
+        punto_anterior_mouse = None
+    elif evento == cv2.EVENT_RBUTTONDOWN:
+        lienzo_mouse[:] = 255
+
+
+if MODO_MOUSE:
+    # La ventana se crea ANTES del primer imshow porque setMouseCallback
+    # necesita que ya exista. WINDOW_AUTOSIZE (el valor por defecto) hace
+    # que un pixel de la ventana sea un pixel del lienzo, asi las
+    # coordenadas (x, y) del mouse se usan tal cual, sin reescalar.
+    cv2.namedWindow(VENTANA_PRINCIPAL, cv2.WINDOW_AUTOSIZE)
+    cv2.setMouseCallback(VENTANA_PRINCIPAL, al_mover_mouse)
 
 # ------------------------------------------------------------------
 # Suavizado por ventana de votacion, con umbral de proporcion y de
@@ -418,9 +488,15 @@ LARGO_ESQUINA = min(lado, 40)
 
 
 while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
+    if cap is not None:
+        ret, frame = cap.read()
+        if not ret:
+            break
+    else:
+        # Una COPIA del lienzo: el HUD (esquinas, paneles, textos) se
+        # dibuja encima del frame, y si se dibujara sobre el lienzo mismo
+        # quedaria pintado para siempre y la CNN lo veria como trazo.
+        frame = lienzo_mouse.copy()
 
     # 4.1 Recortar la ROI de un frame SIN nada dibujado todavia encima
     # (antes se dibujaba el recuadro guia primero y recien despues se
@@ -555,14 +631,29 @@ while True:
     cv2.putText(frame, estado1, (38, alto_f - 29), cv2.FONT_HERSHEY_SIMPLEX, 0.55, COLOR_TEXTO, 1)
     cv2.putText(frame, estado2, (38, alto_f - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, COLOR_GRIS, 1)
 
-    # 4.8 Mostrar frame principal
-    cv2.imshow('Reconocimiento de digitos', frame)
+    # 4.7 En modo mouse, recordar como se usa (sobre el lienzo blanco el
+    # texto va en gris oscuro para que se lea).
+    if MODO_MOUSE:
+        cv2.putText(frame, "Dibuja dentro del recuadro | clic derecho o 'c': borrar | 'q': salir",
+                    (10, alto_f - 64), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (60, 60, 60), 1)
 
-    # 4.9 Salir con 'q'
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    # 4.8 Mostrar frame principal
+    cv2.imshow(VENTANA_PRINCIPAL, frame)
+
+    # 4.9 Salir con 'q' (y en modo mouse, 'c' borra el lienzo)
+    tecla = cv2.waitKey(1) & 0xFF
+    if tecla == ord('q'):
+        break
+    if MODO_MOUSE and tecla == ord('c'):
+        lienzo_mouse[:] = 255
+    # Cerrar la ventana con la X tambien termina el programa: sin esto,
+    # el siguiente imshow la volveria a abrir (y en modo mouse, sin el
+    # callback del mouse, asi que ya no se podria dibujar).
+    if cv2.getWindowProperty(VENTANA_PRINCIPAL, cv2.WND_PROP_VISIBLE) < 1:
         break
 
-cap.release()
+if cap is not None:
+    cap.release()
 cv2.destroyAllWindows()
 if ser is not None:
     ser.close()

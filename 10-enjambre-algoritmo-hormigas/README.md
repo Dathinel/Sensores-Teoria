@@ -43,7 +43,7 @@ En `preview.html` están todos en el panel de la izquierda. Si se cambia un valo
 5. **Definimos el protocolo (`protocolo.py`).** Usamos los mensajes del planteamiento (HELLO, PHER, PATH) y agregamos FIN (para la barrera), TAU (para un nodo reiniciado), ESTADO y los de prueba. Los números van con 17 cifras, los envíos son unicast y los datagramas no pasan de 1200 bytes.
 6. **Escribimos el firmware.** `generar_maze_h.py` traduce el mapa; el sketch arma la red AP/estación, la máquina de estados sin bloqueos, la barrera, la caída y el reinicio de un nodo, y los motores con arranque suave. Compila para los tres nodos.
 7. **Armamos un emulador de los tres nodos.** Son los mismos mensajes por UDP real en el PC, para probar el protocolo sin hardware. Con sus nodos virtuales la feromona salió idéntica a la de `aco.py`, y además encontró una limitación real del reingreso (más abajo).
-8. **Hicimos el gemelo y los archivos de Docker.** Primero el modo sin hardware, después el modo hardware alimentado por el emulador, y al final el Dockerfile con Python 3.11, porque pybullet no tiene rueda para Python 3.14 en Windows.
+8. **Hicimos el gemelo y los archivos de Docker.** Primero el modo sin hardware, después el modo hardware alimentado por el emulador, y al final el Dockerfile con Python 3.11, porque pybullet no publica ruedas para Windows (en Windows siempre se compila) y en Linux sí trae rueda para la 3.11.
 9. **Hicimos `preview.html`.** Portamos el ACO a JavaScript, lo comprobamos contra Python con node y tomamos las capturas.
 10. **Revisamos todo y corrimos las pruebas.** Una revisión del firmware nodo por nodo encontró tres errores de comportamiento, que corregimos: un carrito reiniciado durante el recorrido volvía a buscar solo, la caída del AP partía el enjambre y el carrito frenaba en cada celda recta. La revisión de la medida de convergencia nos llevó a un criterio más estricto. Luego corrimos las pruebas 6 a 11 y las de punta a punta del gemelo; las de hardware quedaron con la tabla lista.
 11. **Cambiamos la regla de depósito.** Con la regla original (deposita toda hormiga que llega) la prueba 6 mostró que la colonia se estancaba en rutas largas del laberinto abierto. Probamos dos variantes elitistas, que solo deposite la mejor hormiga de cada nodo o solo la mejor de todo el enjambre, y nos quedamos con la primera, que se comportó mejor (la segunda se aferraba a la primera ruta que encontraba). La cambiamos a la vez en C++, Python y JavaScript, volvimos a comprobar que los tres dan lo mismo bit a bit y repetimos todas las pruebas. La regla original sigue disponible para comparar (`ACO_SOLO_MEJOR 0`, `--deposito todas`).
@@ -72,7 +72,7 @@ Un **gemelo digital** es una copia virtual de un sistema físico que se alimenta
 
 **Docker** empaqueta un programa junto con todo lo que necesita para correr (el intérprete de Python de una versión exacta, las librerías con sus versiones, las fuentes, la configuración) en una **imagen**. Esa imagen se ejecuta como un **contenedor**: un proceso aislado que ve su propio sistema de archivos de Linux, como una máquina virtual muy liviana que comparte el núcleo del sistema operativo en vez de emular un computador completo. La receta de la imagen es el `Dockerfile`, y `docker-compose.yml` describe cómo se corre (puertos, carpetas compartidas, comandos).
 
-Lo usamos por tres razones. La primera, el enunciado lo pide para la capa virtual. La segunda, PyBullet trae problemas de instalación: no publica ruedas para Python 3.14 en Windows (en este PC hubo que compilarlo), y dentro de la imagen se usa Python 3.11 en Linux, donde sí hay rueda oficial, así que cualquiera con Docker corre exactamente lo mismo sin instalar nada más. La tercera, la reproducibilidad: el mismo contenedor con la misma semilla tiene que dar siempre la misma ruta, que es justo lo que mide la prueba 15.
+Lo usamos por tres razones. La primera, el enunciado lo pide para la capa virtual. La segunda, PyBullet trae problemas de instalación: no publica ruedas (paquetes ya compilados) para Windows con ninguna versión de Python, así que `pip` lo compila desde el código fuente y para eso hacen falta las herramientas de compilación de Visual Studio, y dentro de la imagen se usa Python 3.11 en Linux, donde sí hay rueda oficial, así que cualquiera con Docker corre exactamente lo mismo sin instalar nada más. La tercera, la reproducibilidad: el mismo contenedor con la misma semilla tiene que dar siempre la misma ruta, que es justo lo que mide la prueba 15.
 
 El contenedor no tiene pantalla. Por eso el gemelo usa PyBullet en modo DIRECT, que simula y renderiza sin abrir ventanas, toma cuadros con una cámara cenital y los guarda como video mp4 en una carpeta del PC compartida con el contenedor.
 
@@ -120,12 +120,12 @@ sequenceDiagram
     N1->>N1: suelta 4 hormigas
     N2->>N2: suelta 4 hormigas
     N3->>N3: suelta 4 hormigas
-    N1->>N2: PHER... + FIN;1;k
-    N1->>N3: PHER... + FIN;1;k
-    N2->>N1: PHER... + FIN;2;k
-    N2->>N3: PHER... + FIN;2;k
-    N3->>N1: PHER... + FIN;3;k
-    N3->>N2: PHER... + FIN;3;k
+    N1->>N2: PHER... + FIN#59;1#59;k
+    N1->>N3: PHER... + FIN#59;1#59;k
+    N2->>N1: PHER... + FIN#59;2#59;k
+    N2->>N3: PHER... + FIN#59;2#59;k
+    N3->>N1: PHER... + FIN#59;3#59;k
+    N3->>N2: PHER... + FIN#59;3#59;k
     N1-->>PC: copia de PHER, FIN, PATH
     N2-->>PC: copia de PHER, FIN, PATH
     N3-->>PC: copia de PHER, FIN, PATH
@@ -252,7 +252,7 @@ Para poder comparar nodo por nodo la ruta del carrito físico y la del gemelo, l
 
 - **Las cuentas van en double** (64 bits) en los dos lados.
 - **Los depósitos se suman en orden de nodo y de arista**, sin importar el orden en que lleguen los paquetes: sumar en otro orden cambia el último bit de un double.
-- **Se mandan con 17 cifras significativas** (`41.666666666666657`), lo mínimo para recuperar el mismo número exacto al leerlo.
+- **Se mandan con 17 cifras significativas** (`41.666666666666671`), lo mínimo para recuperar el mismo número exacto al leerlo.
 - **Las sumas se hacen a mano, de izquierda a derecha.** Esto lo descubrimos comparando: desde Python 3.12, `sum()` de floats hace una suma compensada más exacta, y daba `2.4000000000000004` donde el C++ da `2.3999999999999999`. Las rutas eran iguales, pero el depósito cambiaba en el último bit.
 
 `pruebas/equivalencia/comparar_equivalencia.py` compila el `aco_core.h` del firmware con g++ en el PC y lo corre con 4 laberintos, varias semillas, dos juegos de parámetros y las dos reglas de depósito. Después compara línea por línea contra Python la mejor ruta de cada nodo en cada iteración y la feromona final: **48 de 48 casos idénticos** (`pruebas/resultados/equivalencia_cpp_python.json`). No es el ESP32, pero es el mismo código fuente; en la placa solo podría cambiar el último bit de `pow()`, y con los parámetros por defecto tampoco ($5^2 = 25$ y $\tau^1 = \tau$ son exactos). `comparar_preview.py` hace lo mismo con el JavaScript de `preview.html`: 24 de 24 casos idénticos.
@@ -278,7 +278,7 @@ Todos los mensajes son texto con campos separados por punto y coma, una línea p
 
 ```
 HELLO;2;A85E23EB;0;ESPERA
-PHER;3;1;3;4;41.666666666666657
+PHER;3;1;3;4;41.666666666666671
 FIN;3;1;12;1;3
 PATH;1;2.400;0,1,2,7,6,5,10,11,16,17,22,23,24
 ESTADO;1;BUSQUEDA;5;2.400;0;-48;1,2,3;12345
@@ -493,7 +493,7 @@ python -m venv entorno
 entorno\Scripts\python -m pip install pybullet numpy pillow imageio imageio-ffmpeg matplotlib
 ```
 
-PyBullet no publica rueda para Python 3.14 en Windows: hay que compilarlo (necesita las herramientas de compilación de Visual Studio) o usar Python 3.11 a 3.13, que sí tienen rueda. Docker evita este paso. El emulador (`emulador_nodos.py`) y `herramientas_red.py` solo usan la biblioteca estándar, así que corren también con el Python del sistema.
+PyBullet no publica ruedas para Windows con ninguna versión de Python (solo para Linux): `pip` lo compila desde el código fuente, tarda varios minutos y necesita las Build Tools de Visual Studio con el componente "Desarrollo para el escritorio con C++". Si `pip` dice "Unable to find a compatible Visual Studio installation" aunque estén instaladas, se corre la instalación desde la consola "x64 Native Tools Command Prompt for VS 2022" (o después de `vcvars64.bat`) con `set DISTUTILS_USE_SDK=1`. Docker evita este paso. El emulador (`emulador_nodos.py`) y `herramientas_red.py` solo usan la biblioteca estándar, así que corren también con el Python del sistema.
 
 **Firmware.** El Arduino IDE (o arduino-cli) con el núcleo **esp32 3.x** de Espressif (probado con el 3.3.12); no hace falta ninguna librería extra. `firmware\compilar.ps1` compila los tres nodos con arduino-cli.
 

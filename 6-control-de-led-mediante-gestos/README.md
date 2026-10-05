@@ -185,6 +185,7 @@ Por qué esos pines: GPIO25, 26 y 27 están uno al lado del otro en el mismo cos
 - **`esp32_gestos.py`**: el firmware del ESP32 en MicroPython. Configura los tres PWM y el Timer, espera palabras por `sys.stdin` y contesta `OK <comando>` o `? <comando>`. Se guarda en el ESP32 como `main.py` para que arranque solo al conectarlo.
 - **`enunciado-actividad.png`**: la captura del enunciado de la Actividad 4, incrustada arriba.
 - **`img/`**: el montaje en 3D, los tres estados de los LEDs y la animación de la sección "El circuito funcionando".
+- **`probar.json`**: la receta que usa el lanzador de la raíz del repo para probar este tema sin hardware (la página y las imágenes del montaje).
 
 ## La lógica del código, paso a paso
 

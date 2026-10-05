@@ -1,0 +1,74 @@
+{
+  "id": "7",
+  "titulo": "Brazo robótico: control por teclado (jog) + simulación URDF",
+  "resumen": "El brazo del profesor (brazo.urdf: giro de base, codo y pinza) se simula en PyBullet y se mueve con un teclado 4x4 conectado al ESP32, que manda la posición de las articulaciones por USB diez veces por segundo. Sin ESP32, la ventana de PyBullet trae botones con el mismo jog, y preview.html muestra lo mismo en el navegador sin instalar nada.",
+  "pide": [
+    "Programar el ESP32 para leer sensores y enviar datos",
+    "Script de Python que recibe datos por UART y controla el robot",
+    "Probar el movimiento de las articulaciones y la apertura/cierre de la pinza",
+    "Validar la comunicación en tiempo real",
+    "Describir el funcionamiento con videos y pantallazos, y subirlo al repositorio"
+  ],
+  "python": {
+    "versiones": ["3.13", "3.14", "3.12"],
+    "paquetes": [
+      "pybullet==3.2.7",
+      "pyserial==3.5"
+    ]
+  },
+  "acciones": [
+    {
+      "id": "sim",
+      "nombre": "Simulación en PyBullet (sin ESP32)",
+      "tipo": "python",
+      "script": "brazo_pybullet.py",
+      "args": [],
+      "cwd": ".",
+      "descripcion": "Abre la ventana de PyBullet con el brazo. Sin ESP32 la consola dice 'No se encontro el ESP32 en COM7' y se usan los 7 botones del panel derecho: joint_1 (base) +/-, joint_2 (codo) +/-, pinza +/- (la pinza sube y los dedos se abren a la vez) y Home. Cada clic mueve ~2.9° o 5 mm. Se cierra cerrando la ventana.",
+      "cubre": [
+        "Script de Python que recibe datos por UART y controla el robot",
+        "Probar el movimiento de las articulaciones y la apertura/cierre de la pinza"
+      ]
+    },
+    {
+      "id": "preview",
+      "nombre": "Preview en el navegador (teclado 4x4 clicable)",
+      "tipo": "html",
+      "archivo": "preview.html",
+      "descripcion": "Vista 3D simplificada del mismo brazo, sin instalar nada. En 'Modo prueba' la página hace de ESP32: mantener presionadas las teclas 8/2 (base), 6/4 (codo), 9/7 (pinza) o 5 (home), con el mouse o con las teclas numéricas del PC, y el monitor muestra las líneas J1/J2/G que mandaría por serial. 'Conectado' lee el ESP32 real por Web Serial (Chrome o Edge).",
+      "cubre": [
+        "Probar el movimiento de las articulaciones y la apertura/cierre de la pinza",
+        "Validar la comunicación en tiempo real"
+      ]
+    },
+    {
+      "id": "demo",
+      "nombre": "Animación del jog (video)",
+      "tipo": "archivo",
+      "archivo": "img/demo-jog.gif",
+      "descripcion": "El brazo en PyBullet moviéndose con el jog del teclado, con la línea serial J1/J2/G que manda el ESP32.",
+      "cubre": [
+        "Describir el funcionamiento con videos y pantallazos, y subirlo al repositorio"
+      ]
+    },
+    {
+      "id": "montaje",
+      "nombre": "Montaje 3D del teclado al ESP32",
+      "tipo": "archivo",
+      "archivo": "img/montaje-3d.png",
+      "descripcion": "Filas R1-R4 a GPIO14/27/26/25 y columnas C1-C4 a GPIO33/32/18/19, directo con la cinta del teclado. Las fotos del montaje real están en img/foto-teclado-esp32.jpg."
+    },
+    {
+      "id": "fw",
+      "nombre": "Firmware del ESP32",
+      "tipo": "info",
+      "archivo": "esp32_brazo.py",
+      "descripcion": "MicroPython: se guarda en el ESP32 como main.py con Thonny (cerrar Thonny después). Barre el teclado 4x4 y manda 'J1:..,J2:..,G:..' cada 100 ms a 115200 baudios. Para usarlo con la simulación, poner el COM en PUERTO_SERIAL de brazo_pybullet.py. No hace falta para probar.",
+      "cubre": [
+        "Programar el ESP32 para leer sensores y enviar datos",
+        "Validar la comunicación en tiempo real"
+      ]
+    }
+  ],
+  "notas": "pybullet 3.2.7 no publica ruedas para Windows (ninguna versión de Python): pip lo compila desde el código fuente, lo que necesita Visual Studio 2022 Build Tools con C++ y tarda unos 10 minutos la primera vez (después queda en la caché de pip). Ojo: si la carpeta 'C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer' (vswhere.exe) no está en el PATH, setuptools no encuentra el compilador ('Unable to find a compatible Visual Studio installation'); agregarla al PATH antes de instalar lo arregla. Probado en entornos nuevos con Python 3.14 y 3.13. preview.html no necesita nada de eso."
+}

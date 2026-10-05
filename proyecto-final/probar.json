@@ -1,0 +1,163 @@
+{
+  "id": "★",
+  "titulo": "Proyecto final: logística de monedas inteligentes (grupo 7, detector de monedas y vasos)",
+  "resumen": "Una línea recibe piezas de una en una, filtra las monedas colombianas (rechaza botones, arandelas, bloques y monedas extranjeras), las guarda por denominación, las empaca en vasos tapados y un carro las lleva por una pista con tres muros hasta la meta. Todo corre en simulación con física real (PyBullet), se ve en un visor 3D, se sigue en un dashboard de Streamlit y tiene un asistente que responde y da órdenes, incluso sin internet ni clave.",
+  "pide": [
+    "Sistema logístico de monedas con ESP32 y estructuras mecánicas y electrónicas propias",
+    "Contador de monedas, módulo de transporte y embalaje en vasos, y recolección de los vasos",
+    "Vehículo que sigue una trayectoria con tres obstáculos hasta la meta",
+    "Aplicativo web en Streamlit comunicado de forma inalámbrica con el ESP32",
+    "Dashboard con el seguimiento de la ruta y el valor, peso y cantidad de las monedas procesadas",
+    "Chatbot asistente que exponga los datos del proyecto",
+    "Grupo 7 (elemento diferencial): detector de elementos de monedas y vasos, cada filtro demostrable por separado",
+    "Entregables: arquitectura, diseño mecánico y electrónico (se acepta PyBullet con URDF), primeros módulos y app web",
+    "Repositorio de GitHub con el paso a paso documentado"
+  ],
+  "python": {
+    "versiones": ["3.14", "3.13"],
+    "paquetes": [
+      "pybullet==3.2.7",
+      "numpy==2.5.3",
+      "PyYAML==6.0.3",
+      "streamlit==1.64.0",
+      "plotly==7.1.0",
+      "pandas==3.0.6",
+      "pyserial==3.5",
+      "requests==2.34.2",
+      "python-dotenv==1.2.3",
+      "openai==3.19.2",
+      "pillow==12.3.0",
+      "opencv-python==5.0.0.93",
+      "pytest==9.1.1"
+    ]
+  },
+  "acciones": [
+    {
+      "id": "vivo",
+      "nombre": "Visor 3D en vivo + dashboard de Streamlit (lo que hace visor.bat)",
+      "tipo": "python",
+      "modulo": "app.lanzar",
+      "args": ["--auto", "prueba_completa", "--abrir", "--abrir-dashboard"],
+      "cwd": ".",
+      "descripcion": "Arranca la simulación completa (escenario prueba_completa) y abre dos pestañas: el visor 3D en vivo (http://localhost:8765: planta, carro y pista; paneles En vivo, Pruebas, Paso a paso, Sensores y Componentes; botones de sabotaje y 'Ver la prueba de este sensor') y el dashboard (http://127.0.0.1:8501: Resumen, Monedas y vasos, Calidad del filtro, Línea en vivo, Carro y ruta, Pruebas, Montaje real, Asistente y Ayuda; la barra lateral tiene Empezar, Pausa, Paro y 'Probar un filtro'). Tarda unos 10 s en responder. Se detiene cerrando su consola (Ctrl+C cierra los dos procesos). Si la simulación ya estaba corriendo, solo abre las pestañas.",
+      "cubre": [
+        "Contador de monedas, módulo de transporte y embalaje en vasos, y recolección de los vasos",
+        "Vehículo que sigue una trayectoria con tres obstáculos hasta la meta",
+        "Dashboard con el seguimiento de la ruta y el valor, peso y cantidad de las monedas procesadas",
+        "Grupo 7 (elemento diferencial): detector de elementos de monedas y vasos, cada filtro demostrable por separado"
+      ]
+    },
+    {
+      "id": "asistente",
+      "nombre": "Asistente (pestaña Asistente del dashboard)",
+      "tipo": "info",
+      "descripcion": "Con la acción anterior corriendo, en el dashboard ir a la pestaña Asistente y escribir, por ejemplo: '¿cuántas monedas se aceptaron?', '¿qué sensor detecta el metal?' o 'avanza 20 cm'. Sin clave de DeepSeek y sin Ollama responde el intérprete de reglas (sin internet, probado); con Ollama y qwen2.5:3b responde el modelo local, y con una clave en .env, DeepSeek. La voz (micrófono) es opcional.",
+      "cubre": ["Chatbot asistente que exponga los datos del proyecto"]
+    },
+    {
+      "id": "portable",
+      "nombre": "Visor 3D portable (demo grabada, sin Python)",
+      "tipo": "html",
+      "archivo": "visor-portable.html",
+      "descripcion": "Un solo archivo HTML (~2,5 MB) con Three.js, el visor y una corrida grabada: se ve la línea completa sin instalar nada. Arriba dice 'DEMO GRABADA'; si la simulación de este PC está corriendo, la pestaña pasa sola al visor en vivo.",
+      "cubre": ["Entregables: arquitectura, diseño mecánico y electrónico (se acepta PyBullet con URDF), primeros módulos y app web"]
+    },
+    {
+      "id": "sim-filtro",
+      "nombre": "PyBullet 1: filtro de monedas (nuestra parte, grupo 7)",
+      "tipo": "python",
+      "modulo": "sim.ver.filtro_monedas",
+      "args": [],
+      "cwd": ".",
+      "descripcion": "Ventana de PyBullet con la cinta de monedas y el almacén: 18 piezas mezcladas (monedas, botones, arandelas, bloques, extranjeras), cada una con un rótulo de su material o su causa de rechazo, y cada tubo con su cuenta. En la ventana: espacio pausa, r reinicia, q sale.",
+      "cubre": [
+        "Grupo 7 (elemento diferencial): detector de elementos de monedas y vasos, cada filtro demostrable por separado",
+        "Contador de monedas, módulo de transporte y embalaje en vasos, y recolección de los vasos"
+      ]
+    },
+    {
+      "id": "sim-vasos",
+      "nombre": "PyBullet 2: embalaje de vasos",
+      "tipo": "python",
+      "modulo": "sim.ver.embalaje_vasos",
+      "args": [],
+      "cwd": ".",
+      "descripcion": "Verificación del vaso, llenado por lotes, tapa, prensa, canaleta y los sabotajes (vaso retirado, cambiado, mano en la cortina). Espacio pausa, r reinicia, q sale.",
+      "cubre": [
+        "Contador de monedas, módulo de transporte y embalaje en vasos, y recolección de los vasos",
+        "Grupo 7 (elemento diferencial): detector de elementos de monedas y vasos, cada filtro demostrable por separado"
+      ]
+    },
+    {
+      "id": "sim-carro",
+      "nombre": "PyBullet 3: carro en la pista",
+      "tipo": "python",
+      "modulo": "sim.ver.carro_pista",
+      "args": [],
+      "cwd": ".",
+      "descripcion": "El carro con motores y ruedas: sigue la línea, esquiva los tres muros, llega a la meta y vuelve de reversa al muelle. Espacio pausa, r reinicia, q sale.",
+      "cubre": ["Vehículo que sigue una trayectoria con tres obstáculos hasta la meta"]
+    },
+    {
+      "id": "sim-todo",
+      "nombre": "PyBullet 4: todo junto",
+      "tipo": "python",
+      "modulo": "sim.ver.todo_junto",
+      "args": [],
+      "cwd": ".",
+      "descripcion": "La corrida completa: la planta en una ventana de PyBullet y el carro en otra (PyBullet permite una ventana por proceso). Espacio pausa, r reinicia, q sale.",
+      "cubre": [
+        "Contador de monedas, módulo de transporte y embalaje en vasos, y recolección de los vasos",
+        "Vehículo que sigue una trayectoria con tres obstáculos hasta la meta"
+      ]
+    },
+    {
+      "id": "video-filtro",
+      "nombre": "Video: filtro de monedas",
+      "tipo": "archivo",
+      "archivo": "docs/videos/filtro_monedas.mp4"
+    },
+    {
+      "id": "video-todo",
+      "nombre": "Video: todo junto (planta + carro)",
+      "tipo": "archivo",
+      "archivo": "docs/videos/todo_junto.mp4"
+    },
+    {
+      "id": "pruebas",
+      "nombre": "Pruebas automáticas (pytest, sin ventana)",
+      "tipo": "python",
+      "modulo": "pytest",
+      "args": ["-q"],
+      "cwd": ".",
+      "descripcion": "Corre las más de 900 pruebas de tests/ (control, simulación, visor, dashboard, asistente y firmware contra una estación emulada). Tarda unos 4 minutos; al final dice cuántas pasaron (probado: 928 pasan, 2 se omiten).",
+      "cubre": ["Grupo 7 (elemento diferencial): detector de elementos de monedas y vasos, cada filtro demostrable por separado"]
+    },
+    {
+      "id": "enunciado",
+      "nombre": "Enunciado del parcial (PDF)",
+      "tipo": "archivo",
+      "archivo": "docs/enunciado/segundo-parcial-umng.pdf"
+    },
+    {
+      "id": "readme",
+      "nombre": "README del proyecto (arquitectura, decisiones, conexiones, costos)",
+      "tipo": "info",
+      "archivo": "README.md",
+      "descripcion": "La explicación completa: el elemento 7, el recorrido de una moneda, un vaso y el carro, los filtros, la parte eléctrica, el asistente, el firmware y lo que falta en físico."
+    },
+    {
+      "id": "firmware",
+      "nombre": "Firmware de los dos ESP32 (MicroPython)",
+      "tipo": "info",
+      "archivo": "firmware/README.md",
+      "descripcion": "El ESP32 fijo (estación, por USB con el PC) y el del carro (por ESP-NOW). Se sube con `python -m firmware.subir`; no hace falta para probar: todo lo anterior corre en simulación. El circuito también está en Wokwi (carpeta wokwi/)."
+    }
+  ],
+  "notas": [
+    "Sin hardware: todo corre en simulación (hardware.backend: sim en config/parametros.yaml). Sin clave de DeepSeek el asistente responde con reglas locales.",
+    "PyBullet 3.2.7 no publica ruedas para Windows: pip lo compila, así que hace falta tener instaladas las Microsoft C++ Build Tools (Visual Studio Build Tools con 'Desarrollo para el escritorio con C++'). Si 'entorno/' ya existe (instalar.bat del proyecto, Python 3.14), se usa ese.",
+    "Usa los puertos 8765 (visor 3D) y 8501 (dashboard). Si otro programa ocupa el 8765, el visor en vivo no aparece: cerrar ese programa o cambiar supervisor.puerto_http en config/parametros.yaml. `python -m app.chequeo` lo detecta.",
+    "La instalación completa del proyecto (instalar.bat: torch, keras, Whisper, firmware, Ollama) es mucho más pesada y solo hace falta para la voz sin internet, entrenar la visión o subir el firmware."
+  ]
+}

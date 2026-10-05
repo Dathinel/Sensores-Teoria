@@ -211,7 +211,16 @@ def crear_mundo(modo=p.GUI):
     """Conecta PyBullet en `modo` (p.GUI o p.DIRECT), arma la escena y
     deja a Baxter en su pose inicial. Devuelve el `estado` (un
     SimpleNamespace con todos los ids, indices y variables del control).
-    Si faltan los modelos, avisa y termina con codigo 1."""
+    Si faltan los modelos, intenta bajarlos una vez con
+    ../descargar_modelos.py; si no se puede (sin internet), avisa y
+    termina con codigo 1."""
+    if not URDF_BAXTER.exists():
+        # Primera vez (por ejemplo, recien clonado): se corre el descargador
+        # en un proceso aparte con el MISMO Python, para no repetir su codigo
+        # aca. Si ya estaban, no se llega a esta linea.
+        import subprocess
+        print("Faltan los modelos de Baxter: bajandolos una vez con descargar_modelos.py ...", flush=True)
+        subprocess.run([sys.executable, str(CARPETA_MODELOS.parent / "descargar_modelos.py")])
     if not URDF_BAXTER.exists():
         print("Faltan los modelos: corra `entorno\\Scripts\\python descargar_modelos.py` en la carpeta del taller")
         sys.exit(1)

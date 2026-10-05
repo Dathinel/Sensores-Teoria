@@ -47,6 +47,17 @@
   .chip b { color: var(--text); font-weight: 500; }
   .punto { width: 8px; height: 8px; border-radius: 50%; background: var(--gris); display: inline-block; }
 
+  .visores { margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .visores .titulo { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-right: 4px; }
+  .visores a, .t-cab a.ver {
+    border: 1px solid var(--panel-border); background: var(--panel); border-radius: 8px; padding: 6px 11px;
+    color: var(--text); text-decoration: none; font-size: 0.8rem;
+  }
+  .visores a:hover, .t-cab a.ver:hover { border-color: var(--c, var(--azul)); background: var(--panel-2); }
+  .visores a small { color: var(--text-muted); font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; margin-left: 4px; }
+  .t-cab a.ver { padding: 2px 8px; font-size: 0.7rem; }
+  .intro { margin: 10px 0 0; color: var(--text-muted); font-size: 0.8rem; line-height: 1.5; max-width: 1100px; }
+  .intro b { color: var(--text); font-weight: 500; }
   .fila-sup { display: grid; grid-template-columns: 1.35fr 1fr; gap: 14px; margin-top: 16px; }
   .panel { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 10px; padding: 14px 16px; }
   .panel h2 { font-size: 0.8rem; font-weight: 600; margin: 0 0 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
@@ -145,6 +156,18 @@
     </div>
   </div>
 
+  <p class="intro">Este es el <b>tablero del plano de administración</b> del laboratorio: el contenedor <b>admin</b> (VLAN 3) recibe un
+    latido UDP por segundo de cada contenedor y de cada ESP32, les hace ping <b>a través del router</b> y decide si cada servicio
+    está <b>OK</b>, <b>LENTO</b> o <b>CAIDO</b>. Las dos zonas (VLAN 1 y VLAN 2) no se ven entre sí; solo el admin las ve a las dos.
+    Abajo, una columna por VLAN. Para ver qué está simulando cada zona, abrir sus visores:</p>
+  <nav class="visores" id="visores">
+    <span class="titulo">Visores</span>
+    <a data-puerto="8010" style="--c: var(--amarillo)">Pista de carreras (track-server)<small>:8010</small></a>
+    <a data-puerto="8011" style="--c: var(--azul)">Robot Spot (sim-spot)<small>:8011</small></a>
+    <a data-puerto="8012" style="--c: var(--azul)">Robot Pepper (sim-pepper)<small>:8012</small></a>
+    <a data-puerto="8013" style="--c: var(--azul)">Robot NAO (sim-nao)<small>:8013</small></a>
+  </nav>
+
   <div class="fila-sup">
     <div class="panel">
       <h2>ESP32 esclava · 6 LEDs (lab/estado/&lt;servicio&gt;)</h2>
@@ -197,13 +220,18 @@ const $ = (id) => document.getElementById(id);
 const fmt = (v, dec = 2, uni = "") => (v === null || v === undefined) ? "—" : (Number(v).toFixed(dec) + uni);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 let tarjetas = {};      // nombre -> elementos de su tarjeta
+// Visores de cada contenedor: los publica Docker en el mismo PC que el dashboard, en otro puerto.
+// Se arma la URL con el host con el que se abrió esta página (sirve con localhost o con la IP del PC).
+const VISORES = { "track-server": 8010, "sim-spot": 8011, "sim-pepper": 8012, "sim-nao": 8013 };
+const urlVisor = (puerto) => `${location.protocol}//${location.hostname || "localhost"}:${puerto}/`;
+document.querySelectorAll("#visores a").forEach((a) => { a.href = urlVisor(a.dataset.puerto); a.target = "_blank"; a.rel = "noopener"; });
 let umbr = null;
 
 function crearTarjeta(nombre) {
   const d = document.createElement("div");
   d.className = "tarjeta";
   d.innerHTML = `
-    <div class="t-cab"><span class="nombre">${esc(nombre)}</span><span class="ip"></span><span class="esp"></span><span class="insignia x">?</span></div>
+    <div class="t-cab"><span class="nombre">${esc(nombre)}</span><span class="ip"></span><span class="esp"></span>${VISORES[nombre] ? `<a class="ver" href="${urlVisor(VISORES[nombre])}" target="_blank" rel="noopener" title="abrir el visor de ${esc(nombre)}">visor ↗</a>` : ""}<span class="insignia x">?</span></div>
     <div class="motivo"></div>
     <div class="num">
       <div><div class="k">RTT último</div><div class="v" data-k="rtt"></div></div>

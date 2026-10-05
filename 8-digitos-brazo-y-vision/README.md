@@ -59,7 +59,8 @@ Los pasos detallados, con los mensajes que tienen que aparecer en cada paso, est
 **Sin ESP32 conectado:**
 
 - Punto 1: `entorno\Scripts\python brazo_dibuja.py` abre PyBullet con 10 botones, uno por dígito.
-- Punto 2: `entorno\Scripts\python reconocer_digito.py` reconoce con la cámara igual; solo no manda nada.
+- Punto 2: `entorno\Scripts\python reconocer_digito.py` reconoce con la cámara igual; solo no manda nada. Sin cámara, `entorno\Scripts\python reconocer_digito.py --mouse` abre un lienzo donde el dígito se dibuja con el mouse (y si la cámara no abre, entra solo en ese modo).
+- Sin Python: cada punto trae un `preview.html` (doble clic en Chrome o Edge) con el teclado y la LCD simulados (punto 1) o la OLED simulada (punto 2).
 
 **Con ESP32 conectado:**
 

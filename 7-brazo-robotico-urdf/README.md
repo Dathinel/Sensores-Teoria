@@ -183,7 +183,8 @@ Si al apretar una tecla sale otra distinta, el teclado tiene sus pines en otro o
 - **`enunciado-actividad.png`**: la captura del enunciado de la actividad.
 - **`img/`**: las fotos del montaje real, el montaje en 3D y las animaciones de la sección "El montaje y la demo".
 - **`entorno/`**: el entorno virtual de Python del tema, con `pybullet` y `pyserial` ya instalados. No se sube a GitHub (tiene su propio `.gitignore` con `*`).
-  Para crearlo en otro PC (Python 3.14), dentro de esta carpeta: `py -3.14 -m venv entorno` y `entorno\Scripts\python -m pip install pybullet pyserial`.
+  Para crearlo en otro PC (Python 3.14), dentro de esta carpeta: `py -3.14 -m venv entorno` y `entorno\Scripts\python -m pip install pybullet==3.2.7 pyserial==3.5`. PyBullet no publica paquetes ya compilados para Windows, así que pip lo compila desde el código fuente: hace falta tener instalado Visual Studio 2022 (o las *Build Tools*) con la carga de trabajo de C++, y la primera instalación tarda unos 10 minutos (probado con Python 3.14 y 3.13). Si falla con `Unable to find a compatible Visual Studio installation` teniendo las Build Tools instaladas, es que `vswhere.exe` no está en el PATH: antes de instalar, `set PATH=C:\Program Files (x86)\Microsoft Visual Studio\Installer;%PATH%` en la misma consola.
+- **`probar.json`**: la receta que usa el lanzador de la raíz del repo para probar este tema sin hardware (la simulación, `preview.html` y las imágenes).
 
 ## La lógica del código
 
@@ -244,7 +245,7 @@ Todos los comandos se corren desde la carpeta `7-brazo-robotico-urdf`, con el en
 **Sin ESP32 conectado:**
 
 1. `entorno\Scripts\python -m pip list` para comprobar que el entorno está bien (deben aparecer `pybullet` y `pyserial`).
-2. `entorno\Scripts\python brazo_pybullet.py`. En la consola aparece `No se encontro el ESP32 en COM7: se usan los botones de jog de PyBullet.` y se abre la ventana.
+2. `entorno\Scripts\python brazo_pybullet.py`. En la consola aparece `No se encontro el ESP32 en COM7: se usan los botones de jog de PyBullet.` y se abre la ventana. Los avisos `No inertial data for link, using mass=1` que salen antes son normales: el URDF del profesor no trae `<inertial>` y PyBullet le pone 1 kg a cada pieza.
 3. En el panel de la derecha, hacer click en los botones de jog: cada click mueve la articulación ~2.9° (o la pinza 5 mm). Con `pinza +` se ve cómo la pinza sube y los dedos se separan a la vez; `Home (0, 0, 0)` lo devuelve todo a cero. Arriba, la línea de estado dice `Serial: sin ESP32 (modo botones)`.
 
 **Con ESP32 conectado:**

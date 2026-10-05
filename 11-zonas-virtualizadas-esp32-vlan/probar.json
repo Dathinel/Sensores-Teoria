@@ -1,0 +1,141 @@
+{
+  "id": "11",
+  "titulo": "Zonas virtualizadas (VLAN) con ESP32, PyBullet, Docker y un plano de administración",
+  "resumen": "Un laboratorio de 16 contenedores de Docker partido en tres redes aisladas, como tres VLAN: una zona gamer con una pista de carreras en PyBullet y tres jugadores, una zona robótica con un Spot, un Pepper y un NAO simulados, y un plano de administración que mide latencia, jitter y disponibilidad y lo muestra en un dashboard. Los siete ESP32 (seis mandos y una esclava con 6 LED) van emulados, así que todo se prueba sin placas.",
+  "pide": [
+    "Zona Gamer (VLAN 1): servidor de pista en PyBullet y 3 jugadores, cada uno manejado por su ESP32",
+    "Zona Robótica (VLAN 2): Spot, Pepper y NAO siguiendo en tiempo real los ángulos de su ESP32 (real-to-sim)",
+    "Plano de administración (VLAN 3): broker MQTT, monitor de latencia/jitter/disponibilidad y ESP32 esclava con 6 LED",
+    "Router inter-VLAN: el admin ve las dos zonas y las zonas no se ven entre sí",
+    "Validación experimental: latencia, jitter y disponibilidad",
+    "Repositorio con el paso a paso, imágenes en Docker Hub y video funcionando"
+  ],
+  "python": {
+    "versiones": ["3.13", "3.12", "3.14"],
+    "paquetes": ["paho-mqtt==2.1.0", "numpy==2.5.3", "matplotlib==3.11.2"]
+  },
+  "acciones": [
+    {
+      "id": "stack",
+      "nombre": "Levantar el laboratorio (16 contenedores, ESP32 emulados)",
+      "tipo": "docker",
+      "compose": "docker-compose.yml",
+      "args": ["--profile", "emulado", "up", "-d", "--build"],
+      "abrir": "http://localhost:8080",
+      "detener": ["--profile", "emulado", "stop"],
+      "descripcion": "Construye y levanta router, admin, pista, 3 jugadores, 3 robots y los 7 ESP32 emulados. La primera vez tarda varios minutos (baja PyBullet y los modelos de los robots); después unos segundos. Al terminar abre el dashboard del admin, donde los 6 servicios deben quedar en OK. 'Detener' los para sin borrarlos.",
+      "cubre": ["Zona Gamer (VLAN 1)", "Zona Robótica (VLAN 2)", "Plano de administración (VLAN 3)", "Router inter-VLAN"]
+    },
+    {
+      "id": "dashboard",
+      "nombre": "Dashboard del plano de administración",
+      "tipo": "url",
+      "url": "http://localhost:8080",
+      "descripcion": "Con el laboratorio arriba: cada contenedor de las tres VLAN con su estado (OK/LENTO/CAIDO), RTT, jitter y disponibilidad medidos a través del router, los 6 'LED' de la ESP32 esclava y los latidos de los ESP32. Arriba hay enlaces a los cuatro visores.",
+      "cubre": ["Plano de administración (VLAN 3)", "Validación experimental: latencia, jitter y disponibilidad"]
+    },
+    {
+      "id": "pista",
+      "nombre": "Visor de la pista (Zona Gamer)",
+      "tipo": "url",
+      "url": "http://localhost:8010",
+      "descripcion": "La carrera en vivo: 3 carros de jugadores manejados por sus ESP32 emulados (con piloto automático) y 3 autónomos, con la tabla de posiciones y una cámara de persecución.",
+      "cubre": ["Zona Gamer (VLAN 1)"]
+    },
+    {
+      "id": "spot",
+      "nombre": "Visor del Spot (Zona Robótica)",
+      "tipo": "url",
+      "url": "http://localhost:8011",
+      "descripcion": "El Rex (pequeño Spot) moviendo la pose del cuerpo según los 3 ángulos de su ESP32 emulado, con el error real-to-sim.",
+      "cubre": ["Zona Robótica (VLAN 2)"]
+    },
+    {
+      "id": "pepper",
+      "nombre": "Visor del Pepper (Zona Robótica)",
+      "tipo": "url",
+      "url": "http://localhost:8012",
+      "descripcion": "Pepper copiando hombro, codo y cabeza de su ESP32 emulado (sin las mallas de SoftBank se dibuja como esqueleto).",
+      "cubre": ["Zona Robótica (VLAN 2)"]
+    },
+    {
+      "id": "nao",
+      "nombre": "Visor del NAO (Zona Robótica)",
+      "tipo": "url",
+      "url": "http://localhost:8013",
+      "descripcion": "NAO copiando hombro, codo y cabeza de su ESP32 emulado; el botón hace un saludo.",
+      "cubre": ["Zona Robótica (VLAN 2)"]
+    },
+    {
+      "id": "preview",
+      "nombre": "Todo el laboratorio en el navegador (sin Docker)",
+      "tipo": "html",
+      "archivo": "preview.html",
+      "descripcion": "Simulación en una sola página, sin instalar nada: mapa de las tres VLAN con el router y sus contadores, la pista con un joystick virtual (o flechas/WASD y espacio), los tres robots con deslizadores, 'Meter fallas' (retardo, jitter, pérdida) para ver LENTO y CAIDO, 'detener' contenedores y el ping prohibido de player-1 a sim-nao que descarta el router. El modo 'Conectado' habla por Web Serial con una ESP32 real.",
+      "cubre": ["Router inter-VLAN", "Plano de administración (VLAN 3)", "Zona Gamer (VLAN 1)", "Zona Robótica (VLAN 2)"]
+    },
+    {
+      "id": "video",
+      "nombre": "Video de la demo",
+      "tipo": "archivo",
+      "archivo": "video/demo-stack.mp4",
+      "descripcion": "El stack completo: la pista, los tres robots y los LED de la esclava; a mitad del video se detiene sim-pepper, el admin lo marca CAIDO y luego vuelve a OK.",
+      "cubre": ["Repositorio con el paso a paso, imágenes en Docker Hub y video funcionando"]
+    },
+    {
+      "id": "unitarias",
+      "nombre": "Pruebas del protocolo (sin Docker)",
+      "tipo": "python",
+      "script": "pruebas/test_protocolo.py",
+      "args": ["-v"],
+      "cwd": ".",
+      "descripcion": "40 pruebas unitarias de los mensajes CTRL, JOINTS, HB y PING/PONG, del conteo de perdidos por secuencia y del jitter RFC 3550. No necesitan el laboratorio.",
+      "cubre": ["Validación experimental: latencia, jitter y disponibilidad"]
+    },
+    {
+      "id": "aislamiento",
+      "nombre": "Prueba de aislamiento entre VLAN",
+      "tipo": "python",
+      "script": "pruebas/prueba_aislamiento.py",
+      "args": [],
+      "cwd": ".",
+      "descripcion": "Con el laboratorio arriba (unos 30 s): pings y conexiones TCP de la zona gamer a la robótica y al revés (sin ruta y con ruta forzada por el router), contadores DROP del router, ping del admin a todas las zonas con ttl=63 y traceroute. Deben aprobarse los 45 casos. Reescribe pruebas/resultados/aislamiento.json.",
+      "cubre": ["Router inter-VLAN"]
+    },
+    {
+      "id": "disponibilidad",
+      "nombre": "Prueba de disponibilidad (caídas)",
+      "tipo": "python",
+      "script": "pruebas/prueba_disponibilidad.py",
+      "args": [],
+      "cwd": ".",
+      "descripcion": "Con el laboratorio arriba (unos 3 min): detiene y vuelve a arrancar sim-pepper, player-2 y el admin, y mide cuánto tarda el admin en marcar CAIDO y en volver a OK, y que las demás zonas sigan funcionando. Al terminar todo queda arriba otra vez. Reescribe pruebas/resultados/disponibilidad.json.",
+      "cubre": ["Validación experimental: latencia, jitter y disponibilidad", "Plano de administración (VLAN 3)"]
+    },
+    {
+      "id": "red_base",
+      "nombre": "Medir latencia y jitter (escenario base, 5 min)",
+      "tipo": "python",
+      "script": "pruebas/medir_red.py",
+      "args": ["--escenario", "base", "--minutos", "5"],
+      "cwd": ".",
+      "descripcion": "Con el laboratorio arriba: 5 minutos de ping desde el admin a cada servicio a través del router, más lo que publica el admin por MQTT. Saca RTT promedio, p95, máximo, jitter, pérdida y disponibilidad, con gráficas en pruebas/resultados/red_base_*.png (reescribe esos archivos).",
+      "cubre": ["Validación experimental: latencia, jitter y disponibilidad"]
+    },
+    {
+      "id": "montaje",
+      "nombre": "Montaje 3D de las placas",
+      "tipo": "archivo",
+      "archivo": "img/montaje-3d-gamer.png",
+      "descripcion": "El tema se entrega en simulación. Renders del montaje con los pines exactos del firmware: img/montaje-3d-gamer.png (joystick KY-023), img/montaje-3d-robot.png (3 potenciómetros y pulsador) e img/montaje-3d-esclava.png (6 LED con resistencias)."
+    },
+    {
+      "id": "fw",
+      "nombre": "Firmware de los ESP32",
+      "tipo": "info",
+      "archivo": "firmware/esp32_maestra/esp32_maestra.ino",
+      "descripcion": "Dos sketches de Arduino: firmware/esp32_maestra (los seis mandos; el rol se elige en config.h o con compilar.ps1 -Roles) y firmware/esp32_esclava_leds (la esclava con 6 LED). Se compilan y suben con firmware/compilar.ps1 (arduino-cli, núcleo esp32 3.x). No hacen falta para probar: el laboratorio usa los emuladores."
+    }
+  ],
+  "notas": "Requiere Docker Desktop abierto ('Engine running') y libres los puertos 8080, 8010-8013, 8765, 1883 y 5001-5300 UDP. Las pruebas de aislamiento, disponibilidad y red necesitan el laboratorio levantado y el comando docker en el PATH. Las subredes 192.168.10/20/30.0/24 no deben estar usadas por otro proyecto de Docker. preview.html, el video y las pruebas del protocolo funcionan sin Docker."
+}

@@ -1,0 +1,3 @@
+# Lanzador: el .bat con CRLF (cmd.exe se confunde con LF) y el .sh con LF (sh no acepta el retorno de carro).
+/PROBAR.bat text eol=crlf
+/probar.sh text eol=lf

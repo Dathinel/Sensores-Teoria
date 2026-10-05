@@ -7,7 +7,7 @@ Basado en el ejemplo de visión computacional con OpenCV compartido en el reposi
 
 El enunciado pide seguir un esquema fijo: cámara del PC → preprocesamiento OpenCV → reconocimiento con una CNN → envío por puerto serie → ESP-A (maestro SPI) → envío por SPI → ESP-B (esclavo SPI) → mostrar en una OLED I2C. Lo que quedó:
 
-- Se escribe un dígito en un papel y se muestra a la cámara del PC, dentro de un recuadro fijo.
+- Se escribe un dígito en un papel y se muestra a la cámara del PC, dentro de un recuadro fijo. Sin cámara, el mismo programa abre un lienzo blanco donde el dígito se dibuja con el mouse (`--mouse`, ver "Cómo probarlo").
 - `reconocer_digito.py` lo recorta y lo deja como una imagen de MNIST (28×28, fondo negro, trazo blanco, centrado), y la CNN entrenada con `entrenar_modelo.py` dice qué dígito es. Como la red puede "dudar" de un frame a otro, un dígito solo se confirma cuando gana con claridad varios frames seguidos.
 - Cada dígito confirmado se manda **una sola vez** por USB al ESP-A como `DIGIT:n`.
 - El ESP-A (MicroPython) lo reenvía al ESP-B por **dos caminos a la vez: SPI real y UART2**, y le contesta al PC `REENVIADO:n`.
@@ -58,6 +58,7 @@ Una pantalla OLED de 128×64 píxeles monocromática, donde cada píxel emite su
 flowchart TD
     subgraph PC["PC — reconocer_digito.py"]
         Papel["Dígito en papel"] --> Cam["Cámara<br/>recuadro fijo (ROI)"]
+        Mouse["Sin cámara (--mouse):<br/>lienzo dibujado con el mouse"] -.-> Pre
         Cam --> Pre["preprocesar_digito()<br/>gris, blur, umbral, recorte,<br/>centrado 28x28"]
         Pre --> CNN["CNN<br/>(modelo_mnist_cnn.h5)"]
         CNN --> Vota["Ventana de 15 frames<br/>confianza >= 60 %, ganador >= 80 %"]
@@ -139,17 +140,17 @@ Un cuidado con los pines del ESP-B: `GPIO12` (MISO) y `GPIO15` (SS) son pines de
 
 - **`entrenar_modelo.py`**: entrena la CNN sobre MNIST y la guarda en `modelo_mnist_cnn.h5`. Se corre **una sola vez** (tarda varios minutos), no en cada uso.
 - **`modelo_mnist_cnn.h5`**: la red ya entrenada (arquitectura + pesos, unos 2.7 MB). Es lo que carga `reconocer_digito.py`.
-- **`reconocer_digito.py`**: el programa del día a día. Cámara, preprocesamiento, CNN, votación, envío al ESP-A y lectura de su confirmación, todo en una ventana.
+- **`reconocer_digito.py`**: el programa del día a día. Cámara, preprocesamiento, CNN, votación, envío al ESP-A y lectura de su confirmación, todo en una ventana. Con `--mouse` (o solo, si la cámara no abre) cambia la cámara por un lienzo para dibujar el dígito con el mouse; el resto del código es el mismo.
 - **`esp-a-maestro/esp_a_maestro.py`**: firmware del ESP-A en MicroPython. Se guarda en la placa como `main.py` con Thonny. Recibe `DIGIT:n` por USB, lo valida, lo reenvía por SPI y por UART2, y contesta `REENVIADO:n`.
 - **`esp-b-esclavo/esp_b_esclavo.ino`**: sketch de Arduino del ESP-B. Se compila y sube con el Arduino IDE (es el único ESP32 del repositorio que no se programa con Thonny). Escucha SPI esclavo y UART2 sin bloquear y dibuja el dígito en la OLED.
 - **`probar_esp_a.py`**: prueba aislada del ESP-A desde el PC, sin cámara ni CNN. Abre el puerto, le manda `DIGIT:5` y muestra todo lo que responda.
 - **`enunciado-actividad.png`** y **`enunciado-actividad-2.png`**: las capturas del enunciado.
 - **`img/`**: las fotos del montaje real, el montaje en 3D y las animaciones de la sección "El montaje y la demo".
-- **`entorno/`**: entorno virtual de Python **3.12** (TensorFlow todavía no tiene versión para 3.13/3.14) con `tensorflow`, `opencv-python`, `numpy` y `pyserial`. No se sube a GitHub (su `.gitignore` tiene `*`). Para crearlo en otro PC, dentro de esta carpeta:
+- **`entorno/`**: entorno virtual de Python **3.12** con `tensorflow`, `opencv-python`, `numpy`, `scipy` y `pyserial` (`scipy` solo lo pide `entrenar_modelo.py`, para rotar las imágenes del *data augmentation*). TensorFlow 2.21 tiene versión para Windows de Python 3.10 a 3.13, pero no para 3.14. No se sube a GitHub (su `.gitignore` tiene `*`). Para crearlo en otro PC, dentro de esta carpeta (son las versiones con las que se probó):
 
   ```
   py -3.12 -m venv entorno
-  entorno\Scripts\python -m pip install tensorflow opencv-python numpy pyserial
+  entorno\Scripts\python -m pip install tensorflow==2.21.0 opencv-python==5.0.0.93 numpy==2.5.3 scipy==1.18.1 pyserial==3.5
   ```
 
 ## Cómo se entrenó la red (`entrenar_modelo.py`)
@@ -225,6 +226,8 @@ El puerto se abre con el mismo patrón de siempre (`try/except serial.SerialExce
 
 El recuadro se marca con cuatro esquinas en L: grises si no hay nada, ámbar si hay un dígito pero la ventana todavía no llega al 80 %, verdes con un pulso de brillo cuando se confirma. Arriba a la izquierda sale `Buscando digito...`, `Leyendo... N% ventana` o, al confirmar, el dígito grande con dos barras (proporción de la ventana y confianza promedio). Una segunda ventana, "Digito procesado", muestra ampliada la imagen de 28×28 que de verdad ve la red: es la mejor forma de entender por qué a veces se equivoca.
 
+Sin cámara (`--mouse`), cada frame sale de una copia de un lienzo blanco donde se dibuja con el mouse, con trazo negro de `lado // 16` píxeles (22 px en el recuadro de 360 px de una ventana de 800×600, más o menos la proporción trazo/dígito de MNIST). Es blanco con trazo negro a propósito, como la hoja de papel, para que pase por el mismo preprocesamiento que la cámara (que lo invierte) y no se salte justo la parte que más importa probar. Cerrar la ventana con la X también termina el programa.
+
 ## La lógica de los dos ESP32
 
 ### ESP-A (`esp_a_maestro.py`)
@@ -287,6 +290,8 @@ Todos los comandos se corren desde la carpeta `punto-2-reconocimiento-oled-spi`.
 1. `entorno\Scripts\python reconocer_digito.py`. La consola dice `No se encontro el ESP-A en COM7: el reconocimiento sigue, pero no se manda nada.` y después `Modelo cargado. Presiona 'q' para salir.`
 2. Mostrar un dígito escrito a mano (trazo grueso, papel blanco, buena luz) dentro del recuadro. Arriba a la izquierda aparece `Leyendo...` mientras se llena la ventana y, al confirmarse, el dígito grande con sus dos barras. La ventana "Digito procesado" muestra la imagen de 28×28 que ve la red. Abajo dice `ESP-A: no conectado` en rojo.
 3. `q` para salir.
+
+**Sin cámara** (o para probar sin papel): `entorno\Scripts\python reconocer_digito.py --mouse`. En vez del video sale un lienzo blanco con el mismo recuadro; el dígito se dibuja con el clic izquierdo dentro del recuadro, y el clic derecho o la tecla `c` lo borran. El lienzo pasa por el mismo `preprocesar_digito()`, la misma CNN y la misma ventana de 15 votos que la cámara, y con un ESP-A conectado también le manda `DIGIT:n`. Si la cámara no abre, el programa entra solo en este modo en vez de cerrarse. Conviene dibujar el dígito grande (que ocupe buena parte del recuadro) y soltar el mouse: mientras el trazo cambia, la ventana de votos tarda unos frames en confirmarlo.
 
 **Con ESP32 conectado:**
 

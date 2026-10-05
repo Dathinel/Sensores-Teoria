@@ -153,7 +153,10 @@ flowchart TD
 - **`esp32_voz.py`**: el firmware del ESP32, en MicroPython. Se guarda **una sola vez** en la placa con el nombre `main.py` desde Thonny, y desde ahí arranca solo cada vez que el ESP32 recibe energía. Escucha el puerto serial, mueve los pines 25 y 26, hace el show de luces y contesta `OK ...` o `IGNORADO ...`.
 - **`.env.example`**: plantilla del archivo de la clave. Se copia como `.env` y se reemplaza `tu_api_key_aqui` por la clave real de DeepSeek.
 - **`.env`**: el archivo real con la clave. Existe solo en la computadora de cada uno y nunca se sube (está en el `.gitignore` de la raíz).
+- **`preview.html`**: una página suelta (HTML + JavaScript, sin instalar nada) para probar el asistente en el navegador: el mismo intérprete por palabras clave, el ESP32 simulado con los dos LEDs y un modo conectado por Web Serial. Ver "Cómo probarlo".
+- **`probar.json`**: la receta que usa el lanzador `probar.py` de la raíz del repositorio para abrir este tema con un clic (qué entorno crear y qué se puede probar).
 - **`diagrama-circuito.png`**: el esquema de referencia del circuito en Wokwi.
+- **`img/preview-modo-prueba.png`**: captura de `preview.html` en modo prueba.
 - **`demo-*.gif`**: las grabaciones de la demostración.
 - **`entorno/`**: el entorno virtual de Python 3.12 de este tema, con `openai`, `pyserial`, `SpeechRecognition`, `pyaudio` y `python-dotenv`. No se sube (tiene su propio `.gitignore` con `*`).
 
@@ -333,7 +336,7 @@ En resumen, el original se queda en "preguntarle algo a la API y mostrar la resp
 
 ## Preparar el entorno
 
-Todo va en esta carpeta, con su propio entorno virtual `entorno`. Un detalle importante antes de crearlo: tiene que ser con **Python 3.12** y no con una versión más nueva como 3.13 o 3.14, por una razón concreta que se explica más abajo en "Problemas encontrados" (pyaudio). Desde PowerShell, parado dentro de `4-chatbot-asistente-voz`:
+Todo va en esta carpeta, con su propio entorno virtual `entorno`. Un detalle importante antes de crearlo: tiene que ser con **Python 3.12 o 3.13** y no con 3.14, por una razón concreta que se explica más abajo en "Problemas encontrados" (pyaudio). Nosotros lo armamos con 3.12; en 3.13 también se probó (PyAudio 0.2.14 trae wheel para las dos). Desde PowerShell, parado dentro de `4-chatbot-asistente-voz`:
 
 ```
 py -3.12 -m venv entorno
@@ -348,7 +351,7 @@ Después se crea el `.env` a partir de la plantilla y se pone la clave real de D
 copy .env.example .env
 ```
 
-En Windows, instalar pyaudio a veces falla con pip porque el paquete necesita compilar código nativo si no encuentra una versión ya compilada (un *wheel*) para la versión de Python que se está usando. Lo que nos funcionó a nosotros fue usar Python 3.12, para el que sí existe ese wheel. Otra alternativa que se suele recomendar es `pipwin install pyaudio`, que instala una versión precompilada.
+En Windows, instalar pyaudio a veces falla con pip porque el paquete necesita compilar código nativo si no encuentra una versión ya compilada (un *wheel*) para la versión de Python que se está usando. Lo que nos funcionó a nosotros fue usar Python 3.12, para el que sí existe ese wheel (también existe para 3.13, no para 3.14). Otra alternativa que se suele recomendar es `pipwin install pyaudio`, que instala una versión precompilada.
 
 ## Cómo probarlo
 
@@ -362,6 +365,16 @@ entorno\Scripts\python comando_voz.py
 
 Arranca igual aunque no haya nada en el puerto: avisa que no pudo abrir el puerto serial y desde ahí muestra en pantalla la orden que habría mandado. Se puede escribir la frase directamente (`enciende el rojo`, `prende los dos`, `haz un show de luces`, `apaga el azul`) en vez de hablar, o presionar Enter y decirla al micrófono. Si todavía no hay clave de DeepSeek en el `.env`, el script lo dice y usa el intérprete por palabras clave. Así se prueba toda la cadena frase → JSON → orden sin el hardware (la corrida de ejemplo de más arriba es exactamente esto), y con la clave puesta, también la parte del modelo de lenguaje. Se termina escribiendo `salir`.
 
+Tres opciones sirven para forzar un modo aunque el PC sí tenga micrófono o el `.env` sí tenga clave: `--texto` no abre el micrófono, `--sin-clave` usa el intérprete por palabras clave sin consultar DeepSeek, y `--puerto COMx` cambia el puerto sin editar el código. Por ejemplo, la corrida de arriba sale igual con:
+
+```
+entorno\Scripts\python comando_voz.py --texto --sin-clave --puerto COM99
+```
+
+Sin Python también se puede probar con `preview.html` (abrirlo con doble clic, mejor en Chrome o Edge). En **Modo prueba** se escribe la frase (o se pulsa *Hablar*, que usa el reconocimiento de voz del navegador) y la página muestra el texto, el JSON de intención, la orden que saldría (`10`, `01`, `11`, `00` o `SHOW`) y la respuesta de un ESP32 simulado con la misma lógica de `esp32_voz.py`, incluido el show de 2,4 s que deja los LEDs como estaban. Los botones `10`…`SHOW` mandan la orden directa, sin pasar por el intérprete. El intérprete es el mismo plan B por palabras clave del script (la página no usa DeepSeek para no poner la clave en una página web).
+
+![preview.html en modo prueba: "prende los dos" da el JSON con las dos claves, la orden 11 y los dos LEDs encendidos](img/preview-modo-prueba.png)
+
 **Con ESP32 conectado**
 
 1. Armar el circuito según la tabla de conexiones.
@@ -373,6 +386,8 @@ Arranca igual aunque no haya nada en el puerto: avisa que no pudo abrir el puert
    ```
    entorno\Scripts\python comando_voz.py
    ```
+
+Desde el navegador también sirve `preview.html` en modo **Conectado (Web Serial)**: con Thonny cerrado, *Elegir puerto del ESP32* abre el puerto a 115200 y las órdenes van a la placa de verdad; el monitor muestra las líneas crudas (`OK 10`, `IGNORADO ...`) y los LEDs de la página siguen lo que el ESP32 confirma.
 
 La consola dice `ESP32 conectado en COM7` y queda esperando. Al presionar Enter aparece `Habla ahora...`; en cuanto se detecta que la persona dejó de hablar la grabación se corta sola y arranca el proceso completo: la transcripción (`Se entendio: ...`), la consulta a DeepSeek (`DeepSeek respondio: {...}`) y el envío de la orden al ESP32, que contesta con `OK 10`, `OK SHOW` o `IGNORADO ...` y el script lo muestra como `ESP32 dice: ...`. Todo ese recorrido toma normalmente uno o dos segundos, la mayor parte consumida por la respuesta de la API, así que el encendido del LED no es instantáneo pero sí bastante rápido para tratarse de una cadena que pasa por dos servicios en internet antes de llegar al chip.
 

@@ -1,0 +1,33 @@
+{
+  "id": "5",
+  "titulo": "Parcial: peces en el osciloscopio (modo XY)",
+  "resumen": "Parcial del primer corte, a partir de las figuras de Lissajous: el ESP32 saca por sus dos DAC (GPIO25 = eje X, GPIO26 = eje Y) una lista de voltajes calculada de antemano, y un osciloscopio en modo XY la dibuja como un pez (o tres). Sin placa ni osciloscopio, preview.html simula la pantalla con la misma geometría.",
+  "pide": [
+    "Usar el ESP32 como generador de señales hacia un osciloscopio en modo XY",
+    "Partir de las figuras de Lissajous (dos senoidales en X e Y)",
+    "Dibujar una figura propia en la pantalla, no solo los patrones clásicos (un pez y tres peces)"
+  ],
+  "python": {"versiones": [], "paquetes": []},
+  "acciones": [
+    {"id": "preview", "nombre": "Osciloscopio XY simulado (preview)", "tipo": "html", "archivo": "preview.html",
+     "descripcion": "Modo prueba: elegir pez3_esp32.py (un pez, 314 puntos) o pez5_esp32.py (tres peces, 942 puntos) y ver la figura que sacarían los DAC. Bajar \"Velocidad del haz\" a 10-30 para ver el punto recorrer cuerpo, cola, ojo, pupila, boca y aleta; mover DESPLAZAMIENTO_X/Y e INVERT_X/Y como en el script; el contador de puntos recortados marca 19 con tres peces (el pez grande toca el borde). La opción Lissajous muestra las figuras clásicas de dos senos. El modo Conectado (Web Serial, Chrome o Edge) pinta los puntos que imprime el ESP32 con ENVIAR_SERIAL = True.",
+     "cubre": ["Partir de las figuras de Lissajous (dos senoidales en X e Y)", "Dibujar una figura propia en la pantalla, no solo los patrones clásicos (un pez y tres peces)"]},
+    {"id": "gif-tres", "nombre": "Video: tres peces en el osciloscopio", "tipo": "archivo", "archivo": "demo-tres-peces.gif",
+     "descripcion": "pez5_esp32.py en el osciloscopio real del laboratorio.",
+     "cubre": ["Usar el ESP32 como generador de señales hacia un osciloscopio en modo XY", "Dibujar una figura propia en la pantalla, no solo los patrones clásicos (un pez y tres peces)"]},
+    {"id": "gif-uno", "nombre": "Video: un pez en el osciloscopio", "tipo": "archivo", "archivo": "demo-un-pez-limpio.gif",
+     "descripcion": "pez3_esp32.py en el osciloscopio real.",
+     "cubre": ["Usar el ESP32 como generador de señales hacia un osciloscopio en modo XY"]},
+    {"id": "gif-ajuste", "nombre": "Video: ajustando el osciloscopio en vivo", "tipo": "archivo", "archivo": "demo-ajustando-en-vivo.gif",
+     "descripcion": "Los controles verticales del osciloscopio moviéndose mientras el pez se sigue dibujando."},
+    {"id": "gif-intento", "nombre": "Video: primer intento", "tipo": "archivo", "archivo": "demo-primer-intento.gif",
+     "descripcion": "Uno de los primeros intentos, antes de resolver la escala y el desplazamiento."},
+    {"id": "foto", "nombre": "Foto: el pez de cerca", "tipo": "archivo", "archivo": "demo-primer-pez-cerca.jpg",
+     "descripcion": "El trazo del cuerpo, la cola, el ojo y la boca en la pantalla del osciloscopio."},
+    {"id": "fw-uno", "nombre": "Firmware: un pez (pez3_esp32.py)", "tipo": "info", "archivo": "pez3_esp32.py",
+     "descripcion": "MicroPython para el ESP32: se guarda en la placa como main.py con Thonny. GPIO25 a la punta del canal 1, GPIO26 al canal 2, GND a las pinzas de tierra, osciloscopio en formato XY. No corre en el PC (usa machine.DAC)."},
+    {"id": "fw-tres", "nombre": "Firmware: tres peces (pez5_esp32.py)", "tipo": "info", "archivo": "pez5_esp32.py",
+     "descripcion": "La versión final de la entrega: un pez base reutilizado tres veces con crear_pez(centro, escala). Mismo cableado y mismo procedimiento que pez3_esp32.py (uno u otro como main.py)."}
+  ],
+  "notas": "No hay nada que instalar en el PC. Para la demo real hace falta un ESP32 clásico (los S2/S3/C3 no tienen DAC) y un osciloscopio de dos canales con modo XY. El modo Conectado del preview necesita Chrome o Edge."
+}

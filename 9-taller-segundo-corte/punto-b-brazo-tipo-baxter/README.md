@@ -135,7 +135,7 @@ El URDF de Baxter no está en el paquete `pybullet_data` que se instala con pip 
 entorno\Scripts\python descargar_modelos.py
 ```
 
-Si se corre `brazo_pybullet.py` sin haberlas bajado, avisa `Faltan los modelos: corra ...descargar_modelos.py en la carpeta del taller` y termina.
+Si se corre `brazo_pybullet.py` sin haberlas bajado, corre solo `descargar_modelos.py` una vez antes de abrir la ventana; si no hay internet, avisa `Faltan los modelos: corra ...descargar_modelos.py en la carpeta del taller` y termina.
 
 Un detalle de carga que costó encontrar: el URDF nombra sus mallas como `package://baxter_description/meshes/...`. PyBullet quita el `package://` y busca el resto en su **ruta de búsqueda adicional**, que es **una sola** (cada `setAdditionalSearchPath` pisa la anterior). Por eso esa ruta apunta a `modelos/baxter_common/`, y el piso y el cubo de `pybullet_data` se cargan con su ruta completa.
 

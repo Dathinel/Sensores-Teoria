@@ -161,7 +161,7 @@ Solo el teclado matricial va al ESP32, conectado directo a 8 GPIO: filas en `GPI
 
 ## Qué hace cada archivo
 
-- **`drones_pybullet.py`**: todo el punto a). Crea el mundo, carga los 5 drones, tiene el controlador de cada uno (`Dron`), lo que hace cada tecla (`Mando`), la lectura del serial (`leer_teclas`) y el bucle principal (`volar`). Se corre con ventana (`python drones_pybullet.py`, opcionalmente `--puerto COM5`) o sin ventana como prueba automática (`--prueba`).
+- **`drones_pybullet.py`**: todo el punto a). Crea el mundo, carga los 5 drones, tiene el controlador de cada uno (`Dron`), lo que hace cada tecla (`Mando`), la lectura del serial (`leer_teclas`) y el bucle principal (`volar`). Se corre con ventana (`python drones_pybullet.py`, opcionalmente `--puerto COM5`, o `--mision` para que arranque volando la misión) o sin ventana como prueba automática (`--prueba`).
 - **`dron.urdf`**: la descripción del dron. Es un solo link (no tiene articulaciones: las hélices no giran de verdad en la simulación, su efecto está en las fuerzas que aplica el script). Tiene la parte visual (cuerpo rojo de 10 cm, 4 brazos en X, motores y discos de hélice semitransparentes), una caja de colisión chata de 56 × 56 × 4 cm para que se apoye en el piso y los drones no se atraviesen entre sí, y la parte inercial: 0,35 kg e inercias `ixx = iyy = 0,0045`, `izz = 0,0085` kg·m² (aproximadas como un cuerpo central más 4 masas en las puntas).
 - **`../esp32_teclado.py`**: el firmware común del ESP32 (ver el README del taller).
 - **`enunciado-actividad.png`**: la captura del enunciado de este punto.
@@ -274,7 +274,7 @@ Los comandos van desde la carpeta del taller (`9-taller-segundo-corte\`), usando
 
 **Sin ESP32 conectado:**
 1. `entorno\Scripts\python punto-a-drones-waypoints\drones_pybullet.py`. En consola sale que no encontró el ESP32 y la ventana de PyBullet abre igual, con 14 botones a la derecha: jog en los tres ejes, Detener, Ir a A / B / C, Home, Despegar, Aterrizar y "Mision A -> B -> C".
-2. Lo más rápido para verlo todo: "Despegar" y después "Mision A -> B -> C". Arriba de la ventana se ve la posición del líder, su objetivo, los puntos que le faltan a la misión y el estado del serial (`sin ESP32`).
+2. Lo más rápido para verlo todo: "Despegar" y después "Mision A -> B -> C" (o correr el script con `--mision`, que despega solo y lanza la misión al segundo de abrir la ventana; después se sigue manejando igual). Arriba de la ventana se ve la posición del líder, su objetivo, los puntos que le faltan a la misión y el estado del serial (`sin ESP32`).
 3. Prueba sin ventana: `entorno\Scripts\python punto-a-drones-waypoints\drones_pybullet.py --prueba`. Despega, vuela la misión A → B → C, imprime en cuánto llegó a cada punto y la inclinación máxima, y termina con `PRUEBA OK` o `PRUEBA FALLIDA` (falla si no llega a los tres en orden o si se inclina más de 35°).
 
 **Con ESP32 conectado:**

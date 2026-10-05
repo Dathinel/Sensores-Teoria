@@ -1,0 +1,92 @@
+{
+  "id": "3",
+  "titulo": "Detección de objetos: YOLO en el PC prende LEDs en un ESP32",
+  "resumen": "La computadora corre YOLOv8 (un detector de objetos) sobre la cámara web y, cuando ve una silla o un celular (o un carro y una moto con la otra opción), le avisa al ESP32 por el cable USB para que prenda el LED de ese objeto. Sin cámara se puede probar con fotos de ejemplo, y sin ESP32 el programa muestra en pantalla el mensaje que le mandaría.",
+  "pide": [
+    "Partir del ejemplo de YOLOv8 del profesor (cámara + cajas en pantalla)",
+    "Llevar la detección al mundo físico: un LED por objeto en el ESP32",
+    "Comunicación PC → ESP32 por serial (mensajes '10', '01', '11', '00')",
+    "Directiva alternativa: carro de juguete → LED rojo, moto de juguete → LED verde",
+    "Apagado de seguridad: el ESP32 apaga todo si deja de recibir mensajes"
+  ],
+  "python": {
+    "versiones": ["3.13", "3.14", "3.12"],
+    "paquetes": ["ultralytics==8.4.121", "torch==2.14.1", "torchvision==0.29.1", "opencv-python==5.0.0.93", "pyserial==3.5"]
+  },
+  "acciones": [
+    {
+      "id": "fotos",
+      "nombre": "Detección con fotos de ejemplo (sin webcam)",
+      "tipo": "python",
+      "script": "deteccion_pc.py",
+      "args": ["--imagen"],
+      "cwd": ".",
+      "descripcion": "Abre una ventana que pasa cada 3 s por tres fotos (solo silla, solo celular, las dos) con las cajas de YOLO y, arriba, el mensaje que recibiría el ESP32: '10', '01', '11'. Tarda unos 10-15 s en abrir (carga PyTorch). Se cierra con la tecla q sobre la ventana.",
+      "cubre": ["Partir del ejemplo de YOLOv8 del profesor (cámara + cajas en pantalla)", "Comunicación PC → ESP32 por serial (mensajes '10', '01', '11', '00')"]
+    },
+    {
+      "id": "fotos-carro-moto",
+      "nombre": "Carro y moto con fotos de ejemplo (sin webcam)",
+      "tipo": "python",
+      "script": "deteccion_pc.py",
+      "args": ["--carro-moto", "--imagen"],
+      "cwd": ".",
+      "descripcion": "Lo mismo con la directiva alternativa: fotos de un carro, una moto y las dos cosas; el primer carácter del mensaje es el LED rojo (GPIO25) y el segundo el verde (GPIO26). Se cierra con q.",
+      "cubre": ["Directiva alternativa: carro de juguete → LED rojo, moto de juguete → LED verde"]
+    },
+    {
+      "id": "camara",
+      "nombre": "Detección con la webcam (silla y celular)",
+      "tipo": "python",
+      "script": "deteccion_pc.py",
+      "args": [],
+      "cwd": ".",
+      "descripcion": "Necesita webcam. Pon una silla o un celular frente a la cámara: la franja de arriba muestra el estado de cada uno y el mensaje. Si hay un ESP32 en COM7 con esp32_leds.py como main.py, prende sus LEDs; si no, sigue solo con la visión. Se cierra con q.",
+      "cubre": ["Llevar la detección al mundo físico: un LED por objeto en el ESP32"]
+    },
+    {
+      "id": "camara-carro-moto",
+      "nombre": "Detección con la webcam (carro y moto)",
+      "tipo": "python",
+      "script": "deteccion_pc.py",
+      "args": ["--carro-moto"],
+      "cwd": ".",
+      "descripcion": "Necesita webcam. Igual que la anterior pero detecta carro (LED rojo, GPIO25) y moto (LED verde, GPIO26). Con juguetes pequeños la confianza baja; con buena luz funciona mejor.",
+      "cubre": ["Directiva alternativa: carro de juguete → LED rojo, moto de juguete → LED verde"]
+    },
+    {
+      "id": "preview",
+      "nombre": "Simulador en el navegador (preview.html)",
+      "tipo": "html",
+      "archivo": "preview.html",
+      "descripcion": "Sin instalar nada. Los botones 'silla en cuadro' / 'celular en cuadro' hacen de YOLO, el ESP32 de la derecha está simulado con la lógica de esp32_leds.py y el monitor muestra cada línea. 'Simular cable desconectado' muestra el apagado de seguridad a los 2 s. El selector cambia a carro/moto; 'Usar cámara' corre un detector COCO en el navegador; 'Conectar ESP32' usa Web Serial (Chrome/Edge) con el ESP32 real.",
+      "cubre": ["Comunicación PC → ESP32 por serial (mensajes '10', '01', '11', '00')", "Apagado de seguridad: el ESP32 apaga todo si deja de recibir mensajes"]
+    },
+    {
+      "id": "gif-montaje",
+      "nombre": "Video: montaje con la detección corriendo",
+      "tipo": "archivo",
+      "archivo": "demo-montaje-1.gif"
+    },
+    {
+      "id": "gif-deteccion",
+      "nombre": "Video: ventana de detección (silla y celular)",
+      "tipo": "archivo",
+      "archivo": "demo-deteccion.gif"
+    },
+    {
+      "id": "gif-leds",
+      "nombre": "Video: LEDs encendidos en la protoboard",
+      "tipo": "archivo",
+      "archivo": "demo-protoboard-encendida.gif"
+    },
+    {
+      "id": "fw",
+      "nombre": "Firmware del ESP32 (esp32_leds.py)",
+      "tipo": "info",
+      "archivo": "esp32_leds.py",
+      "descripcion": "MicroPython. Se guarda en el ESP32 con Thonny como main.py; LEDs en GPIO25 y GPIO26 con resistencias de 220 Ω. No hace falta para probar: las acciones de arriba funcionan sin ESP32."
+    }
+  ],
+  "notas": "La webcam es opcional: sin ella usa las acciones 'fotos de ejemplo' o el preview.html. El modelo yolov8n.pt (6 MB) ya viene en la carpeta (si faltara, ultralytics lo descarga solo la primera vez, con internet). La instalación trae PyTorch, unos cientos de MB, y tarda varios minutos la primera vez. El ESP32 se busca en COM7 (cambiar PUERTO_SERIAL en deteccion_pc.py si es otro); sin ESP32 todo sigue funcionando."
+}

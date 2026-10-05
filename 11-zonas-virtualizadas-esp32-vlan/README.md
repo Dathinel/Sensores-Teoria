@@ -14,6 +14,22 @@ La segunda figura es la arquitectura del enunciado: la VLAN 1 (192.168.10.0/24) 
 - [rex-gym](https://github.com/nicrusso7/rex-gym): de ahí sale el "pequeño Spot", el Rex (un SpotMicro), con su URDF y sus 13 mallas STL, bajados de un commit fijo al construir la imagen. La cinemática inversa la rehicimos (más abajo explicamos por qué).
 - [humanoid-gym](https://github.com/0aqz0/humanoid-gym): entrena humanoides en PyBullet y carga a NAO a través de [qiBullet](https://github.com/softbankrobotics-research/qibullet), el simulador oficial de SoftBank. De qiBullet tomamos los URDF de NAO y de Pepper.
 
+## Por dónde empezar
+
+El tema se entrega **completo en simulación**: los siete ESP32 están emulados (mandan exactamente los mismos mensajes que el firmware) y el montaje de las placas está dibujado en 3D con los pines del firmware. No hace falta ninguna placa para probarlo. Tres caminos, de menos a más:
+
+1. **Sin instalar nada**: abrir `preview.html` con doble clic (Chrome o Edge). Es todo el laboratorio simulado en el navegador: las tres VLAN con el router, la pista con un joystick virtual, los robots con deslizadores, las fallas y los LED de la esclava.
+2. **El laboratorio de verdad, en Docker** (hace falta Docker Desktop abierto). Desde esta carpeta:
+
+   ```powershell
+   docker compose --profile emulado up -d --build
+   ```
+
+   y abrir el dashboard del admin en `http://localhost:8080`. Desde ahí hay enlaces a los cuatro visores: la pista (`8010`) y el Spot, el Pepper y el NAO (`8011`, `8012`, `8013`). Para pararlo: `docker compose --profile emulado stop`.
+3. **Con el lanzador del repositorio** (`PROBAR.bat` en la raíz): la tarjeta de este tema levanta el laboratorio, abre el dashboard y los visores, y corre las pruebas de aislamiento, disponibilidad y latencia con su propio entorno de Python (lo que lanza está en `probar.json`).
+
+Para entender qué se está viendo, conviene leer primero "La idea general" y, si los conceptos son nuevos, las secciones "Qué es...". El video de la demo y el montaje en 3D están en "El montaje y la demo".
+
 ## Lo que hicimos
 
 - **Tres redes de Docker como tres VLAN** (`vlan1_gamer`, `vlan2_robotica`, `vlan3_admin`) y un **router inter-VLAN** en un contenedor Alpine con FRR e iptables: la administración llega a las dos zonas y un paquete de la VLAN 1 a la VLAN 2 (o al revés) se descarta en el router. Lo comprobamos con 45 de 45 casos aprobados.
@@ -23,6 +39,7 @@ La segunda figura es la arquitectura del enunciado: la VLAN 1 (192.168.10.0/24) 
 - **El firmware de los ESP32**: un sketch maestro que sirve para los seis mandos (joystick o potenciómetros) y otro para la esclava de seis LED. Compilan sin advertencias.
 - **Un emulador de los siete ESP32** que manda exactamente los mismos mensajes, para correr todo sin hardware. Los mandos de los carros traen un piloto automático que "mira" la pista.
 - **`preview.html`**: todo el laboratorio simulado en el navegador, con un modo conectado por Web Serial para una placa real.
+- **El montaje en 3D** de las tres placas (maestra gamer con joystick, maestra robot con potenciómetros y pulsador, y la esclava con seis LED), con la biblioteca de componentes de Blender y los pines exactos del firmware.
 - **Pruebas** de protocolo, aislamiento, disponibilidad, latencia y jitter, con los resultados reales del stack completo, y un script que publica las seis imágenes en Docker Hub.
 
 El stack completo son 16 contenedores: router, admin, track-server, player-1..3, sim-spot, sim-pepper, sim-nao y los 7 ESP32 emulados.
@@ -38,7 +55,7 @@ Dónde está cada cosa que pide el enunciado:
 | Objetivo 5: latencia, jitter y disponibilidad | "Qué son la latencia, el jitter y la disponibilidad"; pruebas 20-26 |
 | Repositorio con el paso a paso | "Cómo lo hicimos, paso a paso", "Cómo probarlo" y "Docker paso a paso" |
 | Imágenes en Docker Hub | "Docker paso a paso" → "Docker Hub"; prueba 27 |
-| Video de la práctica funcionando | "El montaje y la demo" (con los ESP32 emulados; el del montaje físico está en "Pendiente") |
+| Video de la práctica funcionando | "El montaje y la demo": el video del stack completo con los ESP32 emulados y el montaje de las placas en 3D |
 | Explicación | las secciones "Qué es..." y la de cada parte |
 
 ## Cómo lo hicimos, paso a paso
@@ -435,7 +452,7 @@ $L_d$ crece con la velocidad: mirar lejos a alta velocidad evita el zigzag y mir
 
 El render con `ER_TINY_RENDERER` (el único que funciona sin pantalla ni tarjeta gráfica) tardaba unos 250 ms por la vista cenital dentro de Docker. Como la pista no se mueve, el fondo se renderiza una vez al arrancar y en cada cuadro solo se renderiza un recorte de 56 × 56 px alrededor de cada carro, con la misma cámara, y se pega sobre el fondo usando la máscara de segmentación. Comprobamos que la imagen es idéntica (diferencia 0) y baja de 250 a 11 ms; el cuadro completo, con el panel y la cámara de persecución, sale en unos 45 ms.
 
-El visor está en `http://localhost:8010/` (puerto 8000 dentro del contenedor), y con la variable `GRABAR_S` el servidor graba un video.
+El visor está en `http://localhost:8010/` (puerto 8000 dentro del contenedor): la imagen en vivo con una explicación de qué es cada carro y enlaces al dashboard y a los robots. Con la variable `GRABAR_S` el servidor graba un video.
 
 ![Failsafe: player-1 se desconectó y su carro queda frenado; los demás lo esquivan](img/pista-failsafe.png)
 
@@ -538,7 +555,7 @@ El rango de cada ESP32 está en su `config.h` y coincide con lo que acepta el ro
 
 En cada paso de la física: error = |objetivo − medido| de cada ángulo, y se promedian los tres. En NAO y Pepper el objetivo es el ángulo pedido ya recortado a los límites y lo medido es el ángulo de la articulación. En el Spot el objetivo es la pose pedida y lo medido es la pose de la base como la daría la IMU del robot real, o sea la pose **conseguida** por el cuerpo entero.
 
-Se publica cada 2 s en `lab/metricas/sim-<robot>`: recibidos, perdidos, jitter, `error_realsim_deg`, su máximo y el de cada ángulo, fps de la física, estado (`reposo`, `siguiendo`, `gesto`, `trotando`) y recortes. El visor de cada robot está en `http://localhost:8011/` (Spot), `8012` (Pepper) y `8013` (NAO).
+Se publica cada 2 s en `lab/metricas/sim-<robot>`: recibidos, perdidos, jitter, `error_realsim_deg`, su máximo y el de cada ángulo, fps de la física, estado (`reposo`, `siguiendo`, `gesto`, `trotando`) y recortes. El visor de cada robot está en `http://localhost:8011/` (Spot), `8012` (Pepper) y `8013` (NAO): la imagen en vivo con el panel de comando, objetivo y medido, una explicación de qué mueve cada ángulo, enlaces a los demás visores y el `estado.json` crudo plegado al final.
 
 Probamos cada robot por separado con `zona-robotica/probar_joints.py`, que hace de ESP32 con un guion de 40 s (reposo, barrido de cada ángulo, pose quieta, botón y corte para el failsafe) y se salta el 2 % de los mensajes a propósito:
 
@@ -591,7 +608,7 @@ Por qué esos umbrales (se cambian con las variables `HB_TIMEOUT_S`, `UMBRAL_RTT
 
 ### El dashboard
 
-`http://localhost:8080`: las tres VLAN con cada contenedor, su estado y por qué, el RTT, p95, jitter y disponibilidad del ping, la edad, el jitter y la pérdida de los latidos, una mini gráfica del RTT de los últimos 60 s, las métricas que publica cada contenedor, los seis "LED" como en la ESP32 esclava y la tabla de los ESP32 que mandan latidos, con su IP. No usa librerías: pide `/api/resumen.json` cada segundo. La captura con el stack completo está en "El montaje y la demo".
+`http://localhost:8080`: arriba, una explicación corta y los enlaces a los cuatro visores (también hay un botón "visor" en la tarjeta del track-server y de cada robot); debajo, las tres VLAN con cada contenedor, su estado y por qué, el RTT, p95, jitter y disponibilidad del ping, la edad, el jitter y la pérdida de los latidos, una mini gráfica del RTT de los últimos 60 s, las métricas que publica cada contenedor, los seis "LED" como en la ESP32 esclava y la tabla de los ESP32 que mandan latidos, con su IP. No usa librerías: pide `/api/resumen.json` cada segundo. La captura con el stack completo está en "El montaje y la demo".
 
 Antes de integrar probamos el admin solo, con `plano-admin/admin/probar_admin.py` haciendo de todos los demás desde Windows, para ver los tres estados a la vez:
 
@@ -749,6 +766,8 @@ flowchart LR
     E -. "UDP 5300 (HB)" .-> PC
 ```
 
+Los tres montajes dibujados en 3D, con estos mismos pines, están en "El montaje y la demo".
+
 ### Alimentación
 
 Cada placa se alimenta por su **cable USB** (5 V del PC, de un cargador de celular o de un hub con fuente propia); el regulador de la placa baja a 3,3 V para el chip, el joystick, los potenciómetros y los LED. El consumo es el del ESP32 con WiFi (80-120 mA de media, picos de ~240 mA al transmitir y hasta 400-500 mA un instante al arrancar el radio) más menos de 40 mA de LED. Si se cuelgan varias placas de un hub USB **sin fuente**, puede que no dé los picos de siete ESP32 a la vez y alguna se reinicie al conectarse al WiFi (el monitor serie muestra "Brownout detector was triggered"): se arregla con un hub con fuente o repartiendo las placas. No hace falta tierra común entre placas: solo se hablan por WiFi.
@@ -884,7 +903,8 @@ entorno\Scripts\python.exe emulador\emulador_esp32.py --rol ctrl-2 --destino 127
 | `pruebas/red/` | la prueba de aislamiento del router solo, con contenedores de relleno |
 | `pruebas/resultados/` | los json y las gráficas de las pruebas |
 | `publicar_dockerhub.ps1` | construye las seis imágenes y las sube a Docker Hub con `1.0` y `latest` |
-| `img/`, `video/` | capturas y video de la demo |
+| `img/`, `video/` | capturas, el montaje en 3D (`img/montaje-3d-*.png`) y el video de la demo |
+| `probar.json` | lo que lanza el lanzador del repositorio (`PROBAR.bat`) para este tema: levantar el stack, abrir el dashboard y los visores, `preview.html`, el video y las pruebas |
 | `resultados/` | lo que dejan los contenedores (CSV del admin, videos); no se sube al repositorio |
 
 ## Cómo instalar lo necesario
@@ -915,7 +935,7 @@ docker compose ps
 
 La primera construcción tarda varios minutos (baja PyBullet y los modelos de los robots). Después se levantan los 16 contenedores. Los robots tardan unos segundos en cargar; luego:
 
-- `http://localhost:8080`: el dashboard del admin, con los seis servicios en OK.
+- `http://localhost:8080`: el dashboard del admin, con los seis servicios en OK y los enlaces a los visores.
 - `http://localhost:8010`: la pista, con los tres jugadores manejados por el piloto de sus emuladores y los tres autónomos.
 - `http://localhost:8011`, `8012`, `8013`: el Spot, el Pepper y el NAO siguiendo a sus emuladores.
 - `docker compose logs -f esclava-emulada`: las líneas `LEDS,...` y la fila de LED de la esclava.
@@ -932,7 +952,7 @@ Para ver una caída: `docker compose stop sim-pepper`. En menos de un segundo el
 
 Los números de latencia de `preview.html` son de un modelo (la latencia de un bridge de Docker más ruido y lo que se meta con los deslizadores), no medidos: los medidos están en "Pruebas".
 
-**Con ESP32 conectado**
+**Con ESP32 conectado** (opcional: el tema se entrega en simulación; esto es para quien quiera armar las placas de "El montaje y la demo")
 
 1. **Configurar la placa.** En `firmware/esp32_maestra/config.h` (y en el de la esclava): `WIFI_SSID` y `WIFI_CLAVE` de una red de 2,4 GHz, e `IP_PC_0..3` con la IP del PC en esa red (`ipconfig`, "Dirección IPv4" del adaptador WiFi). El PC y las placas tienen que estar en la misma red.
 2. **Compilar y subir** con `firmware\compilar.ps1` (ver "Compilar y subir"), una placa a la vez, con su rol.
@@ -1037,6 +1057,30 @@ Esa imagen local no se debe subir. Si después se quiere publicar, `publicar_doc
 
 ## El montaje y la demo
 
+El tema se entrega en simulación, como los otros temas sin montaje físico: las placas están dibujadas en 3D y lo que harían (mandar el joystick, los potenciómetros, prender los LED) lo hacen los siete ESP32 emulados dentro del laboratorio.
+
+### El montaje en 3D
+
+Hecho en Blender con la biblioteca de componentes del curso (ESP32 DevKit de 38 pines, joystick KY-023, potenciómetros B10K, pulsador, LED de 5 mm, resistencias de 220 Ω y protoboard de 400), con los pines tal cual están en `firmware/esp32_maestra/config.h` y `firmware/esp32_esclava_leds/config.h`. El ESP32 va boca abajo con los cables dupont directo a sus pines, como en los temas 7 y 8. Una sola maestra de cada tipo representa a las tres: entre `ctrl-1`, `ctrl-2` y `ctrl-3` (o entre las tres de robots) solo cambia `ROL` en el firmware.
+
+**Maestra de la Zona Gamer** (`ctrl-1..3`): joystick KY-023 con cinco dupont: VRx → GPIO 34 (dirección), VRy → GPIO 35 (velocidad), SW → GPIO 32 (pull-up interno), el pin "+5V" del módulo → 3V3 (nunca a 5 V) y GND → GND. El USB va al PC.
+
+![Montaje 3D de la maestra gamer: ESP32 DevKit 38P boca abajo y joystick KY-023 con VRx a GPIO34, VRy a GPIO35, SW a GPIO32, +5V a 3V3 y GND](img/montaje-3d-gamer.png)
+
+**Maestra de la Zona Robótica** (`ctrl-spot`, `ctrl-pepper`, `ctrl-nao`): tres potenciómetros B10K con perilla en la protoboard, con los cursores a GPIO 34 (j1), GPIO 35 (j2) y GPIO 39/VN (j3); los extremos de cada uno van a los rieles (rojo = 3V3, azul = GND, los dos cableados desde el ESP32). El pulsador, a caballo del canal central, une GPIO 32 con GND al apretarlo (saludo en NAO y Pepper, trotar o parar en el Spot).
+
+![Montaje 3D de la maestra robot: tres potenciómetros a GPIO34, 35 y 39 y un pulsador a GPIO32, con los rieles a 3V3 y GND](img/montaje-3d-robot.png)
+
+**ESP32 esclava**: seis LED de 5 mm (rojo, amarillo y verde) en el mismo orden del dashboard: GPIO 16 → player-1, 17 → player-2, 18 → player-3, 19 → sim-spot, 21 → sim-pepper y 22 → sim-nao. Cada GPIO va al ánodo; el cátodo pasa por una resistencia de 220 Ω al riel azul, unido al GND del ESP32. El USB solo alimenta.
+
+![Montaje 3D de la ESP32 esclava: seis LED en GPIO16, 17, 18, 19, 21 y 22 con resistencias de 220 ohmios al riel de GND](img/montaje-3d-esclava.png)
+
+Los archivos de Blender y los scripts que los arman quedan en la biblioteca de Blender del curso, fuera de este repositorio.
+
+### La simulación de los procesos
+
+Cada placa del montaje tiene su gemelo en el laboratorio: un contenedor de `emulador/emulador_esp32.py` dentro de la misma VLAN que su contenedor (ver "El emulador de ESP32"). Las maestras gamer manejan su carro con un piloto automático que mira la pista, las maestras robot mueven sus tres ángulos con senos lentos y aprietan el botón cada 12 s, y la esclava sigue los estados por MQTT y escribe la fila de LED en su consola (`docker compose logs -f esclava-emulada`). Los mensajes son los mismos que mandaría el firmware: lo comprobamos carácter por carácter (ver "El formato, comprobado sin placas").
+
 **El stack completo, visto desde el plano de administración.** Con los 16 contenedores arriba, el admin ve las dos zonas a través del router: los seis servicios en OK, con un RTT de 0,17 a 0,26 ms (p95 menor a 0,35 ms) y un 100 % de disponibilidad en el último minuto. El track-server simula a 240 Hz con 6 clientes conectados (los tres jugadores y, como 3 observadores, los pilotos de los emuladores), recibe el control de los tres jugadores a 20 Hz y lleva 0 perdidos. A la derecha se ven los latidos de los siete ESP32 emulados, cada uno con su IP dentro de su VLAN.
 
 ![Dashboard del admin con el stack completo: los seis servicios en OK a través del router](img/dashboard-stack.png)
@@ -1059,11 +1103,9 @@ La demostración del aislamiento: el ping de player-1 a sim-nao muere en el rout
 
 ![El ping de player-1 a sim-nao bloqueado en el router y el del admin respondido](img/preview-ping-bloqueado.png)
 
-Las fotos y el video del montaje con las siete placas van aquí cuando estén listos (ver "Pendiente").
-
 ## Pruebas
 
-Las pruebas de software y de red las corrimos contra el stack completo con los ESP32 emulados (`docker compose --profile emulado up -d`), el 2026-10-05, en Docker Desktop sobre Windows 11, y los números son los que salieron. Las que necesitan las placas quedan como "Pendiente (hardware)". Cuando un resultado viene del emulador lo decimos: el emulador prueba la lógica y la red entre contenedores, no el WiFi.
+Las pruebas de software y de red las corrimos contra el stack completo con los ESP32 emulados (`docker compose --profile emulado up -d`), el 2026-10-05, en Docker Desktop sobre Windows 11, y los números son los que salieron. Las que solo tienen sentido con placas físicas (el WiFi real) quedan como "No aplica": el tema se entrega en simulación, y en esas filas dejamos escrito cómo se probaría con placas reales. Cuando un resultado viene del emulador lo decimos: el emulador prueba la lógica y la red entre contenedores, no el WiFi.
 
 Todo se corre en orden con `pruebas\correr_todo.ps1`, y cada script deja su json (y sus gráficas) en `pruebas/resultados/`.
 
@@ -1081,7 +1123,7 @@ Todo se corre en orden con `pruebas\correr_todo.ps1`, y cada script deja su json
 | 3 | Cada player se conecta por WebSocket con su color y estilo | Métricas del track-server y visor | Aparecen `player-1` rojo/deportivo, `player-2` azul/clásico y `player-3` verde/rally | **Aprobada.** El servidor reporta los tres jugadores conectados (6 clientes en total, de los cuales 3 son los pilotos observadores de los emuladores) |
 | 4 | El ESP32 (emulado) maneja su carro por UDP | Emuladores `ctrl-1..3` con piloto, mandando `CTRL` a 20 Hz | El carro se mueve según dir/vel; recibidos subiendo y perdidos ≈ 0 | **Aprobada (emulador).** Control a 20 Hz en los tres jugadores, 0 perdidos (player-1: 11 166 recibidos), jitter ESP32 → jugador de 0 a 0,01 ms |
 | 5 | Failsafe: sin ESP32 el carro se detiene | Cortar el emulador | En ≤ 1 s el jugador manda vel 0 y el carro frena | **Aprobada, fuera del stack**: el jugador manda vel 0 al pasar 1 s sin `CTRL`, y el servidor marcó el carro como frenado 1,02 a 1,05 s después de cortar el control. En el stack completo no se repitió por separado |
-| 6 | Con el ESP32 físico | ESP32 con joystick y la IP del PC en `config.h`, a UDP 5001 | El carro responde al joystick; `RTT,<ms>` por serie | Pendiente (hardware) |
+| 6 | Con el ESP32 físico | ESP32 con joystick y la IP del PC en `config.h`, a UDP 5001 | El carro responde al joystick; `RTT,<ms>` por serie | **No aplica**: el tema se entrega en simulación; lo que hace esta placa lo cubre la prueba 4 con el emulador. Con placas reales se probaría así: subir `CTRL_1`, detener el emulado (`docker compose stop ctrl-1`) y mover el joystick mirando el visor 8010 y el monitor serie |
 
 ### Objetivo 2: Zona Robótica (VLAN 2)
 
@@ -1089,7 +1131,7 @@ Todo se corre en orden con `pruebas\correr_todo.ps1`, y cada script deja su json
 |---|---|---|---|---|
 | 7 | Los 3 robots siguen las articulaciones que llegan por UDP (real-to-sim) | Emuladores `ctrl-spot/pepper/nao` con senos lentos; visores 8011-8013 | Cada robot sigue `JOINTS`; perdidos ≈ 0 | **Aprobada (emulador).** 0 perdidos en los tres y física a 240 Hz; en 5 min, error real-to-sim promedio de 1,34° (Spot), 1,76° (Pepper) y 1,66° (NAO) (`red_base.json`). Por separado, con 2 % de pérdida a propósito, cada robot contó exactamente los mensajes saltados |
 | 8 | Un `JOINTS` de otro robot o con basura se ignora | Mandar `JOINTS,atlas,...` y texto cualquiera al puerto 5101 | El contenedor no se cae y no mueve nada | **Cubierta en el código**: `sim_robot.py` cuenta y descarta los `JOINTS` de otro robot (`ajenos`) y las líneas que no se pueden leer (`basura`), y la prueba 1 comprueba que la basura no lanza excepción. No la mandamos a mano al contenedor |
-| 9 | Con los potenciómetros físicos | ESP32 maestra con 2-3 potenciómetros, a UDP 5101 | Girar un potenciómetro mueve la articulación correspondiente en el visor | Pendiente (hardware) |
+| 9 | Con los potenciómetros físicos | ESP32 maestra con 2-3 potenciómetros, a UDP 5101 | Girar un potenciómetro mueve la articulación correspondiente en el visor | **No aplica**: el tema se entrega en simulación; lo cubre la prueba 7 con el emulador. Con placas reales: subir `CTRL_NAO`, detener `ctrl-nao` y girar cada perilla mirando el visor 8013 |
 
 ### Objetivo 3: Plano de Administración (VLAN 3)
 
@@ -1097,7 +1139,7 @@ Todo se corre en orden con `pruebas\correr_todo.ps1`, y cada script deja su json
 |---|---|---|---|---|
 | 10 | El admin ve los 6 servicios y publica su estado | Dashboard `http://localhost:8080` y `lab/estado/+` | Los 6 en `OK` con el stack sano | **Aprobada.** Los 6 en OK, RTT de 0,17 a 0,26 ms y 100 % de disponibilidad (captura en "El montaje y la demo") |
 | 11 | La ESP32 esclava (emulada) sigue los estados | Registro del emulador `esclava` (`LEDS,...`) | La línea `LEDS` coincide con `lab/estado/+` | **Aprobada (emulador).** En el stack, la esclava emulada late sin pérdidas; en la prueba aislada su línea `LEDS` cambió al cambiar `lab/estado/player-2`. En el stack no la comparamos línea por línea |
-| 12 | La ESP32 esclava física prende sus 6 LED | Placa con 6 LED en GPIO 16-22 conectada al broker | Encendido = OK, parpadeo = LENTO, apagado = CAIDO; el de la placa encendido = conectada | Pendiente (hardware) |
+| 12 | La ESP32 esclava física prende sus 6 LED | Placa con 6 LED en GPIO 16-22 conectada al broker | Encendido = OK, parpadeo = LENTO, apagado = CAIDO; el de la placa encendido = conectada | **No aplica**: el tema se entrega en simulación; lo cubre la prueba 11 con la esclava emulada. Con la placa real: detener `esclava-emulada`, encender la esclava y hacer `docker compose stop sim-pepper` (se apaga el LED de GPIO 21) |
 
 ### Objetivo 4: Router inter-VLAN y aislamiento
 
@@ -1127,7 +1169,7 @@ Antes, con el router solo y contenedores de relleno (`pruebas/red/probar_aislami
 | 23 | Detección y recuperación de la caída de un robot | `prueba_disponibilidad.py`: `docker stop sim-pepper`, esperar CAIDO, `docker start` | CAIDO en ≤ 10 s, OK otra vez en ≤ 60 s; los otros 5 siguen en OK y publicando | **Aprobada.** CAIDO publicado 0,50 s después de la orden de detener (el `vivo=0` llegó a los 0,12 s); OK otra vez 1,02 s después del `docker start`; los otros 5 siguieron en OK y publicando métricas |
 | 24 | Detección y recuperación de la caída de un jugador | Igual con `player-2` | Igual que la 23 | **Aprobada.** CAIDO a los 0,43 s, OK 1,02 s después del `docker start`; los otros 5 en OK |
 | 25 | Las zonas siguen funcionando sin el admin | `docker stop admin` 30 s, revisando `docker inspect`, los registros y los visores; `docker start admin` | Ninguna zona se cae ni se reinicia; al volver el admin, las métricas reaparecen solas y los 6 vuelven a OK en ≤ 60 s | **Aprobada.** Los 7 contenedores de las zonas siguieron corriendo, sin reinicios y con actividad, y los visores respondieron durante los 30 s. Al volver el admin, el broker respondió a los 1,40 s, los 6 estaban en OK a los 2,11 s (por los latidos UDP) y las métricas MQTT de todos reaparecieron entre 5,4 y 7,2 s (cada cliente reintenta la conexión con una espera de hasta 5 s) |
-| 26 | Latencia real ESP32 ↔ admin por WiFi | ESP32 maestra mandando `PING` a UDP 5300 y leyendo `RTT,<ms>` por serie | Registrar RTT promedio, p95 y pérdida a 1 m y a 5 m del router WiFi | Pendiente (hardware) |
+| 26 | Latencia real ESP32 ↔ admin por WiFi | ESP32 maestra mandando `PING` a UDP 5300 y leyendo `RTT,<ms>` por serie | Registrar RTT promedio, p95 y pérdida a 1 m y a 5 m del router WiFi | **No aplica**: mide el WiFi, que solo existe con placas físicas; la red entre contenedores la miden las pruebas 20-22. Con una placa real se leerían las líneas `RTT,<ms>` del monitor serie a 1 m y a 5 m del router |
 
 Así se ven el escenario base y el de retardo (las gráficas las hace `medir_red.py`):
 
@@ -1147,7 +1189,7 @@ En la prueba 23, la primera vez que la corrimos la vuelta a OK tardó 57 s, por 
 
 ## Pendiente
 
-- El montaje físico de las siete placas: tres maestras con joystick KY-023, tres con potenciómetros y la esclava con seis LED.
-- Fotos y video del montaje funcionando con las placas.
-- Las pruebas 6, 9, 12 y 26 con los ESP32 físicos por WiFi, comprobando que los datagramas llegan por los puertos publicados del PC y que el firewall de Windows los deja pasar.
-- Probar `docker-compose.vlan-real.yml` (VLAN 802.1Q con `macvlan`) en un Linux con un switch administrable.
+El tema está completo en simulación: no falta ningún montaje físico.
+
+- Opcional: probar `docker-compose.vlan-real.yml` (VLAN 802.1Q con `macvlan`) en un Linux con un switch administrable.
+- Opcional: si se quisiera armar físicamente, las placas son las de "El montaje y la demo"; se configuran y se suben como dice "Cómo probarlo" → "Con ESP32 conectado", y las filas "No aplica" de las pruebas 6, 9, 12 y 26 dicen cómo comprobarlas.

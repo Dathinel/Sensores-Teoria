@@ -32,6 +32,7 @@
 # Sin ESP32 conectado, la ventana de PyBullet trae los mismos botones (jog + saltos + mision).
 #   python drones_pybullet.py                  # ventana, ESP32 en COM7
 #   python drones_pybullet.py --puerto COM5
+#   python drones_pybullet.py --mision        # ventana: despega solo y vuela la mision A->B->C (para mostrarla)
 #   python drones_pybullet.py --prueba         # sin ventana: vuela la mision A->B->C y la mide
 
 import argparse
@@ -319,8 +320,8 @@ def volar(con_ventana=True, puerto="COM7", mision_automatica=False, max_segundos
             if llegado:
                 llegadas.append((llegado, round((paso - (t0_mision or 0)) / 240, 1)))
                 print(f"Llego a {llegado} a los {llegadas[-1][1]} s de empezar la mision")
-                if mision_automatica and not mando.mision:
-                    break
+                if mision_automatica and not mando.mision and not con_ventana:
+                    break   # en la prueba sin ventana, terminar; con ventana sigue abierta
 
             if con_ventana:
                 if mando.trazo_reiniciar:
@@ -365,6 +366,8 @@ if __name__ == "__main__":
     analizador.add_argument("--puerto", default="COM7", help="puerto serial del ESP32 (Administrador de dispositivos)")
     analizador.add_argument("--prueba", action="store_true",
                             help="sin ventana: despega, vuela la mision A -> B -> C y muestra tiempos e inclinacion")
+    analizador.add_argument("--mision", action="store_true",
+                            help="con ventana: despega solo y vuela la mision A -> B -> C (despues sigue el control normal)")
     args = analizador.parse_args()
     if args.prueba:
         r = volar(con_ventana=False, mision_automatica=True, max_segundos=60)
@@ -372,4 +375,4 @@ if __name__ == "__main__":
         ok = [n for n, _ in r["llegadas"]] == ["A", "B", "C"] and r["inclinacion_max_grados"] < 35
         print("PRUEBA OK" if ok else "PRUEBA FALLIDA")
         raise SystemExit(0 if ok else 1)
-    volar(puerto=args.puerto)
+    volar(puerto=args.puerto, mision_automatica=args.mision)

@@ -1,0 +1,27 @@
+{
+  "id": "1",
+  "titulo": "Investigación del ESP32 + script que comprueba la ficha técnica",
+  "resumen": "Investigación sobre el microcontrolador de todo el curso: qué es, de dónde viene, cómo está armado, sus pines y periféricos, cómo se programa, su costo ambiental y para qué se usa. Se acompaña de un script de MicroPython que le pregunta al propio chip los datos de la ficha (CPU, flash, RAM, temperatura, ADC, DAC y táctil). Casi todo el tema es lectura: el README es la entrega.",
+  "pide": [
+    "Origen del microcontrolador y su lugar en las revoluciones industriales",
+    "Quién fabrica el ESP32 (Espressif, el ESP8266 antes) y la familia de chips",
+    "Arquitectura interna: CPU, memoria, radio y periféricos",
+    "Pinout y restricciones de cada pin (solo entrada, ADC2 con Wi-Fi, DAC, pines de arranque)",
+    "Cómo se programa: C/C++ (Arduino, ESP-IDF) frente a MicroPython",
+    "Costo ambiental de un chip barato",
+    "Para qué se usa en la práctica"
+  ],
+  "python": {"versiones": [], "paquetes": []},
+  "acciones": [
+    {"id": "readme", "nombre": "Leer la investigación (README)", "tipo": "url", "url": "https://github.com/Dathinel/Sensores-Teoria/tree/main/1-esp32-investigacion",
+     "descripcion": "La entrega del tema, en GitHub (ahí se ven los diagramas dibujados): ficha técnica, historia, arquitectura, pines, ADC/DAC/PWM, buses, familia, lenguajes, costo ambiental y usos. Sin internet, el mismo texto está en README.md de la carpeta.",
+     "cubre": ["Origen del microcontrolador y su lugar en las revoluciones industriales", "Quién fabrica el ESP32 (Espressif, el ESP8266 antes) y la familia de chips", "Arquitectura interna: CPU, memoria, radio y periféricos", "Pinout y restricciones de cada pin (solo entrada, ADC2 con Wi-Fi, DAC, pines de arranque)", "Cómo se programa: C/C++ (Arduino, ESP-IDF) frente a MicroPython", "Costo ambiental de un chip barato", "Para qué se usa en la práctica"]},
+    {"id": "wokwi", "nombre": "Simulador ESP32 en Wokwi (MicroPython)", "tipo": "url", "url": "https://wokwi.com/projects/new/micropython-esp32",
+     "descripcion": "Abre un proyecto nuevo de MicroPython en ESP32 en el navegador, sin instalar nada. Se puede pegar ficha_placa.py en main.py y darle al botón verde, pero el simulador no tiene flash, temperatura ni capacitancia reales: esos números no dicen nada de la placa (el tema 2 trae ejemplos que sí se lucen en Wokwi).",
+     "cubre": ["Cómo se programa: C/C++ (Arduino, ESP-IDF) frente a MicroPython"]},
+    {"id": "fw", "nombre": "Script de la placa: ficha_placa.py", "tipo": "info", "archivo": "ficha_placa.py",
+     "descripcion": "MicroPython que corre en el ESP32 (no en el PC): se abre en Thonny y se corre con F5. Imprime chip y firmware, memoria, temperatura interna, una prueba ADC GPIO34 contra DAC GPIO25 (con un cable entre los dos pines marca cerca de 2000) y el valor táctil de GPIO4 (baja al tocarlo). Solo tiene sentido con la placa conectada.",
+     "cubre": ["Arquitectura interna: CPU, memoria, radio y periféricos", "Pinout y restricciones de cada pin (solo entrada, ADC2 con Wi-Fi, DAC, pines de arranque)"]}
+  ],
+  "notas": "No hay nada que instalar en el PC. El único script es de MicroPython y necesita un ESP32 con MicroPython y Thonny (pasos en el tema 2)."
+}

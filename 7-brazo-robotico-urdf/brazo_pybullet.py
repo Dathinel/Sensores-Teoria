@@ -9,6 +9,7 @@
 # "/dev/ttyUSB0" en Linux. Si el puerto no existe o no responde, el
 # script sigue funcionando solo con los botones.
 
+import os
 import re
 import time
 
@@ -92,7 +93,11 @@ p.setGravity(0, 0, -9.8)
 p.loadURDF("plane.urdf")
 # useFixedBase=True: la base queda atornillada al piso; si no, al mover
 # el brazo el conjunto entero se volcaria por su propio peso.
-robot_id = p.loadURDF("brazo.urdf", [0, 0, 0.15], useFixedBase=True)
+# Ruta absoluta (la carpeta de este script) en vez de solo "brazo.urdf":
+# asi el URDF se encuentra aunque el script se lance desde otra carpeta
+# (por ejemplo desde el lanzador de la raiz del repo o con doble clic).
+RUTA_URDF = os.path.join(os.path.dirname(os.path.abspath(__file__)), "brazo.urdf")
+robot_id = p.loadURDF(RUTA_URDF, [0, 0, 0.15], useFixedBase=True)
 
 # Los indices y los limites de cada articulacion se leen del propio URDF
 # en vez de copiarlos a mano: si brazo.urdf cambia, este script se

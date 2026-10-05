@@ -1,0 +1,55 @@
+{
+  "id": "6",
+  "titulo": "Control de iluminación por gestos (MediaPipe + ESP32)",
+  "resumen": "Una página web reconoce gestos de la mano con la cámara (MediaPipe) y le manda al ESP32 por USB qué LED prender y con qué intensidad: puño 30 %, victoria 70 %, dos manos abiertas 100 %, y dos secuencias de luces con los pulgares. Sin ESP32, un panel de la página replica los LEDs; sin cámara, los botones manuales hacen lo mismo que los gestos.",
+  "pide": [
+    "Reconocer gestos de la mano con MediaPipe Gesture Recognizer",
+    "Puño cerrado: LED amarillo al 30 %",
+    "Señal de victoria: LED azul al 70 %",
+    "Dos manos abiertas: LED rojo al 100 %",
+    "Pulgar abajo: primera interrupción, secuencia de luces (Modo 1)",
+    "Pulgar arriba: segunda interrupción, secuencia de luces (Modo 2)",
+    "Repositorio en GitHub explicando el desarrollo, con video"
+  ],
+  "python": {"versiones": [], "paquetes": []},
+  "acciones": [
+    {
+      "id": "web",
+      "nombre": "Página de gestos (sin ESP32)",
+      "tipo": "html",
+      "archivo": "gesture_control.html",
+      "descripcion": "Abrir en Chrome o Edge (necesita internet la primera vez para bajar MediaPipe). Con webcam: dar permiso y hacer los gestos; 'Lectura en vivo' muestra el gesto y su confianza y 'LEDs (espejo del firmware)' se prende como lo harían los LEDs reales. Sin webcam: los botones de 'Control manual' (Puño, Victoria, Manos abiertas, Modo 1, Modo 2, Detener todo) hacen lo mismo. 'Conectar ESP32' solo hace falta con la placa.",
+      "cubre": ["Reconocer gestos de la mano con MediaPipe Gesture Recognizer", "Puño cerrado: LED amarillo al 30 %", "Señal de victoria: LED azul al 70 %", "Dos manos abiertas: LED rojo al 100 %", "Pulgar abajo: primera interrupción, secuencia de luces (Modo 1)", "Pulgar arriba: segunda interrupción, secuencia de luces (Modo 2)"]
+    },
+    {
+      "id": "demo",
+      "nombre": "Animación de los LEDs (video)",
+      "tipo": "archivo",
+      "archivo": "img/demo-leds.gif",
+      "descripcion": "El montaje 3D recorriendo los cinco gestos y los dos modos, con los duty y tiempos de esp32_gestos.py.",
+      "cubre": ["Repositorio en GitHub explicando el desarrollo, con video"]
+    },
+    {
+      "id": "montaje",
+      "nombre": "Montaje 3D del circuito",
+      "tipo": "archivo",
+      "archivo": "img/montaje-3d.png",
+      "descripcion": "ESP32 en la protoboard: GPIO25, 26 y 27 a través de 330 Ω a los LEDs amarillo, azul y rojo, cátodos a GND."
+    },
+    {
+      "id": "estados",
+      "nombre": "Estados de los LEDs (puño / victoria / dos manos)",
+      "tipo": "archivo",
+      "archivo": "img/estado-puno.png",
+      "descripcion": "Render del LED amarillo al 30 % (puño). En img/ están también estado-victoria.png y estado-dos-manos.png."
+    },
+    {
+      "id": "fw",
+      "nombre": "Firmware del ESP32",
+      "tipo": "info",
+      "archivo": "esp32_gestos.py",
+      "descripcion": "MicroPython: se guarda en el ESP32 como main.py con Thonny (cerrar Thonny después para liberar el puerto). Lee FIST / VICTORY / OPEN2 / THUMB_DOWN / THUMB_UP / NONE por USB y contesta OK <comando>. No hace falta para probar la página."
+    }
+  ],
+  "notas": "Solo Chrome o Edge (Web Serial; Firefox y Safari no lo traen). Internet la primera vez para MediaPipe. Webcam opcional: sin ella los botones manuales cubren todo. No usa Python."
+}

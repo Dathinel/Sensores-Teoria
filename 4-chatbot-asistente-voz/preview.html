@@ -145,10 +145,18 @@ function aplicarComando(datos) {
 const sim = { rojo: 0, azul: 0 };
 const dormir = (ms) => new Promise(r => setTimeout(r, ms));
 
-async function esp32Simulado(linea) {
+// El ESP32 real atiende UNA línea a la vez: mientras corre hacer_show() (2,4 s)
+// no lee el puerto, y lo que llegue espera en el buffer y se aplica al terminar.
+// La cola (cadena de promesas) reproduce eso: si se manda "10" durante el show,
+// se aplica después de restaurar el estado, igual que en la placa.
+let colaSim = Promise.resolve();
+function esp32Simulado(linea) {
+  colaSim = colaSim.then(() => atenderLineaSim(linea));
+}
+
+async function atenderLineaSim(linea) {
   if (linea === "SHOW") {
-    recibido("OK SHOW");
-    if (enShow) return;
+    recibido("OK SHOW");                       // se contesta ANTES del show, como en esp32_voz.py
     enShow = true;
     const previo = { ...sim };                 // guarda el estado para restaurarlo
     for (let i = 0; i < 6; i++) {              // VUELTAS_SHOW = 6, PASO_SHOW_S = 0.2
@@ -159,7 +167,7 @@ async function esp32Simulado(linea) {
     enShow = false;
   } else if (/^[01][01]$/.test(linea)) {
     sim.rojo = +linea[0]; sim.azul = +linea[1];
-    if (!enShow) pintarLeds(sim.rojo, sim.azul);
+    pintarLeds(sim.rojo, sim.azul);
     recibido("OK " + linea);
   } else if (linea) {
     recibido("IGNORADO " + linea);

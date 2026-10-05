@@ -83,7 +83,8 @@ En el osciloscopio: los dos canales con la misma escala de voltios por división
 
 - **`pez3_esp32.py`**: el script de un solo pez. Define cada pieza ya en su posición final dentro de la pantalla y la mueve entera con `DESPLAZAMIENTO_X = -0.08`. Es el que se usa para mostrar el pez grande y bien definido. Se guarda en el ESP32 como `main.py`.
 - **`pez5_esp32.py`**: el script de tres peces. Define un pez base centrado en el origen y lo reutiliza tres veces con distinto centro y tamaño (`crear_pez`). Es la versión final de la entrega. También se guarda como `main.py` (uno u otro, no los dos a la vez).
-- **`demo-*.gif` y `demo-primer-pez-cerca.jpg`**: las grabaciones del osciloscopio, que están incrustadas más abajo en "Demostración en funcionamiento".
+- **[`preview.html`](preview.html)**: un osciloscopio XY simulado en el navegador (se abre con doble clic, no instala nada). En "Modo prueba" recalcula en JavaScript exactamente la misma geometría de los dos scripts (mismas funciones, mismos números, mismo rango 10-245) y la dibuja punto por punto con un "fósforo" que se desvanece, con los mismos controles `DESPLAZAMIENTO_X/Y` e `INVERT_X/Y` y un contador de puntos recortados contra el borde; trae además una Lissajous de dos senos puros para comparar. En "Conectado" usa Web Serial (Chrome o Edge) para pintar los puntos `x y` que el ESP32 imprime con `ENVIAR_SERIAL = True`, con la última línea cruda recibida para diagnosticar. Captura en "Cómo probarlo".
+- **`demo-*.gif` y `demo-primer-pez-cerca.jpg`**: las grabaciones del osciloscopio, que están incrustadas más abajo en "Demostración en funcionamiento". **`preview-modo-prueba.png`**: la captura de `preview.html`.
 
 Los dos scripts comparten la mayor parte del código (configuración del DAC, conversión, generadores y la función `dibujar`); lo que cambia es cómo se ubica cada pez, explicado en "Las dos versiones del script".
 
@@ -224,15 +225,27 @@ Todas las coordenadas del pez se manejan primero en un rango normalizado de 0 a 
 
 **Sin ESP32 conectado**
 
-Los dos scripts son MicroPython y usan `machine.DAC`, que solo existe dentro del ESP32, así que no corren en la computadora tal cual. Lo que sí se puede hacer sin osciloscopio es revisar la geometría antes de ir al laboratorio:
+Los dos scripts son MicroPython y usan `machine.DAC`, que solo existe dentro del ESP32, así que no corren en la computadora tal cual. Para verlos sin placa ni osciloscopio está [`preview.html`](preview.html): se abre con doble clic y en "Modo prueba" dibuja la misma figura que sacarían los DAC.
+
+1. En "Qué dibuja el ESP32" elegir `pez3_esp32.py` (un pez) o `pez5_esp32.py` (tres peces). Los deslizadores arrancan con el desplazamiento de cada archivo (-0.08 y -0.03).
+2. Bajar "Velocidad del haz" a 10-30 puntos por cuadro: se ve el punto recorriendo el cuerpo, la cola, el ojo, la pupila, la boca y la aleta, en el orden de `dibujar_pez()`. Subirla otra vez y la figura se ve "sólida", que es la persistencia de la visión explicada arriba.
+3. Mirar "Puntos por ciclo" (314 y 942, como en la tabla) y "Puntos recortados": con tres peces marca 19, el pez grande aplastado contra el borde izquierdo del que habla "Los límites del rango del DAC". Mover `DESPLAZAMIENTO_X` hasta que marque 0 es probar el arreglo antes de tocar el script.
+4. `INVERT_X`/`INVERT_Y` espejan la figura igual que en el script, y la opción "Lissajous" muestra las figuras clásicas de dos senos (por ejemplo 3:2 con 90° de desfase) para comparar.
+
+![preview.html en modo prueba con los tres peces de pez5_esp32.py y los 19 puntos recortados del pez grande](preview-modo-prueba.png)
+
+**Con ESP32 conectado pero sin osciloscopio**
+
+Se puede revisar la geometría que de verdad calcula la placa antes de ir al laboratorio:
 
 1. En el script, poner `ENVIAR_SERIAL = True`, y `ESCRIBIR_DAC = False` si no hay nada conectado a los pines.
 2. Correrlo desde Thonny (botón Run, sin guardarlo como `main.py`).
 3. En la consola de Thonny van saliendo los puntos, uno por línea, como `x y`. Con `pez3_esp32.py` las primeras líneas son `158 132`, `157 135`, `157 138`..., el borde derecho del cuerpo.
+4. Para verlos dibujados en vez de leerlos: guardar el script (con `ENVIAR_SERIAL = True`) en la placa como `main.py`, cerrar Thonny para que suelte el puerto, abrir `preview.html`, pasar a "Conectado (Web Serial)", "Elegir puerto del ESP32" y presionar EN en la placa. `main.py` arranca solo y los puntos se van pintando (despacio, porque imprimir es lento); "Última línea cruda" muestra lo que llega tal cual, para saber si el problema es que no llega nada o que llega en otro formato.
 
-La figura sale exactamente de las mismas funciones `crear_elipse`, `crear_linea`, `crear_bezier` y `transformar`, así que cualquier cambio de posición, escala o desplazamiento se puede comprobar antes de llevarlo al osciloscopio. Lo que hay que mirar es que ningún punto quede recortado contra el borde (valores 10 o 245 repetidos) y que las piezas no se salgan del pez. Cualquier programa que lea esas líneas y las pinte como puntos XY reconstruye el pez. Antes de la demo real hay que volver a dejar `ENVIAR_SERIAL = False` y `ESCRIBIR_DAC = True`, porque imprimir por USB es mucho más lento que escribir en el DAC y el pez parpadearía.
+La figura sale exactamente de las mismas funciones `crear_elipse`, `crear_linea`, `crear_bezier` y `transformar`, así que cualquier cambio de posición, escala o desplazamiento se puede comprobar antes de llevarlo al osciloscopio. Lo que hay que mirar es que ningún punto quede recortado contra el borde (valores 10 o 245 repetidos) y que las piezas no se salgan del pez. Antes de la demo real hay que volver a dejar `ENVIAR_SERIAL = False` y `ESCRIBIR_DAC = True`, porque imprimir por USB es mucho más lento que escribir en el DAC y el pez parpadearía.
 
-**Con ESP32 conectado**
+**Con ESP32 conectado y el osciloscopio**
 
 1. Con el ESP32 conectado por USB, abrir en Thonny `pez3_esp32.py` (un pez) o `pez5_esp32.py` (tres peces) y guardarlo en el dispositivo con el nombre `main.py`, para que arranque solo apenas el ESP32 tenga energía, sin depender de que Thonny siga conectado.
 2. Cablear según la tabla de conexiones: GPIO25 a la punta del canal 1 (eje X), GPIO26 a la punta del canal 2 (eje Y) y GND a las pinzas de tierra.

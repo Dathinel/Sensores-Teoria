@@ -279,7 +279,15 @@ class Estado:
 
 def crear_mundo(modo=p.DIRECT):
     """Conecta PyBullet (p.GUI o p.DIRECT), carga piso y Atlas, y lo deja
-    de pie, asentado y con el asistente prendido. Devuelve el Estado."""
+    de pie, asentado y con el asistente prendido. Devuelve el Estado.
+    Si faltan los modelos, intenta bajarlos una vez con
+    ../descargar_modelos.py; si no se puede (sin internet), avisa y sale."""
+    if not URDF_ATLAS.exists():
+        # Primera vez (por ejemplo, recien clonado): se corre el descargador
+        # en un proceso aparte con el MISMO Python, para no repetir su codigo.
+        import subprocess
+        print("Faltan los modelos de Atlas: bajandolos una vez con descargar_modelos.py ...", flush=True)
+        subprocess.run([sys.executable, str(MODELOS.parent / "descargar_modelos.py")])
     if not URDF_ATLAS.exists():
         print("Faltan los modelos: corra `entorno\\Scripts\\python descargar_modelos.py` "
               "en la carpeta del taller")

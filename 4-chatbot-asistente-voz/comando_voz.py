@@ -11,7 +11,10 @@
 #   - Sin microfono (o sin pyaudio instalado): se escribe el comando con el teclado.
 #   - Sin clave de DeepSeek o sin internet: usa un interprete sencillo por palabras
 #     clave, avisando en pantalla que no es el modelo de lenguaje.
+#   - Esos dos modos tambien se pueden forzar: --texto (no abre el microfono)
+#     y --sin-clave (no consulta DeepSeek). --puerto COMx cambia el puerto.
 
+import argparse
 import os
 import json
 import re
@@ -26,9 +29,21 @@ from dotenv import load_dotenv
 # nunca queda escrita dentro del codigo que se sube a GitHub.
 load_dotenv()
 
+# Opciones de linea de comandos, todas opcionales (sin ninguna, el script se
+# comporta como siempre). Sirven para forzar un modo de prueba aunque el PC si
+# tenga microfono o el .env si tenga clave; las usa el lanzador probar.py del repo.
+opciones = argparse.ArgumentParser(description="Asistente de voz para dos LEDs")
+opciones.add_argument("--texto", action="store_true",
+                      help="no abrir el microfono: solo comandos escritos")
+opciones.add_argument("--sin-clave", action="store_true",
+                      help="no usar DeepSeek aunque haya clave: interprete por palabras clave")
+opciones.add_argument("--puerto", default="COM7",
+                      help="puerto serial del ESP32 (por defecto COM7)")
+args = opciones.parse_args()
+
 # El numero del puerto cambia en cada computadora: revisarlo en el
 # Administrador de dispositivos (Puertos COM y LPT) con el ESP32 conectado.
-PUERTO_SERIAL = "COM7"
+PUERTO_SERIAL = args.puerto
 # Tiene que ser la misma velocidad que usa MicroPython en el USB del ESP32 (115200).
 BAUDIOS = 115200
 
@@ -65,7 +80,9 @@ ultima_linea_esp32 = None
 # el script no truene con KeyError sino que pase al interprete por reglas.
 CLAVE_DEEPSEEK = os.environ.get("DEEPSEEK_API_KEY")
 cliente = None
-if CLAVE_DEEPSEEK and CLAVE_DEEPSEEK != "tu_api_key_aqui":
+if args.sin_clave:
+    print("--sin-clave: se usara el interprete por palabras clave (no se consulta DeepSeek).")
+elif CLAVE_DEEPSEEK and CLAVE_DEEPSEEK != "tu_api_key_aqui":
     from openai import OpenAI
 
     cliente = OpenAI(api_key=CLAVE_DEEPSEEK, base_url="https://api.deepseek.com")
@@ -78,15 +95,20 @@ else:
 # ------------------------------------------------------------------
 # sr.Microphone() necesita pyaudio. Si no esta instalado o no hay microfono,
 # se sigue funcionando escribiendo el comando con el teclado.
-try:
-    import speech_recognition as sr
+sr = None
+microfono = None
+if args.texto:
+    print("--texto: no se abre el microfono, escribe los comandos con el teclado.")
+else:
+    try:
+        import speech_recognition as sr
 
-    reconocedor = sr.Recognizer()
-    microfono = sr.Microphone()
-except (ImportError, AttributeError, OSError) as error:
-    sr = None
-    microfono = None
-    print("Sin microfono disponible (" + str(error) + "): escribe los comandos con el teclado.")
+        reconocedor = sr.Recognizer()
+        microfono = sr.Microphone()
+    except (ImportError, AttributeError, OSError) as error:
+        sr = None
+        microfono = None
+        print("Sin microfono disponible (" + str(error) + "): escribe los comandos con el teclado.")
 
 
 # El prompt de sistema es la "regla del juego" para el modelo: le dice que
@@ -119,13 +141,19 @@ CLAVES_VALIDAS = ("led_rojo", "led_azul", "show")
 
 def escuchar_comando():
     """Graba una frase del microfono y la devuelve transcrita, o None."""
-    with microfono as fuente:
-        # Mide ~1 s de ruido de fondo para fijar el umbral de energia a partir
-        # del cual se considera que alguien empezo a hablar.
-        reconocedor.adjust_for_ambient_noise(fuente)
-        print("Habla ahora...")
-        # listen() corta sola cuando detecta silencio despues de la frase.
-        audio = reconocedor.listen(fuente)
+    try:
+        with microfono as fuente:
+            # Mide ~1 s de ruido de fondo para fijar el umbral de energia a partir
+            # del cual se considera que alguien empezo a hablar.
+            reconocedor.adjust_for_ambient_noise(fuente)
+            print("Habla ahora...")
+            # listen() corta sola cuando detecta silencio despues de la frase.
+            audio = reconocedor.listen(fuente)
+    except OSError as error:
+        # El microfono existia al arrancar pero ya no se puede abrir (se
+        # desconecto, o lo tiene otro programa): se avisa y se sigue con texto.
+        print("No se pudo abrir el microfono (" + str(error) + "): escribe el comando.")
+        return None
 
     try:
         # Servicio gratuito de Google (necesita internet); es-CO = espanol de Colombia.
@@ -261,7 +289,14 @@ if __name__ == "__main__":
 
     while True:
         leer_respuestas_esp32()
-        entrada = input("> ").strip()
+        try:
+            entrada = input("> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            # EOF: la entrada venia de un archivo o un pipe y se acabo sin "salir";
+            # Ctrl+C: el usuario corto. En los dos casos se cierra ordenado
+            # (y se libera el puerto serial abajo) en vez de mostrar un traceback.
+            print()
+            break
         if entrada.lower() == "salir":
             break
 

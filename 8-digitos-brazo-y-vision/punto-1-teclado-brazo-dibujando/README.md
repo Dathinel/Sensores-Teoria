@@ -172,8 +172,8 @@ Si se alimenta a 5 V, las pull-up del backpack suben SDA/SCL a 5 V; en la práct
 - **`brazo.urdf`**: el brazo del profesor, idéntico al del tema 7.
 - **`enunciado-actividad.png`**: la captura del enunciado.
 - **`img/`**: las fotos del montaje real, el montaje en 3D y las animaciones de la sección "El montaje y la demo".
-- **`entorno/`**: entorno virtual de Python del punto, con `pybullet`, `pyserial` y `numpy`. No se sube a GitHub (su `.gitignore` tiene `*`).
-  Para crearlo en otro PC (Python 3.14), dentro de esta carpeta: `py -3.14 -m venv entorno` y `entorno\Scripts\python -m pip install pybullet pyserial numpy`.
+- **`entorno/`**: entorno virtual de Python del punto, con `pybullet` y `pyserial` (tiene además `numpy`, que el script no usa). No se sube a GitHub (su `.gitignore` tiene `*`).
+  Para crearlo en otro PC (Python 3.14), dentro de esta carpeta: `py -3.14 -m venv entorno` y `entorno\Scripts\python -m pip install pybullet==3.2.7 pyserial==3.5`. PyBullet no publica versiones ya compiladas para Windows, así que `pip` lo compila desde el código fuente: hacen falta las herramientas de compilación de C++ de Visual Studio (*Build Tools*) y tarda varios minutos la primera vez.
 
 ## La lógica del código
 

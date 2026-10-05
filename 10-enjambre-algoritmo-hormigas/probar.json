@@ -1,0 +1,193 @@
+{
+  "id": "10",
+  "titulo": "Enjambre de 3 carritos con algoritmo de hormigas (ACO) en ESP32 + gemelo digital PyBullet en Docker",
+  "resumen": "Tres ESP32 buscan la ruta más corta de A a la meta de un laberinto de 5x5 con el algoritmo de colonia de hormigas, compartiendo la feromona por WiFi (UDP, un ESP32 hace de punto de acceso). Un gemelo digital en PyBullet, que corre en Docker, rehace la misma feromona y mueve tres robots virtuales; todo se puede probar sin los ESP32 (simulación o emulador de los tres nodos).",
+  "pide": [
+    "3 nodos ESP32 (carritos) buscan la ruta óptima de A a la meta en un laberinto/almacén",
+    "el ACO corre dentro de cada ESP32",
+    "intercambian feromona por red, con un ESP32 en modo AP",
+    "el resultado se replica en PyBullet con 3 robots virtuales",
+    "la parte virtual corre en Docker"
+  ],
+  "python": {
+    "versiones": [
+      "3.13",
+      "3.14",
+      "3.12"
+    ],
+    "paquetes": [
+      "pybullet==3.2.7",
+      "numpy==2.5.3",
+      "pillow==12.3.0",
+      "imageio==2.38.0",
+      "imageio-ffmpeg==0.6.0",
+      "matplotlib==3.11.2"
+    ]
+  },
+  "acciones": [
+    {
+      "id": "gemelo",
+      "nombre": "Gemelo digital sin hardware",
+      "tipo": "python",
+      "script": "gemelo_digital.py",
+      "args": [
+        "--modo",
+        "sin-hardware"
+      ],
+      "cwd": ".",
+      "descripcion": "Corre el mismo ACO de los ESP32 en Python y lo pasa por el gemelo en PyBullet (sin ventana). No abre nada en pantalla: imprime el avance y al final deja en la carpeta resultados/ el video gemelo_sin-hardware.mp4, la imagen ruta_final_sin-hardware.png y los json. Tarda unos 2 a 5 minutos (renderiza cada cuadro por software). Para pararlo antes usar Ctrl+C, no cerrar la consola (si se cierra, el mp4 queda vacío).",
+      "cubre": [
+        "el resultado se replica en PyBullet con 3 robots virtuales",
+        "el ACO corre dentro de cada ESP32"
+      ]
+    },
+    {
+      "id": "gemelo-apagado",
+      "nombre": "Gemelo sin hardware con el nodo 3 apagado",
+      "tipo": "python",
+      "script": "gemelo_digital.py",
+      "args": [
+        "--modo",
+        "sin-hardware",
+        "--apagar-nodo",
+        "3",
+        "--en-iteracion",
+        "10"
+      ],
+      "cwd": ".",
+      "descripcion": "Prueba 14 en simulación: el nodo 3 se apaga después de la iteración 10, su carrito queda gris y los nodos 1 y 2 terminan solos. Deja resultados/gemelo_sin-hardware_apagado3.mp4. Tarda lo mismo que el anterior.",
+      "cubre": [
+        "intercambian feromona por red, con un ESP32 en modo AP"
+      ]
+    },
+    {
+      "id": "gemelo-hw",
+      "nombre": "1) Gemelo en modo hardware (esperando telemetría)",
+      "tipo": "python",
+      "script": "gemelo_digital.py",
+      "args": [
+        "--modo",
+        "hardware",
+        "--timeout",
+        "240"
+      ],
+      "cwd": ".",
+      "descripcion": "PRIMERO este: el gemelo escucha la telemetría UDP en el puerto 4211, como lo haría con los carritos reales. Dejarlo abierto y lanzar después la acción 2) (el emulador). Termina solo cuando los tres nodos acaban (unos 50 s después de arrancar el emulador) o a los 240 s; deja resultados/gemelo_hardware.mp4 y resumen_hardware.json. La primera vez Windows puede preguntar por el firewall: permitirlo.",
+      "cubre": [
+        "el resultado se replica en PyBullet con 3 robots virtuales"
+      ]
+    },
+    {
+      "id": "emulador",
+      "nombre": "2) Emulador de los 3 ESP32 (alimenta al gemelo)",
+      "tipo": "python",
+      "script": "emulador_nodos.py",
+      "args": [
+        "--semilla",
+        "12345"
+      ],
+      "cwd": ".",
+      "descripcion": "DESPUÉS de la acción 1): tres ESP32 virtuales en el PC con el mismo protocolo del firmware (HELLO, PHER, FIN, PATH, ESTADO) por UDP real; mandan la telemetría a 127.0.0.1:4211, donde la recibe el gemelo. Imprime cada nodo y al final compara la feromona con aco.py (debe decir 'Identico a la simulacion: SI'). Tarda unos 50 s. Solo usa la biblioteca estándar.",
+      "cubre": [
+        "intercambian feromona por red, con un ESP32 en modo AP",
+        "3 nodos ESP32 (carritos) buscan la ruta óptima de A a la meta en un laberinto/almacén"
+      ]
+    },
+    {
+      "id": "aco",
+      "nombre": "El algoritmo de hormigas en consola",
+      "tipo": "python",
+      "script": "aco.py",
+      "args": [],
+      "cwd": ".",
+      "descripcion": "Corre el enjambre de 3 nodos x 4 hormigas x 30 iteraciones sobre maze.json con la semilla 12345 (la misma lógica, bit a bit, que el C++ del firmware) e imprime la ruta óptima, la mejor ruta de cada nodo (2,40 m) y si la colonia convergió. Tarda menos de un segundo.",
+      "cubre": [
+        "3 nodos ESP32 (carritos) buscan la ruta óptima de A a la meta en un laberinto/almacén",
+        "el ACO corre dentro de cada ESP32"
+      ]
+    },
+    {
+      "id": "pruebas",
+      "nombre": "Pruebas 6 a 11 del algoritmo",
+      "tipo": "python",
+      "script": "pruebas/pruebas_algoritmo.py",
+      "args": [],
+      "cwd": ".",
+      "descripcion": "Corre las pruebas del algoritmo (laberinto abierto, único camino, dos caminos, 20 semillas, barridos de rho y de alfa/beta) en unos 3 s e imprime las tablas que salen en el README. Reescribe pruebas/resultados/pruebas_algoritmo.json y .md con los mismos números (solo cambia el tiempo que tardó).",
+      "cubre": [
+        "3 nodos ESP32 (carritos) buscan la ruta óptima de A a la meta en un laberinto/almacén"
+      ]
+    },
+    {
+      "id": "docker",
+      "nombre": "Gemelo en Docker (sin hardware)",
+      "tipo": "docker",
+      "compose": "docker-compose.yml",
+      "args": [
+        "run",
+        "--rm",
+        "simulacion"
+      ],
+      "descripcion": "Lo que pide el enunciado para la parte virtual: construye la imagen (Python 3.11 en Linux, la primera vez tarda alrededor de 1 minuto y necesita internet) y corre el gemelo sin hardware dentro del contenedor (unos 2 minutos). El video y la imagen quedan en la carpeta resultados/ del tema. Necesita Docker Desktop abierto ('Engine running').",
+      "cubre": [
+        "la parte virtual corre en Docker",
+        "el resultado se replica en PyBullet con 3 robots virtuales"
+      ]
+    },
+    {
+      "id": "docker-hw",
+      "nombre": "Gemelo en Docker en modo hardware",
+      "tipo": "docker",
+      "compose": "docker-compose.yml",
+      "args": [
+        "up",
+        "-d",
+        "--build",
+        "gemelo"
+      ],
+      "detener": [
+        "stop",
+        "gemelo"
+      ],
+      "descripcion": "Deja el gemelo del contenedor escuchando UDP 4211 (publicado en el PC). Con los carritos, el PC debe estar en el WiFi ENJAMBRE_ACO; sin ellos, lanzar después la acción 2) (el emulador), que manda a 127.0.0.1:4211 y Docker Desktop lo reenvía al contenedor. Termina solo a los 240 s o cuando los tres nodos acaban; los resultados quedan en resultados/.",
+      "cubre": [
+        "la parte virtual corre en Docker",
+        "intercambian feromona por red, con un ESP32 en modo AP"
+      ]
+    },
+    {
+      "id": "preview",
+      "nombre": "Simulador del enjambre en el navegador",
+      "tipo": "html",
+      "archivo": "preview.html",
+      "descripcion": "El mismo ACO portado a JavaScript, sin instalar nada. Elegir laberinto y parámetros y pulsar Iniciar (seguido) o Paso (una iteración); los botones 'Apagar nodo' simulan la caída de un carrito. Se ve la feromona como grosor verde, la mejor ruta de cada nodo en su color y las líneas de protocolo que mandaría la red. El modo 'Conectado' lee por Web Serial (Chrome o Edge) la telemetría de UN carrito enchufado por USB."
+    },
+    {
+      "id": "video-sin-hw",
+      "nombre": "Video: gemelo sin hardware",
+      "tipo": "archivo",
+      "archivo": "video/gemelo-sin-hardware.mp4",
+      "descripcion": "La búsqueda (la feromona violeta se concentra en la ruta corta) y los tres carritos recorriendo su ruta, escalonados 8 s."
+    },
+    {
+      "id": "video-apagado",
+      "nombre": "Video: nodo 3 apagado (prueba 14)",
+      "tipo": "archivo",
+      "archivo": "video/gemelo-apagado-nodo3.mp4"
+    },
+    {
+      "id": "video-emulador",
+      "nombre": "Video: gemelo en modo hardware con el emulador",
+      "tipo": "archivo",
+      "archivo": "video/gemelo-hardware-emulador.mp4"
+    },
+    {
+      "id": "fw",
+      "nombre": "Firmware de los ESP32 (C++, Arduino)",
+      "tipo": "info",
+      "archivo": "firmware/esp32_aco_nodo/esp32_aco_nodo.ino",
+      "descripcion": "Un solo sketch para los tres carritos (solo cambia NODO_ID en config.h). Se sube con el Arduino IDE y el núcleo esp32 3.x, o con firmware/compilar.ps1. No hace falta para probar: el emulador hace de los tres ESP32."
+    }
+  ],
+  "notas": "PyBullet no publica ruedas para Windows: pip lo compila desde el código fuente y para eso hacen falta las Build Tools de Visual Studio 2022 (componente 'Desarrollo para el escritorio con C++'); la instalación tarda unos 13 minutos (probado con Python 3.13). Si pip dice 'Unable to find a compatible Visual Studio installation' aunque estén instaladas, hay que instalar desde la consola 'x64 Native Tools Command Prompt for VS 2022' (o tras vcvars64.bat) con DISTUTILS_USE_SDK=1. En este PC la rueda ya compilada para 3.13 quedó en la caché de pip, así que un entorno nuevo con 3.13 se instala en segundos. Si no se tienen, la acción Docker corre el gemelo sin instalar Python (necesita Docker Desktop). aco.py, el emulador y preview.html no necesitan PyBullet. El gemelo no abre ventana: el resultado es el video y la imagen de la carpeta resultados/. Las acciones 'Gemelo en modo hardware' y 'Gemelo en Docker en modo hardware' usan el mismo puerto UDP 4211: no correr las dos a la vez. Opcional para las pruebas de equivalencia (pruebas/equivalencia/): g++ y node."
+}

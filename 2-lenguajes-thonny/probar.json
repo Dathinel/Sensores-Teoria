@@ -1,0 +1,32 @@
+{
+  "id": "2",
+  "titulo": "Lenguajes: por qué Thonny (MicroPython frente a C/C++)",
+  "resumen": "Qué es Thonny y qué es MicroPython, cómo se instala MicroPython en el ESP32 y en qué se diferencia de programarlo en C/C++ con el Arduino IDE (interpretar frente a compilar). Se compara con el mismo circuito en los dos lenguajes: un semáforo de tres LEDs que mide cuántos microsegundos tarda cada lenguaje en cambiar un pin, y un display de siete segmentos que muestra un \"2\" en Wokwi.",
+  "pide": [
+    "Qué es Thonny y qué es MicroPython",
+    "Instalar MicroPython en la placa (la guía del profesor es para ESP8266; aquí pasada al ESP32)",
+    "Por qué MicroPython/Thonny y no C/C++ con el Arduino IDE: compilar frente a interpretar",
+    "El mismo programa en los dos lenguajes, comparando sintaxis y velocidad"
+  ],
+  "python": {"versiones": [], "paquetes": []},
+  "acciones": [
+    {"id": "wokwi-mp", "nombre": "Wokwi: ESP32 con MicroPython", "tipo": "url", "url": "https://wokwi.com/projects/new/micropython-esp32",
+     "descripcion": "Proyecto nuevo de MicroPython en el navegador. Pegar siete_segmentos.py (o semaforo_velocidad.py) en main.py, armar el circuito con el botón \"+\" según el README (display de cátodo común en GPIO 17, 16, 32, 33, 25, 14, 12 para los segmentos a-g, o LEDs en GPIO5 rojo, 17 amarillo y 16 verde) y darle al botón verde. El display debe mostrar un \"2\". Los microsegundos que imprime el semáforo en Wokwi no sirven para comparar: el simulador no reproduce los tiempos del chip.",
+     "cubre": ["El mismo programa en los dos lenguajes, comparando sintaxis y velocidad"]},
+    {"id": "wokwi-c", "nombre": "Wokwi: ESP32 con Arduino (C/C++)", "tipo": "url", "url": "https://wokwi.com/projects/new/esp32",
+     "descripcion": "Proyecto nuevo de Arduino en ESP32. Pegar siete_segmentos/siete_segmentos.ino (o semaforo_velocidad/semaforo_velocidad.ino) en sketch.ino, con el mismo circuito que la versión MicroPython, para ver la misma lógica en C/C++.",
+     "cubre": ["El mismo programa en los dos lenguajes, comparando sintaxis y velocidad", "Por qué MicroPython/Thonny y no C/C++ con el Arduino IDE: compilar frente a interpretar"]},
+    {"id": "cap-mp", "nombre": "Captura: siete segmentos en MicroPython", "tipo": "archivo", "archivo": "wokwi-micropython.png",
+     "descripcion": "El display mostrando el \"2\" en Wokwi con el código MicroPython."},
+    {"id": "cap-c", "nombre": "Captura: siete segmentos en C/C++", "tipo": "archivo", "archivo": "wokwi-arduino-c.png",
+     "descripcion": "El mismo circuito y el mismo \"2\" con el código de Arduino, para comparar con la captura anterior."},
+    {"id": "cap-leds", "nombre": "Circuito del semáforo (Wokwi)", "tipo": "archivo", "archivo": "circuito-comparacion-leds.png",
+     "descripcion": "Los tres LEDs del semáforo: rojo GPIO5, amarillo GPIO17, verde GPIO16 (en la protoboard real, cada uno con 220 ohm a GND)."},
+    {"id": "fw-sem", "nombre": "Firmware: semáforo que mide su velocidad", "tipo": "info", "archivo": "semaforo_velocidad.py",
+     "descripcion": "MicroPython para el ESP32 (Thonny, F5): tres ciclos de semáforo y luego 20 000 cambios del LED rojo medidos con ticks_us; imprime los microsegundos por cambio, normal y con el método en variable local. Su par en C/C++ es semaforo_velocidad/semaforo_velocidad.ino (Arduino IDE, Monitor Serie a 115200). Los números reales solo salen en la placa.",
+     "cubre": ["El mismo programa en los dos lenguajes, comparando sintaxis y velocidad"]},
+    {"id": "fw-7seg", "nombre": "Firmware: display de siete segmentos", "tipo": "info", "archivo": "siete_segmentos.py",
+     "descripcion": "MicroPython que dibuja un \"2\" en un display de cátodo común; su par en C/C++ es siete_segmentos/siete_segmentos.ino. Son el código de las dos capturas de Wokwi."}
+  ],
+  "notas": "No hay nada que instalar en el PC: los .py corren en el ESP32 (MicroPython) y los .ino los compila el Arduino IDE. Wokwi necesita internet. Grabar un .ino en la placa borra MicroPython (hay que reinstalarlo después)."
+}
