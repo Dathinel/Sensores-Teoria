@@ -34,6 +34,8 @@
 #   python drones_pybullet.py --puerto COM5
 #   python drones_pybullet.py --mision        # ventana: despega solo y vuela la mision A->B->C (para mostrarla)
 #   python drones_pybullet.py --prueba         # sin ventana: vuela la mision A->B->C y la mide
+#     (en la prueba imprime tambien 'PUNTO A x y z' y una linea 'RUTA t x y z' cada 0,1 s con la
+#      posicion del lider: la app del tema 9 las usa para DIBUJAR la ruta mientras vuela)
 
 import argparse
 import math
@@ -295,6 +297,10 @@ def volar(con_ventana=True, puerto="COM7", mision_automatica=False, max_segundos
     pos_anterior = None
     paso, llegadas, t0_mision = 0, [], None
     print("Cierra la ventana o Ctrl+C para salir.")
+    trazar = mision_automatica and not con_ventana   # la prueba: imprimir la ruta para dibujarla
+    if trazar:
+        for nombre, (x, y, z) in PUNTOS.items():
+            print(f"PUNTO {nombre} {x:.2f} {y:.2f} {z:.2f}")
     try:
         while True:
             teclas, cruda, buffer = leer_teclas(ser, buffer)
@@ -316,6 +322,8 @@ def volar(con_ventana=True, puerto="COM7", mision_automatica=False, max_segundos
                 o = lider.objetivo
                 d.objetivo[:] = [o[0] + dx, o[1] + dy, max(ALTURA_SUELO, o[2] + dz)]
                 d.paso()
+            if trazar and paso % 24 == 0:   # 10 veces por segundo de simulacion
+                print(f"RUTA {paso / 240:.1f} {pos[0]:.3f} {pos[1]:.3f} {pos[2]:.3f}")
             llegado = mando.avanzar_mision(pos, vel)
             if llegado:
                 llegadas.append((llegado, round((paso - (t0_mision or 0)) / 240, 1)))

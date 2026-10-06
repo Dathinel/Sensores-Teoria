@@ -228,7 +228,10 @@ if not os.path.exists('modelo_mnist_cnn.h5'):
     print("(tarda varios minutos; despues de eso ya puedes correr este script normal)")
     exit()
 
-modelo = tf.keras.models.load_model('modelo_mnist_cnn.h5')
+# compile=False: aqui la red solo predice (no se entrena), asi que no hace
+# falta su optimizador; el .h5 se guarda sin el (ver entrenar_modelo.py) y
+# sin esto Keras avisaria "No training configuration found" al cargar.
+modelo = tf.keras.models.load_model('modelo_mnist_cnn.h5', compile=False)
 print("Modelo cargado. Presiona 'q' para salir.")
 
 
@@ -344,6 +347,7 @@ ventana_confianzas = []  # su confianza correspondiente, para poder promediar
 digito_enviado = None       # ultimo digito que se le mando al ESP-A (para no repetir envios)
 ultima_confirmacion = None  # ultima confirmacion "REENVIADO:n" que llego del ESP-A
 ultima_linea_cruda = None   # ultima linea que llego del ESP-A, sea o no una confirmacion
+ultima_prediccion = None    # las 10 probabilidades del ultimo frame (solo para el estado en vivo, 4.10)
 
 
 def clasificar_frame(roi):
@@ -352,8 +356,10 @@ def clasificar_frame(roi):
     hay contorno reconocible O si la confianza de la CNN no alcanza
     UMBRAL_CONFIANZA — asi un frame ruidoso entra a la ventana como
     "nada" en vez de como un digito equivocado."""
+    global ultima_prediccion
     digito_procesado, bbox = preprocesar_digito(roi)
     if digito_procesado is None:
+        ultima_prediccion = None
         return None, 0.0, None
 
     entrada = digito_procesado.reshape(1, 28, 28, 1)
@@ -366,6 +372,10 @@ def clasificar_frame(roi):
     # entrenar), igual que hace predict(). float32 es el tipo con el que
     # se entreno la red.
     prediccion = modelo(entrada.astype(np.float32), training=False).numpy()
+    # Las 10 probabilidades (una por digito) se guardan aparte solo para
+    # el "estado en vivo" opcional de la app (seccion 4.10); la logica de
+    # votacion de abajo sigue usando solo la clase ganadora y su confianza.
+    ultima_prediccion = prediccion[0]
     clase = int(np.argmax(prediccion))
     confianza = float(np.max(prediccion)) * 100
 
@@ -487,6 +497,77 @@ def esquinas_roi(frame, x1, y1, x2, y2, color, grosor, largo):
 LARGO_ESQUINA = min(lado, 40)
 
 
+# ------------------------------------------------------------------
+# 4.10 (Opcional) Estado en vivo para la app del tema
+# ------------------------------------------------------------------
+# Con `--estado archivo.json` el programa escribe ahi, unas 5 veces por
+# segundo, lo mismo que dibuja en su ventana: el recorte del recuadro
+# (achicado), la entrada de 28x28 que ve la red, las 10 probabilidades,
+# la ventana de 15 votos y el digito confirmado/enviado. La app del tema
+# (app/index.html) lee ese archivo y lo dibuja paso a paso al lado de la
+# prueba. Sin `--estado` no se escribe nada: el uso normal (consola,
+# Thonny, doble clic) queda exactamente igual que antes.
+RUTA_ESTADO = None
+if "--estado" in sys.argv:
+    _i = sys.argv.index("--estado")
+    RUTA_ESTADO = sys.argv[_i + 1] if _i + 1 < len(sys.argv) else "estado_en_vivo.json"
+_ultimo_estado = 0.0
+
+
+def _a_hex(imagen_0_255, bits):
+    """Imagen en escala de grises (0-255) -> texto hexadecimal compacto:
+    con bits=8 dos caracteres por pixel, con bits=4 uno solo (16 tonos,
+    suficiente para la miniatura del recuadro)."""
+    plano = np.asarray(imagen_0_255, dtype=np.uint8).ravel()
+    if bits == 4:
+        return "".join("0123456789abcdef"[v >> 4] for v in plano)
+    return plano.tobytes().hex()
+
+
+def escribir_estado(roi, digito_procesado, clase_frame, confianza_frame,
+                    confirmado, proporcion, confianza_promedio, terminado=False):
+    """Escribe RUTA_ESTADO (si se pidio) como maximo cada 0.2 s. Se
+    escribe a un archivo temporal y despues se reemplaza de un golpe
+    (os.replace) para que la app nunca lea un JSON a medio escribir. Si
+    el reemplazo falla (la app justo lo esta leyendo), se salta esa vez."""
+    global _ultimo_estado
+    if RUTA_ESTADO is None:
+        return
+    ahora = time.time()
+    if not terminado and ahora - _ultimo_estado < 0.2:
+        return
+    _ultimo_estado = ahora
+    import json
+    mini = cv2.resize(cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY), (56, 56), interpolation=cv2.INTER_AREA)
+    datos = {
+        "t": ahora,
+        "terminado": terminado,
+        "modo": "mouse" if MODO_MOUSE else "camara",
+        "recuadro56": _a_hex(mini, 4),
+        "entrada28": None if digito_procesado is None else _a_hex((digito_procesado * 255).round(), 8),
+        "probabilidades": None if ultima_prediccion is None else [round(float(p), 4) for p in ultima_prediccion],
+        "clase_frame": clase_frame,
+        "confianza_frame": round(float(confianza_frame), 1),
+        "ventana": list(ventana),
+        "tam_ventana": TAM_VENTANA,
+        "umbral_confianza": UMBRAL_CONFIANZA,
+        "umbral_confirmacion": UMBRAL_CONFIRMACION,
+        "confirmado": confirmado,
+        "proporcion": round(float(proporcion), 3),
+        "confianza_promedio": round(float(confianza_promedio), 1),
+        "esp_a": "no conectado" if ser is None else "conectado",
+        "enviado": digito_enviado,
+        "confirmacion_esp_a": ultima_confirmacion,
+    }
+    try:
+        temporal = RUTA_ESTADO + ".tmp"
+        with open(temporal, "w", encoding="utf-8") as f:
+            json.dump(datos, f)
+        os.replace(temporal, RUTA_ESTADO)
+    except OSError:
+        pass
+
+
 while True:
     if cap is not None:
         ret, frame = cap.read()
@@ -574,6 +655,10 @@ while True:
         # se manda de una, no se espera a que cambie de otro digito
         digito_enviado = None
 
+    # 4.4b Estado en vivo para la app (solo con --estado; ver 4.10)
+    escribir_estado(roi, digito_procesado, clase_frame, confianza_frame,
+                    confirmado, proporcion, confianza_promedio)
+
     # 4.5 Mostrar el digito preprocesado ampliado, con un marco del
     # mismo color/pulso que las esquinas de la ROI y una barra de
     # titulo arriba -- esto es "la parte que lockea": ahora se nota a
@@ -652,6 +737,12 @@ while True:
     if cv2.getWindowProperty(VENTANA_PRINCIPAL, cv2.WND_PROP_VISIBLE) < 1:
         break
 
+if RUTA_ESTADO is not None:
+    # avisar a la app que el programa ya termino (deja de esperar datos)
+    try:
+        escribir_estado(roi, None, None, 0.0, None, 0.0, 0.0, terminado=True)
+    except NameError:
+        pass  # se cerro antes del primer frame
 if cap is not None:
     cap.release()
 cv2.destroyAllWindows()

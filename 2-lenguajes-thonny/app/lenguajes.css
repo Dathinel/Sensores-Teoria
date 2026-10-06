@@ -22,9 +22,9 @@
 .lado-cab { font-size: .92rem; margin-bottom: .5rem; }
 .lado-cc .lado-cab b { color: var(--cc); }
 .lado-mp .lado-cab b { color: var(--mp); }
-.tubo { list-style: none; margin: 0; padding: 0; display: grid; gap: .35rem; flex: 1; }
+.tubo { list-style: none; margin: 0; padding: 0; display: grid; gap: .8rem; align-content: start; }
 .tubo li { position: relative; background: rgba(0,0,0,.25); border-radius: 7px; padding: .45rem .6rem; font-size: .86rem; line-height: 1.35; }
-.tubo li + li::before { content: "↓"; position: absolute; top: -.85rem; left: 50%; font-size: .75rem; color: var(--tenue); }
+.tubo li + li::before { content: "↓"; position: absolute; top: -.8rem; line-height: .8rem; left: 50%; font-size: .75rem; color: var(--tenue); }
 .lado-cc .tubo li { animation: pulso-cc 4s infinite; }
 .lado-mp .tubo li { animation: pulso-mp 4s infinite; }
 .tubo li:nth-child(2) { animation-delay: 1s; } .tubo li:nth-child(3) { animation-delay: 2s; } .tubo li:nth-child(4) { animation-delay: 3s; }
@@ -136,6 +136,42 @@
 .problemas details { background: var(--panel); border: 1px solid var(--borde); border-radius: 10px; padding: .6rem .9rem; }
 .problemas summary { cursor: pointer; font-weight: 500; }
 .problemas p { color: var(--suave); margin: .5rem 0 .2rem; font-size: .92rem; }
+
+/* ---------- duelo animado (botón "Ver cómo corre cada uno") ---------- */
+.duelo-caja { display: grid; gap: .7rem; }
+.duelo-pie { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; font-size: .8rem; }
+.carril { margin-top: auto; padding-top: .7rem; display: grid; gap: .45rem; }
+.carril-barra { height: 6px; border-radius: 99px; background: rgba(0,0,0,.35); overflow: hidden; }
+.carril-barra div { height: 100%; width: 0; background: var(--cc); border-radius: 99px; }
+.carril-pie { display: flex; align-items: center; gap: .5rem; font-family: var(--mono); font-size: .74rem; color: var(--tenue); min-height: 2.3em; }
+.led-mini { flex: none; width: 14px; height: 14px; border-radius: 50%; background: #3a1512; border: 1px solid #5a2520; }
+.led-mini.on { background: #ff3b2f; box-shadow: 0 0 10px #ff3b2f; }
+.carril-cod { margin: 0; background: rgba(0,0,0,.35); border-radius: 7px; padding: .35rem .5rem; font-size: .72rem; line-height: 1.5; display: grid; color: #b9a476; }
+.carril-cod span { border-radius: 4px; padding: 0 .3rem; }
+.carril-cod span.leyendo { background: rgba(240,180,41,.22); color: #fff; box-shadow: inset 3px 0 0 var(--mp); }
+/* mientras se reproduce, el latido automático se apaga y manda el JS */
+.duelo.jugando .tubo li { animation: none; opacity: .45; transition: opacity .2s, box-shadow .2s; }
+.duelo.jugando .lado-cc .tubo li.activo { opacity: 1; box-shadow: inset 3px 0 0 var(--cc), 0 0 0 1px rgba(63,181,176,.5); }
+.duelo.jugando .lado-mp .tubo li.activo { opacity: 1; box-shadow: inset 3px 0 0 var(--mp), 0 0 0 1px rgba(240,180,41,.5); }
+.duelo.jugando .tubo li.hecho { opacity: .8; }
+.duelo.jugando .carril-txt { color: var(--texto); }
+
+/* ---------- selector de números del display ---------- */
+.digitos { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; justify-content: center; }
+.digitos .app-tenue { width: 100%; text-align: center; font-size: .8rem; }
+.dig { font-family: var(--mono); font-size: .9rem; width: 2.1rem; height: 2.1rem; border-radius: 7px; border: 1px solid var(--borde); background: var(--panel); color: var(--texto); cursor: pointer; }
+.dig:hover { border-color: #ff6b5b; }
+.dig.activo { background: #ff3b2f; border-color: #ff3b2f; color: #1a0503; font-weight: 700; }
+.cod-digito { width: 100%; border: 1px solid var(--borde); border-radius: 10px; overflow: hidden; background: var(--hondo); }
+.cod-digito pre { margin: 0; padding: .5rem .7rem; font-size: .76rem; line-height: 1.5; overflow-x: auto; }
+.cod-digito pre .on { color: #ff6b5b; }
+.cod-digito pre .off { color: var(--tenue); }
+
+/* ---------- cargando ---------- */
+.cargando { color: var(--tenue); font-style: italic; display: inline-flex; align-items: center; gap: .5rem; }
+.cargando::before { content: ""; width: .9em; height: .9em; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: girar .8s linear infinite; }
+@keyframes girar { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .cargando::before { animation: none; } }
 
 /* sin App.pasos: todo seguido */
 #guia.sin-pasos .paso { border-top: 1px solid var(--borde); padding-top: 1.4rem; margin-top: 1.4rem; }

@@ -10,7 +10,11 @@
     "Describir el funcionamiento con videos y pantallazos, y subirlo al repositorio"
   ],
   "python": {
-    "versiones": ["3.13", "3.14", "3.12"],
+    "versiones": [
+      "3.13",
+      "3.14",
+      "3.12"
+    ],
     "paquetes": [
       "pybullet==3.2.7",
       "pyserial==3.5"
@@ -25,7 +29,7 @@
       "args": [],
       "cwd": ".",
       "ventana": true,
-      "descripcion": "Abre la ventana de PyBullet con el brazo. Sin ESP32 la consola dice 'No se encontro el ESP32 en COM7' y se usan los 7 botones del panel derecho: joint_1 (base) +/-, joint_2 (codo) +/-, pinza +/- (la pinza sube y los dedos se abren a la vez) y Home. Cada clic mueve ~2.9° o 5 mm. Se cierra cerrando la ventana.",
+      "descripcion": "Abre la ventana de PyBullet con el brazo. Sin ESP32 la consola dice 'No se encontro el ESP32 en COM7' y se usan los 7 botones del panel derecho: joint_1 (base) +/-, joint_2 (codo) +/-, pinza +/- (la pinza sube y los dedos se abren a la vez) y Home. Cada clic mueve ~2.9° o 5 mm. Se cierra cerrando la ventana. La primera vez se compila PyBullet (~10 min, con las Build Tools de C++ de Visual Studio); después abre en unos segundos.",
       "cubre": [
         "Script de Python que recibe datos por UART y controla el robot",
         "Probar el movimiento de las articulaciones y la apertura/cierre de la pinza"
@@ -56,7 +60,7 @@
       "id": "montaje",
       "nombre": "Montaje 3D del teclado al ESP32",
       "tipo": "archivo",
-      "archivo": "img/montaje-3d.png",
+      "archivo": "img/montaje-3d.jpg",
       "descripcion": "Filas R1-R4 a GPIO14/27/26/25 y columnas C1-C4 a GPIO33/32/18/19, directo con la cinta del teclado. Las fotos del montaje real están en img/foto-teclado-esp32.jpg."
     },
     {

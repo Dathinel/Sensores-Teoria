@@ -1,11 +1,29 @@
 # Dígitos: brazo que dibuja + visión que reconoce
 
+## ¿Quiere probarlo? → aquí está
+
+Doble clic en [`ABRIR.bat`](ABRIR.bat) (en Linux o Mac, `sh abrir.sh`). Se abre la app del tema en una ventana propia, con una barra lateral agrupada por punto:
+
+- **Punto 2 · La red en vivo** (al instante, sin instalar nada): se dibuja un dígito con el mouse y se ve, paso a paso, lo que hace `reconocer_digito.py`: la imagen preprocesada de 28×28, los 32 filtros de la primera capa de la CNN, la probabilidad de cada dígito, la ventana de 15 votos (12 de 15 para confirmar) y el `DIGIT:n` que llegaría a la OLED. Corre en el navegador con **los mismos pesos** de `modelo_mnist_cnn.h5`. Con *Programa de Python* abre el programa real (lienzo del mouse o cámara; tarda ~20-60 s en cargar TensorFlow) y la página dibuja en vivo lo que el programa ve.
+- **Punto 1 · Pruébalo**: abre el brazo de PyBullet que dibuja los dígitos (la primera vez se compila PyBullet, ~10 min), con la trayectoria de cada dígito dibujada en la página mientras tanto, y el teclado + LCD simulados.
+- **Cómo funciona**, **Conexiones** y **Con el ESP32** de cada punto, y **Resultados**: lo mismo de los README, resumido y con las fotos. Sin ESP32 ni cámara se prueba todo.
+
+![La app del tema 8: el dígito dibujado, la entrada de 28x28, los filtros, las probabilidades, los votos y la OLED](img/app.png)
+
+## ¿Quiere saber cómo funciona? → aquí está todo
+
+- **Este README** (el mapa): [Qué es cada cosa nueva](#qué-es-cada-cosa-nueva) · [La idea general](#la-idea-general) · [Cómo probarlo](#cómo-probarlo) · [El montaje y la demo](#el-montaje-y-la-demo)
+- **[Punto 1: teclado + brazo dibujando](punto-1-teclado-brazo-dibujando/README.md)**: [teclado matricial](punto-1-teclado-brazo-dibujando/README.md#qué-es-un-teclado-matricial-y-cómo-se-lee) · [I2C y la LCD](punto-1-teclado-brazo-dibujando/README.md#qué-es-i2c-y-cómo-maneja-la-lcd) · [URDF](punto-1-teclado-brazo-dibujando/README.md#qué-es-un-urdf-y-qué-articulaciones-usa-el-dibujo) · [por qué ángulos y no XYZ](punto-1-teclado-brazo-dibujando/README.md#por-qué-el-brazo-se-maneja-por-ángulos-y-no-por-coordenadas-xyz) · [la idea general](punto-1-teclado-brazo-dibujando/README.md#la-idea-general) · [los trazos](punto-1-teclado-brazo-dibujando/README.md#los-trazos-de-cada-dígito) · [conexiones](punto-1-teclado-brazo-dibujando/README.md#conexiones) · [archivos](punto-1-teclado-brazo-dibujando/README.md#qué-hace-cada-archivo) · [la lógica del código](punto-1-teclado-brazo-dibujando/README.md#la-lógica-del-código) · [cómo probarlo](punto-1-teclado-brazo-dibujando/README.md#cómo-probarlo) · [montaje y demo](punto-1-teclado-brazo-dibujando/README.md#el-montaje-y-la-demo)
+- **[Punto 2: reconocimiento + OLED por SPI](punto-2-reconocimiento-oled-spi/README.md)**: [CNN y MNIST](punto-2-reconocimiento-oled-spi/README.md#qué-es-una-cnn-y-qué-es-mnist) · [OpenCV](punto-2-reconocimiento-oled-spi/README.md#qué-es-opencv) · [SPI](punto-2-reconocimiento-oled-spi/README.md#qué-es-spi-maestro-y-esclavo) · [UART2](punto-2-reconocimiento-oled-spi/README.md#qué-es-uart2) · [OLED](punto-2-reconocimiento-oled-spi/README.md#qué-es-una-oled-ssd1306) · [la idea general](punto-2-reconocimiento-oled-spi/README.md#la-idea-general) · [conexiones](punto-2-reconocimiento-oled-spi/README.md#conexiones) · [archivos](punto-2-reconocimiento-oled-spi/README.md#qué-hace-cada-archivo) · [cómo se entrenó](punto-2-reconocimiento-oled-spi/README.md#cómo-se-entrenó-la-red-entrenar_modelopy) · [la lógica del reconocimiento](punto-2-reconocimiento-oled-spi/README.md#la-lógica-del-reconocimiento-reconocer_digitopy) · [los dos ESP32](punto-2-reconocimiento-oled-spi/README.md#la-lógica-de-los-dos-esp32) · [cómo probarlo](punto-2-reconocimiento-oled-spi/README.md#cómo-probarlo) · [montaje y demo](punto-2-reconocimiento-oled-spi/README.md#el-montaje-y-la-demo)
+
+---
+
 Actividad de dos puntos independientes, los dos alrededor de los dígitos del 0 al 9. El enunciado recomienda tomar como base el `brazo.urdf` y el ejemplo de visión con OpenCV del repositorio [U_Militar](https://github.com/dialejobv/U_Militar/blob/main/README.md), y eso hicimos. Los dos puntos van en sentidos opuestos:
 
 - El **punto 1** va del dígito al movimiento: un teclado elige un número y un brazo simulado lo dibuja.
 - El **punto 2** va de la imagen al dígito: la cámara ve un número escrito a mano, una red neuronal lo reconoce y dos ESP32 lo llevan hasta una pantalla.
 
-Cada punto tiene su propia carpeta, con su README completo (conceptos, conexiones pin a pin, qué hace cada archivo, la lógica del código y cómo probarlo), su código y su propio `entorno/` de Python. Este README es solo el mapa.
+Cada punto tiene su propia carpeta, con su README completo (conceptos, conexiones pin a pin, qué hace cada archivo, la lógica del código y cómo probarlo), su código y su propio `entorno/` de Python. Este README es solo el mapa. En esta carpeta quedan además la app del tema (`ABRIR.bat`/`abrir.sh`, `app/` y `probar.json`, ver "¿Quiere probarlo?") e `img/` con su captura. La app trae `app/cnn.js` (la CNN y el preprocesamiento en JavaScript), `app/cnn-pesos.bin` (los mismos pesos del modelo en int8, ~220 KB) y `app/exportar_pesos_web.py`, que los vuelve a generar si se reentrena el modelo.
 
 ## Qué es cada cosa nueva
 
@@ -38,7 +56,7 @@ Los dos puntos usan el mismo protocolo de texto hacia o desde el PC, una línea 
 
 ## [Punto 1: teclado + brazo dibujando](./punto-1-teclado-brazo-dibujando)
 
-![Enunciado del punto 1](punto-1-teclado-brazo-dibujando/enunciado-actividad.png)
+![Enunciado del punto 1](punto-1-teclado-brazo-dibujando/img/enunciado-actividad.png)
 
 Se aprieta una tecla del 0 al 9, el ESP32 la muestra en la LCD y le manda `DIGIT:n` al PC, y el brazo simulado la dibuja con una línea amarilla que sale de la punta de la pinza, como un lápiz. Sin ESP32, la ventana de PyBullet trae 10 botones, uno por dígito.
 
@@ -46,7 +64,7 @@ Lo difícil fue geométrico: un brazo con solo dos articulaciones de giro (base 
 
 ## [Punto 2: reconocimiento + OLED por SPI](./punto-2-reconocimiento-oled-spi)
 
-![Enunciado del punto 2](punto-2-reconocimiento-oled-spi/enunciado-actividad.png)
+![Enunciado del punto 2](punto-2-reconocimiento-oled-spi/img/enunciado-actividad.png)
 
 Un dígito escrito en papel se muestra a la cámara; OpenCV lo recorta y lo deja con el aspecto de una imagen de MNIST (28×28, fondo negro, centrado por centro de masa), y una CNN (Conv2D 32 → MaxPool → Conv2D 64 → MaxPool → Dense 128 → Dropout 0.5 → Dense 10) dice qué dígito es. Como la red "duda" de un frame a otro, un dígito solo se confirma si en los últimos 15 frames ganó con al menos el 80 % de los votos, y cada voto necesita 60 % de confianza. Con los ajustes del preprocesamiento y del entrenamiento, la precisión sobre un lote de 240 imágenes de prueba pasó de 78.3 % a 98.3 %.
 

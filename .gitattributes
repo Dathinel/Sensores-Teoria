@@ -1,3 +1,4 @@
-# Lanzador: el .bat con CRLF (cmd.exe se confunde con LF) y el .sh con LF (sh no acepta el retorno de carro).
-/PROBAR.bat text eol=crlf
-/probar.sh text eol=lf
+# Cada práctica se abre con <carpeta>/ABRIR.bat (con CRLF: cmd.exe se confunde con LF) o con
+# <carpeta>/abrir.sh (con LF: sh no acepta el retorno de carro). Los dos llaman a _lanzador/lanzador.py.
+ABRIR.bat text eol=crlf
+abrir.sh text eol=lf

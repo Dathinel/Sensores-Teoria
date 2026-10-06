@@ -2,6 +2,28 @@
 
 Parcial del primer corte: dibujar una figura propia en un osciloscopio usando el ESP32, a partir de la idea de las figuras de Lissajous vista en clase.
 
+## ¿Quiere probarlo? → aquí está
+
+Doble clic en **[`ABRIR.bat`](ABRIR.bat)** (en Linux o Mac, `./abrir.sh`). Solo hace falta Python 3.9 o más nuevo: no instala nada más, ni hace falta ESP32 ni osciloscopio. Se abre una app (una ventana tipo programa, con un menú lateral como el de Docker Desktop) que recorre el tema paso a paso:
+
+1. **Lissajous y el modo XY**: dos senoidales en vivo, con la relación de frecuencias y el desfase ajustables; con 1:1 y 90° sale la elipse del cuerpo del pez.
+2. **El pez, pieza por pieza**: el pez de `pez3_esp32.py` se arma solo (cuerpo, cola, ojo, pupila, boca, aleta) con la geometría exacta del script, mostrando el número que recibe cada DAC, el voltaje, X e Y en el tiempo y la línea de código de cada pieza.
+3. **Cómo se conecta**, **el osciloscopio simulado** ([`preview.html`](preview.html), también con Web Serial si hay placa), **con el ESP32 real** (el código para copiar a Thonny) y **los videos del laboratorio**.
+
+![La app del tema 5: el pez armándose pieza por pieza, con los valores de los dos DAC](img/app-pez-por-partes.png)
+
+## ¿Quiere saber cómo funciona? → aquí está todo
+
+- [Qué pedía el parcial y qué hicimos](#qué-pedía-el-parcial-y-qué-hicimos)
+- Conceptos: [qué es un DAC](#qué-es-un-dac) · [el modo XY](#qué-es-el-modo-xy-de-un-osciloscopio) · [de Lissajous a una figura libre](#qué-son-las-figuras-de-lissajous-y-de-ahí-a-una-figura-libre)
+- [La idea general](#la-idea-general) (diagramas) y [conexiones](#conexiones)
+- [Qué hace cada archivo](#qué-hace-cada-archivo)
+- [Por qué se ve como una figura sólida](#por-qué-se-ve-como-una-figura-sólida-y-no-como-puntos-sueltos) y [cómo está construida la figura del pez](#cómo-está-construida-la-figura-del-pez)
+- [La lógica del código, paso a paso](#la-lógica-del-código-paso-a-paso) y [función por función](#el-código-función-por-función)
+- [Las dos versiones del script](#las-dos-versiones-del-script) y [los límites del rango del DAC](#los-límites-del-rango-del-dac)
+- [Cómo probarlo](#cómo-probarlo) (sin ESP32, con ESP32 sin osciloscopio, con todo) y [problemas de compatibilidad](#problemas-de-compatibilidad)
+- [Demostración en funcionamiento](#demostración-en-funcionamiento) (los videos del laboratorio) y [pendiente](#pendiente)
+
 ## Qué pedía el parcial y qué hicimos
 
 En clase se vio que un osciloscopio en modo XY dibuja figuras de Lissajous cuando a sus dos canales les llegan dos senoidales. El parcial pedía ir un paso más allá: usar el ESP32 como generador de señales y conseguir que en la pantalla del osciloscopio apareciera una figura propia, no solo los patrones clásicos.
@@ -84,7 +106,8 @@ En el osciloscopio: los dos canales con la misma escala de voltios por división
 - **`pez3_esp32.py`**: el script de un solo pez. Define cada pieza ya en su posición final dentro de la pantalla y la mueve entera con `DESPLAZAMIENTO_X = -0.08`. Es el que se usa para mostrar el pez grande y bien definido. Se guarda en el ESP32 como `main.py`.
 - **`pez5_esp32.py`**: el script de tres peces. Define un pez base centrado en el origen y lo reutiliza tres veces con distinto centro y tamaño (`crear_pez`). Es la versión final de la entrega. También se guarda como `main.py` (uno u otro, no los dos a la vez).
 - **[`preview.html`](preview.html)**: un osciloscopio XY simulado en el navegador (se abre con doble clic, no instala nada). En "Modo prueba" recalcula en JavaScript exactamente la misma geometría de los dos scripts (mismas funciones, mismos números, mismo rango 10-245) y la dibuja punto por punto con un "fósforo" que se desvanece, con los mismos controles `DESPLAZAMIENTO_X/Y` e `INVERT_X/Y` y un contador de puntos recortados contra el borde; trae además una Lissajous de dos senos puros para comparar. En "Conectado" usa Web Serial (Chrome o Edge) para pintar los puntos `x y` que el ESP32 imprime con `ENVIAR_SERIAL = True`, con la última línea cruda recibida para diagnosticar. Captura en "Cómo probarlo".
-- **`demo-*.gif` y `demo-primer-pez-cerca.jpg`**: las grabaciones del osciloscopio, que están incrustadas más abajo en "Demostración en funcionamiento". **`preview-modo-prueba.png`**: la captura de `preview.html`.
+- **`img/`**: `demo-*.gif` y `demo-primer-pez-cerca.jpg` son las grabaciones del osciloscopio, que están incrustadas más abajo en "Demostración en funcionamiento" (los GIF se volvieron a codificar a 560 px, 6 cuadros por segundo y 64 colores para que el repositorio pese menos: de 23 MB a 9 MB, con el pez igual de legible). `preview-modo-prueba.png` es la captura de `preview.html` y `app-pez-por-partes.png` la de la app.
+- **`ABRIR.bat` / `abrir.sh`, `probar.json` y `app/`**: la app de la práctica (ver "¿Quiere probarlo?" arriba). `app/peces.js` repite en JavaScript la geometría de `pez3_esp32.py` para el paso "El pez, pieza por pieza"; `probar.json` le dice al lanzador del repositorio qué acciones tiene la práctica.
 
 Los dos scripts comparten la mayor parte del código (configuración del DAC, conversión, generadores y la función `dibujar`); lo que cambia es cómo se ubica cada pez, explicado en "Las dos versiones del script".
 
@@ -232,7 +255,7 @@ Los dos scripts son MicroPython y usan `machine.DAC`, que solo existe dentro del
 3. Mirar "Puntos por ciclo" (314 y 942, como en la tabla) y "Puntos recortados": con tres peces marca 19, el pez grande aplastado contra el borde izquierdo del que habla "Los límites del rango del DAC". Mover `DESPLAZAMIENTO_X` hasta que marque 0 es probar el arreglo antes de tocar el script.
 4. `INVERT_X`/`INVERT_Y` espejan la figura igual que en el script, y la opción "Lissajous" muestra las figuras clásicas de dos senos (por ejemplo 3:2 con 90° de desfase) para comparar.
 
-![preview.html en modo prueba con los tres peces de pez5_esp32.py y los 19 puntos recortados del pez grande](preview-modo-prueba.png)
+![preview.html en modo prueba con los tres peces de pez5_esp32.py y los 19 puntos recortados del pez grande](img/preview-modo-prueba.png)
 
 **Con ESP32 conectado pero sin osciloscopio**
 
@@ -264,23 +287,23 @@ La figura sale exactamente de las mismas funciones `crear_elipse`, `crear_linea`
 
 Este fue uno de los primeros intentos, todavía sin la figura bien resuelta, mientras se ajustaba la escala y el desplazamiento.
 
-![Primer intento en el osciloscopio, todavía sin la figura del pez bien definida](demo-primer-intento.gif)
+![Primer intento en el osciloscopio, todavía sin la figura del pez bien definida](img/demo-primer-intento.gif)
 
 Ya con la figura resuelta, el pez individual del script pez3_esp32.py dibujado en el osciloscopio.
 
-![Un solo pez dibujado en el osciloscopio en modo XY](demo-un-pez-limpio.gif)
+![Un solo pez dibujado en el osciloscopio en modo XY](img/demo-un-pez-limpio.gif)
 
 De cerca, se nota bien el trazo del cuerpo, la cola, el ojo y la boca.
 
-![Vista de cerca del pez dibujado en la pantalla del osciloscopio](demo-primer-pez-cerca.jpg)
+![Vista de cerca del pez dibujado en la pantalla del osciloscopio](img/demo-primer-pez-cerca.jpg)
 
 Ajustando en vivo los controles verticales del osciloscopio mientras la figura sigue dibujándose.
 
-![Ajustando los controles del osciloscopio mientras el pez se dibuja en pantalla](demo-ajustando-en-vivo.gif)
+![Ajustando los controles del osciloscopio mientras el pez se dibuja en pantalla](img/demo-ajustando-en-vivo.gif)
 
 Y la versión completa del script pez5_esp32.py, con los tres peces dibujados al mismo tiempo en distintas posiciones y tamaños.
 
-![Tres peces dibujados al mismo tiempo en el osciloscopio](demo-tres-peces.gif)
+![Tres peces dibujados al mismo tiempo en el osciloscopio](img/demo-tres-peces.gif)
 
 ## Pendiente
 

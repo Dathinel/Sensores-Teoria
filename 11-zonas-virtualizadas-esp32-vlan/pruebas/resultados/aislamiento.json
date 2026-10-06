@@ -1,5 +1,5 @@
 {
-  "fecha_epoch": 1791217409.1,
+  "fecha_epoch": 1791259810.0,
   "resumen": {
     "casos": 45,
     "aprobadas": 45,
@@ -8,16 +8,16 @@
   },
   "router": {
     "ip_forward": "1",
-    "frr_show_ip_route": "Codes: K - kernel route, C - connected, L - local, S - static,\n       R - RIP, O - OSPF, I - IS-IS, B - BGP, E - EIGRP, N - NHRP,\n       T - Table, v - VNC, V - VNC-Direct, A - Babel, F - PBR,\n       f - OpenFabric, t - Table-Direct,\n       > - selected route, * - FIB route, q - queued, r - rejected, b - backup\n       t - trapped, o - offload failure\n\nK>* 0.0.0.0/0 [0/0] via 192.168.10.1, eth2, 00:00:35\nC>* 192.168.10.0/24 is directly connected, eth2, 00:00:35\nL>* 192.168.10.254/32 is directly connected, eth2, 00:00:35\nC>* 192.168.20.0/24 is directly connected, eth0, 00:00:35\nL>* 192.168.20.254/32 is directly connected, eth0, 00:00:35\nC>* 192.168.30.0/24 is directly connected, eth1, 00:00:35\nL>* 192.168.30.254/32 is directly connected, eth1, 00:00:35",
+    "frr_show_ip_route": "Codes: K - kernel route, C - connected, L - local, S - static,\n       R - RIP, O - OSPF, I - IS-IS, B - BGP, E - EIGRP, N - NHRP,\n       T - Table, v - VNC, V - VNC-Direct, A - Babel, F - PBR,\n       f - OpenFabric, t - Table-Direct,\n       > - selected route, * - FIB route, q - queued, r - rejected, b - backup\n       t - trapped, o - offload failure\n\nK>* 0.0.0.0/0 [0/0] via 192.168.10.1, eth0, 00:01:30\nC>* 192.168.10.0/24 is directly connected, eth0, 00:01:30\nL>* 192.168.10.254/32 is directly connected, eth0, 00:01:30\nC>* 192.168.20.0/24 is directly connected, eth1, 00:01:30\nL>* 192.168.20.254/32 is directly connected, eth1, 00:01:30\nC>* 192.168.30.0/24 is directly connected, eth2, 00:01:30\nL>* 192.168.30.254/32 is directly connected, eth2, 00:01:30",
     "iptables_forward_reglas": [
       "-P FORWARD DROP",
-      "-A FORWARD -i eth2 -o eth0 -j AISLAR_V1_V2",
-      "-A FORWARD -i eth0 -o eth2 -j AISLAR_V1_V2",
+      "-A FORWARD -i eth0 -o eth1 -j AISLAR_V1_V2",
+      "-A FORWARD -i eth1 -o eth0 -j AISLAR_V1_V2",
       "-A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT",
-      "-A FORWARD -s 192.168.10.0/24 -d 192.168.30.0/24 -i eth2 -o eth1 -j ACCEPT",
-      "-A FORWARD -s 192.168.30.0/24 -d 192.168.10.0/24 -i eth1 -o eth2 -j ACCEPT",
-      "-A FORWARD -s 192.168.20.0/24 -d 192.168.30.0/24 -i eth0 -o eth1 -j ACCEPT",
-      "-A FORWARD -s 192.168.30.0/24 -d 192.168.20.0/24 -i eth1 -o eth0 -j ACCEPT"
+      "-A FORWARD -s 192.168.10.0/24 -d 192.168.30.0/24 -i eth0 -o eth2 -j ACCEPT",
+      "-A FORWARD -s 192.168.30.0/24 -d 192.168.10.0/24 -i eth2 -o eth0 -j ACCEPT",
+      "-A FORWARD -s 192.168.20.0/24 -d 192.168.30.0/24 -i eth1 -o eth2 -j ACCEPT",
+      "-A FORWARD -s 192.168.30.0/24 -d 192.168.20.0/24 -i eth2 -o eth1 -j ACCEPT"
     ],
     "drops_inicio": {
       "total": 0,
@@ -264,15 +264,15 @@
         "enviados": 3,
         "recibidos": 3,
         "rtt_ms": [
-          0.13,
-          0.089,
-          0.097
+          0.161,
+          0.136,
+          0.17
         ],
         "ttl": [
           63
         ],
         "via": "docker exec",
-        "salida": "PING 192.168.10.10 (192.168.10.10): 56 data bytes\n64 bytes from 192.168.10.10: seq=0 ttl=63 time=0.130 ms\n64 bytes from 192.168.10.10: seq=1 ttl=63 time=0.089 ms\n64 bytes from 192.168.10.10: seq=2 ttl=63 time=0.097 ms\n\n--- 192.168.10.10 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.089/0.105/0.130 ms"
+        "salida": "PING 192.168.10.10 (192.168.10.10): 56 data bytes\n64 bytes from 192.168.10.10: seq=0 ttl=63 time=0.161 ms\n64 bytes from 192.168.10.10: seq=1 ttl=63 time=0.136 ms\n64 bytes from 192.168.10.10: seq=2 ttl=63 time=0.170 ms\n\n--- 192.168.10.10 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.136/0.155/0.170 ms"
       }
     },
     {
@@ -295,15 +295,15 @@
         "enviados": 3,
         "recibidos": 3,
         "rtt_ms": [
-          0.15,
-          0.136,
-          0.096
+          0.12,
+          0.205,
+          0.146
         ],
         "ttl": [
           63
         ],
         "via": "docker exec",
-        "salida": "PING 192.168.10.21 (192.168.10.21): 56 data bytes\n64 bytes from 192.168.10.21: seq=0 ttl=63 time=0.150 ms\n64 bytes from 192.168.10.21: seq=1 ttl=63 time=0.136 ms\n64 bytes from 192.168.10.21: seq=2 ttl=63 time=0.096 ms\n\n--- 192.168.10.21 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.096/0.127/0.150 ms"
+        "salida": "PING 192.168.10.21 (192.168.10.21): 56 data bytes\n64 bytes from 192.168.10.21: seq=0 ttl=63 time=0.120 ms\n64 bytes from 192.168.10.21: seq=1 ttl=63 time=0.205 ms\n64 bytes from 192.168.10.21: seq=2 ttl=63 time=0.146 ms\n\n--- 192.168.10.21 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.120/0.157/0.205 ms"
       }
     },
     {
@@ -326,15 +326,15 @@
         "enviados": 3,
         "recibidos": 3,
         "rtt_ms": [
-          0.147,
-          0.119,
-          0.12
+          0.17,
+          0.118,
+          0.158
         ],
         "ttl": [
           63
         ],
         "via": "docker exec",
-        "salida": "PING 192.168.10.22 (192.168.10.22): 56 data bytes\n64 bytes from 192.168.10.22: seq=0 ttl=63 time=0.147 ms\n64 bytes from 192.168.10.22: seq=1 ttl=63 time=0.119 ms\n64 bytes from 192.168.10.22: seq=2 ttl=63 time=0.120 ms\n\n--- 192.168.10.22 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.119/0.128/0.147 ms"
+        "salida": "PING 192.168.10.22 (192.168.10.22): 56 data bytes\n64 bytes from 192.168.10.22: seq=0 ttl=63 time=0.170 ms\n64 bytes from 192.168.10.22: seq=1 ttl=63 time=0.118 ms\n64 bytes from 192.168.10.22: seq=2 ttl=63 time=0.158 ms\n\n--- 192.168.10.22 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.118/0.148/0.170 ms"
       }
     },
     {
@@ -357,15 +357,15 @@
         "enviados": 3,
         "recibidos": 3,
         "rtt_ms": [
-          0.108,
-          0.115,
-          0.107
+          0.155,
+          0.148,
+          0.127
         ],
         "ttl": [
           63
         ],
         "via": "docker exec",
-        "salida": "PING 192.168.10.23 (192.168.10.23): 56 data bytes\n64 bytes from 192.168.10.23: seq=0 ttl=63 time=0.108 ms\n64 bytes from 192.168.10.23: seq=1 ttl=63 time=0.115 ms\n64 bytes from 192.168.10.23: seq=2 ttl=63 time=0.107 ms\n\n--- 192.168.10.23 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.107/0.110/0.115 ms"
+        "salida": "PING 192.168.10.23 (192.168.10.23): 56 data bytes\n64 bytes from 192.168.10.23: seq=0 ttl=63 time=0.155 ms\n64 bytes from 192.168.10.23: seq=1 ttl=63 time=0.148 ms\n64 bytes from 192.168.10.23: seq=2 ttl=63 time=0.127 ms\n\n--- 192.168.10.23 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.127/0.143/0.155 ms"
       }
     },
     {
@@ -388,15 +388,15 @@
         "enviados": 3,
         "recibidos": 3,
         "rtt_ms": [
-          0.105,
-          0.088,
-          0.078
+          0.198,
+          0.104,
+          0.126
         ],
         "ttl": [
           63
         ],
         "via": "docker exec",
-        "salida": "PING 192.168.20.21 (192.168.20.21): 56 data bytes\n64 bytes from 192.168.20.21: seq=0 ttl=63 time=0.105 ms\n64 bytes from 192.168.20.21: seq=1 ttl=63 time=0.088 ms\n64 bytes from 192.168.20.21: seq=2 ttl=63 time=0.078 ms\n\n--- 192.168.20.21 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.078/0.090/0.105 ms"
+        "salida": "PING 192.168.20.21 (192.168.20.21): 56 data bytes\n64 bytes from 192.168.20.21: seq=0 ttl=63 time=0.198 ms\n64 bytes from 192.168.20.21: seq=1 ttl=63 time=0.104 ms\n64 bytes from 192.168.20.21: seq=2 ttl=63 time=0.126 ms\n\n--- 192.168.20.21 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.104/0.142/0.198 ms"
       }
     },
     {
@@ -419,15 +419,15 @@
         "enviados": 3,
         "recibidos": 3,
         "rtt_ms": [
-          0.102,
-          0.083,
-          0.102
+          0.121,
+          0.131,
+          0.156
         ],
         "ttl": [
           63
         ],
         "via": "docker exec",
-        "salida": "PING 192.168.20.22 (192.168.20.22): 56 data bytes\n64 bytes from 192.168.20.22: seq=0 ttl=63 time=0.102 ms\n64 bytes from 192.168.20.22: seq=1 ttl=63 time=0.083 ms\n64 bytes from 192.168.20.22: seq=2 ttl=63 time=0.102 ms\n\n--- 192.168.20.22 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.083/0.095/0.102 ms"
+        "salida": "PING 192.168.20.22 (192.168.20.22): 56 data bytes\n64 bytes from 192.168.20.22: seq=0 ttl=63 time=0.121 ms\n64 bytes from 192.168.20.22: seq=1 ttl=63 time=0.131 ms\n64 bytes from 192.168.20.22: seq=2 ttl=63 time=0.156 ms\n\n--- 192.168.20.22 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.121/0.136/0.156 ms"
       }
     },
     {
@@ -450,15 +450,15 @@
         "enviados": 3,
         "recibidos": 3,
         "rtt_ms": [
-          0.113,
-          0.094,
-          0.109
+          0.116,
+          0.132,
+          0.086
         ],
         "ttl": [
           63
         ],
         "via": "docker exec",
-        "salida": "PING 192.168.20.23 (192.168.20.23): 56 data bytes\n64 bytes from 192.168.20.23: seq=0 ttl=63 time=0.113 ms\n64 bytes from 192.168.20.23: seq=1 ttl=63 time=0.094 ms\n64 bytes from 192.168.20.23: seq=2 ttl=63 time=0.109 ms\n\n--- 192.168.20.23 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.094/0.105/0.113 ms"
+        "salida": "PING 192.168.20.23 (192.168.20.23): 56 data bytes\n64 bytes from 192.168.20.23: seq=0 ttl=63 time=0.116 ms\n64 bytes from 192.168.20.23: seq=1 ttl=63 time=0.132 ms\n64 bytes from 192.168.20.23: seq=2 ttl=63 time=0.086 ms\n\n--- 192.168.20.23 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.086/0.111/0.132 ms"
       }
     },
     {
@@ -481,15 +481,15 @@
         "enviados": 3,
         "recibidos": 3,
         "rtt_ms": [
-          0.167,
-          0.095,
-          0.107
+          0.219,
+          0.09,
+          0.103
         ],
         "ttl": [
           63
         ],
         "via": "docker exec",
-        "salida": "PING 192.168.10.31 (192.168.10.31): 56 data bytes\n64 bytes from 192.168.10.31: seq=0 ttl=63 time=0.167 ms\n64 bytes from 192.168.10.31: seq=1 ttl=63 time=0.095 ms\n64 bytes from 192.168.10.31: seq=2 ttl=63 time=0.107 ms\n\n--- 192.168.10.31 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.095/0.123/0.167 ms"
+        "salida": "PING 192.168.10.31 (192.168.10.31): 56 data bytes\n64 bytes from 192.168.10.31: seq=0 ttl=63 time=0.219 ms\n64 bytes from 192.168.10.31: seq=1 ttl=63 time=0.090 ms\n64 bytes from 192.168.10.31: seq=2 ttl=63 time=0.103 ms\n\n--- 192.168.10.31 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.090/0.137/0.219 ms"
       }
     },
     {
@@ -512,15 +512,15 @@
         "enviados": 3,
         "recibidos": 3,
         "rtt_ms": [
-          0.148,
-          0.095,
-          0.106
+          0.142,
+          0.129,
+          0.1
         ],
         "ttl": [
           63
         ],
         "via": "docker exec",
-        "salida": "PING 192.168.10.32 (192.168.10.32): 56 data bytes\n64 bytes from 192.168.10.32: seq=0 ttl=63 time=0.148 ms\n64 bytes from 192.168.10.32: seq=1 ttl=63 time=0.095 ms\n64 bytes from 192.168.10.32: seq=2 ttl=63 time=0.106 ms\n\n--- 192.168.10.32 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.095/0.116/0.148 ms"
+        "salida": "PING 192.168.10.32 (192.168.10.32): 56 data bytes\n64 bytes from 192.168.10.32: seq=0 ttl=63 time=0.142 ms\n64 bytes from 192.168.10.32: seq=1 ttl=63 time=0.129 ms\n64 bytes from 192.168.10.32: seq=2 ttl=63 time=0.100 ms\n\n--- 192.168.10.32 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.100/0.123/0.142 ms"
       }
     },
     {
@@ -543,15 +543,15 @@
         "enviados": 3,
         "recibidos": 3,
         "rtt_ms": [
-          0.198,
-          0.107,
+          0.106,
+          0.128,
           0.135
         ],
         "ttl": [
           63
         ],
         "via": "docker exec",
-        "salida": "PING 192.168.10.33 (192.168.10.33): 56 data bytes\n64 bytes from 192.168.10.33: seq=0 ttl=63 time=0.198 ms\n64 bytes from 192.168.10.33: seq=1 ttl=63 time=0.107 ms\n64 bytes from 192.168.10.33: seq=2 ttl=63 time=0.135 ms\n\n--- 192.168.10.33 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.107/0.146/0.198 ms"
+        "salida": "PING 192.168.10.33 (192.168.10.33): 56 data bytes\n64 bytes from 192.168.10.33: seq=0 ttl=63 time=0.106 ms\n64 bytes from 192.168.10.33: seq=1 ttl=63 time=0.128 ms\n64 bytes from 192.168.10.33: seq=2 ttl=63 time=0.135 ms\n\n--- 192.168.10.33 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.106/0.123/0.135 ms"
       }
     },
     {
@@ -574,15 +574,15 @@
         "enviados": 3,
         "recibidos": 3,
         "rtt_ms": [
-          0.136,
-          0.13,
-          0.122
+          0.126,
+          0.113,
+          0.094
         ],
         "ttl": [
           63
         ],
         "via": "docker exec",
-        "salida": "PING 192.168.20.31 (192.168.20.31): 56 data bytes\n64 bytes from 192.168.20.31: seq=0 ttl=63 time=0.136 ms\n64 bytes from 192.168.20.31: seq=1 ttl=63 time=0.130 ms\n64 bytes from 192.168.20.31: seq=2 ttl=63 time=0.122 ms\n\n--- 192.168.20.31 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.122/0.129/0.136 ms"
+        "salida": "PING 192.168.20.31 (192.168.20.31): 56 data bytes\n64 bytes from 192.168.20.31: seq=0 ttl=63 time=0.126 ms\n64 bytes from 192.168.20.31: seq=1 ttl=63 time=0.113 ms\n64 bytes from 192.168.20.31: seq=2 ttl=63 time=0.094 ms\n\n--- 192.168.20.31 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.094/0.111/0.126 ms"
       }
     },
     {
@@ -605,15 +605,15 @@
         "enviados": 3,
         "recibidos": 3,
         "rtt_ms": [
-          0.18,
-          0.115,
-          0.11
+          0.143,
+          0.107,
+          0.091
         ],
         "ttl": [
           63
         ],
         "via": "docker exec",
-        "salida": "PING 192.168.20.32 (192.168.20.32): 56 data bytes\n64 bytes from 192.168.20.32: seq=0 ttl=63 time=0.180 ms\n64 bytes from 192.168.20.32: seq=1 ttl=63 time=0.115 ms\n64 bytes from 192.168.20.32: seq=2 ttl=63 time=0.110 ms\n\n--- 192.168.20.32 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.110/0.135/0.180 ms"
+        "salida": "PING 192.168.20.32 (192.168.20.32): 56 data bytes\n64 bytes from 192.168.20.32: seq=0 ttl=63 time=0.143 ms\n64 bytes from 192.168.20.32: seq=1 ttl=63 time=0.107 ms\n64 bytes from 192.168.20.32: seq=2 ttl=63 time=0.091 ms\n\n--- 192.168.20.32 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.091/0.113/0.143 ms"
       }
     },
     {
@@ -636,15 +636,15 @@
         "enviados": 3,
         "recibidos": 3,
         "rtt_ms": [
-          0.116,
-          0.093,
-          0.085
+          0.169,
+          0.183,
+          0.113
         ],
         "ttl": [
           63
         ],
         "via": "docker exec",
-        "salida": "PING 192.168.20.33 (192.168.20.33): 56 data bytes\n64 bytes from 192.168.20.33: seq=0 ttl=63 time=0.116 ms\n64 bytes from 192.168.20.33: seq=1 ttl=63 time=0.093 ms\n64 bytes from 192.168.20.33: seq=2 ttl=63 time=0.085 ms\n\n--- 192.168.20.33 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.085/0.098/0.116 ms"
+        "salida": "PING 192.168.20.33 (192.168.20.33): 56 data bytes\n64 bytes from 192.168.20.33: seq=0 ttl=63 time=0.169 ms\n64 bytes from 192.168.20.33: seq=1 ttl=63 time=0.183 ms\n64 bytes from 192.168.20.33: seq=2 ttl=63 time=0.113 ms\n\n--- 192.168.20.33 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.113/0.155/0.183 ms"
       }
     },
     {
@@ -667,15 +667,15 @@
         "enviados": 3,
         "recibidos": 3,
         "rtt_ms": [
-          0.127,
-          0.083,
-          0.165
+          0.219,
+          0.117,
+          0.098
         ],
         "ttl": [
           63
         ],
         "via": "auxiliar alpine:3.20 en la red del contenedor",
-        "salida": "PING 192.168.30.10 (192.168.30.10): 56 data bytes\n64 bytes from 192.168.30.10: seq=0 ttl=63 time=0.127 ms\n64 bytes from 192.168.30.10: seq=1 ttl=63 time=0.083 ms\n64 bytes from 192.168.30.10: seq=2 ttl=63 time=0.165 ms\n\n--- 192.168.30.10 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.083/0.125/0.165 ms"
+        "salida": "PING 192.168.30.10 (192.168.30.10): 56 data bytes\n64 bytes from 192.168.30.10: seq=0 ttl=63 time=0.219 ms\n64 bytes from 192.168.30.10: seq=1 ttl=63 time=0.117 ms\n64 bytes from 192.168.30.10: seq=2 ttl=63 time=0.098 ms\n\n--- 192.168.30.10 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.098/0.144/0.219 ms"
       }
     },
     {
@@ -687,15 +687,15 @@
         "enviados": 3,
         "recibidos": 3,
         "rtt_ms": [
-          0.128,
-          0.116,
-          0.118
+          0.154,
+          0.13,
+          0.149
         ],
         "ttl": [
           63
         ],
         "via": "auxiliar alpine:3.20 en la red del contenedor",
-        "salida": "PING 192.168.30.10 (192.168.30.10): 56 data bytes\n64 bytes from 192.168.30.10: seq=0 ttl=63 time=0.128 ms\n64 bytes from 192.168.30.10: seq=1 ttl=63 time=0.116 ms\n64 bytes from 192.168.30.10: seq=2 ttl=63 time=0.118 ms\n\n--- 192.168.30.10 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.116/0.120/0.128 ms"
+        "salida": "PING 192.168.30.10 (192.168.30.10): 56 data bytes\n64 bytes from 192.168.30.10: seq=0 ttl=63 time=0.154 ms\n64 bytes from 192.168.30.10: seq=1 ttl=63 time=0.130 ms\n64 bytes from 192.168.30.10: seq=2 ttl=63 time=0.149 ms\n\n--- 192.168.30.10 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.130/0.144/0.154 ms"
       }
     },
     {
@@ -707,15 +707,15 @@
         "enviados": 3,
         "recibidos": 3,
         "rtt_ms": [
-          0.147,
-          0.095,
-          0.087
+          0.535,
+          0.153,
+          0.151
         ],
         "ttl": [
           63
         ],
         "via": "auxiliar alpine:3.20 en la red del contenedor",
-        "salida": "PING 192.168.30.10 (192.168.30.10): 56 data bytes\n64 bytes from 192.168.30.10: seq=0 ttl=63 time=0.147 ms\n64 bytes from 192.168.30.10: seq=1 ttl=63 time=0.095 ms\n64 bytes from 192.168.30.10: seq=2 ttl=63 time=0.087 ms\n\n--- 192.168.30.10 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.087/0.109/0.147 ms"
+        "salida": "PING 192.168.30.10 (192.168.30.10): 56 data bytes\n64 bytes from 192.168.30.10: seq=0 ttl=63 time=0.535 ms\n64 bytes from 192.168.30.10: seq=1 ttl=63 time=0.153 ms\n64 bytes from 192.168.30.10: seq=2 ttl=63 time=0.151 ms\n\n--- 192.168.30.10 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 0.151/0.279/0.535 ms"
       }
     },
     {
@@ -732,7 +732,7 @@
           "192.168.30.254",
           "192.168.20.23"
         ],
-        "salida": "traceroute to 192.168.20.23 (192.168.20.23), 5 hops max, 46 byte packets\n 1  192.168.30.254  0.006 ms\n 2  192.168.20.23  0.005 ms"
+        "salida": "traceroute to 192.168.20.23 (192.168.20.23), 5 hops max, 46 byte packets\n 1  192.168.30.254  0.008 ms\n 2  192.168.20.23  0.007 ms"
       }
     },
     {
@@ -749,7 +749,7 @@
           "192.168.30.254",
           "192.168.10.21"
         ],
-        "salida": "traceroute to 192.168.10.21 (192.168.10.21), 5 hops max, 46 byte packets\n 1  192.168.30.254  0.009 ms\n 2  192.168.10.21  0.006 ms"
+        "salida": "traceroute to 192.168.10.21 (192.168.10.21), 5 hops max, 46 byte packets\n 1  192.168.30.254  0.008 ms\n 2  192.168.10.21  0.006 ms"
       }
     }
   ]

@@ -1633,3 +1633,34 @@ su causa de `control/reglas.py`), instalación y puertos, botones para el visor 
 enlaces del puerto real que dice `app.lanzar`), las 4 escenas de PyBullet, el asistente (nuevo
 `app/charla.py`: reglas sin clave sobre una COPIA de la base; las órdenes no se mandan), el visor portable
 embebido, resultados (videos, pytest) y el estado del proyecto tal cual está en el README.
+
+## 2026-10-05 (noche) — Menos peso, README "probarlo / cómo funciona" y app tipo Docker Desktop (plan PLAN-ORGANIZAR-APPS, agente P)
+
+**Peso** (archivos versionados de `proyecto-final/`, `git ls-files | du -cb`): **29,0 MB → 17,0 MB**.
+- `docs/videos/`: 15,6 → 7,7 MB. Los GIF del README se recodificaron sin tramado (`dither=none`, ~15 % menos y
+  los rótulos se leen igual, revisado cuadro a cuadro): filtro 1,28 → 0,96 MB y embalaje 1,03 → 0,69 MB (6 fps,
+  64 colores); carro 4,0 → 2,8 MB (5 fps, 48 colores: la cámara sigue al carro y todo el cuadro cambia, por eso
+  pesa más). `todo_junto.gif` (4,5 MB) se quitó: el README no lo mostraba y la app usa el mp4. Los mp4 pasaron de
+  CRF 26 a CRF 30 `-preset slow` (4,9 → 3,2 MB, texto legible). `sim/ver/grabar.py` y `sim/ver/comun.py` quedan
+  con los mismos ajustes (`SIN_GIF = {"todo_junto"}`, `GIF_MAX_MB = 3`) para que regrabar dé lo mismo.
+- `docs/enunciado/`: el PDF 2,3 → 0,58 MB (sus dos imágenes grandes a JPEG 82 % y 1400 px con PyMuPDF; el texto
+  sigue siendo texto) y las figuras PNG cuantizadas a 256 colores y 1400 px (2,1 → 0,67 MB); `docs/capturas/`
+  1,1 → 0,46 MB. La figura 3 se dejó igual (no bajaba).
+- `visor-portable.html` (2,6 MB) se dejó igual: lo que pesa es Three.js y la demo grabada, que son su función
+  (abrir sin Python ni internet), y `tests/visor/test_portable.py` fija su estructura (importmap con módulos
+  base64, tres scripts). Comprimirlo con gzip + DecompressionStream cambiaría esa estructura: no vale el riesgo.
+
+**README**: al principio, "¿Quiere probarlo? → aquí está" (`ABRIR.bat`, qué trae la app, cuánto tarda, captura
+`docs/capturas/app-practica.png`) y "¿Quiere saber cómo funciona? → aquí está todo" (índice enlazado a todas las
+secciones técnicas, que siguen completas). Referencias a `probar.py` → `_lanzador/` (lo movió F2).
+
+**App** (`app-practica/`), como Docker Desktop: cabecera con el estado de la simulación en vivo (lee
+`datos/puertos.json` y `GET /api/estado` del visor, que ya tenía CORS para lecturas) y el botón de pantalla
+completa del motor común; barra lateral con 8 vistas; vista **Programas** con la lista (punto de estado, cuánto
+tarda) y el detalle al lado con Iniciar/Detener arriba; vista **Prueba visual**: la animación del recorrido
+(con la barra del ciclo real de 1,6 s) junto a "En la simulación, ahora" (las piezas reales en E1-E4, almacén
+y rechazos por causa, carro y vasos, cada 1 s; botón para arrancar la línea si no corre y para ver el visor 3D
+ahí mismo). `probar.json`: `duracion`/`duracion_s` en cada acción, `progreso_regex` para pytest y `si_falla`
+del chequeo (sale con error si hay al menos una ✗, p. ej. Ollama apagado). Probado con el lanzador en 8071 a
+1366x768 y 1920x1080 (sin errores de consola), con el chequeo lanzado desde la app y con una corrida propia
+(visor 8791, dashboard 8512, ya cerrada) para ver el panel real con piezas moviéndose.

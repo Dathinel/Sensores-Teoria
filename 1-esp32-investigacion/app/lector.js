@@ -22,8 +22,9 @@
       "La idea general", "Conexiones", "Qué hace cada archivo", "Cómo funciona", "@placa",
       "Qué se usó de todo esto"] },
   ];
-  // Secciones del README que la app reemplaza por su propio capítulo (o que son internas).
-  const OCULTAR = ["Cómo probarlo", "Pendiente"];
+  // Secciones del README que la app reemplaza por su propio capítulo (o que son internas, como el
+  // índice de entrada del README, que aquí es el lateral).
+  const OCULTAR = ["Cómo probarlo", "Pendiente", "¿Quiere"];   // "¿Quiere probarlo?" / "¿Quiere saber…?": la entrada del README
   // Cada punto de "pide" del manifiesto, con el capítulo que lo responde.
   const PIDE_A_CAP = [
     ["Origen", "De dónde viene"], ["Quién fabrica", "La familia y quién la fabrica"],
@@ -207,6 +208,8 @@
       return;
     }
     retocar(el);
+    // Si el capítulo terminó de cargar mientras está abierto, ya tiene sus subtítulos.
+    if (caps[actual] === c) pintarSub(el.closest(".capitulo"));
   }
 
   // Ajustes al HTML del README para que funcione dentro de la app: enlaces relativos del repo
@@ -247,6 +250,54 @@
     el.querySelectorAll("img").forEach((img) => { if (A() && A().imagen) A().imagen(img); });
   }
 
+  // ---------- columna "En este capítulo" (solo en pantallas anchas, ver lector.css) ----------
+  // Lista lo que trae el capítulo abierto para saltar directo: subtítulos (### o párrafos que
+  // empiezan en negrita, que es como el README parte sus capítulos), diagramas y tablas. En los capítulos propios de la app, sus h2. Marca por dónde va la lectura.
+  let subtitulos = [];
+  const recortar = (s, n) => (s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s);
+  // Un párrafo que empieza en negrita ("**1. Chip y firmware.** ...") cuenta como subtítulo.
+  function esObjeto(el) {
+    if (el.parentElement.closest("pre, .mermaid, table")) return false;
+    if (el.tagName !== "STRONG") return true;
+    const p = el.parentElement, txt = el.textContent.trim();
+    return p.firstChild === el && txt.length > 2 && txt.length < 60;
+  }
+  function etiqueta(el) {
+    if (/^(H[23]|STRONG)$/.test(el.tagName)) return el.textContent.trim().replace(/[.:]$/, "");
+    if (el.tagName === "TABLE") {
+      const ths = Array.from(el.querySelectorAll("th")).map((x) => x.textContent.trim()).filter(Boolean);
+      return "▦ Tabla: " + recortar(ths.slice(0, 3).join(" · ") || "datos", 46);
+    }
+    return "◇ Diagrama";
+  }
+  function pintarSub(seccion) {
+    const aside = $("#enCap"), ol = $("#listaSub");
+    if (!aside || !seccion) return;
+    const md = seccion.querySelector(".md");
+    const hs = md
+      ? Array.from(md.querySelectorAll("h3, p > strong:first-child, table, .mermaid")).filter(esObjeto)
+      : Array.from(seccion.querySelectorAll("h2"));
+    ol.innerHTML = "";
+    subtitulos = [];
+    hs.forEach((h, n) => {
+      if (!h.id) h.id = (seccion.id || "cap") + "-sub-" + n;
+      const li = document.createElement("li"), a = document.createElement("a");
+      a.href = "#" + h.id; a.textContent = etiqueta(h);
+      if (!/^(H[23]|STRONG)$/.test(h.tagName)) a.className = "objeto";
+      a.addEventListener("click", (e) => { e.preventDefault(); h.scrollIntoView({ behavior: "smooth", block: "start" }); });
+      li.appendChild(a); ol.appendChild(li);
+      subtitulos.push([h, a]);
+    });
+    aside.hidden = hs.length < 2;
+    marcarSub();
+  }
+  function marcarSub() {
+    let ultimo = null;
+    for (const [h, a] of subtitulos) { a.classList.remove("visto"); if (h.getBoundingClientRect().top < 140) ultimo = a; }
+    if (ultimo) ultimo.classList.add("visto");
+  }
+  window.addEventListener("scroll", () => { if (subtitulos.length) requestAnimationFrame(marcarSub); }, { passive: true });
+
   function ir(i, desdeHash) {
     if (i < 0 || i >= caps.length) return;
     const c = caps[i];
@@ -254,6 +305,7 @@
     const s = seccionDe(c);
     s.hidden = false;
     actual = i;
+    pintarSub(s);
     if (c.id !== "portada") { estado.leidos[c.id] = true; }
     estado.ultimo = c.id;
     guardarEstado();

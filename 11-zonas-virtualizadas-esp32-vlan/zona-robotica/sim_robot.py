@@ -96,7 +96,7 @@ nav{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}nav a{color:#e8e9ee;te
 border:1px solid #2c303a;border-radius:8px;padding:5px 10px;background:#1b1e26}nav a:hover{border-color:#4f8fce}
 nav a.aqui{border-color:#4f8fce;color:#7fb2e6}details{margin-top:6px;color:#9aa}summary{cursor:pointer;font-size:.85rem}
 pre{font-size:12px;color:#9aa;overflow-x:auto}</style></head><body><main>
-<nav id="nav"><a data-p="8080">Dashboard del admin</a><a data-p="8010">Pista</a><a data-p="8011">Spot</a>
+<nav id="nav"><a data-p="8180">Dashboard del admin</a><a data-p="8010">Pista</a><a data-p="8011">Spot</a>
 <a data-p="8012">Pepper</a><a data-p="8013">NAO</a></nav>
 <h1>sim-__ROBOT__ · real-to-sim en vivo (Zona Robótica, VLAN 2)</h1>
 <p id="intro"></p>

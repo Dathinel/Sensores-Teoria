@@ -1,1 +1,0 @@
-API App 1.1 lista (2026-10-05): probar.py --practica <carpeta>; /app/<carpeta>/, /comun/, campo "app"; acciones python/docker en modo app con salida en vivo, entrada, Detener; campos de acción entrada, ventana, modo, si_falla, oculta, vida. Ver apps-comun/LEEME.md.

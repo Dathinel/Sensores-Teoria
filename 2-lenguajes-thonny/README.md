@@ -2,6 +2,49 @@
 
 Basado en [Instalación de Thonny — NODEMCU V3 ESP8266](https://github.com/dialejobv/U_Militar/blob/main/1%29%20Instalaci%C3%B3n%20Thonny/NODEMCU%20V3%20ESP8266.md) (U_Militar, carpeta `1) Instalación Thonny`).
 
+## ¿Quiere probarlo? Aquí está
+
+Doble clic en [`ABRIR.bat`](ABRIR.bat) (en Linux o Mac, `./abrir.sh`). Solo hace falta Python 3.9 o
+más nuevo; no se instala nada más y abre en unos segundos. Se abre la app del tema en una ventana
+propia, por pasos: las dos maneras de programar el ESP32 (compilar C/C++ con el Arduino IDE o
+interpretar MicroPython con Thonny) animadas lado a lado, los dos códigos del display de siete
+segmentos con cada idea resaltada en los dos lenguajes, un display clicable que muestra qué GPIO se
+prende para cada número, el semáforo animado, y botones que abren Wokwi y copian el código listo
+para pegar (los dos ejemplos se prueban en el navegador, sin placa). También trae la instalación de
+MicroPython en el ESP32 como lista para ir marcando y qué hacer si algo falla.
+
+![La app del tema 2: MicroPython frente a C/C++ lado a lado](img/app.png)
+
+## ¿Quiere saber cómo funciona? Aquí está todo
+
+**Los conceptos**
+
+- [Qué pedía la actividad y qué hicimos](#qué-pedía-la-actividad-y-qué-hicimos)
+- [Qué es Thonny](#qué-es-thonny)
+- [Qué es MicroPython (y qué es un firmware)](#qué-es-micropython-y-qué-es-un-firmware), con
+  [por qué MicroPython y no Python normal](#por-qué-micropython-y-no-python-normal)
+- [Qué es compilar y qué es interpretar](#qué-es-compilar-y-qué-es-interpretar)
+- [Cómo se relaciona esto con Arduino y con C++](#cómo-se-relaciona-esto-con-arduino-y-con-c)
+- [La idea general](#la-idea-general) (diagramas de los dos caminos)
+- [Instalar MicroPython en el ESP32](#instalar-micropython-en-el-esp32)
+- [Por qué MicroPython y no C++](#por-qué-micropython-y-no-c)
+
+**Las dos comparaciones**
+
+- [Primera comparación: el semáforo que mide su propia velocidad](#primera-comparación-el-semáforo-que-mide-su-propia-velocidad):
+  [qué es un LED y por qué lleva resistencia](#qué-es-un-led-y-por-qué-lleva-resistencia),
+  [conexiones](#conexiones-del-semáforo) y [qué hace el código](#qué-hace-el-código)
+- [Segunda comparación: el mismo circuito en Wokwi](#segunda-comparación-el-mismo-circuito-en-wokwi-cc-contra-micropython):
+  [qué es un display de siete segmentos](#qué-es-un-display-de-siete-segmentos),
+  [conexiones](#conexiones-del-display) y [las dos versiones lado a lado](#las-dos-versiones-lado-a-lado)
+
+**El resto**
+
+- [Qué hace cada archivo](#qué-hace-cada-archivo)
+- [Qué se modificó frente al material original](#qué-se-modificó-frente-al-material-original)
+- [Problemas de compatibilidad](#problemas-de-compatibilidad)
+- [Cómo probarlo](#cómo-probarlo) (sin ESP32 y con ESP32) y [Pendiente](#pendiente)
+
 ## Qué pedía la actividad y qué hicimos
 
 La guía del profesor explica cómo grabar MicroPython en un NodeMCU V3 (ESP8266) para poder
@@ -163,7 +206,7 @@ En resumen, C++ le exige más al chip pero saca más rendimiento de él, mientra
 
 Para ver esta diferencia de velocidad en la práctica basta un montaje simple: tres LEDs conectados al ESP32, el rojo en GPIO5, el amarillo en GPIO17 y el verde en GPIO16, cada uno con su resistencia de 220 Ω hacia GND (en Wokwi se pueden omitir, en la protoboard no).
 
-![Circuito con tres LEDs conectados al ESP32](./circuito-comparacion-leds.png)
+![Circuito con tres LEDs conectados al ESP32](img/circuito-comparacion-leds.png)
 
 ### Qué es un LED y por qué lleva resistencia
 
@@ -325,11 +368,11 @@ durante el arranque, que a lo sumo hacen parpadear el segmento f un instante.
 
 Escribiendo exactamente la misma lógica, encender los segmentos necesarios para dibujar el número dos, en los dos lenguajes que ya se compararon arriba, la diferencia de sintaxis salta a la vista. El código de las dos capturas está en [`siete_segmentos.py`](siete_segmentos.py) y [`siete_segmentos/siete_segmentos.ino`](siete_segmentos/siete_segmentos.ino), comentado, para pegarlo en Wokwi o grabarlo en la placa:
 
-![Simulación en Wokwi del mismo circuito programado en C/C++ vía Arduino](wokwi-arduino-c.png)
+![Simulación en Wokwi del mismo circuito programado en C/C++ vía Arduino](img/wokwi-arduino-c.png)
 
 En C/C++ vía Arduino cada pin se declara como una constante con `const int`, se configura como salida dentro de `setup()` con `pinMode(pin, OUTPUT)`, y se escribe con `digitalWrite(pin, HIGH)` o `digitalWrite(pin, LOW)`. Todo ese código se compila una sola vez y el resultado corre dentro de `loop()`, que el propio Arduino ya se encarga de repetir sin que haga falta escribir un bucle explícito.
 
-![Simulación en Wokwi del mismo circuito programado en MicroPython](wokwi-micropython.png)
+![Simulación en Wokwi del mismo circuito programado en MicroPython](img/wokwi-micropython.png)
 
 En MicroPython cada pin se declara directamente como un objeto `Pin(numero, Pin.OUT)` importado desde el módulo `machine`, y se escribe con `.value(1)` o `.value(0)` en vez de una función aparte como `digitalWrite`. Como no hay compilación previa que repita el código por su cuenta, hace falta un `while True:` explícito para que el estado de los segmentos se siga manteniendo en el tiempo. Es la misma idea de fondo, prender y apagar pines digitales, pero se nota de inmediato que MicroPython pide menos ceremonia para declarar cada pin y que el control del bucle principal queda en manos de quien escribe el código en vez de quedar oculto dentro del framework de Arduino.
 
@@ -360,12 +403,17 @@ Shell que atender.
   Imprime una línea por el Monitor Serie a 115200 baudios. Grabarlo borra MicroPython.
 - **[`siete_segmentos.py`](siete_segmentos.py)**: MicroPython, dibuja un "2" en el display de siete
   segmentos (cátodo común) y lo mantiene con un `while True`. Es el código de la captura
-  `wokwi-micropython.png`, con comentarios y la pausa de 100 ms.
+  `img/wokwi-micropython.png`, con comentarios y la pausa de 100 ms.
 - **[`siete_segmentos/siete_segmentos.ino`](siete_segmentos/siete_segmentos.ino)**: lo mismo en
-  C/C++, el código de la captura `wokwi-arduino-c.png`.
-- **`circuito-comparacion-leds.png`**: el circuito de los tres LEDs armado en Wokwi.
-- **`wokwi-arduino-c.png`** y **`wokwi-micropython.png`**: las capturas del display de siete
-  segmentos en Wokwi con cada lenguaje.
+  C/C++, el código de la captura `img/wokwi-arduino-c.png`.
+- **`img/`**: las imágenes del tema: [`circuito-comparacion-leds.png`](img/circuito-comparacion-leds.png)
+  (el circuito de los tres LEDs armado en Wokwi), [`wokwi-arduino-c.png`](img/wokwi-arduino-c.png) y
+  [`wokwi-micropython.png`](img/wokwi-micropython.png) (las capturas del display de siete segmentos en
+  Wokwi con cada lenguaje) y `app.png` (la captura de la app, arriba en "Quiere probarlo").
+- **`ABRIR.bat`** / **`abrir.sh`**, **`probar.json`** y **`app/`**: la app del tema (ver "¿Quiere
+  probarlo?" arriba). `probar.json` le dice al lanzador del repo qué pedía la actividad y qué abrir
+  (Wokwi, las capturas); `app/` es la página (HTML, CSS y JS sin librerías que instalar), que lee los
+  `.py` y `.ino` de esta carpeta para mostrarlos lado a lado.
 
 No hay `entorno/` de Python en este tema: ninguno de los programas corre en el PC. Los `.py` los
 ejecuta MicroPython dentro del ESP32 y los `.ino` los compila el Arduino IDE.
@@ -399,7 +447,7 @@ Todo el tema se puede probar en [Wokwi](https://wokwi.com), sin instalar nada:
 
 1. Crear un proyecto nuevo "ESP32" (para C/C++) o "MicroPython on ESP32".
 2. Armar el circuito con el botón "+": tres LEDs con el ánodo en GPIO5 (rojo), GPIO17 (amarillo) y
-   GPIO16 (verde) y el cátodo a GND, como en `circuito-comparacion-leds.png`; o un display de siete
+   GPIO16 (verde) y el cátodo a GND, como en `img/circuito-comparacion-leds.png`; o un display de siete
    segmentos de cátodo común con sus siete resistencias hacia los GPIO 17, 16, 32, 33, 25, 14 y 12
    (segmentos a a g, en ese orden) y el común a GND, como en las capturas de arriba.
 3. Pegar el código del archivo correspondiente (`.py` en `main.py`, `.ino` en `sketch.ino`) y darle

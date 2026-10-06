@@ -10,8 +10,18 @@
     "Punto 2: el ESP-A se lo pasa al ESP-B (esclavo SPI) y el ESP-B lo muestra en una OLED I2C"
   ],
   "python": {
-    "versiones": ["3.13", "3.12"],
-    "paquetes": ["pybullet==3.2.7", "pyserial==3.5", "tensorflow==2.21.0", "opencv-python==5.0.0.93", "numpy==2.5.3", "scipy==1.18.1"]
+    "versiones": [
+      "3.13",
+      "3.12"
+    ],
+    "paquetes": [
+      "pybullet==3.2.7",
+      "pyserial==3.5",
+      "tensorflow==2.21.0",
+      "opencv-python==5.0.0.93",
+      "numpy==2.5.3",
+      "scipy==1.18.1"
+    ]
   },
   "acciones": [
     {
@@ -22,8 +32,10 @@
       "script": "brazo_dibuja.py",
       "args": [],
       "cwd": "punto-1-teclado-brazo-dibujando",
-      "descripcion": "Abre PyBullet con el brazo de brazo.urdf. En el panel de la derecha hay 10 botones (0 a 9): cada clic borra el dígito anterior y el brazo dibuja el nuevo con una línea amarilla que sale de la punta de la pinza. Sin ESP32 la consola avisa que no pudo abrir COM7 y sigue con los botones. Se sale cerrando la ventana.",
-      "cubre": ["Punto 1: brazo robótico (brazo.urdf) en PyBullet que dibuja el dígito presionado"]
+      "descripcion": "Abre PyBullet con el brazo de brazo.urdf. En el panel de la derecha hay 10 botones (0 a 9): cada clic borra el dígito anterior y el brazo dibuja el nuevo con una línea amarilla que sale de la punta de la pinza. Sin ESP32 la consola avisa que no pudo abrir COM7 y sigue con los botones. Se sale cerrando la ventana. La primera vez se compila PyBullet (~10 min, con las Build Tools de C++); después abre en segundos.",
+      "cubre": [
+        "Punto 1: brazo robótico (brazo.urdf) en PyBullet que dibuja el dígito presionado"
+      ]
     },
     {
       "id": "p1-preview",
@@ -32,7 +44,9 @@
       "archivo": "preview.html",
       "cwd": "punto-1-teclado-brazo-dibujando",
       "descripcion": "Teclado 4x4 clicable, la LCD 16x2 simulada con los mismos textos del firmware y el trazo del dígito. 'Modo prueba' funciona solo; 'Conectado' recibe los DIGIT:n del ESP32 real por Web Serial (Chrome o Edge).",
-      "cubre": ["Punto 1: teclado matricial 4x4 + LCD 16x2 por I2C en un ESP32"]
+      "cubre": [
+        "Punto 1: teclado matricial 4x4 + LCD 16x2 por I2C en un ESP32"
+      ]
     },
     {
       "id": "p1-video",
@@ -56,10 +70,16 @@
       "tipo": "python",
       "ventana": true,
       "script": "reconocer_digito.py",
-      "args": ["--mouse"],
+      "args": [
+        "--mouse",
+        "--estado",
+        "estado_en_vivo.json"
+      ],
       "cwd": "punto-2-reconocimiento-oled-spi",
-      "descripcion": "Abre un lienzo blanco con un recuadro: dibuja un dígito grande con el clic izquierdo dentro del recuadro y suelta. La CNN lo lee y, cuando gana 12 de los últimos 15 frames, sale 'DIGITO CONFIRMADO' arriba a la izquierda. La ventana 'Digito procesado' muestra la imagen de 28x28 que ve la red. Clic derecho o 'c' borra, 'q' sale. Tarda unos segundos en abrir (carga TensorFlow).",
-      "cubre": ["Punto 2: cámara del PC + preprocesamiento con OpenCV + CNN (MNIST) que reconoce el dígito"]
+      "descripcion": "Abre un lienzo blanco con un recuadro: dibuja un dígito grande con el clic izquierdo dentro del recuadro y suelta. La CNN lo lee y, cuando gana 12 de los últimos 15 frames, sale 'DIGITO CONFIRMADO' arriba a la izquierda. La ventana 'Digito procesado' muestra la imagen de 28x28 que ve la red. Clic derecho o 'c' borra, 'q' sale. Tarda ~20-60 s en abrir (carga TensorFlow). Con --estado escribe lo que ve en estado_en_vivo.json para que la app lo dibuje paso a paso (28x28, filtros, probabilidades, votos).",
+      "cubre": [
+        "Punto 2: cámara del PC + preprocesamiento con OpenCV + CNN (MNIST) que reconoce el dígito"
+      ]
     },
     {
       "id": "p2-camara",
@@ -67,10 +87,15 @@
       "tipo": "python",
       "ventana": true,
       "script": "reconocer_digito.py",
-      "args": [],
+      "args": [
+        "--estado",
+        "estado_en_vivo.json"
+      ],
       "cwd": "punto-2-reconocimiento-oled-spi",
       "descripcion": "Lo mismo, con la cámara del PC: muestra un dígito escrito con trazo grueso en papel blanco dentro del recuadro, con buena luz. Si la cámara no abre, cambia solo al lienzo del mouse. 'q' sale.",
-      "cubre": ["Punto 2: cámara del PC + preprocesamiento con OpenCV + CNN (MNIST) que reconoce el dígito"]
+      "cubre": [
+        "Punto 2: cámara del PC + preprocesamiento con OpenCV + CNN (MNIST) que reconoce el dígito"
+      ]
     },
     {
       "id": "p2-entrenar",
@@ -80,7 +105,11 @@
       "args": [],
       "cwd": "punto-2-reconocimiento-oled-spi",
       "descripcion": "No hace falta: el modelo entrenado (modelo_mnist_cnn.h5) ya viene en la carpeta. Esto descarga MNIST (unos 11 MB) la primera vez, entrena 10 épocas mostrando la precisión de cada una y sobrescribe modelo_mnist_cnn.h5. Tarda varios minutos (en CPU, unos 30 s por época: cerca de 5 minutos en total) y termina con una precisión de validación de alrededor del 99 %.",
-      "cubre": ["Punto 2: cámara del PC + preprocesamiento con OpenCV + CNN (MNIST) que reconoce el dígito"]
+      "cubre": [
+        "Punto 2: cámara del PC + preprocesamiento con OpenCV + CNN (MNIST) que reconoce el dígito"
+      ],
+      "duracion": "~5 min",
+      "progreso_regex": "Epoch (\\d+)/(\\d+)"
     },
     {
       "id": "p2-probar-esp-a",
@@ -90,7 +119,10 @@
       "args": [],
       "cwd": "punto-2-reconocimiento-oled-spi",
       "descripcion": "Sin cámara ni red: abre COM7, muestra lo que el ESP-A imprime al arrancar, le manda DIGIT:5 y muestra todo lo que conteste durante 5 segundos (debe salir REENVIADO:5 y la OLED del ESP-B mostrar un 5). Termina solo. Sin la placa dice 'No se pudo abrir COM7' y termina: es lo esperado.",
-      "cubre": ["Punto 2: el PC le manda el dígito por serial al ESP-A (maestro SPI)"]
+      "cubre": [
+        "Punto 2: el PC le manda el dígito por serial al ESP-A (maestro SPI)"
+      ],
+      "duracion": "~8 s"
     },
     {
       "id": "p2-preview",
@@ -99,7 +131,10 @@
       "archivo": "preview.html",
       "cwd": "punto-2-reconocimiento-oled-spi",
       "descripcion": "Botones 0-9 que hacen de 'la red reconoció este dígito' y una OLED 128x64 simulada que lo pinta como el ESP-B. 'Conectado' manda DIGIT:n al ESP-A real por Web Serial y muestra su REENVIADO:n.",
-      "cubre": ["Punto 2: el PC le manda el dígito por serial al ESP-A (maestro SPI)", "Punto 2: el ESP-A se lo pasa al ESP-B (esclavo SPI) y el ESP-B lo muestra en una OLED I2C"]
+      "cubre": [
+        "Punto 2: el PC le manda el dígito por serial al ESP-A (maestro SPI)",
+        "Punto 2: el ESP-A se lo pasa al ESP-B (esclavo SPI) y el ESP-B lo muestra en una OLED I2C"
+      ]
     },
     {
       "id": "p2-video",
@@ -118,5 +153,5 @@
       "descripcion": "ESP-A (MicroPython, main.py con Thonny): recibe DIGIT:n por USB y lo reenvía por SPI maestro (SCK 18, MOSI 23, MISO 19, CS 5) y por UART2 (TX 17, RX 16); contesta REENVIADO:n. ESP-B (esp-b-esclavo/esp_b_esclavo.ino, Arduino IDE, porque MicroPython no tiene SPI esclavo): escucha SPI y UART2 y pinta el dígito en la OLED (I2C 0x3C). probar_esp_a.py prueba el ESP-A solo, con la placa conectada. No hace falta para probar."
     }
   ],
-  "notas": "Un solo entorno para los dos puntos: TensorFlow 2.21 tiene versión para Windows solo hasta Python 3.13 (no 3.14). PyBullet 3.2.7 no publica versiones ya compiladas para Windows: pip lo compila, lo que pide las Build Tools de C++ de Visual Studio y unos minutos la primera vez. La instalación completa baja unos 400 MB (TensorFlow). La cámara es opcional (hay modo mouse) y el modelo ya entrenado viene incluido. scipy solo lo usa el reentrenamiento (las rotaciones del data augmentation). Si la compilación de PyBullet falla con \"Unable to find a compatible Visual Studio installation\", es que vcvarsall.bat no encuentra vswhere.exe: agregar C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer al PATH al instalar lo resuelve (comprobado en este PC)."
+  "notas": "Un solo entorno para los dos puntos: TensorFlow 2.21 tiene versión para Windows solo hasta Python 3.13 (no 3.14). PyBullet 3.2.7 no publica versiones ya compiladas para Windows: pip lo compila, lo que pide las Build Tools de C++ de Visual Studio y unos minutos la primera vez. La instalación completa baja unos 400 MB (TensorFlow). La cámara es opcional (hay modo mouse) y el modelo ya entrenado viene incluido (guardado sin el estado del optimizador: 0,9 MB). La app además corre la misma red en el navegador (app/cnn.js + app/cnn-pesos.bin) sin instalar nada. scipy solo lo usa el reentrenamiento (las rotaciones del data augmentation). Si la compilación de PyBullet falla con \"Unable to find a compatible Visual Studio installation\", es que vcvarsall.bat no encuentra vswhere.exe: agregar C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer al PATH al instalar lo resuelve (comprobado en este PC)."
 }

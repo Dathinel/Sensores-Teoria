@@ -53,7 +53,10 @@ def main() -> None:
     arbol = json.loads(bajar(ARBOL))["tree"]
     tamanos = {x["path"]: x.get("size", 0) for x in arbol if x["type"] == "blob"}
 
-    total = 0
+    # 1) Primero se arma la lista completa de los dos robots (sin bajar nada todavía): así se sabe
+    #    de antemano cuántos MB faltan y se puede mostrar el avance real ("bajando 12.3/37.0 MB"),
+    #    que la app del tema 9 convierte en una barra de progreso.
+    por_robot = {}
     for robot, (urdf, raiz_mallas) in ROBOTS.items():
         texto = bajar(CRUDO + "data/" + urdf).decode("utf-8")
         pedidos = {urdf}
@@ -73,18 +76,34 @@ def main() -> None:
         faltan = sorted(p for p in pedidos if "data/" + p not in tamanos)
         if faltan:
             print(f"  ! {robot}: el repositorio ya no tiene {len(faltan)} archivo(s): {faltan[:3]}...")
+        por_robot[robot] = sorted(pedidos - set(faltan))
+
+    def ya_esta(rel):
+        destino = DESTINO / rel
+        return destino.exists() and destino.stat().st_size == tamanos["data/" + rel]
+
+    por_bajar = sum(tamanos["data/" + r] for lista in por_robot.values() for r in lista if not ya_esta(r)) / 1e6
+    if por_bajar:
+        print(f"Hay que bajar {por_bajar:.2f} MB (solo esta vez).")
+    else:
+        print("Los modelos ya estaban completos: no se baja nada.")
+
+    # 2) Ahora sí se baja lo que falta, archivo por archivo, contando los MB.
+    total, bajado = 0.0, 0.0
+    for robot, lista in por_robot.items():
         bajados = 0
-        for rel in sorted(pedidos - set(faltan)):
-            destino = DESTINO / rel
-            tam = tamanos["data/" + rel]
-            if destino.exists() and destino.stat().st_size == tam:
+        for rel in lista:
+            if ya_esta(rel):
                 continue  # ya estaba: no se vuelve a bajar
+            destino = DESTINO / rel
             destino.parent.mkdir(parents=True, exist_ok=True)
             destino.write_bytes(bajar(CRUDO + "data/" + rel))
             bajados += 1
-        mb = sum(tamanos["data/" + r] for r in pedidos - set(faltan)) / 1e6
+            bajado += tamanos["data/" + rel] / 1e6
+            print(f"  bajando {bajado:.2f}/{por_bajar:.2f} MB  {Path(rel).name}", flush=True)
+        mb = sum(tamanos["data/" + r] for r in lista) / 1e6
         total += mb
-        print(f"  {robot}: {len(pedidos) - len(faltan)} archivos ({mb:.1f} MB), {bajados} descargados ahora")
+        print(f"  {robot}: {len(lista)} archivos ({mb:.1f} MB), {bajados} descargados ahora")
 
     print(f"Listo: {total:.1f} MB en {DESTINO}")
 

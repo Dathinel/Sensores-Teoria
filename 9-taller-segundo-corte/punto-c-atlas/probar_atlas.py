@@ -16,7 +16,7 @@ simular), simulando el protocolo del ESP32: una linea "TECLA:x" cada 50 ms.
 
     entorno\\Scripts\\python punto-c-atlas\\probar_atlas.py
 
-Tarda alrededor de un minuto. No abre ventanas.
+Tarda unos 3 a 4 minutos. No abre ventanas.
 """
 
 import math
@@ -52,7 +52,16 @@ def texto(caida, total):
 def bloque(e, con_asistente):
     """Pruebas 1 a 5 con el asistente prendido o apagado."""
     nombre = "CON asistente" if con_asistente else "SIN asistente"
-    filas = []
+    # Cada resultado se imprime apenas se mide (no todo junto al final del bloque): asi la app del
+    # tema 9 va dibujando la grafica con/sin asistente prueba por prueba mientras corre.
+    print(f"\n=== {nombre} ===", flush=True)
+
+    class Filas(list):
+        def append(self, fila):
+            super().append(fila)
+            print(f"  {fila[0]:<50} {fila[1]}", flush=True)
+
+    filas = Filas()
 
     def preparar():
         A.reiniciar_todo(e)
@@ -104,10 +113,7 @@ def bloque(e, con_asistente):
         A.procesar_tecla(e, "-")
     filas.append(("Poses seguidas, 4 s c/u (C, D, #, 5)", "; ".join(resultados)))
 
-    print(f"\n=== {nombre} ===")
-    for prueba, resultado in filas:
-        print(f"  {prueba:<50} {resultado}")
-    return filas
+    return list(filas)
 
 
 def prueba_poner_de_pie(e):

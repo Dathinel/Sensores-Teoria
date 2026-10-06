@@ -406,7 +406,7 @@ class Vista:
             shutil.move(self._ruta_cruda, self.grabar)
         else:
             subprocess.run([ffmpeg, "-y", "-loglevel", "error", "-i", str(self._ruta_cruda), "-c:v", "libx264",
-                            "-pix_fmt", "yuv420p", "-crf", "26", "-preset", "medium", "-movflags", "+faststart",
+                            "-pix_fmt", "yuv420p", "-crf", "30", "-preset", "slow", "-movflags", "+faststart",
                             str(self.grabar)], check=True)
             self._ruta_cruda.unlink(missing_ok=True)
         return {"mp4": self.grabar, "cuadros": self.cuadros, "segundos_video": self.cuadros / self.fps}

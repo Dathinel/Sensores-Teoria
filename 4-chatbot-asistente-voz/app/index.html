@@ -9,14 +9,24 @@
 </head>
 <body class="app-tema4">
 
-<header class="cabecera">
-  <div class="cabecera-texto">
-    <span class="etiqueta">Tema 4 · Chatbot</span>
-    <h1>El asistente que prende dos LEDs con la voz</h1>
-    <p>Le dices una frase como <em>"enciende el rojo"</em> y la computadora entiende qué pediste, se lo traduce al
-      ESP32 en una orden cortita y el ESP32 prende o apaga los LEDs.</p>
+<!-- Barra superior tipo Docker Desktop: qué práctica es, estado del asistente y botones. -->
+<header class="barra-sup">
+  <div class="marca">
+    <span class="mini-leds" aria-hidden="true"><span class="bulbo rojo"></span><span class="bulbo azul"></span></span>
+    <div class="marca-txt">
+      <span class="etiqueta">Tema 4 · Chatbot</span>
+      <h1>Asistente de voz que prende dos LEDs</h1>
+    </div>
   </div>
-  <div class="mini-leds" aria-hidden="true"><span class="bulbo rojo"></span><span class="bulbo azul"></span></div>
+  <div class="chip-asist" id="chipAsist" data-estado="parado" title="Estado del programa comando_voz.py">
+    <span class="punto-estado"></span><span id="chipTxt">Asistente detenido</span>
+  </div>
+  <nav class="barra-botones">
+    <button type="button" class="boton-sup" id="btnIrProbar">▶ Probar</button>
+    <button type="button" class="boton-sup" id="btnReadme">README</button>
+    <!-- Aquí /comun/app.js pone "Pantalla completa" y el estado de la práctica (entorno / programas en marcha). -->
+    <span class="herr-sitio" data-app-herramientas></span>
+  </nav>
 </header>
 
 <main id="pasos">
@@ -26,7 +36,9 @@
     <div class="portada">
       <div>
         <h2>Habla, y los LEDs obedecen</h2>
-        <p class="grande">Esta práctica convierte el <strong>chat de consola del profesor</strong> (que le pregunta cosas a
+        <p class="grande">Le dices una frase como <em>"enciende el rojo"</em> y la computadora entiende qué pediste, se lo
+          traduce al ESP32 en una orden cortita y el ESP32 prende o apaga los LEDs.</p>
+        <p>Esta práctica convierte el <strong>chat de consola del profesor</strong> (que le pregunta cosas a
           DeepSeek) en un <strong>asistente domótico</strong>: en vez de contestar con texto, contesta
           <strong>prendiendo y apagando dos LEDs</strong> (uno rojo y uno azul) conectados a un ESP32.</p>
         <ul class="puntos">
@@ -37,9 +49,10 @@
         </ul>
         <p class="nota">Para probarlo <strong>no necesitas</strong> el ESP32, ni micrófono, ni clave de DeepSeek: el paso
           <em>Pruébalo</em> funciona solo con el teclado y dibuja los LEDs en la pantalla.</p>
+        <button type="button" class="boton-grande" id="btnPortadaProbar">▶ Ir a Pruébalo</button>
       </div>
       <figure class="foto">
-        <img data-ampliar src="/repo/4-chatbot-asistente-voz/demo-led-rojo.gif" alt="Protoboard con el LED rojo encendido tras pedirlo por voz">
+        <img data-ampliar src="/repo/4-chatbot-asistente-voz/img/demo-led-rojo.gif" alt="Protoboard con el LED rojo encendido tras pedirlo por voz">
         <figcaption>Montaje real: "enciende el rojo" dicho al micrófono.</figcaption>
       </figure>
     </div>
@@ -90,7 +103,7 @@
       quieras usar el ESP32 de verdad.</p>
     <div class="dos-col">
       <figure class="foto">
-        <img data-ampliar src="/repo/4-chatbot-asistente-voz/diagrama-circuito.png" alt="Diagrama de referencia del circuito: dos LEDs con resistencia hacia el ESP32">
+        <img data-ampliar src="/repo/4-chatbot-asistente-voz/img/diagrama-circuito.png" alt="Diagrama de referencia del circuito: dos LEDs con resistencia hacia el ESP32">
         <figcaption>Esquema de referencia (Wokwi). En el montaje real: LED <b>rojo</b> en GPIO25, azul en GPIO26 y resistencias de 220 Ω.</figcaption>
       </figure>
       <div>
@@ -127,18 +140,55 @@
 
   <!-- ============================ 4. PRUÉBALO ============================ -->
   <section class="paso" data-titulo="Pruébalo">
-    <h2>Habla con el asistente (escribiendo)</h2>
-    <p>Pulsa <strong>Iniciar</strong>: arranca el programa real de la práctica en modo texto, sin micrófono, sin clave y
-      sin ESP32. Después toca una frase de ejemplo (se escribe sola y se envía) o escribe la tuya en la caja.
-      Los LEDs de abajo se prenden según la orden que <strong>el propio programa</strong> decide.</p>
+    <h2>Pruébalo: sigue cada frase de la voz hasta el LED</h2>
+    <p class="intro-probar">Toca una <strong>frase de ejemplo</strong>: si el asistente no está en marcha, se arranca solo
+      (el programa real <code>comando_voz.py</code>, en modo texto: sin micrófono, sin clave y sin ESP32). Cada frase
+      recorre las <strong>cinco etapas</strong> de abajo, una tras otra, y al final los LEDs dibujados hacen lo que
+      <strong>el propio programa</strong> decidió.</p>
 
-    <div class="probador">
-      <div class="col-izq">
-        <div id="panelTexto"></div>
-        <div class="frases">
-          <span class="frases-titulo">Frases de ejemplo</span>
-          <div id="botonesFrases"></div>
-        </div>
+    <!-- Barra de arranque: se ve solo mientras el programa arranca (o se prepara su entorno la primera vez). -->
+    <div class="arranque" id="arranque" hidden>
+      <div class="arranque-fila"><b id="arrTxt">Arrancando el asistente…</b><span id="arrTiempo" class="arranque-tiempo"></span></div>
+      <div class="arranque-barra"><div id="arrBarra"></div></div>
+    </div>
+
+    <!-- El recorrido de cada frase: voz -> texto -> intención -> orden -> LED, animado etapa por etapa. -->
+    <ol class="recorrido" id="recorrido" aria-live="polite">
+      <li class="etapa" data-e="voz">
+        <span class="e-tit"><span class="e-num">1</span> Voz o teclado</span>
+        <span class="e-val" id="eVal-voz">—</span>
+        <span class="e-exp">Cómo entra la frase: micrófono o caja de texto.</span>
+      </li>
+      <li class="flecha" aria-hidden="true"><i></i></li>
+      <li class="etapa" data-e="texto">
+        <span class="e-tit"><span class="e-num">2</span> Texto</span>
+        <span class="e-val" id="eVal-texto">—</span>
+        <span class="e-exp">Con voz, Google la transcribe (es-CO).</span>
+      </li>
+      <li class="flecha" aria-hidden="true"><i></i></li>
+      <li class="etapa" data-e="intencion">
+        <span class="e-tit"><span class="e-num">3</span> Intención (JSON)</span>
+        <span class="e-val mono" id="eVal-intencion">—</span>
+        <span class="e-exp" id="eExp-intencion">DeepSeek o las reglas por palabras clave.</span>
+      </li>
+      <li class="flecha" aria-hidden="true"><i></i></li>
+      <li class="etapa" data-e="orden">
+        <span class="e-tit"><span class="e-num">4</span> Orden al ESP32</span>
+        <span class="e-val mono grande-orden" id="eVal-orden">—</span>
+        <span class="e-exp" id="eExp-orden">El PC recuerda los dos LEDs y arma la orden.</span>
+      </li>
+      <li class="flecha" aria-hidden="true"><i></i></li>
+      <li class="etapa" data-e="led">
+        <span class="e-tit"><span class="e-num">5</span> LEDs</span>
+        <span class="e-val" id="eVal-led"><span class="par"><i class="bulbo rojo"></i><i class="bulbo azul"></i></span></span>
+        <span class="e-exp" id="eExp-led">GPIO25 (rojo) y GPIO26 (azul).</span>
+      </li>
+    </ol>
+
+    <div class="probador tres">
+      <div class="frases">
+        <span class="frases-titulo">Toca una frase de ejemplo</span>
+        <div id="botonesFrases"></div>
       </div>
       <div class="col-der">
         <div class="tablero">
@@ -149,11 +199,13 @@
           </div>
           <div class="ultima">Última orden: <code id="gOrden">—</code></div>
         </div>
-        <div class="chat" id="chat" aria-live="polite">
-          <div class="burbuja sistema">Aquí aparece la conversación: tu frase, lo que entendió el asistente y la orden que mandó.</div>
-        </div>
+      </div>
+      <div class="chat" id="chat" aria-live="polite">
+        <div class="burbuja sistema">Aquí queda el historial: tu frase, lo que entendió el asistente y la orden que mandó.</div>
       </div>
     </div>
+    <h3 class="titulo-consola">El programa real (<code>comando_voz.py --texto --sin-clave</code>): arranque, consola y caja para escribir</h3>
+    <div id="panelTexto" class="panel-consola"></div>
   </section>
 
   <!-- ============================ 5. SIMULADOR ============================ -->
@@ -236,10 +288,10 @@
     <p>Comandos dichos al micrófono uno tras otro: prender el rojo, prender también el azul, el show de luces y
       apagar todo. Toca una imagen para verla grande.</p>
     <div class="galeria">
-      <figure><img data-ampliar src="/repo/4-chatbot-asistente-voz/demo-led-rojo.gif" alt="LED rojo encendido por voz"><figcaption>"Enciende el rojo" → <code>10</code></figcaption></figure>
-      <figure><img data-ampliar src="/repo/4-chatbot-asistente-voz/demo-dos-leds.gif" alt="Los dos LEDs encendidos"><figcaption>"Prende también el azul" → <code>11</code></figcaption></figure>
-      <figure><img data-ampliar src="/repo/4-chatbot-asistente-voz/demo-show-luces-azul.gif" alt="Show de luces, azul encendido"><figcaption>Show de luces (instante azul) → <code>SHOW</code></figcaption></figure>
-      <figure><img data-ampliar src="/repo/4-chatbot-asistente-voz/demo-show-luces-rojo.gif" alt="Show de luces, rojo encendido"><figcaption>Show de luces (instante rojo)</figcaption></figure>
+      <figure><img data-ampliar src="/repo/4-chatbot-asistente-voz/img/demo-led-rojo.gif" alt="LED rojo encendido por voz"><figcaption>"Enciende el rojo" → <code>10</code></figcaption></figure>
+      <figure><img data-ampliar src="/repo/4-chatbot-asistente-voz/img/demo-dos-leds.gif" alt="Los dos LEDs encendidos"><figcaption>"Prende también el azul" → <code>11</code></figcaption></figure>
+      <figure><img data-ampliar src="/repo/4-chatbot-asistente-voz/img/demo-show-luces-azul.gif" alt="Show de luces, azul encendido"><figcaption>Show de luces (instante azul) → <code>SHOW</code></figcaption></figure>
+      <figure><img data-ampliar src="/repo/4-chatbot-asistente-voz/img/demo-show-luces-rojo.gif" alt="Show de luces, rojo encendido"><figcaption>Show de luces (instante rojo)</figcaption></figure>
       <figure><img data-ampliar src="/repo/4-chatbot-asistente-voz/img/preview-modo-prueba.png" alt="Simulador en modo prueba"><figcaption>Simulador: "prende los dos" → <code>11</code></figcaption></figure>
     </div>
     <div id="checklist2"></div>

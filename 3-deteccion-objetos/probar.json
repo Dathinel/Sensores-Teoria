@@ -30,15 +30,20 @@
       "tipo": "python",
       "script": "deteccion_pc.py",
       "args": [
-        "--imagen"
+        "--imagen",
+        "--vista",
+        "salida-app",
+        "--sin-ventana"
       ],
       "cwd": ".",
-      "descripcion": "Abre una ventana que pasa cada 3 s por tres fotos (solo silla, solo celular, las dos) con las cajas de YOLO y, arriba, el mensaje que recibiría el ESP32: '10', '01', '11'. Tarda unos 10-15 s en abrir (carga PyTorch). Se cierra con la tecla q sobre la ventana.",
+      "descripcion": "YOLO de verdad mirando tres fotos de ejemplo (solo silla, solo celular, las dos), una cada 3 s. Todo se ve dentro de la app: la foto con las cajas de YOLO, la confianza de cada objeto, el mensaje que recibiría el ESP32 ('10', '01', '11') y los LEDs. Tarda 10-30 s en arrancar (carga PyTorch); la primera vez descarga además el modelo yolov8n.pt (6 MB). Se para con Detener.",
       "cubre": [
         "Partir del ejemplo de YOLOv8 del profesor (cámara + cajas en pantalla)",
         "Comunicación PC → ESP32 por serial (mensajes '10', '01', '11', '00')"
       ],
-      "ventana": true
+      "duracion": "~10-30 s",
+      "progreso_regex": "Arranque (\\d+)/(\\d+)",
+      "vida": "app"
     },
     {
       "id": "fotos-carro-moto",
@@ -47,27 +52,37 @@
       "script": "deteccion_pc.py",
       "args": [
         "--carro-moto",
-        "--imagen"
+        "--imagen",
+        "--vista",
+        "salida-app",
+        "--sin-ventana"
       ],
       "cwd": ".",
-      "descripcion": "Lo mismo con la directiva alternativa: fotos de un carro, una moto y las dos cosas; el primer carácter del mensaje es el LED rojo (GPIO25) y el segundo el verde (GPIO26). Se cierra con q.",
+      "descripcion": "Lo mismo con la directiva alternativa: fotos de un carro, una moto y las dos cosas; el primer carácter del mensaje es el LED rojo (GPIO25) y el segundo el verde (GPIO26). Se ve en la app y se para con Detener.",
       "cubre": [
         "Directiva alternativa: carro de juguete → LED rojo, moto de juguete → LED verde"
       ],
-      "ventana": true
+      "duracion": "~10-30 s",
+      "progreso_regex": "Arranque (\\d+)/(\\d+)",
+      "vida": "app"
     },
     {
       "id": "camara",
       "nombre": "Detección con la webcam (silla y celular)",
       "tipo": "python",
       "script": "deteccion_pc.py",
-      "args": [],
+      "args": [
+        "--vista",
+        "salida-app"
+      ],
       "cwd": ".",
-      "descripcion": "Necesita webcam. Pon una silla o un celular frente a la cámara: la franja de arriba muestra el estado de cada uno y el mensaje. Si hay un ESP32 en COM7 con esp32_leds.py como main.py, prende sus LEDs; si no, sigue solo con la visión. Se cierra con q.",
+      "descripcion": "Necesita webcam. Pon una silla o un celular frente a la cámara: la franja de arriba muestra el estado de cada uno y el mensaje. Si hay un ESP32 en COM7 con esp32_leds.py como main.py, prende sus LEDs; si no, sigue solo con la visión. Además de la ventana, la app muestra lo que ve YOLO. Se cierra con q o con Detener.",
       "cubre": [
         "Llevar la detección al mundo físico: un LED por objeto en el ESP32"
       ],
-      "ventana": true
+      "ventana": true,
+      "duracion": "~10-30 s",
+      "progreso_regex": "Arranque (\\d+)/(\\d+)"
     },
     {
       "id": "camara-carro-moto",
@@ -75,14 +90,18 @@
       "tipo": "python",
       "script": "deteccion_pc.py",
       "args": [
-        "--carro-moto"
+        "--carro-moto",
+        "--vista",
+        "salida-app"
       ],
       "cwd": ".",
       "descripcion": "Necesita webcam. Igual que la anterior pero detecta carro (LED rojo, GPIO25) y moto (LED verde, GPIO26). Con juguetes pequeños la confianza baja; con buena luz funciona mejor.",
       "cubre": [
         "Directiva alternativa: carro de juguete → LED rojo, moto de juguete → LED verde"
       ],
-      "ventana": true
+      "ventana": true,
+      "duracion": "~10-30 s",
+      "progreso_regex": "Arranque (\\d+)/(\\d+)"
     },
     {
       "id": "preview",
@@ -99,19 +118,19 @@
       "id": "gif-montaje",
       "nombre": "Video: montaje con la detección corriendo",
       "tipo": "archivo",
-      "archivo": "demo-montaje-1.gif"
+      "archivo": "img/demo-montaje-1.gif"
     },
     {
       "id": "gif-deteccion",
       "nombre": "Video: ventana de detección (silla y celular)",
       "tipo": "archivo",
-      "archivo": "demo-deteccion.gif"
+      "archivo": "img/demo-deteccion.gif"
     },
     {
       "id": "gif-leds",
       "nombre": "Video: LEDs encendidos en la protoboard",
       "tipo": "archivo",
-      "archivo": "demo-protoboard-encendida.gif"
+      "archivo": "img/demo-protoboard-encendida.gif"
     },
     {
       "id": "fw",
@@ -121,5 +140,5 @@
       "descripcion": "MicroPython. Se guarda en el ESP32 con Thonny como main.py; LEDs en GPIO25 y GPIO26 con resistencias de 220 Ω. No hace falta para probar: las acciones de arriba funcionan sin ESP32."
     }
   ],
-  "notas": "La webcam es opcional: sin ella usa las acciones 'fotos de ejemplo' o el preview.html. El modelo yolov8n.pt (6 MB) ya viene en la carpeta (si faltara, ultralytics lo descarga solo la primera vez, con internet). La instalación trae PyTorch, unos cientos de MB, y tarda varios minutos la primera vez. El ESP32 se busca en COM7 (cambiar PUERTO_SERIAL en deteccion_pc.py si es otro); sin ESP32 todo sigue funcionando."
+  "notas": "La webcam es opcional: sin ella usa 'Ver a YOLO con fotos' o el simulador. El modelo yolov8n.pt (6 MB) no viene en el repositorio: la primera vez que se corre, deteccion_pc.py lo descarga solo (necesita internet esa vez) y queda en la carpeta. La instalación trae PyTorch, unos cientos de MB, y tarda varios minutos la primera vez. El ESP32 se busca en COM7 (cambiar PUERTO_SERIAL en deteccion_pc.py si es otro); sin ESP32 todo sigue funcionando."
 }

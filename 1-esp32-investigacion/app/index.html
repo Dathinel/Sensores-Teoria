@@ -19,13 +19,14 @@
   </div>
   <div class="barra-progreso" title="Capítulos leídos"><div id="progresoLectura"></div></div>
   <span class="barra-leidos" id="txtLeidos"></span>
+  <span class="barra-herr" data-app-herramientas></span>
   <a class="boton-sec" id="bGithub" href="https://github.com/Dathinel/Sensores-Teoria/tree/main/1-esp32-investigacion" target="_blank" rel="noopener">Ver en GitHub ↗</a>
 </header>
 
 <div class="cuerpo">
   <nav class="indice" id="indice" aria-label="Capítulos">
     <div class="indice-cab">Capítulos</div>
-    <ol id="listaCap"></ol>
+    <ol id="listaCap"><li class="cargando">Cargando capítulos…</li></ol>
     <div class="indice-pie">
       <a href="/app/2-lenguajes-thonny/" target="_blank" rel="noopener">Tema 2: Thonny y MicroPython ↗</a>
     </div>
@@ -165,7 +166,7 @@ Tactil GPIO4 (tocar el pin y volver a correr): &lt;valor&gt;</pre>
             <a class="boton-sec" href="https://github.com/Dathinel/Sensores-Teoria/blob/main/1-esp32-investigacion/ficha_placa.py" target="_blank" rel="noopener">En GitHub ↗</a>
           </span>
         </div>
-        <pre class="codigo" id="codigoFicha">Cargando…</pre>
+        <pre class="codigo" id="codigoFicha"><span class="cargando">Cargando el código…</span></pre>
       </div>
 
       <details class="plegado">
@@ -183,6 +184,12 @@ Tactil GPIO4 (tocar el pin y volver a correr): &lt;valor&gt;</pre>
       <button class="boton-pri" id="bSiguiente">Siguiente →</button>
     </nav>
   </main>
+
+  <!-- En pantallas anchas: los subtítulos del capítulo abierto, para saltar dentro de él -->
+  <aside class="en-cap" id="enCap" aria-label="En este capítulo" hidden>
+    <div class="indice-cab">En este capítulo</div>
+    <ol id="listaSub"></ol>
+  </aside>
 </div>
 
 <script src="/comun/app.js"></script>

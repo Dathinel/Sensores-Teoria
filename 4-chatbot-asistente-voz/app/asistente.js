@@ -86,6 +86,84 @@
     leds.rojo = false; leds.azul = false; pintar(0, 0); $("gOrden").textContent = "—";
   }
 
+  // ---------------------------- Recorrido animado (paso Pruébalo) ----------------------------
+  // Cada frase recorre las cinco etapas voz -> texto -> intención -> orden -> LED. Las etapas se
+  // encienden una tras otra (con un "paquete" que viaja por la flecha) para que se vea el camino.
+  // Todo va en una cola: si llegan dos frases seguidas, la segunda espera a que termine la primera.
+  // Al recargar la página con el programa ya en marcha, el lanzador vuelve a mandar toda la salida
+  // vieja de golpe: esas vueltas se dibujan sin pausas (rapido) para no repetir la animación de cada una.
+  const t0Pagina = Date.now();
+  const pausa = (ms) => dormir(Date.now() - t0Pagina < 2500 ? 0 : ms);
+  const recorrido = {
+    cola: Promise.resolve(),
+    encolar(f) { this.cola = this.cola.then(f).catch((e) => console.warn(e)); return this.cola; },
+    etapa(n) { return document.querySelector(`#recorrido .etapa[data-e="${n}"]`); },
+    flechaTras(n) { const e = this.etapa(n); return e && e.nextElementSibling && e.nextElementSibling.classList.contains("flecha") ? e.nextElementSibling : null; },
+    poner(n, estado, valorHtml, exp) {
+      const e = this.etapa(n); if (!e) return;
+      e.classList.remove("activa", "hecha", "nula");
+      if (estado) e.classList.add(estado);
+      if (valorHtml != null) $("eVal-" + n).innerHTML = valorHtml;
+      if (exp != null && $("eExp-" + n)) $("eExp-" + n).textContent = exp;
+    },
+    async pasar(n) {
+      // La etapa n queda hecha y el paquete viaja por la flecha hacia la siguiente.
+      this.poner(n, "hecha");
+      const f = this.flechaTras(n);
+      if (f) { f.classList.remove("viaja"); void f.offsetWidth; f.classList.add("viaja", "paso"); }
+      await pausa(380);
+    },
+    limpiar() {
+      for (const n of ["voz", "texto", "intencion", "orden"]) this.poner(n, null, "—");
+      this.poner("led", null);
+      document.querySelectorAll("#recorrido .flecha").forEach((f) => f.classList.remove("viaja", "paso"));
+    },
+    // Llega una frase (escrita, o ya transcrita si fue por voz).
+    inicio(frase, porVoz) {
+      return this.encolar(async () => {
+        if (!porVoz) {
+          this.limpiar();
+          this.poner("voz", "activa", "⌨ Escrita", "Modo texto: no se usa el micrófono.");
+          await pausa(260);
+        }
+        await this.pasar("voz");
+        this.poner("texto", "activa", `"${esc(frase)}"`, porVoz ? "Google la transcribió (es-CO)." : "Ya viene escrita: no hay que transcribir.");
+        await pausa(260);
+        await this.pasar("texto");
+        this.poner("intencion", "activa", '<span class="pensando">el programa la interpreta</span>', "Esperando la respuesta de comando_voz.py");
+      });
+    },
+    escuchando() {
+      return this.encolar(async () => {
+        this.limpiar();
+        this.poner("voz", "activa", "🎙 Escuchando", "Habla ahora: graba hasta que haya silencio.");
+      });
+    },
+    // El programa terminó la vuelta: JSON, orden (o nada) y LEDs.
+    fin({ json, origen, orden, sinEsp, alAplicar }) {
+      return this.encolar(async () => {
+        this.poner("intencion", "activa", esc(json || "{}"), "Según " + origen + (orden ? "." : ": nada sobre los LEDs."));
+        await pausa(420);
+        if (!orden) {
+          this.poner("intencion", "hecha");
+          this.poner("orden", "nula", "—", "No se manda nada: la frase no habla de los LEDs.");
+          this.poner("led", "nula", null, "Siguen como estaban.");
+          return;
+        }
+        await this.pasar("intencion");
+        this.poner("orden", "activa", orden, orden === "SHOW" ? "Show de luces: alterna 2,4 s y vuelve."
+          : `Primer carácter = rojo, segundo = azul (1 = prendido).`);
+        await pausa(420);
+        await this.pasar("orden");
+        this.poner("led", "activa", bulbos(orden), sinEsp ? "Sin ESP32: se dibuja aquí (no hay cable)." : "Esperando la respuesta del ESP32…");
+        if (alAplicar) alAplicar();
+        await pausa(orden === "SHOW" ? 2500 : 450);
+        this.poner("led", "hecha", bulbos(orden));
+      });
+    },
+    respuestaEsp(texto) { this.encolar(async () => { this.poner("led", "hecha", null, "El ESP32 contestó: " + texto); }); },
+  };
+
   // ---------------------------- Conversación ----------------------------
   function burbuja(clase, html) {
     const chat = $("chat");
@@ -119,10 +197,11 @@
         html += `<div>${texto}</div><div class="fila-orden">Orden <code>${orden}</code> ${bulbos(orden)}`
           + `<span class="nota">${st.sinEsp ? "(sin ESP32: solo se muestra)" : ""}</span></div>`;
         st.ultimaBot = burbuja("bot", html);
-        aplicarOrden(orden);
+        recorrido.fin({ json, origen, orden, sinEsp: st.sinEsp, alAplicar: () => aplicarOrden(orden) });
       } else {
         html += "<div>Eso no tiene que ver con los LEDs, así que no hice nada.</div>";
         st.ultimaBot = burbuja("bot nada", html);
+        recorrido.fin({ json, origen, orden: null });
       }
       st.sinEsp = false;
     }
@@ -139,6 +218,7 @@
         if (p) { p.propio = true; return; }
       }
       st.cola.push({ texto, eco: !!eco, propio: !eco });
+      recorrido.inicio(texto, false);
     }
     function linea(cruda, tipo) {
       if (tipo === "in") { anotar(cruda, true); return; }
@@ -155,8 +235,11 @@
           burbuja("sistema", l.startsWith("ESP32 conectado") ? "El programa arrancó y encontró el ESP32: las órdenes salen por el cable."
             : "El programa arrancó sin ESP32: las órdenes solo se muestran (y se dibujan aquí).");
         }
-      } else if ((m = l.match(/^Se entendio:\s*(.*)$/))) { st.vozTexto = m[1]; st.vozDeVoz = true; }
-      else if (l.startsWith("Habla ahora")) burbuja("sistema", "🎙 Escuchando… habla ahora.");
+      } else if (/^(Escribe el comando|Enter = hablar)/.test(l)) {
+        // El programa terminó de arrancar y espera la primera frase.
+        marcarListo(accionId);
+      } else if ((m = l.match(/^Se entendio:\s*(.*)$/))) { st.vozTexto = m[1]; st.vozDeVoz = true; recorrido.inicio(m[1], true); }
+      else if (l.startsWith("Habla ahora")) { burbuja("sistema", "🎙 Escuchando… habla ahora."); recorrido.escuchando(); }
       else if (l.startsWith("No se logro entender")) burbuja("sistema", "No se entendió el audio. Inténtalo de nuevo.");
       else if ((m = l.match(/^DeepSeek respondio:\s*(.*)$/))) { st.json = m[1]; st.deepseek = true; }
       else if (l.startsWith("Fallo la consulta a DeepSeek")) st.fallo = "DeepSeek no respondió; se usaron las palabras clave.";
@@ -166,6 +249,7 @@
       else if (l.startsWith("El comando no tenia relacion")) cerrarVuelta(null);
       else if ((m = l.match(/^ESP32 dice:\s*(.*)$/)) && st.ultimaBot) {
         st.ultimaBot.insertAdjacentHTML("beforeend", `<div class="nota">ESP32 contestó: <code>${esc(m[1])}</code></div>`);
+        recorrido.respuestaEsp(m[1]);
       }
     }
     return { st, linea, anotar };
@@ -174,10 +258,71 @@
   // ---------------------------- Integración con la API común ----------------------------
   const lectores = { texto: crearLector("texto"), voz: crearLector("voz") };
   const corriendo = { texto: false, voz: false };
+  const listo = { texto: false, voz: false };
+  const esperasListo = { texto: [], voz: [] };
+  const ctls = {};
+
+  // ---------------------------- Arranque: barra de carga y chip de estado ----------------------------
+  // El programa suele tardar ~3 s en arrancar (el lanzador revisa el entorno y Python importa openai,
+  // pyserial y SpeechRecognition). La primera vez, además, se crea el entorno e instala paquetes (1-3 min).
+  const ARRANQUE_S = 3;
+  let relojArranque = null;
+  function chip(estado, texto) {
+    const c = $("chipAsist"); if (!c) return;
+    c.dataset.estado = estado; $("chipTxt").textContent = texto;
+  }
+  function mostrarArranque(modo) {
+    const caja = $("arranque"); if (!caja) return;
+    clearInterval(relojArranque);
+    caja.hidden = false; caja.classList.remove("listo", "indeterminada");
+    const t0 = Date.now();
+    if (modo === "entorno") {
+      caja.classList.add("indeterminada");
+      $("arrTxt").textContent = "Preparando el entorno de Python (solo la primera vez: 1-3 min; el progreso de pip sale en el panel)…";
+      chip("arrancando", "Preparando el entorno…");
+    } else {
+      $("arrTxt").textContent = "Arrancando el asistente… suele tardar ~" + ARRANQUE_S + " s";
+      chip("arrancando", "Arrancando el asistente…");
+    }
+    const pintar = () => {
+      const s = (Date.now() - t0) / 1000;
+      $("arrTiempo").textContent = modo === "entorno" ? `lleva ${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`
+        : `lleva ${s.toFixed(1)} s de ~${ARRANQUE_S} s`;
+      if (modo !== "entorno") $("arrBarra").style.width = Math.min(92, (s / ARRANQUE_S) * 92) + "%";
+    };
+    pintar(); relojArranque = setInterval(pintar, 200);
+  }
+  function ocultarArranque(ok) {
+    clearInterval(relojArranque);
+    const caja = $("arranque"); if (!caja || caja.hidden) return;
+    if (ok) {
+      caja.classList.remove("indeterminada"); caja.classList.add("listo");
+      $("arrBarra").style.width = "100%"; $("arrTxt").textContent = "¡Listo! El asistente espera tu frase.";
+      setTimeout(() => { caja.hidden = true; }, 1600);
+    } else caja.hidden = true;
+  }
+  function marcarListo(id) {
+    listo[id] = true;
+    ocultarArranque(true);
+    chip("listo", id === "voz" ? "Asistente con micrófono en marcha" : "Asistente en marcha (modo texto)");
+    esperasListo[id].splice(0).forEach((r) => r(true));
+  }
 
   function marcarEstado(id, estado) {
     const e = String(estado && (estado.estado || estado) || "");
     corriendo[id] = e === "lanzada";
+    if (e === "preparando" || e === "instalando") { listo[id] = false; mostrarArranque(e === "instalando" ? "entorno" : "normal"); }
+    else if (e === "lanzada") { if (!listo[id] && $("arranque").hidden) mostrarArranque("normal"); }
+    else if (["terminada", "detenida", "error"].includes(e)) {
+      listo[id] = false; ocultarArranque(false);
+      esperasListo[id].splice(0).forEach((r) => r(false));
+      const otro = id === "texto" ? "voz" : "texto";
+      if (!corriendo[otro]) chip(e === "error" ? "error" : "parado", e === "error" ? "El asistente no arrancó (mira el panel)" : "Asistente detenido");
+    }
+  }
+  function esperarListo(id, ms) {
+    if (listo[id]) return Promise.resolve(true);
+    return new Promise((r) => { esperasListo[id].push(r); setTimeout(() => r(false), ms); });
   }
 
   // La caja de texto que pone panelEjecucion para las acciones con "entrada": true.
@@ -192,30 +337,43 @@
     }, true);
   }
 
-  // Botones de frases: la frase se "teclea" sola en la caja y se le manda al programa.
+  // Botones de frases: si el asistente no está en marcha, se arranca solo; luego la frase se
+  // "teclea" sola en la caja y se le manda al programa.
   let escribiendo = false;
   async function decir(frase) {
     if (escribiendo) return;
-    const panel = $("panelTexto");
-    if (!corriendo.texto) {
-      aviso("Primero pulsa «Iniciar» para arrancar el asistente; luego toca la frase.", "info");
-      panel.scrollIntoView({ behavior: "smooth", block: "center" });
-      return;
-    }
     escribiendo = true;
-    const caja = cajaDe(panel);
+    document.querySelectorAll(".frase-btn").forEach((b) => { b.disabled = true; });
+    const panel = $("panelTexto");
     try {
+      if (!listo.texto) {
+        if (!corriendo.texto && ctls.texto) ctls.texto.iniciar();
+        if (!(await esperarListo("texto", 240000))) {
+          aviso("El asistente no llegó a arrancar: mira el panel de abajo (Lo que dice el programa).", "error");
+          return;
+        }
+        await dormir(150);
+      }
+      const caja = cajaDe(panel);
       if (caja) {
         caja.value = "";
-        for (const c of frase) { caja.value += c; caja.dispatchEvent(new Event("input", { bubbles: true })); await dormir(28); }
-        await dormir(180);
+        for (const c of frase) { caja.value += c; caja.dispatchEvent(new Event("input", { bubbles: true })); await dormir(24); }
+        await dormir(150);
       }
       lectores.texto.anotar(frase, false);
+      // Que se vea el recorrido de la frase (el foco de la caja puede haber movido la página).
+      const rec = $("recorrido"), r = rec.getBoundingClientRect();
+      if (r.top < 60 || r.bottom > innerHeight) rec.scrollIntoView({ behavior: "smooth", block: "start" });
       await App.entrada("texto", frase);
       if (caja) { caja.value = ""; caja.dispatchEvent(new Event("input", { bubbles: true })); }
+      // Deja terminar la animación del recorrido antes de aceptar otra frase.
+      await recorrido.cola;
     } catch (err) {
       aviso("No se pudo mandar la frase: " + (err && err.message || err), "error");
-    } finally { escribiendo = false; }
+    } finally {
+      escribiendo = false;
+      document.querySelectorAll(".frase-btn").forEach((b) => { b.disabled = false; });
+    }
   }
 
   function aviso(texto, tipo) {
@@ -244,6 +402,7 @@
       alEstado: (e) => marcarEstado(accionId, e),
     }, extra || {});
     const r = App.panelEjecucion(el, accionId, opciones);
+    ctls[accionId] = r;
     if (lectores[accionId]) vigilarCaja(el, accionId);
     return r;
   }
@@ -255,6 +414,14 @@
     $("simulador").src = rutaRepo("preview.html");
     $("abrirSim").onclick = () => App.abrir("preview.html");
     $("abrirReadme").onclick = () => App.abrir("README.md");
+    $("btnReadme").onclick = () => (window.App ? App.abrir("README.md") : null);
+    // Al volver a una página con el asistente ya en marcha, el panel común enfoca su caja de texto y el
+    // navegador baja hasta la consola: en los primeros segundos se vuelve arriba (al recorrido).
+    document.addEventListener("focusin", (ev) => {
+      if (Date.now() - t0Pagina < 4000 && ev.target.closest && ev.target.closest("#panelTexto")) {
+        requestAnimationFrame(() => window.scrollTo({ top: 0 }));
+      }
+    });
 
     if (!window.App) {
       document.body.insertAdjacentHTML("afterbegin", '<p class="aviso-suave" style="margin:1rem">Esta página se abre con el '
@@ -262,17 +429,21 @@
       return;
     }
     try { await App.iniciar(); } catch (e) { aviso("No se pudo hablar con el lanzador: " + (e.message || e), "error"); }
-    try { App.pasos($("pasos")); } catch (e) { console.warn(e); }
+    let pasos = null;
+    try { pasos = App.pasos($("pasos")); } catch (e) { console.warn(e); }
+    // "Probar" lleva al paso Pruébalo (el 4.º) desde cualquier parte.
+    const irProbar = () => { if (pasos) pasos.ir(3); };
+    $("btnIrProbar").onclick = irProbar;
+    $("btnPortadaProbar").onclick = irProbar;
     try { App.checklist($("checklist")); App.checklist($("checklist2")); } catch (e) { console.warn(e); }
     panel("panelTexto", "texto", {
       titulo: "El asistente, en modo texto",
       botonTexto: "Iniciar el asistente",
-      queVaAPasar: "Arranca el programa real de la práctica sin micrófono, sin clave de DeepSeek y sin ESP32. "
+      queVaAPasar: "Arranca comando_voz.py sin micrófono, sin clave de DeepSeek y sin ESP32 (~3 s). "
         + "Entiende las frases con sus reglas por palabras clave y dice qué orden le habría mandado al ESP32.",
-      queHacer: "Toca una frase de ejemplo (abajo) o escribe la tuya en la caja que aparece y pulsa Enter. "
+      queHacer: "Toca una frase de ejemplo (arriba) o escribe la tuya en la caja y pulsa Enter. "
         + "Para terminar: escribe salir o pulsa Detener.",
-      queDeberiasVer: "En la conversación de la derecha, tu frase, el JSON que entendió y la orden (10, 01, 11, 00 o SHOW); "
-        + "los LEDs dibujados se prenden igual que lo harían los de la protoboard.",
+      queDeberiasVer: "",
     });
     panel("panelVoz", "voz", {
       titulo: "El asistente con micrófono (y DeepSeek si pusiste la clave)",

@@ -1,0 +1,4 @@
+# Modelo YOLOv8 nano (6 MB): no se sube, deteccion_pc.py lo descarga solo la primera vez
+yolov8n.pt
+# Ultimo cuadro y estado que deteccion_pc.py --vista deja para la app (temporal)
+salida-app/

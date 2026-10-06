@@ -3,9 +3,13 @@
  * Usa la API común window.App (apps-comun/app.js): App.iniciar, App.pasos, App.panelEjecucion,
  * App.accion, App.detener, App.checklist, App.markdown, App.imagen, App.url. Lo propio de esta
  * práctica está aquí:
- *   - el mapa interactivo de las 3 VLAN (SVG armado desde la lista NODOS),
- *   - el estado en vivo (LED + latencias), que llega por la acción "vivo" (app/estado_vivo.py),
- *     porque el admin en localhost:8080 no permite CORS y la página no puede leerlo directo,
+ *   - la animación "Docker paso a paso" (docker-anim.js), a la que se le pasan los datos reales,
+ *   - el PROGRESO REAL al levantar: lee línea a línea lo que imprime `docker compose` (imágenes que
+ *     se bajan o construyen, redes que se crean, contenedores que arrancan) y lo dibuja con su barra,
+ *   - el estado en vivo (mapa, LED, latencias y la lista de contenedores como Docker Desktop), que
+ *     llega por la acción "vivo" (app/estado_vivo.py), porque el admin en 127.0.0.1:8180 no
+ *     permite CORS y la página no puede leerlo directo,
+ *   - la prueba de aislamiento dibujada caso por caso en un mapa (en vivo y repetida del json),
  *   - los resultados de las pruebas, leídos de pruebas/resultados/*.json y dibujados.
  */
 (function () {
@@ -16,6 +20,8 @@
   const num = (v, dec = 2) => (v === null || v === undefined || Number.isNaN(Number(v))) ? "—" : Number(v).toLocaleString("es-CO", { minimumFractionDigits: dec, maximumFractionDigits: dec });
   const R = (ruta) => (window.App && App.url ? App.url(ruta) : ruta);
   const fechaDe = (epoch) => epoch ? new Date(epoch * 1000).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" }) : "—";
+  const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+  const DASHBOARD = "http://127.0.0.1:8180/";   // el contenedor admin escucha en 8080; en el PC se publica en 8180
 
   // ---------------------------------------------------------------- datos fijos del laboratorio
   const ZONA = {
@@ -52,8 +58,8 @@
       que: "ESP32 maestra emulada de sim-pepper (potenciómetros simulados)." },
     { id: "ctrl-nao", vlan: 2, ip: "192.168.20.33", x: 800, y: 205, w: 104, emu: true, manda: "sim-nao",
       que: "ESP32 maestra emulada de sim-nao (potenciómetros simulados)." },
-    { id: "admin", vlan: 3, ip: "192.168.30.10", x: 375, y: 470, w: 170, visor: "dashboard", puerto: 8080,
-      que: "La sala de control: broker MQTT (Mosquitto), recibe los latidos UDP de todos, hace ping a cada contenedor a través del router, decide OK / LENTO / CAIDO, lo publica por MQTT y lo muestra en el dashboard." },
+    { id: "admin", vlan: 3, ip: "192.168.30.10", x: 375, y: 470, w: 170, visor: "dashboard", puerto: 8180,
+      que: "La sala de control: broker MQTT (Mosquitto), recibe los latidos UDP de todos, hace ping a cada contenedor a través del router, decide OK / LENTO / CAIDO, lo publica por MQTT y lo muestra en el dashboard (en tu PC, puerto 8180)." },
     { id: "esclava", vlan: 3, ip: "192.168.30.40", x: 580, y: 470, w: 170, emu: true, servicio: "esclava-emulada",
       que: "ESP32 esclava emulada: se suscribe por MQTT a lab/estado/<servicio> y prende sus 6 LED (encendido = OK, parpadeo = LENTO, apagado = CAIDO)." },
     { id: "router", vlan: 0, ip: "192.168.10.254 · 20.254 · 30.254", x: 450, y: 322, w: 120, router: true,
@@ -61,9 +67,25 @@
   ];
   const GPIO = { "player-1": 16, "player-2": 17, "player-3": 18, "sim-spot": 19, "sim-pepper": 21, "sim-nao": 22 };
   const ORDEN_TABLA = ["track-server", "player-1", "player-2", "player-3", "sim-spot", "sim-pepper", "sim-nao", "router"];
+  // Los 16 servicios del compose, en el orden en que conviene mostrarlos, con su red.
+  const SERVICIOS = [
+    ["router", 0], ["admin", 3], ["esclava-emulada", 3],
+    ["track-server", 1], ["player-1", 1], ["player-2", 1], ["player-3", 1], ["ctrl-1", 1], ["ctrl-2", 1], ["ctrl-3", 1],
+    ["sim-spot", 2], ["sim-pepper", 2], ["sim-nao", 2], ["ctrl-spot", 2], ["ctrl-pepper", 2], ["ctrl-nao", 2],
+  ];
+  const RED_DE = Object.fromEntries(SERVICIOS);
+  // Las 6 imágenes: MB comprimidos de Docker Hub (docker manifest inspect, 2026-10-05) y tamaño en disco.
+  const IMAGENES = [
+    { k: "router", mb: 11, disco: "47,6 MB" }, { k: "admin", mb: 19, disco: "79,2 MB" },
+    { k: "servidor-pista", mb: 211, disco: "890 MB" }, { k: "jugador", mb: 53, disco: "230 MB" },
+    { k: "robot", mb: 214, disco: "898 MB" }, { k: "emulador", mb: 53, disco: "228 MB" },
+  ];
+  const MB_DESCARGA = 415;   // capas únicas de las 6 imágenes (34 capas): lo que baja la primera vez
+  const IMAGEN_DE = (s) => s === "router" ? "router" : s === "admin" ? "admin" : s === "track-server" ? "servidor-pista"
+    : /^player/.test(s) ? "jugador" : /^sim-/.test(s) ? "robot" : "emulador";
 
   let pasosCtl = null;
-  let vivo = { datos: null, ultimo: 0, corriendo: false, errorAdmin: null };
+  let vivo = { datos: null, ultimo: 0, corriendo: false, errorAdmin: null, docker: null, dockerUltimo: 0 };
 
   // ================================================================ arranque
   async function arrancar() {
@@ -81,26 +103,27 @@
     dibujarVisores();
     dibujarGaleria();
     pintarLedsVacios();
+    progreso.pintar();
+    aisla.dibujar();
+    if (window.DockerAnim) DockerAnim.iniciar({ alIr: irA });
 
     // Paneles de ejecución (salida en vivo dentro de la página)
-    App.panelEjecucion("#panelStack", "stack_hub", {
+    App.panelEjecucion("#panelStack", "stack_hub", Object.assign({
       titulo: "Levantar los 16 contenedores",
       botonTexto: "Levantar el laboratorio",
-      queVaAPasar: "Docker enciende el router, la sala de control, la pista, los 3 jugadores, los 3 robots y los 7 ESP32 emulados. Si falta alguna imagen, la baja de Docker Hub (la primera vez, unos 2,4 GB). Al terminar se abre el dashboard del admin en otra pestaña y aquí abajo empieza el estado en vivo.",
-      queDeberiasVer: "Líneas de Docker \"Started\" o \"Running\" por cada contenedor. Unos segundos después, los 6 LED de abajo encendidos y todo en OK (los robots tardan un poco más en cargar).",
-      alTerminar: (t) => { if (t.estado === "terminada") setTimeout(empezarVivo, 2500); },
-    });
-    App.panelEjecucion("#panelStackBuild", "stack", {
+      queVaAPasar: "Docker enciende el router, la sala de control, la pista, los 3 jugadores, los 3 robots y los 7 ESP32 emulados. Si falta alguna imagen, la baja de Docker Hub (la primera vez, ~415 MB que ocupan ~2,4 GB). El progreso se dibuja arriba; al terminar, la app pasa sola al laboratorio en vivo.",
+      queDeberiasVer: "Arriba, cada imagen \"lista\", las 3 redes creadas y los 16 contenedores en verde. Unos segundos después, la sala de control ve a todos en OK (los robots tardan un poco más en cargar).",
+    }, progreso.ganchos()));
+    App.panelEjecucion("#panelStackBuild", "stack", Object.assign({
       titulo: "Construir y levantar",
       botonTexto: "Construir las imágenes y levantar",
-      queDeberiasVer: "Los pasos de construcción de cada imagen (la de la pista y la de los robots son las largas). Al final, lo mismo que con el botón de arriba.",
-      alTerminar: (t) => { if (t.estado === "terminada") setTimeout(empezarVivo, 2500); },
-    });
+      queDeberiasVer: "Arriba, el paso \"k de n\" de cada Dockerfile (la de la pista y la de los robots son las largas). Al final, lo mismo que con el botón principal.",
+    }, progreso.ganchos()));
     App.panelEjecucion("#panelParar", "parar", {
       titulo: "Detener los 16 contenedores",
       botonTexto: "Detener el laboratorio",
       queDeberiasVer: "Una línea \"Stopped\" por cada contenedor. El estado en vivo pasará a \"el admin no responde\".",
-      alTerminar: () => pararVivo(),
+      alTerminar: () => { setTimeout(pararVivo, 4000); },
     });
 
     // Pruebas
@@ -119,7 +142,9 @@
     App.panelEjecucion("#panelAislamiento", "aislamiento", {
       titulo: "Probar el aislamiento entre VLAN",
       botonTexto: "Correr la prueba de aislamiento",
-      queDeberiasVer: "Cada caso con su resultado esperado y obtenido. Al final, 45 de 45 aprobados; el resultado se dibuja aquí debajo.",
+      queDeberiasVer: "Cada caso dibujado arriba como un paquete (verde llega, rojo bloqueado) y su línea aquí. Al final, 45 de 45 aprobados; el resultado se dibuja debajo.",
+      alLinea: (x) => aisla.linea(x),
+      alEstado: (t) => { if (t.estado === "preparando") aisla.reiniciar(); },
       alTerminar: () => pintarAislamiento(true),
     });
     pintarAislamiento(false);
@@ -127,7 +152,8 @@
     App.panelEjecucion("#panelDisponibilidad", "disponibilidad", {
       titulo: "Probar caídas y recuperación",
       botonTexto: "Correr la prueba de disponibilidad",
-      queDeberiasVer: "Cómo se detiene cada contenedor, cuándo el admin lo marca CAIDO y cuándo vuelve a OK. Si tienes el estado en vivo abierto (paso anterior), verás apagarse y volver cada LED.",
+      queDeberiasVer: "Cómo se detiene cada contenedor, cuándo el admin lo marca CAIDO y cuándo vuelve a OK. Los LED de arriba se apagan y vuelven en vivo.",
+      alEstado: (t) => { if (t.estado === "lanzada" && !vivo.corriendo) empezarVivo(); },
       alTerminar: () => pintarDisponibilidad(true),
     });
     pintarDisponibilidad(false);
@@ -145,7 +171,8 @@
     $("#btnVivoParar").onclick = pararVivo;
     $("#btnPreviewAbrir").onclick = () => App.accion("preview");
     $("#btnReadme").onclick = () => App.abrir("README.md");
-    $("#chipEstado").onclick = () => irA("Levantar el laboratorio");
+    $("#btnAislaRepetir").onclick = () => aisla.repetir();
+    $("#chipEstado").onclick = () => irA("El laboratorio en vivo");
     document.querySelectorAll("[data-ir]").forEach((b) => { b.onclick = () => irA(b.dataset.ir); });
 
     $("#plegableConceptos").addEventListener("toggle", function () {
@@ -156,7 +183,7 @@
     });
     $("#plegableIframe").addEventListener("toggle", function () {
       const f = $("#iframeDashboard");
-      if (this.open) f.src = "http://localhost:8080/"; else f.removeAttribute("src");
+      if (this.open) f.src = DASHBOARD; else f.removeAttribute("src");
     });
 
     // Pasos (al final: mueve las secciones y llama a alCambiar con el paso guardado)
@@ -180,17 +207,233 @@
   }
 
   function alEntrarPaso(titulo) {
-    // La simulación pesa (dibuja en canvas sin parar): solo se carga al entrar a su paso.
+    // La animación y la simulación dibujan sin parar: solo corren en su paso.
+    if (window.DockerAnim) DockerAnim.visible(titulo === "Docker paso a paso");
     const f = $("#iframePreview");
     if (titulo === "Sin Docker") { if (!f.getAttribute("src")) f.src = R("preview.html"); }
     else if (f.getAttribute("src")) f.removeAttribute("src");
-    // Al entrar al paso del laboratorio se intenta mirar el estado (si no está arriba, se rinde solo a los 20 s).
-    if (titulo === "Levantar el laboratorio" && !vivo.corriendo && !vivo.intentado) { vivo.intentado = true; empezarVivo(); }
+    // Al entrar al laboratorio en vivo (o a Docker paso a paso, para "la prueba", o a las pruebas, por los LED) se intenta mirar el
+    // estado; si el laboratorio no está arriba, el lector se rinde solo a los 20 s.
+    if (["El laboratorio en vivo", "Docker paso a paso", "Las pruebas"].includes(titulo) && !vivo.corriendo && !vivo.intentado) {
+      vivo.intentado = true; empezarVivo();
+    }
   }
+
+  // ================================================================ progreso real al levantar
+  // Lee lo que imprime `docker compose` (sin colores, BUILDKIT_PROGRESS=plain, lo pone el lanzador):
+  //   " Image dathinel/zonas-esp32-robot:1.0 Pulling" / "Pulled" / "Building" / "Built"
+  //   " 4abcf2066143 Downloading 12.58MB"  (una capa; sin el total, así que se suma lo bajado)
+  //   "#20 [sim-spot stage-1 3/9] RUN pip install ..."  (paso k de n de un Dockerfile)
+  //   " Network vlan1_gamer Creating" / "Created"
+  //   " Container zonas-esp32-router-1 Creating" / "Created" / "Starting" / "Started" / "Running"
+  const progreso = (() => {
+    let P = null;
+    let reloj = null;
+
+    function nuevo() {
+      return {
+        activo: false, t0: 0, tFin: 0, docker: "esperando", hayImagenes: false, error: null, termino: null,
+        imgs: Object.fromEntries(IMAGENES.map((i) => [i.k, { estado: "", frac: 0, modo: "" }])),
+        capas: {}, redes: { vlan1_gamer: "", vlan2_robotica: "", vlan3_admin: "" },
+        conts: Object.fromEntries(SERVICIOS.map(([s]) => [s, ""])),
+        hitos: {}, salud: null,
+      };
+    }
+    P = nuevo();
+
+    const bytes = (s) => {
+      const m = /([\d.]+)\s*([kKMG]?)B/.exec(s || "");
+      if (!m) return 0;
+      return parseFloat(m[1]) * ({ "": 1, k: 1e3, K: 1e3, M: 1e6, G: 1e9 }[m[2]] || 1);
+    };
+    const hito = (k) => { if (!P.hitos[k]) P.hitos[k] = Date.now(); };
+
+    function empezar() {
+      P = nuevo(); P.activo = true; P.t0 = Date.now(); P.docker = "comprobando";
+      clearInterval(reloj); reloj = setInterval(pintar, 1000);
+      pintar();
+    }
+
+    function linea(x) {
+      if (!P.activo) empezar();
+      let m;
+      if ((m = /^\s*Image (\S+?)(?::[\w.-]+)?\s+(Pulling|Pulled|Building|Built|Skipped)/.exec(x))) {
+        const k = (/zonas-esp32-([\w-]+)/.exec(m[1]) || [])[1];
+        if (k && P.imgs[k]) {
+          const im = P.imgs[k]; P.hayImagenes = true; hito("imagenes");
+          if (m[2] === "Pulling") { im.estado = "bajando"; im.modo = "pull"; }
+          else if (m[2] === "Building") { im.estado = "construyendo"; im.modo = "build"; }
+          else { im.estado = "lista"; im.frac = 1; }
+        }
+      } else if ((m = /^\s*([0-9a-f]{12}) (Pulling fs layer|Waiting|Downloading|Verifying Checksum|Download complete|Extracting|Pull complete|Already exists)\s*(.*)$/.exec(x))) {
+        P.hayImagenes = true; hito("imagenes");
+        const c = P.capas[m[1]] || (P.capas[m[1]] = { b: 0, listo: false });
+        if (m[2] === "Downloading") c.b = Math.max(c.b, bytes(m[3]));
+        if (m[2] === "Pull complete" || m[2] === "Already exists") c.listo = true;
+      } else if ((m = /^#\d+ \[([\w.-]+)(?: ([\w.-]+))? (\d+)\/(\d+)\]/.exec(x))) {
+        // Paso k de n del Dockerfile de ese servicio (la etapa "mallas-softbank" del robot es aparte: se ignora)
+        const k = IMAGEN_DE(m[1]);
+        if ((!m[2] || m[2] === "stage-1") && P.imgs[k] && P.imgs[k].estado !== "lista") {
+          P.hayImagenes = true; hito("imagenes");
+          const im = P.imgs[k]; im.estado = "construyendo"; im.modo = "build";
+          im.frac = Math.max(im.frac, (Number(m[3]) - 1) / Number(m[4]));
+          im.paso = `${m[3]}/${m[4]}`;
+        }
+      } else if ((m = /^\s*Network (\S+)\s+(Creating|Created|Removing|Removed)/.exec(x))) {
+        hito("redes");
+        if (m[1] in P.redes) P.redes[m[1]] = m[2] === "Created" ? "creada" : m[2] === "Creating" ? "creando" : m[2].toLowerCase();
+      } else if ((m = /^\s*Container zonas-esp32-([\w-]+?)-\d+\s+(\w+)/.exec(x))) {
+        hito("contenedores");
+        const s = m[1];
+        if (s in P.conts) {
+          const e = m[2];
+          P.conts[s] = /^(Started|Running|Healthy)$/.test(e) ? "arriba" : /^(Created|Recreated)$/.test(e) ? "creado"
+            : /^(Starting|Waiting)$/.test(e) ? "arrancando" : /^(Creating|Recreate)$/.test(e) ? "creando"
+            : /^(Error)$/.test(e) ? "error" : P.conts[s];
+        }
+      } else if (/port is already allocated|Error response from daemon|error during connect|Pool overlaps/i.test(x)) {
+        P.error = x.trim();
+      }
+      // Si ya empezaron las redes o los contenedores, las imágenes que no se mencionaron ya estaban.
+      if (P.hitos.redes || P.hitos.contenedores) {
+        for (const im of Object.values(P.imgs)) if (!im.estado) { im.estado = "ya estaba"; im.frac = 1; }
+        for (const r of Object.keys(P.redes)) if (!P.redes[r] && P.hitos.contenedores) P.redes[r] = "ya estaba";
+      }
+      pintarPronto();
+    }
+
+    function estado(t) {
+      if (t.estado === "preparando" && (!P.activo || P.termino)) empezar();
+      if (t.estado === "lanzada" && P.docker === "comprobando") P.docker = "abierto";
+      if (t.estado === "lanzada" && !P.activo) empezar();
+      pintarPronto();
+    }
+
+    function terminar(t) {
+      if (!P.activo) return;
+      P.termino = t.estado; P.tFin = Date.now();
+      if (t.estado === "terminada") {
+        for (const im of Object.values(P.imgs)) if (im.estado !== "lista" && im.estado !== "ya estaba") { im.estado = im.estado ? "lista" : "ya estaba"; im.frac = 1; }
+        for (const r of Object.keys(P.redes)) if (!P.redes[r] || P.redes[r] === "creando") P.redes[r] = P.redes[r] ? "creada" : "ya estaba";
+        for (const s of Object.keys(P.conts)) if (P.conts[s] !== "error") P.conts[s] = "arriba";
+        // Tiempos reales de esta subida, para "la prueba" de la escena 6 de la animación
+        const seg = (a, b) => (a && b ? `${Math.max(0, Math.round((b - a) / 1000))} s` : "—");
+        const h = P.hitos;
+        if (window.DockerAnim) DockerAnim.datos({ subida: {
+          imagenes: h.imagenes ? seg(h.imagenes, h.redes || h.contenedores || P.tFin) : "ya estaban",
+          redes: seg(h.redes, h.contenedores || P.tFin), contenedores: seg(h.contenedores, P.tFin), total: seg(P.t0, P.tFin) } });
+        P.salud = { desde: Date.now(), ok: 0, total: 8 };
+        setTimeout(() => { if (!vivo.corriendo) empezarVivo(); }, 1500);
+      } else {
+        clearInterval(reloj);
+      }
+      pintar();
+    }
+
+    /** Lo llama el estado en vivo: cuántos servicios ve el admin en OK (fase final). */
+    function salud(d) {
+      if (!P.salud || !d) return;
+      const sv = Object.values(d.servicios || {});
+      P.salud.ok = sv.filter((s) => s.estado === "OK").length;
+      P.salud.total = sv.length || 8;
+      if (P.salud.ok >= P.salud.total && !P.salud.listo) {
+        P.salud.listo = Date.now(); clearInterval(reloj);
+        setTimeout(() => irA("El laboratorio en vivo"), 2500);
+      }
+      pintarPronto();
+    }
+
+    function fracciones() {
+      const imgs = Object.values(P.imgs);
+      const capas = Object.values(P.capas);
+      const mbBajados = capas.reduce((a, c) => a + c.b, 0) / 1e6;
+      // Imágenes: si se bajan, manda lo descargado (sobre ~415 MB); si se construyen, el paso k/n de cada Dockerfile.
+      let fImg = imgs.reduce((a, im, i) => a + im.frac * IMAGENES[i].mb, 0) / MB_DESCARGA;
+      if (imgs.some((im) => im.modo === "pull")) fImg = Math.max(fImg, Math.min(0.98, mbBajados / MB_DESCARGA));
+      if (imgs.every((im) => im.estado === "lista" || im.estado === "ya estaba")) fImg = 1;
+      const fRed = Object.values(P.redes).filter((r) => r === "creada" || r === "ya estaba").length / 3;
+      const peso = { creando: 0.25, creado: 0.5, arrancando: 0.7, arriba: 1 };
+      const fCont = Object.values(P.conts).reduce((a, e) => a + (peso[e] || 0), 0) / SERVICIOS.length;
+      const fSalud = P.salud ? Math.min(1, P.salud.ok / (P.salud.total || 8)) : 0;
+      // Pesos: las imágenes solo cuentan si hubo que bajarlas o construirlas.
+      const w = P.hayImagenes ? { i: 70, r: 3, c: 17, s: 10 } : { i: 0, r: 10, c: 60, s: 30 };
+      const total = (w.i * fImg + w.r * fRed + w.c * fCont + w.s * fSalud) / 100;
+      return { fImg, fRed, fCont, fSalud, total, mbBajados };
+    }
+
+    let pendiente = false;
+    function pintarPronto() { if (!pendiente) { pendiente = true; requestAnimationFrame(() => { pendiente = false; pintar(); }); } }
+
+    function pintar() {
+      const f = fracciones();
+      const ahora = P.tFin && (!P.salud || P.salud.listo) ? (P.salud && P.salud.listo ? P.salud.listo : P.tFin) : Date.now();
+      const seg = P.t0 ? (ahora - P.t0) / 1000 : 0;
+      const barra = $("#progBarra");
+      barra.style.width = `${Math.round((P.salud && P.salud.listo ? 1 : f.total) * 100)}%`;
+      barra.className = P.error || P.termino === "error" ? "mal" : P.salud && P.salud.listo ? "ok" : "";
+      // Título: la fase actual en palabras
+      let titulo = 'Todavía no has pulsado "Levantar el laboratorio"';
+      if (P.activo) {
+        if (P.termino === "error") titulo = "No se pudo levantar: mira el resumen del error abajo";
+        else if (P.termino === "detenida") titulo = "Detenido";
+        else if (P.salud && P.salud.listo) titulo = "Listo: los 16 contenedores arriba y la sala de control ve a todos en OK";
+        else if (P.salud) titulo = `Contenedores arriba. Esperando a que la sala de control vea a todos: ${P.salud.ok} de ${P.salud.total} en OK`;
+        else if (P.hitos.contenedores) titulo = `Arrancando contenedores: ${Object.values(P.conts).filter((e) => e === "arriba").length} de 16`;
+        else if (P.hitos.redes) titulo = "Creando las 3 redes (VLAN)";
+        else if (P.hayImagenes) {
+          const bajando = Object.entries(P.imgs).filter(([, im]) => im.estado === "bajando" || im.estado === "construyendo").map(([k]) => k);
+          titulo = Object.values(P.imgs).some((im) => im.modo === "build")
+            ? `Construyendo imágenes: ${bajando.join(", ") || "…"}`
+            : `Bajando imágenes de Docker Hub: ${num(f.mbBajados, 0)} de ~${MB_DESCARGA} MB`;
+        } else if (P.docker === "comprobando") titulo = "Comprobando que Docker Desktop esté abierto…";
+        else titulo = "Docker respondió: revisando qué imágenes faltan…";
+      }
+      $("#progTitulo").textContent = titulo;
+      const tipico = P.hayImagenes ? (Object.values(P.imgs).some((im) => im.modo === "build") ? "10-20 min" : "2-6 min") : "~30 s";
+      $("#progReloj").innerHTML = P.activo ? `<b>${mmss(seg)}</b><span>típico: ${tipico}</span>` : `<span>típico: ~30 s · la primera vez 2-6 min</span>`;
+
+      // Fases
+      const chip = (nombre, est, extra, color) => {
+        const cls = /lista|ya estaba|creada|arriba/.test(est) ? "ok" : /error/.test(est) ? "mal" : est ? "trabaja" : "";
+        return `<div class="c11-chipf ${cls}" ${color ? `style="--zc:${color}"` : ""}><i></i><b>${esc(nombre)}</b><span>${esc(est || "pendiente")}${extra ? " · " + esc(extra) : ""}</span></div>`;
+      };
+      const imgs = IMAGENES.map((i) => {
+        const im = P.imgs[i.k];
+        const extra = im.estado === "construyendo" && im.paso ? `paso ${im.paso}` : im.estado === "bajando" ? `~${i.mb} MB` : im.estado ? i.disco : `${i.mb} MB / ${i.disco}`;
+        return chip(i.k, im.estado, extra);
+      }).join("");
+      const redes = Object.entries(P.redes).map(([n, e], i) => chip(n, e, ["192.168.10.0/24", "192.168.20.0/24", "192.168.30.0/24"][i], ZONA[i + 1].color)).join("");
+      const conts = SERVICIOS.map(([s, v]) => chip(s, P.conts[s], "", ZONA[v].color)).join("");
+      const fase = (n, titulo, frac, contenido, nota) => `<div class="c11-fase ${frac >= 1 ? "hecha" : frac > 0 ? "en-curso" : ""}">
+          <div class="c11-fase-cab"><span class="c11-fase-num">${frac >= 1 ? "✓" : n}</span><b>${titulo}</b><small>${esc(nota || "")}</small>
+            <div class="c11-barra"><i style="width:${Math.round(frac * 100)}%"></i></div></div>
+          <div class="c11-fase-cuerpo">${contenido}</div></div>`;
+      const nOk = P.salud ? `${P.salud.ok} de ${P.salud.total} servicios en OK` : "";
+      $("#progFases").innerHTML =
+        fase(1, "Imágenes (6)", f.fImg, `<div class="c11-chips seis">${imgs}</div>`,
+          P.hayImagenes && Object.values(P.imgs).some((im) => im.modo === "pull") ? `bajados ${num(f.mbBajados, 0)} de ~${MB_DESCARGA} MB` : (P.activo && (P.hitos.redes || P.hitos.contenedores) && !P.hayImagenes ? "ya estaban todas en el PC" : "")) +
+        fase(2, "Redes (3)", f.fRed, `<div class="c11-chips tres">${redes}</div>`) +
+        fase(3, "Contenedores (16)", f.fCont, `<div class="c11-chips dieciseis">${conts}</div>`, "el router arranca primero: los demás lo esperan") +
+        fase(4, "La sala de control ve a todos", P.salud && P.salud.listo ? 1 : f.fSalud, `<p class="c11-nota">${P.salud ? esc(nOk) + (P.salud.listo ? " · ¡listo!" : " · los robots tardan unos segundos en cargar sus modelos") : "Cuando terminen los contenedores, la app lee el estado del admin (los 6 LED)."}</p>`);
+      const nota = $("#progNota");
+      if (P.activo && !P.error && !(P.salud && P.salud.listo)) {
+        nota.textContent = P.termino === "error" ? "Docker no terminó bien: abajo está el resumen del error y sus últimas líneas."
+          : "Cada cuadro cambia cuando docker compose lo anuncia (la salida completa está abajo, en \"Lo que dice el programa\").";
+        nota.className = "c11-nota";
+      }
+      if (P.error) { nota.textContent = "Docker avisó: " + P.error; nota.className = "c11-nota c11-mal"; }
+      else if (P.salud && P.salud.listo) { nota.innerHTML = 'Todo arriba. <button class="c11-btn primario" id="btnIrVivo">Ver el laboratorio en vivo →</button>'; nota.className = "c11-nota"; const b = $("#btnIrVivo"); if (b) b.onclick = () => irA("El laboratorio en vivo"); }
+    }
+
+    function ganchos() {
+      return { alLinea: (x, tipo) => { if (tipo !== "in") linea(x); }, alEstado: estado, alTerminar: terminar };
+    }
+
+    return { ganchos, pintar, salud, get estado() { return P; } };
+  })();
 
   // ================================================================ mapa
   function dibujarMapa() {
-    const ns = "http://www.w3.org/2000/svg";
     let s = `<svg viewBox="0 0 900 560" role="img" aria-label="Mapa de las tres VLAN con el router">
       <defs>
         <marker id="m11ok" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 z" fill="#4caf7d"/></marker>
@@ -202,7 +445,6 @@
     s += zona(20, 20, 400, 245, 1, "VLAN 1 · ZONA GAMER");
     s += zona(480, 20, 400, 245, 2, "VLAN 2 · ZONA ROBÓTICA");
     s += zona(250, 405, 420, 135, 3, "VLAN 3 · ADMINISTRACIÓN");
-    // Enlaces con el router (permitido) y el cruce bloqueado
     s += `<g stroke-width="2.2" fill="none">
       <path d="M220 265 C 230 300, 330 322, 390 322" stroke="#4caf7d" marker-end="url(#m11ok)" marker-start="url(#m11ok)"/>
       <path d="M680 265 C 670 300, 570 322, 510 322" stroke="#4caf7d" marker-end="url(#m11ok)" marker-start="url(#m11ok)"/>
@@ -214,14 +456,12 @@
       <text x="450" y="182" fill="#d9534f" font-size="10">DROP</text>
       <text x="300" y="300" fill="#4caf7d" font-size="10">.254</text><text x="600" y="300" fill="#4caf7d" font-size="10">.254</text><text x="472" y="378" fill="#4caf7d" font-size="10">.254</text>
     </g>`;
-    // Emulado → su contenedor (punteado)
     s += `<g stroke="#8b929b" stroke-dasharray="2 4" stroke-width="1.3">`;
     for (const n of NODOS.filter((n) => n.manda)) {
       const d = NODOS.find((m) => m.id === n.manda);
       s += `<line x1="${n.x}" y1="${n.y - 14}" x2="${d.x}" y2="${d.y + 16}"/>`;
     }
     s += `<line x1="545" y1="470" x2="460" y2="470"/></g>`;
-    // Nodos
     for (const n of NODOS) {
       const c = ZONA[n.vlan].color, h = n.router ? 38 : 32;
       const x = n.x - n.w / 2, y = n.y - h / 2;
@@ -245,10 +485,17 @@
       g.addEventListener("click", elegir);
       g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); elegir(); } });
     });
-    void ns;
+  }
+
+  function contenedorDe(id) {
+    const servicio = id === "esclava" ? "esclava-emulada" : id;
+    return (vivo.docker && Date.now() - vivo.dockerUltimo < 10000 ? vivo.docker.contenedores : []).find((c) => c.servicio === servicio);
   }
 
   function estadoDeNodo(n) {
+    // Si Docker dice que el contenedor está detenido, manda eso (aunque el admin no responda).
+    const c = contenedorDe(n.id);
+    if (c && c.estado !== "running") return "CAIDO";
     const d = vivo.datos;
     if (!d || Date.now() - vivo.ultimo > 6000) return null;
     if (n.id === "admin") return "OK";
@@ -268,42 +515,43 @@
       g.querySelector(".luz").setAttribute("fill", colorEstado(estadoDeNodo(n)));
     });
     const sel = document.querySelector("#mapa .nodo.sel");
-    if (sel) mostrarFicha(sel.dataset.id, true);
+    if (sel) mostrarFicha(sel.dataset.id);
   }
 
-  function mostrarFicha(id, silencioso) {
+  function mostrarFicha(id) {
     const n = NODOS.find((m) => m.id === id);
     if (!n) return;
     const z = ZONA[n.vlan];
     const e = estadoDeNodo(n);
     const s = vivo.datos && vivo.datos.servicios[n.id];
+    const c = contenedorDe(n.id);
     let html = `<p class="c11-etiqueta ${z.clase}">${esc(z.nombre)}</p>
       <h4>${esc(n.router ? "router" : n.id)} ${e ? `<span class="c11-insignia ${e}">${e}</span>` : ""}</h4>
       <p class="c11-nota">${esc(n.que)}</p><dl>
       <dt>IP</dt><dd class="c11-mono">${esc(n.ip)}</dd>
       <dt>Tipo</dt><dd>${n.emu ? "ESP32 emulado (contenedor del emulador)" : n.router ? "Router (contenedor Alpine)" : "Contenedor"}</dd>`;
+    if (c) html += `<dt>Docker</dt><dd class="c11-mono">${esc(c.texto)}</dd><dt>Imagen</dt><dd class="c11-mono">${esc((c.imagen || "").replace(/^.*\//, ""))}</dd>`;
     if (n.esp) html += `<dt>Lo maneja</dt><dd class="c11-mono">${esc(n.esp)}</dd>`;
     if (n.manda) html += `<dt>Manda a</dt><dd class="c11-mono">${esc(n.manda)}</dd>`;
     if (n.led) html += `<dt>Su LED</dt><dd class="c11-mono">${esc(n.led)} de la esclava</dd>`;
     if (s && s.prom != null) html += `<dt>RTT ahora</dt><dd class="c11-mono">${num(s.rtt, 3)} ms (prom. ${num(s.prom, 3)})</dd>`;
-    if (n.puerto) html += `<dt>Visor</dt><dd class="c11-mono">localhost:${n.puerto}</dd>`;
+    if (n.puerto) html += `<dt>Visor</dt><dd class="c11-mono">127.0.0.1:${n.puerto}</dd>`;
     html += "</dl>";
     if (n.visor) html += `<div class="c11-botonera"><button class="c11-btn" data-visor="${n.visor}">Abrir su visor</button></div>`;
     const f = $("#ficha");
     f.innerHTML = html;
     const b = f.querySelector("[data-visor]");
     if (b) b.onclick = () => App.accion(b.dataset.visor);
-    void silencioso;
   }
 
   // ================================================================ visores y galería
   function dibujarVisores() {
     const v = [
-      ["dashboard", "Dashboard del admin", "localhost:8080", "img/dashboard-stack.png"],
-      ["pista", "La carrera", "localhost:8010", "img/pista-carrera.png"],
-      ["spot", "Spot (Rex)", "localhost:8011", "img/robot-spot.png"],
-      ["pepper", "Pepper", "localhost:8012", "img/robot-pepper.png"],
-      ["nao", "NAO", "localhost:8013", "img/robot-nao.png"],
+      ["dashboard", "Dashboard del admin", "127.0.0.1:8180", "img/dashboard-stack.png"],
+      ["pista", "La carrera", "127.0.0.1:8010", "img/pista-carrera.png"],
+      ["spot", "Spot (Rex)", "127.0.0.1:8011", "img/robot-spot.png"],
+      ["pepper", "Pepper", "127.0.0.1:8012", "img/robot-pepper.png"],
+      ["nao", "NAO", "127.0.0.1:8013", "img/robot-nao.png"],
     ];
     const c = $("#visores");
     c.innerHTML = v.map(([id, n, p, img]) =>
@@ -331,32 +579,38 @@
   }
 
   // ================================================================ estado en vivo
-  function pintarLedsVacios() {
-    $("#leds").innerHTML = Object.keys(GPIO).map((n) =>
-      `<div class="c11-led"><div class="bombillo"></div><b>${esc(n)}</b><span>GPIO ${GPIO[n]}</span></div>`).join("");
+  function ledsHtml(d) {
+    return (d && d.leds.length ? d.leds : Object.keys(GPIO)).map((n) => {
+      const e = d ? ((d.servicios[n] || {}).estado || "") : "";
+      return `<div class="c11-led ${e}" title="${esc(n)}: ${esc(e)}"><div class="bombillo"></div><b>${esc(n)}</b><span>GPIO ${GPIO[n] ?? "?"}${d ? " · " + esc(e || "—") : ""}</span></div>`;
+    }).join("");
   }
+  function pintarLedsVacios() { $("#leds").innerHTML = ledsHtml(null); $("#ledsDisp").innerHTML = ledsHtml(null); }
 
   async function empezarVivo() {
     if (vivo.corriendo) return;
     vivo.corriendo = true;
     $("#btnVivo").disabled = true; $("#btnVivoParar").disabled = false;
-    textoVivo("Conectando con la sala de control…", "");
-    let lectura = null;
+    textoVivo("Conectando con la sala de control y con Docker…", "");
+    let lectura = null, lecturaDocker = null;
     const lanzar = () => App.accion("vivo", {
       alLinea: (x) => {
         // Cada lectura llega en varias líneas cortas (el lanzador corta las de más de 2000
         // caracteres): GEN abre una lectura nueva, SVC y LAT la completan y OK la dibuja.
+        // Las de Docker igual: CONT (una por contenedor), IMGS, REDES y DOCKER_OK.
         try {
           if (x.startsWith("VIVO_GEN ")) { lectura = Object.assign(JSON.parse(x.slice(9)), { servicios: {}, latidos: [] }); return; }
           if (x.startsWith("VIVO_SVC ") && lectura) { const s = JSON.parse(x.slice(9)); lectura.servicios[s.nombre] = s; return; }
           if (x.startsWith("VIVO_LAT ") && lectura) { lectura.latidos = JSON.parse(x.slice(9)); return; }
-        } catch (e) { lectura = null; return; /* línea dañada: se espera la lectura siguiente */ }
+          if (x.startsWith("VIVO_CONT ")) { (lecturaDocker = lecturaDocker || { contenedores: [] }).contenedores.push(JSON.parse(x.slice(10))); return; }
+          if (x.startsWith("VIVO_IMGS ")) { (lecturaDocker = lecturaDocker || { contenedores: [] }).imagenes = JSON.parse(x.slice(10)); return; }
+          if (x.startsWith("VIVO_REDES ")) { (lecturaDocker = lecturaDocker || { contenedores: [] }).redes = JSON.parse(x.slice(11)); return; }
+        } catch (e) { lectura = null; lecturaDocker = null; return; /* línea dañada: se espera la lectura siguiente */ }
         if (x === "VIVO_OK" && lectura) { recibirVivo(lectura); lectura = null; }
-        else if (x.startsWith("SIN_ADMIN")) {
-          vivo.datos = null; pintarSinAdmin();
-        } else if (x.startsWith("FIN ")) {
-          textoVivo(x.slice(4), vivo.ultimo ? "" : "mal");
-        }
+        else if (x === "VIVO_DOCKER_OK") { recibirDocker(lecturaDocker || { contenedores: [] }); lecturaDocker = null; }
+        else if (x.startsWith("SIN_DOCKER")) { recibirDocker(null); }
+        else if (x.startsWith("SIN_ADMIN")) { vivo.datos = null; pintarSinAdmin(); }
+        else if (x.startsWith("FIN ")) { textoVivo(x.slice(4), vivo.ultimo ? "" : "mal"); }
       },
       alEstado: (t) => {
         if (t.estado === "instalando" || t.estado === "preparando") textoVivo("Preparando el lector del estado…", "");
@@ -364,7 +618,7 @@
       },
     });
     try {
-      let t = await lanzar().catch(async (e) => {
+      const t = await lanzar().catch(async (e) => {
         // Si quedó uno corriendo de antes (se recargó la página), se cierra y se vuelve a lanzar.
         if (/en marcha/i.test(e.message)) { await App.detener("vivo").catch(() => {}); await new Promise((r) => setTimeout(r, 1200)); return lanzar(); }
         throw e;
@@ -393,7 +647,12 @@
   function chip(d) {
     const c = $("#chipEstado"), t = $("#chipTexto");
     c.classList.remove("ok", "lento", "caido");
-    if (!d) { t.textContent = vivo.errorAdmin ? "Laboratorio: el admin no responde" : "Laboratorio: sin mirar"; if (vivo.errorAdmin) c.classList.add("caido"); return; }
+    if (!d) {
+      const corriendo = vivo.docker ? vivo.docker.contenedores.filter((x) => x.estado === "running").length : null;
+      t.textContent = vivo.errorAdmin ? (corriendo ? `Laboratorio: ${corriendo} contenedores, el admin no responde` : "Laboratorio: detenido") : "Laboratorio: sin mirar";
+      if (vivo.errorAdmin) c.classList.add("caido");
+      return;
+    }
     const leds = d.leds.map((n) => (d.servicios[n] || {}).estado);
     const ok = leds.filter((e) => e === "OK").length;
     const caidos = leds.filter((e) => e === "CAIDO").length;
@@ -403,8 +662,8 @@
 
   function pintarSinAdmin() {
     vivo.errorAdmin = true;
-    textoVivo("La sala de control no responde en localhost:8080. ¿Está levantado el laboratorio? (Paso A, arriba)", "mal");
-    document.querySelectorAll("#leds .c11-led").forEach((l) => { l.className = "c11-led"; });
+    textoVivo("La sala de control no responde en 127.0.0.1:8180. ¿Está levantado el laboratorio? (paso \"Levantar el laboratorio\")", "mal");
+    document.querySelectorAll("#leds .c11-led, #ledsDisp .c11-led").forEach((l) => { l.className = "c11-led"; });
     chip(null); pintarMapaVivo();
   }
 
@@ -417,13 +676,9 @@
 
   function recibirVivo(d) {
     vivo.datos = d; vivo.ultimo = Date.now(); vivo.errorAdmin = false;
-    // LED
-    const leds = $("#leds");
-    leds.innerHTML = (d.leds.length ? d.leds : Object.keys(GPIO)).map((n) => {
-      const e = (d.servicios[n] || {}).estado || "";
-      return `<div class="c11-led ${e}" title="${esc(n)}: ${esc(e)}"><div class="bombillo"></div><b>${esc(n)}</b><span>GPIO ${GPIO[n] ?? "?"} · ${esc(e || "—")}</span></div>`;
-    }).join("");
-    // Tabla
+    $("#leds").innerHTML = ledsHtml(d);
+    $("#ledsDisp").innerHTML = ledsHtml(d);
+    // Tabla de lo que mide el admin
     const maxRtt = Math.max(0.5, ...Object.values(d.servicios).map((s) => s.p95 || 0));
     const filas = ORDEN_TABLA.filter((n) => d.servicios[n]).concat(Object.keys(d.servicios).filter((n) => !ORDEN_TABLA.includes(n)));
     $("#tablaVivo tbody").innerHTML = filas.map((n) => {
@@ -449,7 +704,201 @@
     textoVivo(`En vivo · actualizado ${new Date().toLocaleTimeString("es-CO")} · el admin lleva ${duracion(d.en_marcha_s)} en marcha · MQTT ${d.mqtt ? "conectado" : "sin conexión"} · ${nOk} de ${lat.length} ESP32 latiendo`, "ok");
     chip(d);
     pintarMapaVivo();
+    progreso.salud(d);
   }
+
+  // ---------------------------------------------------------------- contenedores (como Docker Desktop)
+  let filtroRed = "todas";
+  function recibirDocker(d) {
+    vivo.docker = d; vivo.dockerUltimo = Date.now();
+    if (window.DockerAnim && d) DockerAnim.datos({ contenedores: d.contenedores, ...(d.imagenes ? { imagenes: d.imagenes } : {}), ...(d.redes ? { redes: d.redes } : {}) });
+    if (d && d.imagenes) vivo.imagenes = d.imagenes;
+    pintarContenedores();
+    if (!vivo.datos) { chip(null); pintarMapaVivo(); }
+  }
+
+  function pintarContenedores() {
+    const d = vivo.docker;
+    const tb = $("#tablaCont tbody");
+    if (!d) {
+      $("#contTitulo").textContent = "Docker no responde: ¿está abierto Docker Desktop?";
+      tb.innerHTML = '<tr><td colspan="6" class="c11-nota">Abre Docker Desktop y espera a que diga "Engine running".</td></tr>';
+      return;
+    }
+    const cs = d.contenedores;
+    const corriendo = cs.filter((c) => c.estado === "running").length;
+    $("#contTitulo").textContent = cs.length ? `zonas-esp32 · ${cs.length} contenedores · ${corriendo} en marcha` : "No hay contenedores del laboratorio: levántalo primero";
+    const filtros = [["todas", "Todos"], ["1", "VLAN 1"], ["2", "VLAN 2"], ["3", "VLAN 3"], ["0", "router"]];
+    $("#contFiltros").innerHTML = filtros.map(([k, n]) => `<button data-f="${k}" class="${filtroRed === k ? "activa" : ""}">${n}</button>`).join("");
+    $("#contFiltros").querySelectorAll("button").forEach((b) => { b.onclick = () => { filtroRed = b.dataset.f; pintarContenedores(); }; });
+    const orden = SERVICIOS.map(([s]) => s);
+    const filas = cs.slice().sort((a, b) => orden.indexOf(a.servicio) - orden.indexOf(b.servicio))
+      .filter((c) => filtroRed === "todas" || String(RED_DE[c.servicio]) === filtroRed);
+    tb.innerHTML = filas.length ? filas.map((c) => {
+      const v = RED_DE[c.servicio] ?? 0, z = ZONA[v];
+      const cls = c.estado === "running" ? (c.salud === "unhealthy" ? "lento" : "ok") : c.estado === "restarting" || c.salud === "starting" ? "lento" : "parado";
+      const puertos = (c.puertos || []).map((p) => {
+        const m = /^(\d+)->(\d+)\/(tcp|udp)$/.exec(p);
+        const web = m && m[3] === "tcp" && /^(8180|801[0-3])$/.test(m[1]);
+        return web ? `<button class="c11-puerto" data-url="http://127.0.0.1:${m[1]}/" title="Abrir en el navegador">${esc(m[1])}:${esc(m[2])} ↗</button>`
+          : `<span class="c11-puerto">${esc(p.replace("->", ":"))}</span>`;
+      }).join(" ");
+      return `<tr><td><span class="c11-punto-est ${cls}"></span></td>
+        <td><b>${esc(c.servicio)}</b><br><span class="c11-nota c11-mono" style="font-size:.66rem">${esc(c.nombre)}</span></td>
+        <td><span class="${z.clase} c11-mono" style="font-size:.72rem">${v ? "VLAN " + v : "las 3"}</span></td>
+        <td class="c11-mono" style="font-size:.74rem">${esc((c.imagen || "").replace(/^.*\//, ""))}</td>
+        <td style="font-size:.78rem">${esc(c.texto)}</td>
+        <td>${puertos || '<span class="c11-nota">—</span>'}</td></tr>`;
+    }).join("") : '<tr><td colspan="6" class="c11-nota">Ninguno en este filtro.</td></tr>';
+    tb.querySelectorAll("[data-url]").forEach((b) => { b.onclick = () => App.abrir(b.dataset.url); });
+    const imgs = vivo.imagenes || d.imagenes;
+    $("#contImgs").innerHTML = imgs && imgs.length ? `<b>Imágenes en tu PC:</b> ${imgs.map((i) => `<span class="c11-mono">${esc(i.repo.replace(/^.*zonas-esp32-/, ""))}</span> ${esc(i.tamano)}`).join(" · ")}` : "";
+  }
+
+  // ================================================================ aislamiento dibujado caso por caso
+  const aisla = (() => {
+    const POS = {
+      "track-server": [80, 70], "player-1": [80, 102], "player-2": [80, 134], "player-3": [80, 166],
+      "ctrl-1": [190, 86], "ctrl-2": [190, 118], "ctrl-3": [190, 150],
+      "sim-spot": [450, 86], "sim-pepper": [450, 118], "sim-nao": [450, 150],
+      "ctrl-spot": [560, 86], "ctrl-pepper": [560, 118], "ctrl-nao": [560, 150],
+      admin: [270, 285], esclava: [370, 285],
+    };
+    const RT = [320, 150], BORDE = { g: [240, 120], r: [400, 120], a: [320, 245] };
+    const PUERTA = { g: [135, 214], r: [505, 214] };
+    const zonaDe = (n) => /^(player|track|ctrl-\d)/.test(n) ? "g" : /^(sim-|ctrl-(spot|pepper|nao))/.test(n) ? "r" : /^admin|^esclava/.test(n) ? "a" : null;
+    let svg = null, cola = [], ocupado = false, cuentas = { bloq: 0, pasan: 0, drop: 0 }, gen = 0;
+
+    function el(tag, attrs, padre) {
+      const e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+      for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+      (padre || svg).appendChild(e); return e;
+    }
+    function t(x, y, s, attrs) { const e = el("text", Object.assign({ x, y, fill: "#e7e9ec", "font-family": "IBM Plex Mono", "font-size": 10 }, attrs || {})); e.textContent = s; return e; }
+
+    function dibujar() {
+      svg = $("#aislaSvg");
+      svg.innerHTML = "";
+      el("rect", { x: 20, y: 30, width: 220, height: 160, rx: 10, fill: "#3fbf8f12", stroke: "#3fbf8f" }); t(30, 46, "VLAN 1 · gamer", { fill: "#3fbf8f", "font-weight": 600 });
+      el("rect", { x: 400, y: 30, width: 220, height: 160, rx: 10, fill: "#f0913a12", stroke: "#f0913a" }); t(410, 46, "VLAN 2 · robótica", { fill: "#f0913a", "font-weight": 600 });
+      el("rect", { x: 210, y: 245, width: 220, height: 70, rx: 10, fill: "#a77be812", stroke: "#a77be8" }); t(220, 261, "VLAN 3 · admin", { fill: "#a77be8", "font-weight": 600 });
+      for (const [a, b] of [[BORDE.g, RT], [BORDE.r, RT], [BORDE.a, RT]]) el("line", { x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: "#4f8fce", "stroke-width": 2 });
+      for (const k of ["g", "r"]) {
+        const [x, y] = PUERTA[k];
+        el("rect", { x: x - 42, y: y - 11, width: 84, height: 22, rx: 5, fill: "rgba(36,150,237,.1)", stroke: "#2496ed", "stroke-dasharray": "3 3" });
+        t(x, y + 4, "puerta .1 Docker", { "text-anchor": "middle", fill: "#2496ed", "font-size": 9 });
+      }
+      el("circle", { cx: RT[0], cy: RT[1], r: 20, fill: "#13263a", stroke: "#4f8fce", "stroke-width": 2, id: "aislaRouter" });
+      t(RT[0], RT[1] + 4, "router", { "text-anchor": "middle", fill: "#4f8fce", "font-size": 10, "font-weight": 600 });
+      for (const [n, [x, y]] of Object.entries(POS)) {
+        const z = zonaDe(n), c = z === "g" ? "#3fbf8f" : z === "r" ? "#f0913a" : "#a77be8";
+        el("rect", { x: x - 46, y: y - 11, width: 92, height: 22, rx: 5, fill: c + "22", stroke: c, "data-n": n });
+        t(x, y + 4, n, { "text-anchor": "middle", "font-size": 9.5 });
+      }
+      pintarCuentas();
+    }
+
+    function pintarCuentas() {
+      $("#aislaBloq").textContent = cuentas.bloq; $("#aislaPasan").textContent = cuentas.pasan; $("#aislaDrop").textContent = cuentas.drop;
+    }
+
+    function reiniciar() { gen++; cola = []; ocupado = false; cuentas = { bloq: 0, pasan: 0, drop: 0 }; if (svg) dibujar(); $("#aislaCaso").textContent = "esperando el primer caso…"; }
+
+    const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
+    function mover(puntos, color, ms, g0) {
+      return new Promise((res) => {
+        const p = el("circle", { r: 6, fill: color, stroke: "#fff", "stroke-width": 1.2 });
+        const largos = []; let total = 0;
+        for (let i = 1; i < puntos.length; i++) { const l = Math.hypot(puntos[i][0] - puntos[i - 1][0], puntos[i][1] - puntos[i - 1][1]); largos.push(l); total += l; }
+        const t0 = performance.now();
+        const paso = (ahora) => {
+          if (g0 !== gen) { p.remove(); return res(false); }
+          let d = Math.min(1, (ahora - t0) / ms) * total;
+          let x = puntos[puntos.length - 1][0], y = puntos[puntos.length - 1][1];
+          for (let i = 0; i < largos.length; i++) {
+            if (d <= largos[i]) { const f = largos[i] ? d / largos[i] : 1; x = puntos[i][0] + (puntos[i + 1][0] - puntos[i][0]) * f; y = puntos[i][1] + (puntos[i + 1][1] - puntos[i][1]) * f; break; }
+            d -= largos[i];
+          }
+          p.setAttribute("cx", x); p.setAttribute("cy", y);
+          if (performance.now() - t0 < ms) requestAnimationFrame(paso); else { p.remove(); res(true); }
+        };
+        requestAnimationFrame(paso);
+      });
+    }
+    function marca(x, y, ok, texto) {
+      const g = el("g", { transform: `translate(${x},${y})` });
+      const c = el("circle", { r: 11, fill: ok ? "rgba(76,175,125,.25)" : "rgba(217,83,79,.25)", stroke: ok ? "#4caf7d" : "#d9534f", "stroke-width": 2 }, g);
+      void c;
+      const s = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      s.setAttribute("text-anchor", "middle"); s.setAttribute("y", 4); s.setAttribute("font-size", 12); s.setAttribute("font-weight", 700);
+      s.setAttribute("fill", ok ? "#9ff7c6" : "#ff8a86"); s.textContent = ok ? "✓" : "✕"; g.appendChild(s);
+      if (texto) { const u = document.createElementNS("http://www.w3.org/2000/svg", "text"); u.setAttribute("text-anchor", "middle"); u.setAttribute("y", 24); u.setAttribute("font-size", 9); u.setAttribute("font-family", "IBM Plex Mono"); u.setAttribute("fill", ok ? "#4caf7d" : "#d9534f"); u.textContent = texto; g.appendChild(u); }
+      setTimeout(() => g.remove(), 900);
+    }
+
+    /** Dibuja un caso: {caso, esperado, obtenido, resultado}. */
+    async function animarCaso(c, rapido, g0) {
+      $("#aislaCaso").innerHTML = `<span class="c11-insignia ${esc(c.resultado)}">${esc(c.resultado)}</span> ${esc(c.caso)}`;
+      const ms = rapido ? 380 : 650;
+      const m = /^(ping|TCP|traceroute) ([\w-]+) -> ([\w-]+)/.exec(c.caso);
+      const llego = c.obtenido === "OK";
+      if (/contadores DROP/.test(c.caso)) {
+        const r = svg.querySelector("#aislaRouter"); r.setAttribute("stroke", "#d9534f"); r.setAttribute("stroke-width", 4);
+        await esperar(ms); r.setAttribute("stroke", "#4f8fce"); r.setAttribute("stroke-width", 2);
+        return;
+      }
+      if (/ttl 63/.test(c.caso)) {
+        const n = (/de ([\w-]+) cruz/.exec(c.caso) || [])[1];
+        if (n && POS[n]) marca(POS[n][0] + ([80, 450].includes(POS[n][0]) ? -56 : 56), POS[n][1], llego, "ttl=63");
+        await esperar(rapido ? 80 : 160);
+        return;
+      }
+      if (!m || !POS[m[2]] || !POS[m[3]]) { await esperar(150); return; }
+      const [, , o, d] = m;
+      const zo = zonaDe(o), zd = zonaDe(d);
+      const forzada = /ruta forzada/.test(c.caso);
+      let camino, fin = POS[d], textoFin = "";
+      if (zo === zd) camino = [POS[o], POS[d]];
+      else if (zo === "a" || zd === "a") camino = [POS[o], BORDE[zo], RT, BORDE[zd], POS[d]];
+      else if (forzada) { camino = [POS[o], BORDE[zo], RT]; fin = RT; textoFin = "DROP"; }
+      else { camino = [POS[o], PUERTA[zo]]; fin = PUERTA[zo]; textoFin = "Docker"; }
+      const color = zo === "g" ? "#3fbf8f" : zo === "r" ? "#f0913a" : "#a77be8";
+      const ok = await mover(camino, color, ms, g0);
+      if (!ok) return;
+      if (llego) { cuentas.pasan++; marca(fin[0], fin[1] - 20, true, ""); }
+      else { cuentas.bloq++; if (forzada) cuentas.drop++; marca(fin[0], fin[1] - (fin === RT ? 30 : 20), false, textoFin); }
+      pintarCuentas();
+    }
+
+    async function vaciar() {
+      if (ocupado) return;
+      ocupado = true;
+      const g0 = gen;
+      while (cola.length && g0 === gen) {
+        const c = cola.shift();
+        await animarCaso(c, cola.length > 3, g0);
+      }
+      ocupado = false;
+    }
+
+    /** Una línea de la salida de prueba_aislamiento.py: "  [APROBADA] caso: esperado X, obtenido Y". */
+    function linea(x) {
+      const m = /^\s*\[(APROBADA|FALLADA)\s*\]\s+(.+?): esperado (\S+?),? obtenido (\S+)/.exec(x);
+      if (!m) return;
+      cola.push({ resultado: m[1], caso: m[2], esperado: m[3], obtenido: m[4] });
+      vaciar();
+    }
+
+    async function repetir() {
+      reiniciar();
+      let d;
+      try { d = await leerJson("pruebas/resultados/aislamiento.json", true); } catch (e) { $("#aislaCaso").textContent = e.message; return; }
+      cola = (d.casos || []).slice();
+      vaciar();
+    }
+
+    return { dibujar, linea, reiniciar, repetir };
+  })();
 
   // ================================================================ resultados de las pruebas
   async function leerJson(ruta, fresco) {
@@ -508,6 +957,7 @@
     let d;
     try { d = await leerJson("pruebas/resultados/aislamiento.json", fresco); }
     catch (e) { caja.innerHTML = `<p class="c11-nota">Sin resultado guardado: ${esc(e.message)}.</p>`; return; }
+    if (window.DockerAnim) DockerAnim.datos({ aislamiento: d });
     const r = d.resumen || {};
     // Matriz origen → destino a partir del texto de cada caso ("ping A -> B", "TCP A -> B")
     const celdas = {};

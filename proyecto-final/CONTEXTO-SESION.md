@@ -58,6 +58,31 @@ Puntos de este proyecto ("corrija eso" = hallazgos del proyecto final + su app):
   `visor.bat` avisa sin entorno, `instalar.bat` mínima/completa (`requirements-minimo.txt`), cifras 60/60 y 936 pruebas,
   `app/charla.py` + `app-practica/`. Sin commit. La app escondida NO se relanzó (lo hace la sesión principal).
 
+**Pedido EN CURSO del 2026-10-05 ~22:15 (agente P del plan `github\PLAN-ORGANIZAR-APPS.md`).** Textual del usuario:
+> "en ese puerto esta una app que hicimos hace tiempo, me gusto mucho el tema de apps para mostrar cada practica,
+> quitele peso en megabytes a cada practica y trate de hacerlas para que todo quede resumido en una app, que el readme
+> se base en, quiere saber como funciona, aqui esta todo, quiere probarlo, aqui esta, sin quitar el contenido que ya
+> tiene, ya que quien lo lee es el profe y si tiene que estar todo lo tecnico, pero meter todo en una app explicada paso
+> a paso esta muy bien, como un tipo docker, me gusta mucho, y organice el repo porque se ve desorganizado, puede cambiar
+> nombres y todo desde que todo quede funcionando, trate de organizar mejor los datos en la app igualmente, abrir en
+> pantalla completa, que no se solapen cosas etc, tener barras que cargan o cosas que digan se esta ejecutando se tarda
+> tanto en abrir, revise practicas mas complicadas de entender y haga pruebas mas claras como la de las hormigas o como
+> funciona el docker, cosas mas explicadas, pruebas visuales, un acompañamiento del tema con su prueba y quitar el probar
+> general, para eso esta en cada practica, junto a su logica, adecue todo eso, con los agentes que le di permiso, y haga
+> commit de todo"
+
+Puntos de este proyecto (el commit lo hace la sesión principal):
+- [x] 1. Peso: GIF de docs/videos re-codificados, sin duplicados gif/mp4 sin uso, imágenes optimizadas, PDF del enunciado, visor-portable.html (medir antes/después).
+- [x] 2. Organizar lo suelto sin romper imports/rutas (pytest al final).
+- [x] 3. README: "¿Quiere probarlo? → aquí está" y "¿Quiere saber cómo funciona? → aquí está todo" al principio, sin quitar lo técnico.
+- [x] 4. App `app-practica/` tipo Docker Desktop, sin solapes (1366x768 y 1920x1080), barras de carga, recorrido de la moneda animado junto al estado real del visor.
+- [x] 5. Probar con el lanzador y capturas; lanzar una acción desde la app.
+  TERMINADOS (P, 2026-10-05 noche; detalle en `docs/bitacora.md`): 29,0 → 17,0 MB versionados (GIF sin tramado,
+  sin `todo_junto.gif`, mp4 CRF 30, PDF y PNG comprimidos; visor portable igual a propósito); la estructura interna
+  ya era coherente (no se movió nada); README con las dos entradas al principio; app tipo Docker Desktop con la
+  prueba visual junto al estado real (`/api/estado`). Sin commit (lo hace la sesión principal). La app escondida
+  NO se relanzó.
+
 Pedidos cerrados (2 a 17): `docs/historial-pedidos.md`.
 
 ## 1. Reglas estrictas del usuario (no negociables)

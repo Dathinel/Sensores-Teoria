@@ -2,7 +2,38 @@
 
 Actividad del segundo corte (en el aula virtual aparece como "Actividad 7"; en este repositorio es el tema 10). Tres carritos, cada uno con un ESP32, buscan la ruta más corta desde un punto A hasta la meta de un laberinto tipo almacén. El algoritmo de optimización por colonia de hormigas (ACO) corre **dentro de cada ESP32**, los tres comparten la feromona por WiFi sin servidor central, y lo que hacen se replica en un gemelo digital en PyBullet que corre dentro de Docker, con tres robots virtuales.
 
-![Enunciado de la actividad](enunciado-actividad.png)
+## ¿Quiere probarlo? Aquí está
+
+**Doble clic en [`ABRIR.bat`](ABRIR.bat)** (en Linux o Mac, `abrir.sh`). Se abre la app de la práctica en una
+ventana propia: un panel tipo Docker Desktop con el menú de pasos a la izquierda y, arriba, lo que está en
+marcha con su barra de avance. No hace falta ningún ESP32: todo se prueba con el PC.
+
+- **Entender**: la animación de las hormigas en dos caminos (el "puente doble"), el laberinto y cómo se hablan los carritos.
+- **Probar**: el algoritmo de los tres carritos en un segundo, las pruebas 6 a 11, **el gemelo digital en vivo**
+  (mientras PyBullet graba el video, la app dibuja el laberinto con la feromona de cada tramo, los tres carritos
+  moviéndose y en qué paso del algoritmo va), el gemelo escuchando a los tres ESP32 emulados por UDP real, el
+  gemelo dentro de Docker y el simulador del navegador.
+- **Montaje y resultados**: los carritos reales paso a paso, los videos, las 15 pruebas y la lista de lo que pide la actividad.
+
+Cada botón dice cuánto tarda (el algoritmo, menos de un segundo; el gemelo, unos 4 a 5 minutos; gemelo + emulador, alrededor de un minuto).
+
+![La app de la práctica con el gemelo digital en vivo](img/app-gemelo-en-vivo.png)
+
+## ¿Quiere saber cómo funciona? Aquí está todo
+
+| Parte | Secciones |
+|---|---|
+| Qué se hizo | [Lo que hicimos](#lo-que-hicimos) · [Parámetros](#parámetros-y-dónde-se-cambian) · [Cómo lo hicimos, paso a paso](#cómo-lo-hicimos-paso-a-paso) |
+| Los conceptos | [ACO](#qué-es-la-optimización-por-colonia-de-hormigas-aco) · [Enjambre sin servidor central](#qué-es-un-enjambre-con-memoria-común-sin-servidor-central) · [Gemelo digital](#qué-es-un-gemelo-digital) · [Docker](#qué-es-docker-y-por-qué-lo-usamos-aquí) · [UDP y modo AP](#qué-es-udp-y-qué-es-el-modo-ap) |
+| El diseño | [La idea general](#la-idea-general) · [El laberinto](#el-laberinto-mazejson) · [La lógica del algoritmo](#la-lógica-del-algoritmo-paso-a-paso) · [C++ = Python](#por-qué-el-c-y-el-python-dan-exactamente-lo-mismo) · [El protocolo de red](#el-protocolo-de-red) |
+| El código por dentro | [El firmware](#el-firmware-por-dentro-esp32_aco_nodoino) · [El gemelo digital](#el-gemelo-digital-por-dentro-gemelo_digitalpy) · [Qué hace cada archivo](#qué-hace-cada-archivo) |
+| El montaje | [Conexiones](#conexiones) · [Pines](#pines-del-esp32-al-tb6612fng) · [Alimentación](#alimentación) · [Brownout](#precauciones-con-el-brownout) · [Distancias](#distancias-entre-los-esp32-en-el-montaje) |
+| Correrlo a mano | [Instalar](#cómo-instalar-lo-necesario) · [Cómo probarlo](#cómo-probarlo) · [Docker paso a paso](#docker-paso-a-paso) · [Problemas típicos](#problemas-típicos) |
+| Lo que salió | [El montaje y la demo](#el-montaje-y-la-demo) · [Pruebas](#pruebas) · [Pendiente](#pendiente) |
+
+## El enunciado
+
+![Enunciado de la actividad](img/enunciado-actividad.png)
 
 El enunciado define la arquitectura de tres capas (el mundo físico con los tres ESP32, la parte de red con un ESP32 en modo AP y la parte virtual con PyBullet dentro de Docker), pero no da valores numéricos. Los que usamos (cuadrícula de 5 por 5 celdas de 20 cm, red 192.168.4.x, puertos 4210 y 4211, parámetros del ACO) salen del planteamiento complementario que definimos para la actividad. A diferencia de otros temas, el profesor no compartió un ejemplo base en [U_Militar](https://github.com/dialejobv/U_Militar/blob/main/README.md) para este, así que todo está escrito desde cero.
 
@@ -338,7 +369,7 @@ Una iteración tarda unos 10 a 30 ms de cálculo (el double del ESP32 es por sof
 - **Estado.** Los dos modos alimentan el mismo objeto, `EstadoGemelo`. Con los `PHER` y `FIN` rehace la feromona **con la misma función de `aco.py`** (`aplicar_iteracion`), así que la suma da el mismo double que en los nodos. Con `PATH` sabe la mejor ruta de cada nodo y con `ESTADO`, la fase y la celda de cada carrito. Da un nodo por apagado si no se oye nada de él en 4 s o si otro nodo vivo ya lo sacó de su lista de vivos.
 - **Escena.** Piso, baldosas de 20 cm, paredes como cajas de 8 cm de alto, la marca verde de A, la bandera a cuadros de la meta, y tres carritos (cuerpo y cuatro ruedas, de 10 cm, en rojo, azul y amarillo). Los carritos se mueven de forma cinemática (`resetBasePositionAndOrientation`): interpolan entre centros de celdas con los mismos tiempos del firmware, y en modo hardware se corrigen con la celda que reporta cada `ESTADO`. La feromona de cada arista es una franja plana cuyo color va de lila pálido a violeta según su valor. Un carrito apagado se ve gris.
 - **Imagen.** Cámara cenital con `getCameraImage` y el renderizador por software (`ER_TINY_RENDERER`), que funciona igual en Windows y en Docker sin tarjeta gráfica. `getCameraImage` no captura las líneas ni los textos de depuración de PyBullet, así que todo lo que se ve es geometría real y los textos se escriben con Pillow en un panel a la derecha: iteración, fase y mejor ruta de cada nodo, vivos, parámetros y leyenda.
-- **Salidas** (en `resultados/`, o en la carpeta de la variable `RESULTADOS`): `gemelo_<modo>.mp4` (H.264, 1120 × 720, 15 cuadros por segundo), `ruta_final_<modo>.png`, `telemetria_<modo>.jsonl` (cada mensaje con su instante) y `resumen_<modo>.json` (ruta y longitud de cada nodo, ruta óptima, si convergió, feromona final, avisos). La corrida con un nodo apagado agrega `_apagado<N>` al nombre.
+- **Salidas** (en `resultados/`, o en la carpeta de la variable `RESULTADOS`): `gemelo_<modo>.mp4` (H.264, 1120 × 720, 15 cuadros por segundo), `ruta_final_<modo>.png`, `telemetria_<modo>.jsonl` (cada mensaje con su instante) y `resumen_<modo>.json` (ruta y longitud de cada nodo, ruta óptima, si convergió, feromona final, avisos). La corrida con un nodo apagado agrega `_apagado<N>` al nombre. Además, mientras corre deja cada 0,4 s una foto chiquita del estado en `vivo_<modo>.json` (tiempo, iteración, feromona de cada arista, fase y posición de cada carrito): la app de la práctica la lee para mostrar el gemelo en vivo antes de que el video esté listo. Se escribe a un `.tmp` y se renombra, para que nunca se lea a medias.
 - **Fin.** En modo hardware termina cuando todos los nodos que se vieron están en `TERMINADO` y sus carritos terminaron, con `--timeout` (240 s por defecto) o con Ctrl+C; en los tres casos escribe las salidas. Si los carritos tardan en encenderse, conviene subir el `--timeout`.
 
 ## Conexiones
@@ -482,7 +513,10 @@ En la salida los tres no caben en la celda A (cada carrito ocupa casi una celda 
 | `pruebas/equivalencia/` | compara el C++ del firmware (`comparar_equivalencia.py`) y el JavaScript del preview (`comparar_preview.py`) contra el Python |
 | `pruebas/resultados/` | lo que dejaron las pruebas (json, md); los del emulador llevan el prefijo `emulador_` |
 | `resultados/` | lo que deja el gemelo (video, imagen, telemetría); es la carpeta montada en Docker y no se sube al repositorio |
-| `img/`, `video/` | las fotos del montaje y las capturas; los videos del gemelo (GIF para verlos en GitHub y mp4 completo) |
+| `img/`, `video/` | las fotos del montaje, el enunciado y las capturas; los videos del gemelo (GIF para verlos en GitHub y mp4 completo) |
+| `ABRIR.bat`, `abrir.sh` | abren la app de la práctica (doble clic) con el lanzador común del repositorio |
+| `app/` (`index.html`, `tema10.css`, `tema10.js`) | la app de la práctica: los pasos explicados, los botones que corren cada programa y la vista del gemelo en vivo |
+| `probar.json` | lo que la app sabe correr: cada acción con su programa, sus argumentos, cuánto tarda y qué punto del enunciado demuestra |
 
 ## Cómo instalar lo necesario
 
@@ -503,7 +537,7 @@ PyBullet no publica ruedas para Windows con ninguna versión de Python (solo par
 
 **Sin ESP32 conectado**
 
-Todo lo de software corre sin los carritos:
+Lo más cómodo es la app (`ABRIR.bat`, ver [arriba](#quiere-probarlo-aquí-está)): corre cada uno de estos programas con un botón y muestra su salida. A mano, todo lo de software corre sin los carritos:
 
 ```powershell
 entorno\Scripts\python aco.py                                   # el enjambre en consola

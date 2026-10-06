@@ -1,5 +1,49 @@
 # Sistema de Logística de Monedas Inteligentes
 
+## ¿Quiere probarlo? → aquí está
+
+Doble clic en **[`ABRIR.bat`](ABRIR.bat)** (en Linux o Mac, `abrir.sh`). Se abre la **app del proyecto** en
+una ventana tipo programa, con todo lo que pide el parcial en un solo lugar y explicado paso a paso:
+
+- **Prueba visual**: una pieza (moneda, botón, arandela, bloque o moneda extranjera) recorre las 4
+  estaciones del filtro, animada y explicada, y al lado se ve **lo que pasa de verdad** en la simulación:
+  las piezas reales en cada estación, el almacén y los rechazos por causa, actualizados cada segundo.
+- **Programas** (como en Docker Desktop: cada fila con su estado y cuánto tarda): la línea en vivo
+  (visor 3D + dashboard de Streamlit; el visor tarda ~8-10 s en responder), las 4 escenas de PyBullet,
+  el asistente, las 936 pruebas automáticas (~4-5 min) y el chequeo del PC.
+- **Cómo funciona**, el **visor 3D sin instalar nada**, los **resultados** (videos y capturas), **qué pide
+  el parcial** con qué se prueba cada punto, y el **estado honesto** del proyecto.
+
+Solo hace falta Python 3.9 o más nuevo. La primera vez que se inicia algo de Python, la app prepara
+sola la instalación mínima (~0,7 GB; unos **3 min** con las descargas en caché, más en un PC nuevo
+porque PyBullet se compila ~10 min con las Microsoft C++ Build Tools) y lo muestra con una barra de
+progreso. Sin la app, lo mismo se abre con `visor.bat` y `simulaciones.bat`: ver [Cómo verlo](#cómo-verlo).
+
+![La app del proyecto: la prueba visual, con el recorrido animado de una pieza junto a la simulación en marcha](docs/capturas/app-practica.png)
+
+## ¿Quiere saber cómo funciona? → aquí está todo
+
+Todo lo técnico sigue abajo, completo, en este orden:
+
+1. [Lo que nos tocó: el elemento 7](#lo-que-nos-tocó-el-elemento-7): qué exige el detector de monedas y vasos.
+2. [Cómo verlo](#cómo-verlo): instalación mínima o completa, `visor.bat`, puertos, visor portable y
+   [las simulaciones de PyBullet](#las-simulaciones-de-pybullet-para-quien-evalúa).
+3. [La idea general](#la-idea-general): arquitectura, y el recorrido de
+   [una moneda](#el-recorrido-de-una-moneda), [un vaso](#el-recorrido-de-un-vaso) y
+   [el carro](#el-carro-y-la-ruta).
+4. [Conceptos que usamos](#conceptos-que-usamos) y [decisiones de diseño y por qué](#decisiones-de-diseño-y-por-qué).
+5. [Filtros que se complementan](#filtros-que-se-complementan), con los
+   [errores simulados a propósito](#errores-simulados-a-propósito) y la [replicación real](#replicación-real).
+6. [Conexiones y parte eléctrica](#conexiones-y-parte-eléctrica).
+7. [El software por dentro](#el-software-por-dentro): [el asistente](#el-asistente),
+   [el firmware de los dos ESP32](#firmware-de-los-dos-esp32) y [las pruebas automáticas](#pruebas-automáticas).
+8. [Lo que nos enseñó la simulación](#lo-que-nos-enseñó-la-simulación) y [costo y peso](#costo-y-peso).
+9. [Estado del proyecto: lo hecho y lo que falta](#estado-del-proyecto-lo-hecho-y-lo-que-falta).
+10. [Instalar en otro PC](#instalar-en-otro-pc), [documentación](#documentación) (los `docs/` a fondo) y
+    [qué hace cada archivo](#qué-hace-cada-archivo).
+
+---
+
 Proyecto del segundo corte de Micros y Laboratorio, quinto semestre de Ingeniería Mecatrónica,
 Universidad Militar Nueva Granada (2026-2). Somos el **grupo 7**, y el elemento diferencial que nos
 tocó es el **detector de elementos de monedas y vasos**: además de todo el sistema general que pide
@@ -919,7 +963,7 @@ Doble clic en **`instalar.bat`** (una vez, con internet) y elegir la opción (o 
 `instalar.bat minima` / `instalar.bat completa`):
 
 - **1, mínima** ([`requirements-minimo.txt`](requirements-minimo.txt), los mismos 13 paquetes que usa
-  el lanzador `probar.py` de la raíz del repo): visor 3D en vivo, dashboard, escenas de PyBullet,
+  la app del proyecto, `ABRIR.bat`): visor 3D en vivo, dashboard, escenas de PyBullet,
   asistente por escrito y pruebas. Medido en este PC: 3 min 21 s y 0,7 GB con los paquetes ya en la
   caché de pip; en un PC nuevo se suman las descargas y la compilación de PyBullet.
 - **2, completa**: crea el entorno `entorno` con las versiones exactas con las que se probó
@@ -929,7 +973,7 @@ Doble clic en **`instalar.bat`** (una vez, con internet) y elegir la opción (o 
 
 PyBullet 3.2.7 no publica instalador listo para Windows: pip lo compila (~10 min) y necesita las
 **Microsoft C++ Build Tools** con "Desarrollo para el escritorio con C++". Si pip dice que no
-encuentra Visual Studio aunque estén instaladas, el `probar.py` de la raíz del repo lo resuelve solo
+encuentra Visual Studio aunque estén instaladas, el lanzador de las apps (`_lanzador/lanzador.py` en la raíz del repo, el que usa `ABRIR.bat`) lo resuelve solo
 (llama a `vcvars64.bat` antes de compilar). Después, `visor.bat`. Se puede pasar de la mínima a la
 completa en cualquier momento (`instalar.bat completa` reutiliza el mismo `entorno\`).
 
@@ -988,7 +1032,8 @@ Aquí está cada archivo, qué hace y cuándo se usa.
 | `visor.bat` | Doble clic para ver todo: abre `visor-portable.html` al instante, arranca la simulación por detrás y abre el dashboard cuando está listo. Sin instalar, avisa y abre solo la demo grabada; si un puerto está ocupado, dice cuál usa. |
 | `simulaciones.bat` y `simulaciones/` | Menú para abrir las simulaciones de PyBullet en su ventana real (filtro de monedas, vasos, carro, todo junto) o la carpeta de videos. Un `.bat` por escena. |
 | `instalar.bat` | Deja todo listo en un PC nuevo. Opción 1, mínima (`requirements-minimo.txt`): para verlo en vivo. Opción 2, completa: entorno con las versiones exactas, firmware, modelo local de Ollama, Whisper y el chequeo. |
-| `app-practica/` | La app amigable del proyecto (se abre desde el lanzador de la raíz del repo, `ABRIR.bat` / `probar.py --practica proyecto-final`): qué hace, el recorrido de una pieza por las 4 estaciones, y botones para el visor en vivo, las escenas, el asistente, las pruebas y el estado. Va aparte porque `app/` es el paquete de Python. |
+| `ABRIR.bat` / `abrir.sh` | Doble clic: abre la app del proyecto (`app-practica/`) con el lanzador de la raíz del repo (`_lanzador/`). |
+| `app-practica/` | La app amigable del proyecto (se abre con `ABRIR.bat`; por dentro `python _lanzador/lanzador.py --practica proyecto-final`), organizada como Docker Desktop (barra lateral, lista de programas con su estado y su detalle al lado): qué hace, la prueba visual (el recorrido animado de una pieza por las 4 estaciones junto al estado real de la simulación, leído de `/api/estado` del visor), y el visor en vivo, las escenas, el asistente, las pruebas y el chequeo con su barra y el tiempo que tardan. Va aparte porque `app/` es el paquete de Python. |
 | `requirements-minimo.txt` | Los 13 paquetes de la instalación mínima (`instalar.bat`, opción 1). |
 | `visor-portable.html` | El visor 3D en un solo archivo (Three.js + demo grabada). Funciona sin Python ni internet y pasa solo al vivo si la simulación responde. Se genera con `python -m app.portable`. |
 | `requirements.txt` / `requirements-lock.txt` | Dependencias, y las versiones exactas con las que se probó todo. |

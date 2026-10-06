@@ -1,8 +1,10 @@
 # Punto 1: Teclado matricial y LCD I2C + brazo robótico dibujando en PyBullet
 
+> **¿Quiere probarlo?** → doble clic en [`../ABRIR.bat`](../ABRIR.bat) (app del tema 8, secciones del *Punto 1*: el brazo de PyBullet, la trayectoria de cada dígito y el teclado + LCD simulados). **¿Quiere saber cómo funciona?** → [teclado](#qué-es-un-teclado-matricial-y-cómo-se-lee) · [I2C y LCD](#qué-es-i2c-y-cómo-maneja-la-lcd) · [URDF](#qué-es-un-urdf-y-qué-articulaciones-usa-el-dibujo) · [ángulos y no XYZ](#por-qué-el-brazo-se-maneja-por-ángulos-y-no-por-coordenadas-xyz) · [idea general](#la-idea-general) · [trazos](#los-trazos-de-cada-dígito) · [conexiones](#conexiones) · [archivos](#qué-hace-cada-archivo) · [código](#la-lógica-del-código) · [cómo probarlo](#cómo-probarlo) · [montaje y demo](#el-montaje-y-la-demo)
+
 Basado en el `brazo.urdf` compartido en el repositorio [U_Militar](https://github.com/dialejobv/U_Militar/blob/main/8%29%20Brazo_URDF/brazo.urdf) (el mismo del [tema 7](../../7-brazo-robotico-urdf)), como recomienda el enunciado.
 
-![Enunciado de la actividad](enunciado-actividad.png)
+![Enunciado de la actividad](img/enunciado-actividad.png)
 
 El enunciado pide "Teclado I²C + simulación de brazo robótico en PyBullet dibujando", y en su esquema se ve un teclado 4x4 con sus 8 cables directos al ESP32 y una LCD 16x2 con 4 cables (el bus I2C). Seguimos ese esquema: el teclado va a 8 GPIO y lo que va por I2C es la pantalla. Lo que quedó:
 
@@ -170,7 +172,7 @@ Si se alimenta a 5 V, las pull-up del backpack suben SDA/SCL a 5 V; en la práct
 - **`probar_teclado.py`**: prueba aislada del teclado, sin LCD ni PC. Se corre desde Thonny con el botón *Run* (no se guarda como `main.py`). Imprime qué columnas leen en reposo y, por cada tecla, su fila y columna con el GPIO correspondiente. Sirve para separar un problema de cableado de uno del programa.
 - **`brazo_dibuja.py`**: el programa del PC. Abre el serial si puede, carga el brazo en PyBullet, crea los 10 botones y dibuja cada dígito que llega (por serial o por botón).
 - **`brazo.urdf`**: el brazo del profesor, idéntico al del tema 7.
-- **`enunciado-actividad.png`**: la captura del enunciado.
+- **`img/enunciado-actividad.png`**: la captura del enunciado.
 - **`img/`**: las fotos del montaje real, el montaje en 3D y las animaciones de la sección "El montaje y la demo".
 - **`entorno/`**: entorno virtual de Python del punto, con `pybullet` y `pyserial` (tiene además `numpy`, que el script no usa). No se sube a GitHub (su `.gitignore` tiene `*`).
   Para crearlo en otro PC (Python 3.14), dentro de esta carpeta: `py -3.14 -m venv entorno` y `entorno\Scripts\python -m pip install pybullet==3.2.7 pyserial==3.5`. PyBullet no publica versiones ya compiladas para Windows, así que `pip` lo compila desde el código fuente: hacen falta las herramientas de compilación de C++ de Visual Studio (*Build Tools*) y tarda varios minutos la primera vez.
@@ -276,7 +278,7 @@ Todos los comandos se corren desde la carpeta `punto-1-teclado-brazo-dibujando`.
 
 **El mismo montaje en 3D**, con el nombre de cada conexión (filas R1-R4 a `GPIO14/27/26/25`, columnas C1-C4 a `GPIO33/32/18/19`, y la LCD con `SDA` a `GPIO21`, `SCL` a `GPIO22`, `VCC` a `3V3` y `GND`):
 
-![Montaje 3D del teclado y la LCD I2C en el ESP32, con cada cable rotulado](img/montaje-3d.png)
+![Montaje 3D del teclado y la LCD I2C en el ESP32, con cada cable rotulado](img/montaje-3d.jpg)
 
 **La demo.** El brazo dibujando 3, 7 y 0 seguidos, con la lógica real de `brazo_dibuja.py` (los mismos trazos, el mismo mapeo a ángulos y la misma punta de lápiz). Cada tecla manda `DIGIT:n` y la LCD muestra `Dibujando:` con el dígito:
 

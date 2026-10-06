@@ -2,7 +2,28 @@
 
 Actividad asignada por la cátedra (Actividad 4): usando la librería [MediaPipe Gesture Recognizer](https://google-ai-edge.github.io/mediapipe-samples-web/#/vision/gesture_recognizer), desarrollar un sistema de control de iluminación basado en gestos de la mano.
 
-![Enunciado de la Actividad 4](enunciado-actividad.png)
+![Enunciado de la Actividad 4](img/enunciado-actividad.png)
+
+## ¿Quiere probarlo? → aquí está
+
+Doble clic en **[`ABRIR.bat`](ABRIR.bat)** (en Linux o Mac, `./abrir.sh`). Solo hace falta Python 3.9 o más nuevo para el lanzador: no se instala nada más, y **no hace falta ni el ESP32 ni la cámara**. Se abre una app (una ventana tipo programa, con un menú lateral como el de Docker Desktop) que recorre el tema paso a paso:
+
+1. **Gestos → LEDs**: se toca un gesto y la orden recorre la cadena entera, iluminando cada etapa (cámara → MediaPipe con su confianza → el filtro de 15 cuadros llenándose → la palabra `FIST`/`VICTORY`… → el cable USB → el ESP32 que contesta `OK`), hasta los tres LEDs simulados con la misma lógica de `esp32_gestos.py` y un monitor de lo que pasaría por el cable.
+2. **Cómo funciona** y **cómo se conecta** (el montaje 3D y la tabla de pines).
+3. **El reconocedor real** ([`gesture_control.html`](gesture_control.html)) dentro de la app, con una barra que muestra la descarga de MediaPipe (página → motor WebAssembly → modelo de gestos → listo) y cuánto lleva; sin cámara, sus botones de Control manual hacen lo mismo que los gestos.
+4. **Con el ESP32 real** (el firmware para copiar a Thonny) y los **resultados**.
+
+![La app del tema 6: un gesto recorriendo la cadena hasta los LEDs simulados](img/app-gestos-leds.png)
+
+## ¿Quiere saber cómo funciona? → aquí está todo
+
+- [Qué pedía la actividad y qué hicimos](#qué-pedía-la-actividad-y-qué-hicimos)
+- Conceptos: [MediaPipe](#qué-es-mediapipe) · [landmarks de la mano](#qué-son-los-landmarks-de-la-mano) · [clasificar un gesto](#qué-es-clasificar-un-gesto) · [Web Serial](#qué-es-web-serial) · [PWM (30 % / 70 % / 100 %)](#qué-es-pwm-y-por-qué-da-el-30--70--100) · [interrupción por Timer](#qué-es-una-interrupción-por-timer-los-modos-1-y-2)
+- [Cómo se evita que el LED "tiemble"](#cómo-se-evita-que-el-led-tiemble-con-cada-frame) (los filtros)
+- [La idea general](#la-idea-general) (diagramas) y [conexiones](#conexiones)
+- [Qué hace cada archivo](#qué-hace-cada-archivo)
+- [La lógica del código, paso a paso](#la-lógica-del-código-paso-a-paso): [en la página](#en-la-página-gesture_controlhtml), [en el ESP32](#en-el-esp32-esp32_gestospy) y [el protocolo con mensajes reales](#el-protocolo-con-mensajes-reales)
+- [Cómo probarlo](#cómo-probarlo) y [el circuito funcionando](#el-circuito-funcionando)
 
 ## Qué pedía la actividad y qué hicimos
 
@@ -183,9 +204,9 @@ Por qué esos pines: GPIO25, 26 y 27 están uno al lado del otro en el mismo cos
 
 - **`gesture_control.html`**: la interfaz real del tema. Una sola página, HTML y JavaScript puro, que carga MediaPipe desde internet (jsdelivr y el modelo desde Google). Tiene la cámara con los landmarks y la vista 3D, el botón **Conectar ESP32**, el selector de modo de apagado (persistente o automático), los botones de **Control manual**, el panel **LEDs (espejo del firmware)**, el estado de la conexión con MediaPipe, la **Lectura en vivo** con los filtros y el **Registro de comandos enviados**. Se abre con doble clic en Chrome o Edge; no necesita servidor.
 - **`esp32_gestos.py`**: el firmware del ESP32 en MicroPython. Configura los tres PWM y el Timer, espera palabras por `sys.stdin` y contesta `OK <comando>` o `? <comando>`. Se guarda en el ESP32 como `main.py` para que arranque solo al conectarlo.
-- **`enunciado-actividad.png`**: la captura del enunciado de la Actividad 4, incrustada arriba.
-- **`img/`**: el montaje en 3D, los tres estados de los LEDs y la animación de la sección "El circuito funcionando".
-- **`probar.json`**: la receta que usa el lanzador de la raíz del repo para probar este tema sin hardware (la página y las imágenes del montaje).
+- **`img/enunciado-actividad.png`**: la captura del enunciado de la Actividad 4, incrustada arriba.
+- **`img/`**: el montaje en 3D, los tres estados de los LEDs (JPG), la animación de la sección "El circuito funcionando", las capturas de la página y la de la app (`app-gestos-leds.png`). Se recomprimieron para que el tema pese menos (de 6,9 MB a 2,5 MB) sin cambiar lo que se ve.
+- **`ABRIR.bat` / `abrir.sh`, `probar.json` y `app/`**: la app del tema (ver "¿Quiere probarlo?" arriba). `probar.json` es la receta que usa el lanzador de la raíz del repo para probar este tema sin hardware (la página y las imágenes del montaje); `app/gestos.js` repite la lógica de `manejar_comando()` del firmware para los LEDs simulados y lee el estado de MediaPipe del reconocedor para la barra de carga.
 
 ## La lógica del código, paso a paso
 
@@ -300,7 +321,7 @@ Esa respuesta es la herramienta de diagnóstico más útil: si en "Última líne
 
 El montaje está representado en 3D con los modelos de nuestra biblioteca de componentes de Blender (el mismo ESP32 DevKit, protoboard, LEDs de 5 mm y resistencias de 330 Ω de la tabla de conexiones), con cada cable en el pin que usa `esp32_gestos.py`. Los LEDs encendidos tienen el brillo proporcional al duty de cada gesto.
 
-![Montaje 3D: ESP32 en la protoboard, GPIO25/26/27 a través de 330 Ω a los LEDs amarillo, azul y rojo, cátodos al riel de GND](img/montaje-3d.png)
+![Montaje 3D: ESP32 en la protoboard, GPIO25/26/27 a través de 330 Ω a los LEDs amarillo, azul y rojo, cátodos al riel de GND](img/montaje-3d.jpg)
 
 El ESP32 DevKit va clavado en la protoboard. De `GPIO25`, `GPIO26` y `GPIO27` sale un cable a una resistencia de 330 Ω cada uno, y de ahí al ánodo del LED amarillo, azul y rojo; los tres cátodos van al riel azul (−), que está unido al `GND` del ESP32. El cable USB va al PC y da a la vez la alimentación y el Web Serial.
 
@@ -308,7 +329,7 @@ Lo que pasa en cada gesto, con el comando que manda la página y el duty que pon
 
 | Puño cerrado → `FIST` | Victoria → `VICTORY` | Dos manos abiertas → `OPEN2` |
 |---|---|---|
-| ![LED amarillo al 30 %](img/estado-puno.png) | ![LED azul al 70 %](img/estado-victoria.png) | ![LED rojo al 100 %](img/estado-dos-manos.png) |
+| ![LED amarillo al 30 %](img/estado-puno.jpg) | ![LED azul al 70 %](img/estado-victoria.jpg) | ![LED rojo al 100 %](img/estado-dos-manos.jpg) |
 | `GPIO25`, duty 306 de 1023 (30 %) | `GPIO26`, duty 716 (70 %) | `GPIO27`, duty 1023 (100 %) |
 
 Y la secuencia completa, incluidas las dos "interrupciones" por Timer: sin gesto (`NONE`, todo apagado), puño, victoria, dos manos, pulgar abajo (`THUMB_DOWN`, Modo 1: barrido amarillo → azul → rojo, 200 ms cada uno) y pulgar arriba (`THUMB_UP`, Modo 2: los tres parpadean juntos, 200 ms prendidos y 200 ms apagados). Los tiempos y los duty salen tal cual de `esp32_gestos.py`:

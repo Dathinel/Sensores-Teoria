@@ -12,378 +12,378 @@
 </head>
 <body>
 
-<!-- ============================ PORTADA ============================ -->
-<header class="portada">
-  <div class="portada-texto">
-    <p class="antetitulo">Tema 8 · Sensores</p>
-    <h1>Dígitos del 0 al 9: <span class="c1">un brazo que los dibuja</span> y <span class="c2">una red que los lee</span></h1>
-    <p class="bajada">Dos puntos que van en sentidos opuestos. En el <b>punto 1</b> eliges un número con un teclado y un brazo robótico simulado lo dibuja. En el <b>punto 2</b> escribes un número a mano, una red neuronal lo reconoce y dos ESP32 lo llevan hasta una pantallita OLED. Todo se puede probar en este PC <b>sin ESP32 y sin cámara</b>.</p>
-    <div class="aviso-primera">
-      <b>La primera vez que pulses un botón "Iniciar" tarda.</b> La app prepara sola el entorno de Python: descarga TensorFlow (unos 400 MB) para el punto 2 y compila PyBullet para el punto 1 (pide las Build Tools de C++ de Visual Studio y unos minutos). Verás el progreso en la misma página. Las veces siguientes abre en segundos.
+<!-- Cada <section data-seccion> es una entrada de la barra lateral (App.marco, tipo Docker Desktop).
+     data-punto="p1"/"p2" le da el color de su punto (ámbar = lápiz del brazo, cian = OLED). -->
+
+<!-- ============================ INICIO ============================ -->
+<section data-seccion="Inicio" data-icono="⌂" data-sub="los dos puntos" id="s-inicio">
+  <div class="inicio">
+    <div class="inicio-texto">
+      <p class="antetitulo">Tema 8 · Sensores</p>
+      <h2 class="inicio-tit">Dígitos del 0 al 9: <span class="c1">un brazo que los dibuja</span> y <span class="c2">una red que los lee</span></h2>
+      <p class="bajada">Dos puntos que van en sentidos opuestos. En el <b>punto 1</b> eliges un número con un teclado y un brazo robótico simulado lo dibuja. En el <b>punto 2</b> escribes un número a mano, una red neuronal lo reconoce y dos ESP32 lo llevan hasta una pantallita OLED. Todo se prueba en este PC <b>sin ESP32 y sin cámara</b>.</p>
+    </div>
+    <div class="eleccion">
+      <button class="tarjeta-punto t1" data-ir="s-p1-probar">
+        <img src="/repo/8-digitos-brazo-y-vision/punto-1-teclado-brazo-dibujando/img/demo-dibujo.gif" alt="El brazo dibujando 3, 7 y 0">
+        <span class="tp-num">Punto 1</span>
+        <span class="tp-tit">Teclado → brazo que dibuja</span>
+        <span class="tp-sub">del dígito al movimiento · PyBullet</span>
+      </button>
+      <button class="tarjeta-punto t2" data-ir="s-p2-red">
+        <img src="/repo/8-digitos-brazo-y-vision/punto-2-reconocimiento-oled-spi/img/demo-reconocimiento.gif" alt="Reconocimiento hasta la OLED">
+        <span class="tp-num">Punto 2</span>
+        <span class="tp-tit">Dibujo → CNN → OLED por SPI</span>
+        <span class="tp-sub">de la imagen al dígito · al instante</span>
+      </button>
     </div>
   </div>
-  <div class="eleccion">
-    <button class="tarjeta-punto t1" data-ir="p1">
-      <img src="/repo/8-digitos-brazo-y-vision/punto-1-teclado-brazo-dibujando/img/demo-dibujo.gif" alt="El brazo dibujando 3, 7 y 0">
-      <span class="tp-num">Punto 1</span>
-      <span class="tp-tit">Teclado → brazo que dibuja</span>
-      <span class="tp-sub">del dígito al movimiento</span>
-    </button>
-    <button class="tarjeta-punto t2" data-ir="p2">
-      <img src="/repo/8-digitos-brazo-y-vision/punto-2-reconocimiento-oled-spi/img/demo-reconocimiento.gif" alt="Reconocimiento hasta la OLED">
-      <span class="tp-num">Punto 2</span>
-      <span class="tp-tit">Visión → CNN → OLED por SPI</span>
-      <span class="tp-sub">de la imagen al dígito</span>
-    </button>
+  <div class="tiempos">
+    <div><b>Al instante</b><span>La red del punto 2 en el navegador (<i>Punto 2 · La red en vivo</i>) y los simuladores de teclado, LCD y OLED.</span></div>
+    <div><b>~20-60 s</b><span>Abrir el programa real de reconocimiento: TensorFlow tarda en cargar. La primera vez, antes, se descarga TensorFlow (~400 MB, unos minutos).</span></div>
+    <div><b>~10 min la 1.ª vez</b><span>El brazo del punto 1: PyBullet se compila (pide las Build Tools de C++ de Visual Studio). Después abre en segundos.</span></div>
   </div>
-</header>
-
-<section class="bloque-pide">
-  <h2>Qué pide la actividad</h2>
-  <p class="nota">Cada punto se marca solo cuando lo pruebas con su botón (o lo puedes marcar tú).</p>
   <div id="checklist"></div>
 </section>
 
-<!-- ============================ PESTAÑAS ============================ -->
-<nav class="pestanas" role="tablist">
-  <button role="tab" data-punto="p1" class="pest t1">Punto 1 · Teclado + brazo dibujando</button>
-  <button role="tab" data-punto="p2" class="pest t2">Punto 2 · Reconocimiento + OLED por SPI</button>
-</nav>
-
 <!-- ============================ PUNTO 1 ============================ -->
-<main>
-<div class="punto" id="p1" data-punto="p1">
-  <div class="pasos" id="pasos-p1">
-
-    <section class="paso" id="p1-paso-1" data-titulo="Qué hace y cómo funciona">
-      <h2>Punto 1: aprietas un número y el brazo lo dibuja</h2>
-      <p>Aprietas una tecla del <b>0 al 9</b> en un teclado 4x4 conectado a un ESP32. El ESP32 muestra el número en una pantalla LCD (<code>Dibujando: 7</code>) y se lo manda al PC por el cable USB. En el PC, un brazo robótico simulado en <b>PyBullet</b> lo traza en el aire con una línea amarilla, como si tuviera un lápiz en la pinza. Sin ESP32, la ventana del simulador trae 10 botones que hacen lo mismo.</p>
-
-      <div class="flujo f1" aria-label="Flujo del punto 1">
-        <div class="nodo"><span class="n-ic">⌨</span><b>Teclado 4x4</b><small>8 cables al ESP32</small></div>
-        <div class="flecha">aprietas 7</div>
-        <div class="nodo esp"><span class="n-ic">▣</span><b>ESP32</b><small>barre filas y columnas</small></div>
-        <div class="flecha bif"><span>I2C → LCD<br><code>Dibujando: 7</code></span><span>USB → PC<br><code>DIGIT:7</code></span></div>
-        <div class="nodo"><span class="n-ic">✎</span><b>Trayectoria</b><small>puntos (u, v) del 7</small></div>
-        <div class="flecha">ángulos</div>
-        <div class="nodo pc"><span class="n-ic">⟲</span><b>Brazo PyBullet</b><small>base + codo, línea amarilla</small></div>
+<section data-seccion="Pruébalo" data-icono="▶" data-sub="brazo dibujando" data-punto="p1" id="s-p1-probar">
+  <h2>Punto 1 · Aprietas un número y el brazo lo dibuja</h2>
+  <div class="dos-col">
+    <div class="prueba">
+      <div class="prueba-explica">
+        <h3>El brazo de verdad, en PyBullet</h3>
+        <p>Al pulsar <b>Iniciar</b> se abre una <b>ventana aparte</b> con el brazo de <code>brazo.urdf</code> y 10 botones (0 a 9). Cada clic borra el dígito anterior y el brazo traza el nuevo con una línea amarilla, como un lápiz en la pinza.</p>
+        <p class="aviso-suave"><b>La primera vez tarda unos 10 minutos:</b> PyBullet no viene listo para Windows y se compila desde su código (necesita las Build Tools de C++ de Visual Studio). La barra cuenta cómo va. Después abre en segundos.</p>
       </div>
+      <div class="panel-accion" id="run-p1-sim"></div>
+    </div>
+    <div class="tarjeta trazo-demo">
+      <h3>Mientras tanto: la trayectoria de cada dígito</h3>
+      <p class="nota">Son los mismos puntos de <code>brazo_dibuja.py</code>. Elige un dígito: se dibuja como lo recorre el brazo, sin levantar el lápiz, con los ángulos de la base y el codo.</p>
+      <div class="botonera-digitos" id="trazo-botones"></div>
+      <svg id="trazo-svg" viewBox="-0.15 -0.15 1.3 1.3" role="img" aria-label="Trayectoria del dígito"></svg>
+      <div class="lectura" id="trazo-lectura">Elige un dígito.</div>
+    </div>
+  </div>
+  <h3 class="sep">Teclado 4x4 y LCD en el navegador (sin instalar nada)</h3>
+  <p>El mismo teclado clicable, la LCD 16x2 con los textos reales del firmware y el trazo del dígito. "Modo prueba" funciona solo; "Conectado" escucha al ESP32 real por Web Serial (Chrome o Edge).</p>
+  <div class="marco-preview">
+    <iframe data-src="/repo/8-digitos-brazo-y-vision/punto-1-teclado-brazo-dibujando/preview.html" title="Teclado + LCD simulados" allow="serial" loading="lazy"></iframe>
+  </div>
+</section>
 
-      <div class="dos-col">
-        <div>
-          <h3>El teclado: 16 teclas con 8 cables</h3>
-          <p>Las teclas están en 4 filas y 4 columnas; cada tecla une una fila con una columna. El ESP32 <b>barre</b>: baja una sola fila a 0 y mira qué columna bajó con ella. El cruce dice qué tecla es. Lo hace cada 30 ms y solo avisa cuando la tecla <b>cambia</b>, así no manda el mismo número 30 veces mientras la mantienes apretada.</p>
-          <h3>La LCD por I2C</h3>
-          <p>I2C es un bus de 2 cables (SDA datos, SCL reloj). El ESP32 es el que manda y le habla a la LCD por su dirección, <code>0x27</code>, como un número de casa. Un chip en la espalda de la LCD (PCF8574) convierte esos 2 cables en los 8 pines que la pantalla necesita.</p>
-          <h3>El truco del brazo</h3>
-          <p>Para dibujar se mueven solo dos articulaciones: la base (gira como una torreta) y el codo. Con dos giros la punta solo llega a puntos de una <b>esfera</b>, no de un plano, así que el dígito se dibuja en un parche chico de esa esfera (±20° alrededor de una pose con el codo doblado), donde la curvatura casi no se nota, y cada tramo se parte en 8 pasos intermedios.</p>
-        </div>
-        <div class="tarjeta trazo-demo">
-          <h3>Mira la trayectoria de cada dígito</h3>
-          <p class="nota">Son los mismos puntos que usa el programa. Elige un dígito: se dibuja como lo recorre el brazo, sin levantar el lápiz.</p>
-          <div class="botonera-digitos" id="trazo-botones"></div>
-          <svg id="trazo-svg" viewBox="-0.15 -0.15 1.3 1.3" role="img" aria-label="Trayectoria del dígito"></svg>
-          <div class="lectura" id="trazo-lectura">Elige un dígito.</div>
-        </div>
-      </div>
-      <details class="mas"><summary>Leer la explicación completa del README (por qué ángulos y no coordenadas, los trazos)</summary>
-        <div class="md" data-md="punto-1-teclado-brazo-dibujando/README.md" data-desde="## Por qué el brazo se maneja por ángulos y no por coordenadas XYZ" data-hasta="## La idea general"></div>
-      </details>
-    </section>
+<section data-seccion="Cómo funciona" data-icono="✎" data-sub="teclado, LCD, ángulos" data-punto="p1" id="s-p1-como">
+  <h2>Punto 1 · Cómo funciona</h2>
+  <div class="flujo f1" aria-label="Flujo del punto 1">
+    <div class="nodo"><span class="n-ic">⌨</span><b>Teclado 4x4</b><small>8 cables al ESP32</small></div>
+    <div class="flecha">aprietas 7</div>
+    <div class="nodo esp"><span class="n-ic">▣</span><b>ESP32</b><small>barre filas y columnas</small></div>
+    <div class="flecha bif"><span>I2C → LCD<br><code>Dibujando: 7</code></span><span>USB → PC<br><code>DIGIT:7</code></span></div>
+    <div class="nodo"><span class="n-ic">✎</span><b>Trayectoria</b><small>puntos (u, v) del 7</small></div>
+    <div class="flecha">ángulos</div>
+    <div class="nodo pc"><span class="n-ic">⟲</span><b>Brazo PyBullet</b><small>base + codo, línea amarilla</small></div>
+  </div>
+  <div class="tres-col">
+    <div class="tarjeta">
+      <h3>El teclado: 16 teclas con 8 cables</h3>
+      <p>Las teclas están en 4 filas y 4 columnas; cada tecla une una fila con una columna. El ESP32 <b>barre</b>: baja una sola fila a 0 y mira qué columna bajó con ella. Lo hace cada 30 ms y solo avisa cuando la tecla <b>cambia</b>, así no manda el mismo número 30 veces mientras la mantienes apretada.</p>
+    </div>
+    <div class="tarjeta">
+      <h3>La LCD por I2C</h3>
+      <p>I2C es un bus de 2 cables (SDA datos, SCL reloj). El ESP32 le habla a la LCD por su dirección, <code>0x27</code>, como un número de casa. Un chip en la espalda de la LCD (PCF8574) convierte esos 2 cables en los 8 pines que la pantalla necesita.</p>
+    </div>
+    <div class="tarjeta">
+      <h3>El truco del brazo</h3>
+      <p>Solo se mueven la base y el codo. Con dos giros la punta solo llega a puntos de una <b>esfera</b>, no de un plano: el dígito se dibuja en un parche chico de esa esfera (±20° alrededor de una pose con el codo doblado), donde la curvatura casi no se nota, y cada tramo se parte en 8 pasos.</p>
+    </div>
+  </div>
+  <details class="mas"><summary>Leer la explicación completa del README (por qué ángulos y no coordenadas XYZ)</summary>
+    <div class="md" data-md="punto-1-teclado-brazo-dibujando/README.md" data-desde="## Por qué el brazo se maneja por ángulos y no por coordenadas XYZ" data-hasta="## La idea general"></div>
+  </details>
+  <details class="mas"><summary>Leer cómo se barre el teclado y cómo maneja la LCD (del README)</summary>
+    <div class="md" data-md="punto-1-teclado-brazo-dibujando/README.md" data-desde="## Qué es un teclado matricial y cómo se lee" data-hasta="## Qué es un URDF y qué articulaciones usa el dibujo"></div>
+  </details>
+</section>
 
-    <section class="paso" id="p1-paso-2" data-titulo="Cómo se conecta">
-      <h2>Cómo se conecta el teclado y la LCD</h2>
-      <p class="aviso-suave"><b>Para probar en este PC no hace falta armar nada.</b> Esto es para cuando quieras montarlo con el ESP32 de verdad.</p>
-      <figure class="fig-ancha">
-        <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-1-teclado-brazo-dibujando/img/montaje-3d.png" alt="Montaje 3D del teclado y la LCD en el ESP32 con cada cable rotulado">
-        <figcaption>El montaje en 3D con cada cable rotulado (clic para ampliar).</figcaption>
-      </figure>
-      <div class="dos-col">
-        <div>
-          <h3>Teclado 4x4 → ESP32 (8 cables directos)</h3>
-          <table>
-            <thead><tr><th>Teclado</th><th>ESP32</th><th>Modo</th></tr></thead>
-            <tbody>
-              <tr><td>Fila R1 (<code>1 2 3 A</code>)</td><td><code>GPIO14</code></td><td>salida</td></tr>
-              <tr><td>Fila R2 (<code>4 5 6 B</code>)</td><td><code>GPIO27</code></td><td>salida</td></tr>
-              <tr><td>Fila R3 (<code>7 8 9 C</code>)</td><td><code>GPIO26</code></td><td>salida</td></tr>
-              <tr><td>Fila R4 (<code>* 0 # D</code>)</td><td><code>GPIO25</code></td><td>salida</td></tr>
-              <tr><td>Columna C1 (<code>1 4 7 *</code>)</td><td><code>GPIO33</code></td><td>entrada, pull-up interna</td></tr>
-              <tr><td>Columna C2 (<code>2 5 8 0</code>)</td><td><code>GPIO32</code></td><td>entrada, pull-up interna</td></tr>
-              <tr><td>Columna C3 (<code>3 6 9 #</code>)</td><td><code>GPIO18</code></td><td>entrada, pull-up interna</td></tr>
-              <tr><td>Columna C4 (<code>A B C D</code>)</td><td><code>GPIO19</code></td><td>entrada, pull-up interna</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div>
-          <h3>LCD 16x2 I2C → ESP32 (4 cables)</h3>
-          <table>
-            <thead><tr><th>LCD</th><th>ESP32</th></tr></thead>
-            <tbody>
-              <tr><td><code>SDA</code></td><td><code>GPIO21</code></td></tr>
-              <tr><td><code>SCL</code></td><td><code>GPIO22</code></td></tr>
-              <tr><td><code>VCC</code></td><td><code>3V3</code> (o <code>5V</code> si el módulo lo pide)</td></tr>
-              <tr><td><code>GND</code></td><td><code>GND</code></td></tr>
-            </tbody>
-          </table>
-          <p class="nota">Dirección I2C <code>0x27</code>. No hace falta ninguna resistencia: las pull-up del teclado son las internas del ESP32 y las del I2C vienen en la LCD. El ESP32 va al PC con un solo cable USB.</p>
-          <p class="nota"><b>Si la LCD prende pero no muestra texto</b> (o solo cuadros negros), gira el potenciómetro azul de su espalda con un destornillador: es el contraste, no el código.</p>
-        </div>
-      </div>
-      <div class="galeria">
-        <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-1-teclado-brazo-dibujando/img/foto-montaje-teclado-lcd.jpg" alt="ESP32 con el teclado y la LCD">
-        <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-1-teclado-brazo-dibujando/img/foto-teclado.jpg" alt="El teclado 4x4">
-        <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-1-teclado-brazo-dibujando/img/foto-teclado-esp32.jpg" alt="Los 8 cables del teclado en el ESP32">
-        <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-1-teclado-brazo-dibujando/img/foto-lcd-contraste-antes.jpg" alt="LCD con contraste muy alto: dos filas de cuadros">
-        <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-1-teclado-brazo-dibujando/img/foto-lcd-contraste-despues.jpg" alt="LCD con el contraste ajustado">
-      </div>
-      <p class="nota">Fotos del montaje real: el ESP32 con el teclado y la LCD, el teclado, su cinta en los 8 GPIO, y la LCD antes y después de ajustar el contraste.</p>
-    </section>
+<section data-seccion="Conexiones" data-icono="⏚" data-sub="teclado + LCD" data-punto="p1" id="s-p1-conexiones">
+  <h2>Punto 1 · Cómo se conecta el teclado y la LCD</h2>
+  <p class="aviso-suave"><b>Para probar en este PC no hace falta armar nada.</b> Esto es para montarlo con el ESP32 de verdad.</p>
+  <div class="dos-col">
+    <figure>
+      <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-1-teclado-brazo-dibujando/img/montaje-3d.jpg" alt="Montaje 3D del teclado y la LCD en el ESP32 con cada cable rotulado">
+      <figcaption>El montaje en 3D con cada cable rotulado (clic para ampliar).</figcaption>
+    </figure>
+    <div>
+      <h3>Teclado 4x4 → ESP32 (8 cables directos)</h3>
+      <table>
+        <thead><tr><th>Teclado</th><th>ESP32</th><th>Modo</th></tr></thead>
+        <tbody>
+          <tr><td>Fila R1 (<code>1 2 3 A</code>)</td><td><code>GPIO14</code></td><td>salida</td></tr>
+          <tr><td>Fila R2 (<code>4 5 6 B</code>)</td><td><code>GPIO27</code></td><td>salida</td></tr>
+          <tr><td>Fila R3 (<code>7 8 9 C</code>)</td><td><code>GPIO26</code></td><td>salida</td></tr>
+          <tr><td>Fila R4 (<code>* 0 # D</code>)</td><td><code>GPIO25</code></td><td>salida</td></tr>
+          <tr><td>Columna C1 (<code>1 4 7 *</code>)</td><td><code>GPIO33</code></td><td>entrada, pull-up interna</td></tr>
+          <tr><td>Columna C2 (<code>2 5 8 0</code>)</td><td><code>GPIO32</code></td><td>entrada, pull-up interna</td></tr>
+          <tr><td>Columna C3 (<code>3 6 9 #</code>)</td><td><code>GPIO18</code></td><td>entrada, pull-up interna</td></tr>
+          <tr><td>Columna C4 (<code>A B C D</code>)</td><td><code>GPIO19</code></td><td>entrada, pull-up interna</td></tr>
+        </tbody>
+      </table>
+      <h3>LCD 16x2 I2C → ESP32 (4 cables)</h3>
+      <table>
+        <thead><tr><th>LCD</th><th>ESP32</th></tr></thead>
+        <tbody>
+          <tr><td><code>SDA</code> / <code>SCL</code></td><td><code>GPIO21</code> / <code>GPIO22</code></td></tr>
+          <tr><td><code>VCC</code> / <code>GND</code></td><td><code>3V3</code> (o <code>5V</code> si el módulo lo pide) / <code>GND</code></td></tr>
+        </tbody>
+      </table>
+      <p class="nota">Dirección I2C <code>0x27</code>. No hace falta ninguna resistencia: las pull-up del teclado son las internas del ESP32 y las del I2C vienen en la LCD. <b>Si la LCD prende pero no muestra texto</b> (o solo cuadros), gira el potenciómetro azul de su espalda: es el contraste, no el código.</p>
+    </div>
+  </div>
+  <div class="galeria">
+    <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-1-teclado-brazo-dibujando/img/foto-montaje-teclado-lcd.jpg" alt="ESP32 con el teclado y la LCD">
+    <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-1-teclado-brazo-dibujando/img/foto-teclado.jpg" alt="El teclado 4x4">
+    <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-1-teclado-brazo-dibujando/img/foto-teclado-esp32.jpg" alt="Los 8 cables del teclado en el ESP32">
+    <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-1-teclado-brazo-dibujando/img/foto-lcd-contraste-antes.jpg" alt="LCD con contraste muy alto: dos filas de cuadros">
+    <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-1-teclado-brazo-dibujando/img/foto-lcd-contraste-despues.jpg" alt="LCD con el contraste ajustado">
+  </div>
+  <p class="nota">Fotos del montaje real: el ESP32 con el teclado y la LCD, el teclado, su cinta en los 8 GPIO, y la LCD antes y después de ajustar el contraste.</p>
+</section>
 
-    <section class="paso" id="p1-paso-3" data-titulo="Pruébalo">
-      <h2>Pruébalo sin ESP32</h2>
-      <div class="prueba">
-        <div class="prueba-explica">
-          <h3>El brazo dibujando en PyBullet</h3>
-          <p>Al pulsar <b>Iniciar</b> se abre una <b>ventana aparte</b> con el brazo robótico.</p>
-        </div>
-        <div class="panel-accion" id="run-p1-sim"></div>
-      </div>
-
-      <h3 class="sep">Teclado y LCD en el navegador</h3>
-      <p>Si no quieres esperar al simulador: el mismo teclado 4x4 clicable, la LCD 16x2 con los textos reales del firmware y el trazo del dígito. Funciona solo en "Modo prueba".</p>
-      <div class="marco-preview">
-        <iframe data-src="/repo/8-digitos-brazo-y-vision/punto-1-teclado-brazo-dibujando/preview.html" title="Teclado + LCD simulados" allow="serial" loading="lazy"></iframe>
-      </div>
-    </section>
-
-    <section class="paso" id="p1-paso-4" data-titulo="Con el ESP32 real">
-      <h2>Con el ESP32 de verdad (opcional)</h2>
-      <ol class="pasos-reales">
-        <li><b>Arma las conexiones</b> del paso "Cómo se conecta" (teclado en 8 GPIO, LCD por I2C).</li>
-        <li><b>(Recomendado la primera vez) prueba solo el teclado</b>: abre <code>probar_teclado.py</code> en Thonny y dale <i>Run</i>. Al apretar el 7 debe decir algo como <code>Tecla 7 (fila R3 = GPIO26, columna C1 = GPIO33)</code>. Si sale otra tecla, el teclado tiene los cables en otro orden.</li>
-        <li><b>Graba el firmware</b>: con Thonny, guarda <code>esp32_teclado_lcd.py</code> en la placa con el nombre <code>main.py</code>. La LCD debe decir <code>Marca un digito</code> / <code>para dibujar</code>.</li>
-        <li><b>Cierra Thonny.</b> Un puerto COM lo puede tener abierto un solo programa a la vez.</li>
-        <li><b>Revisa el puerto</b>: el programa usa <code>COM7</code>. Si en el Administrador de dispositivos tu ESP32 sale en otro COM, cámbialo (ver "Detalles técnicos").</li>
-        <li><b>Pulsa Iniciar</b> en "Pruébalo". Ahora "Lo que dice el programa" debe decir <code>ESP32 conectado en COM7</code>.</li>
-        <li><b>Aprieta un dígito en el teclado</b>: la LCD muestra <code>Dibujando:</code> y el número, arriba de la ventana del brazo aparece <code>Ultima linea del ESP32: DIGIT:n</code> y el brazo lo dibuja.</li>
-      </ol>
+<section data-seccion="Con el ESP32" data-icono="⚡" data-sub="montaje real" data-punto="p1" id="s-p1-esp32">
+  <h2>Punto 1 · Con el ESP32 de verdad (opcional)</h2>
+  <div class="dos-col">
+    <ol class="pasos-reales">
+      <li><b>Arma las conexiones</b> de "Conexiones" (teclado en 8 GPIO, LCD por I2C).</li>
+      <li><b>(Recomendado la primera vez) prueba solo el teclado</b>: abre <code>probar_teclado.py</code> en Thonny y dale <i>Run</i>. Al apretar el 7 debe decir algo como <code>Tecla 7 (fila R3 = GPIO26, columna C1 = GPIO33)</code>.</li>
+      <li><b>Graba el firmware</b>: con Thonny, guarda <code>esp32_teclado_lcd.py</code> en la placa como <code>main.py</code>. La LCD debe decir <code>Marca un digito</code> / <code>para dibujar</code>.</li>
+      <li><b>Cierra Thonny.</b> Un puerto COM lo puede tener abierto un solo programa a la vez.</li>
+      <li><b>Revisa el puerto</b>: el programa usa <code>COM7</code> (constante <code>PUERTO_SERIAL</code> de <code>brazo_dibuja.py</code>).</li>
+      <li><b>Pulsa Iniciar</b> en "Pruébalo": la salida debe decir <code>ESP32 conectado en COM7</code>.</li>
+      <li><b>Aprieta un dígito</b>: la LCD muestra <code>Dibujando:</code> y el número, arriba de la ventana aparece <code>Ultima linea del ESP32: DIGIT:n</code> y el brazo lo dibuja.</li>
+    </ol>
+    <div>
       <div class="tarjeta">
         <h3>Si no pasa nada</h3>
         <ul>
-          <li>La línea gris de arriba de la ventana <b>nunca cambia</b>: el ESP32 no está mandando. Ábrelo en Thonny (con la app detenida) y reinícialo: debe imprimir <code>I2C encontrados: ['0x27']</code> y <code>ESP32 listo: esperando teclas</code>.</li>
+          <li>La línea gris de arriba de la ventana <b>nunca cambia</b>: el ESP32 no está mandando. Ábrelo en Thonny y reinícialo: debe imprimir <code>I2C encontrados: ['0x27']</code> y <code>ESP32 listo: esperando teclas</code>.</li>
           <li><code>Acceso denegado</code> en la salida: Thonny u otro programa tiene el puerto. Ciérralo.</li>
-          <li>La LCD funciona pero una tecla no hace nada: revisa el cable de su fila o columna en la tabla.</li>
+          <li>La LCD funciona pero una tecla no hace nada: revisa el cable de su fila o columna.</li>
         </ul>
       </div>
-      <p>El navegador también puede escuchar al ESP32 real: en el teclado simulado de "Pruébalo", pasa a <b>Conectado</b> y elige el puerto (Chrome o Edge). Cada tecla real aparece en la LCD simulada.</p>
-    </section>
-
-    <section class="paso" id="p1-paso-5" data-titulo="Resultados">
-      <h2>Resultados del punto 1</h2>
-      <figure class="fig-ancha">
-        <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-1-teclado-brazo-dibujando/img/digitos-dibujados.png" alt="Los 10 dígitos dibujados por el brazo">
-        <figcaption>Los diez dígitos como los traza el brazo, un cuadro final por tecla.</figcaption>
-      </figure>
-      <div class="dos-col">
-        <figure>
-          <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-1-teclado-brazo-dibujando/img/demo-dibujo.gif" alt="El brazo dibujando 3, 7 y 0">
-          <figcaption>El brazo dibujando 3, 7 y 0 con la lógica real del programa, la LCD y la tecla apretada.</figcaption>
-        </figure>
-        <figure>
-          <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-1-teclado-brazo-dibujando/img/interfaz-web-dibujo.png" alt="La previsualización después de apretar 7">
-          <figcaption>La previsualización en el navegador después de apretar el 7.</figcaption>
-        </figure>
-      </div>
-      <p class="nota">El trazo amarillo de estas imágenes se proyectó aparte, porque PyBullet no incluye sus líneas de dibujo en las capturas de su cámara; en la ventana en vivo se ve directamente.</p>
+      <p>El navegador también puede escuchar al ESP32 real: en el teclado simulado de "Pruébalo", pasa a <b>Conectado</b> y elige el puerto.</p>
       <details class="tecnico"><summary>Detalles técnicos</summary>
         <ul>
           <li>Programa del PC: <code>punto-1-teclado-brazo-dibujando/brazo_dibuja.py</code>, con el brazo de <code>brazo.urdf</code> (el mismo del tema 7).</li>
-          <li>Puerto: constante <code>PUERTO_SERIAL = "COM7"</code> al principio de <code>brazo_dibuja.py</code>, a 115200 baudios. Protocolo: una línea <code>DIGIT:n</code> por tecla.</li>
+          <li>Protocolo: una línea <code>DIGIT:n</code> por tecla, 115200 baudios.</li>
           <li>Firmware: <code>esp32_teclado_lcd.py</code> (MicroPython, se guarda como <code>main.py</code>); prueba del teclado: <code>probar_teclado.py</code>.</li>
-          <li>Entorno: <code>punto-1-teclado-brazo-dibujando/entorno</code> con <code>pybullet==3.2.7</code> y <code>pyserial==3.5</code>. A mano: <code>entorno\Scripts\python brazo_dibuja.py</code>.</li>
           <li>Constantes del dibujo: <code>CENTRO_J2 = 1.0</code>, <code>RANGO_J1 = RANGO_J2 = 0.35</code> rad, <code>PUNTOS_POR_TRAMO = 8</code>, 6 pasos de física por punto.</li>
+          <li>A mano: <code>entorno\Scripts\python brazo_dibuja.py</code> dentro de la carpeta del punto.</li>
         </ul>
       </details>
-    </section>
+    </div>
   </div>
-</div>
+</section>
 
 <!-- ============================ PUNTO 2 ============================ -->
-<div class="punto" id="p2" data-punto="p2">
-  <div class="pasos" id="pasos-p2">
+<section data-seccion="La red en vivo" data-icono="◉" data-sub="dibuja y mira la CNN" data-punto="p2" id="s-p2-red">
+  <div class="red-cab">
+    <div>
+      <h2>Punto 2 · Dibuja un número y mira cómo lo lee la red</h2>
+      <p class="nota">Paso a paso, lo mismo que hace <code>reconocer_digito.py</code> con cada cuadro de la cámara.</p>
+    </div>
+    <div class="red-fuente" role="tablist" aria-label="De dónde salen los datos">
+      <button type="button" data-fuente="web" class="activa">En el navegador <small>al instante</small></button>
+      <button type="button" data-fuente="py">Programa de Python <small>en vivo</small></button>
+    </div>
+  </div>
 
-    <section class="paso" id="p2-paso-1" data-titulo="Qué hace y cómo funciona">
-      <h2>Punto 2: escribes un número y la OLED lo muestra</h2>
-      <p>Escribes un dígito a mano (en papel frente a la cámara, o con el mouse en un lienzo). El PC lo limpia para que se parezca a los dígitos con los que se entrenó una <b>red neuronal</b>, la red dice qué número es, y cuando está segura se lo manda por USB a un ESP32 (el <b>ESP-A</b>). El ESP-A se lo pasa por cable a un segundo ESP32 (el <b>ESP-B</b>), que lo dibuja grande en una pantalla <b>OLED</b>.</p>
+  <div class="red-py" id="red-py" hidden>
+    <p class="aviso-suave">Aquí la red corre en el programa real (<code>reconocer_digito.py</code>, con TensorFlow) y esta página dibuja lo que el programa escribe cada 0,2 s. <b>Tarda ~20-60 s en abrir</b> porque carga TensorFlow; la primera vez, antes, se instala TensorFlow (~400 MB). Se dibuja en <b>su</b> ventana, no aquí.</p>
+    <div class="dos-col">
+      <div class="panel-accion" id="run-p2-mouse"></div>
+      <div class="panel-accion" id="run-p2-camara"></div>
+    </div>
+    <p class="red-espera" id="red-espera">Esperando datos del programa… Pulsa <b>Abrir el lienzo</b> (o la cámara) y dibuja en su ventana.</p>
+  </div>
 
-      <div class="flujo f2" aria-label="Flujo del punto 2">
-        <div class="nodo"><span class="n-ic">◉</span><b>Imagen</b><small>cámara o mouse</small></div>
-        <div class="flecha">recuadro</div>
-        <div class="nodo"><span class="n-ic">▦</span><b>Preprocesar</b><small>gris, umbral, recorte, 28×28</small></div>
-        <div class="flecha">28×28</div>
-        <div class="nodo pc"><span class="n-ic">⧉</span><b>CNN</b><small>MNIST, 10 probabilidades</small></div>
-        <div class="flecha">12 de 15</div>
-        <div class="nodo"><span class="n-ic">✓</span><b>Dígito</b><small>confirmado una vez</small></div>
-        <div class="flecha">USB<br><code>DIGIT:3</code></div>
-        <div class="nodo esp"><span class="n-ic">▣</span><b>ESP-A</b><small>maestro</small></div>
-        <div class="flecha">SPI + UART2</div>
-        <div class="nodo esp"><span class="n-ic">▣</span><b>ESP-B</b><small>esclavo</small></div>
-        <div class="flecha">I2C</div>
-        <div class="nodo oled"><span class="n-ic">▭</span><b>OLED</b><small>dibuja el 3</small></div>
+  <div class="red-tubo">
+    <div class="red-etapa">
+      <div class="et-cab"><span class="et-n">1</span><b id="et1-tit">Dibuja aquí</b></div>
+      <div class="lienzo-caja">
+        <canvas id="lienzo" width="360" height="360" aria-label="Lienzo para dibujar un dígito"></canvas>
+        <canvas id="py-recuadro" width="56" height="56" class="pixelada" hidden aria-label="Lo que ve el programa dentro del recuadro"></canvas>
       </div>
-
-      <div class="dos-col">
-        <div>
-          <h3>Preprocesar: que la foto parezca MNIST</h3>
-          <p>La red se entrenó con <b>MNIST</b>: 70 000 dígitos a mano de 28×28 píxeles, trazo blanco sobre fondo negro, centrados. Solo reconoce bien lo que se le parezca, así que el programa pasa la imagen a gris, separa trazo de fondo (umbral), recorta el dígito, lo achica a 20×20, lo centra por su centro de masa en un cuadro negro de 28×28 y divide entre 255.</p>
-          <h3>La CNN</h3>
-          <p>Una red neuronal <b>convolucional</b> desliza filtros chicos de 3×3 sobre la imagen: la primera capa aprende a ver bordes y curvas, la segunda los combina en piezas (un lazo, una esquina). Al final da 10 probabilidades, una por dígito. Tiene unos 225 000 pesos y ya viene entrenada (99 % de acierto en MNIST).</p>
-          <h3>Votar antes de mandar</h3>
-          <p>La red puede dudar de un cuadro a otro. Por eso un dígito solo se <b>confirma</b> si ganó en al menos <b>12 de los últimos 15</b> cuadros, y cada voto necesita 60 % de confianza. Recién ahí se manda, y una sola vez.</p>
-        </div>
-        <div>
-          <figure>
-            <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-2-reconocimiento-oled-spi/img/pipeline-preprocesamiento.png" alt="Pasos del preprocesamiento de la foto a 28x28">
-            <figcaption>Cada paso del preprocesamiento real, de la hoja a la entrada de 28×28 de la red.</figcaption>
-          </figure>
-          <div class="tarjeta votos-demo">
-            <h3>Prueba la votación</h3>
-            <p class="nota">Simula 15 cuadros de la cámara con algo de duda. El dígito se confirma solo si gana 12 de 15.</p>
-            <div class="votos-ctrl">
-              <label>Dígito escrito <select id="votos-digito"></select></label>
-              <label>Duda de la red <input type="range" id="votos-ruido" min="0" max="60" value="15"> <span id="votos-ruido-v">15 %</span></label>
-              <button class="btn-sec" id="votos-correr">Simular 15 cuadros</button>
-            </div>
-            <div class="votos-fila" id="votos-fila"></div>
-            <div class="lectura" id="votos-res">—</div>
-          </div>
-        </div>
+      <div class="et-pie" id="et1-pie">
+        <button type="button" class="btn-sec" id="borrar">Borrar</button>
+        <span class="nota">o clic derecho. Grande, como en papel.</span>
       </div>
-      <details class="mas"><summary>Leer la explicación completa del README (la lógica del reconocimiento)</summary>
-        <div class="md" data-md="punto-2-reconocimiento-oled-spi/README.md" data-desde="## La lógica del reconocimiento (`reconocer_digito.py`)" data-hasta="## La lógica de los dos ESP32"></div>
-      </details>
-    </section>
+    </div>
+    <div class="red-flecha">gris, umbral,<br>recorte 20×20,<br>centro de masa</div>
+    <div class="red-etapa">
+      <div class="et-cab"><span class="et-n">2</span><b>Lo que ve la red: 28×28</b></div>
+      <canvas id="c28" width="28" height="28" class="pixelada" aria-label="Entrada de 28x28"></canvas>
+      <p class="et-pie nota">784 números de 0 a 1, fondo negro y trazo blanco: como los 70 000 dígitos de MNIST con los que aprendió.</p>
+    </div>
+    <div class="red-flecha">32 filtros<br>de 3×3</div>
+    <div class="red-etapa">
+      <div class="et-cab"><span class="et-n">3</span><b>Capa 1: 32 filtros</b></div>
+      <div class="mapas" id="mapas"></div>
+      <p class="et-pie nota">Cada cuadrito es un filtro de 3×3 pasado por toda la imagen: se enciende donde encuentra <b>su</b> borde. La capa 2 los combina en lazos y esquinas.</p>
+    </div>
+  </div>
+  <div class="red-tubo">
+    <div class="red-etapa">
+      <div class="et-cab"><span class="et-n">4</span><b>Probabilidad por dígito</b></div>
+      <div class="barras" id="barras"></div>
+      <p class="et-pie nota">Un cuadro solo vota si su ganador pasa el <b>60 %</b> (la línea).</p>
+    </div>
+    <div class="red-flecha">un voto<br>por cuadro</div>
+    <div class="red-etapa">
+      <div class="et-cab"><span class="et-n">5</span><b>Últimos 15 votos</b></div>
+      <div class="votos-fila en-vivo" id="votos"></div>
+      <div class="prop"><div class="prop-barra"><div id="prop-relleno"></div><span class="prop-umbral" title="80 %"></span></div><span id="prop-txt">0 %</span></div>
+      <p class="et-estado" id="et5-estado">Dibuja un dígito.</p>
+      <p class="et-pie nota">Se confirma si gana <b>12 de 15</b> (80 %, la raya blanca): una duda suelta no manda un número equivocado.</p>
+    </div>
+    <div class="red-flecha">una sola vez<br><code id="msg-digit">DIGIT:–</code></div>
+    <div class="red-etapa">
+      <div class="et-cab"><span class="et-n">6</span><b>ESP-A → SPI/UART2 → ESP-B → OLED</b></div>
+      <div class="cadena" id="cadena"><span>PC</span><i></i><span>ESP-A</span><i></i><span>ESP-B</span><i></i><span>OLED</span></div>
+      <canvas id="oled" width="128" height="64" class="pixelada oled" aria-label="OLED simulada"></canvas>
+      <p class="et-pie nota" id="et6-pie">Así lo pinta el ESP-B en la OLED. Con las placas, el programa de Python le manda <code>DIGIT:n</code> al ESP-A y la OLED real muestra lo mismo.</p>
+    </div>
+  </div>
+  <p class="nota red-nota" id="red-nota">La versión del navegador usa <b>los mismos pesos</b> de <code>modelo_mnist_cnn.h5</code> (225 034 números, en <code>app/cnn-pesos.bin</code>) y el mismo preprocesamiento para un lienzo limpio. Comprobado con 60 dígitos de MNIST: da la misma clase que TensorFlow en los 60.</p>
+</section>
 
-    <section class="paso" id="p2-paso-2" data-titulo="Cómo se conecta">
-      <h2>Cómo se conectan los dos ESP32 y la OLED</h2>
-      <p class="aviso-suave"><b>Para probar el reconocimiento en este PC no hace falta ningún ESP32.</b> Esto es para el montaje real.</p>
+<section data-seccion="Cómo funciona" data-icono="⧉" data-sub="CNN, votos, SPI" data-punto="p2" id="s-p2-como">
+  <h2>Punto 2 · Cómo funciona</h2>
+  <div class="flujo f2" aria-label="Flujo del punto 2">
+    <div class="nodo"><span class="n-ic">◉</span><b>Imagen</b><small>cámara o mouse</small></div>
+    <div class="flecha">recuadro</div>
+    <div class="nodo"><span class="n-ic">▦</span><b>Preprocesar</b><small>gris, umbral, recorte, 28×28</small></div>
+    <div class="flecha">28×28</div>
+    <div class="nodo pc"><span class="n-ic">⧉</span><b>CNN</b><small>MNIST, 10 probabilidades</small></div>
+    <div class="flecha">12 de 15</div>
+    <div class="nodo"><span class="n-ic">✓</span><b>Dígito</b><small>confirmado una vez</small></div>
+    <div class="flecha">USB<br><code>DIGIT:3</code></div>
+    <div class="nodo esp"><span class="n-ic">▣</span><b>ESP-A</b><small>maestro</small></div>
+    <div class="flecha">SPI + UART2</div>
+    <div class="nodo esp"><span class="n-ic">▣</span><b>ESP-B</b><small>esclavo</small></div>
+    <div class="flecha">I2C</div>
+    <div class="nodo oled"><span class="n-ic">▭</span><b>OLED</b><small>dibuja el 3</small></div>
+  </div>
+  <div class="tres-col">
+    <div class="tarjeta">
+      <h3>Preprocesar: que la foto parezca MNIST</h3>
+      <p>La red se entrenó con <b>MNIST</b>: 70 000 dígitos a mano de 28×28, trazo blanco sobre negro, centrados. Solo reconoce bien lo que se le parezca: gris, umbral, recorte del dígito, 20×20, centrado por centro de masa en 28×28 y /255.</p>
+    </div>
+    <div class="tarjeta">
+      <h3>La CNN</h3>
+      <p>Una red <b>convolucional</b> desliza filtros de 3×3: la 1.ª capa ve bordes y curvas, la 2.ª los combina en piezas (un lazo, una esquina). Al final, 10 probabilidades. Tiene 225 034 pesos y ya viene entrenada (~99 % en MNIST).</p>
+    </div>
+    <div class="tarjeta">
+      <h3>Votar antes de mandar</h3>
+      <p>Un dígito solo se <b>confirma</b> si ganó al menos <b>12 de los últimos 15</b> cuadros, y cada voto necesita 60 % de confianza. Recién ahí se manda <code>DIGIT:n</code>, una sola vez.</p>
+    </div>
+  </div>
+  <figure class="fig-ancha">
+    <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-2-reconocimiento-oled-spi/img/pipeline-preprocesamiento.png" alt="Pasos del preprocesamiento de la foto a 28x28">
+    <figcaption>Cada paso del preprocesamiento real con una foto de la cámara, de la hoja a la entrada de 28×28 de la red.</figcaption>
+  </figure>
+  <details class="mas"><summary>Leer qué es una CNN y qué es MNIST (del README)</summary>
+    <div class="md" data-md="punto-2-reconocimiento-oled-spi/README.md" data-desde="## Qué es una CNN y qué es MNIST" data-hasta="## Qué es OpenCV"></div>
+  </details>
+  <details class="mas"><summary>Leer la lógica completa del reconocimiento (del README)</summary>
+    <div class="md" data-md="punto-2-reconocimiento-oled-spi/README.md" data-desde="## La lógica del reconocimiento (`reconocer_digito.py`)" data-hasta="## La lógica de los dos ESP32"></div>
+  </details>
+  <details class="avanzado">
+    <summary>Avanzado (opcional): volver a entrenar la red</summary>
+    <div class="aviso-peligro"><b>No hace falta:</b> la red ya viene entrenada. Esto <b>sobrescribe el modelo</b> (<code>modelo_mnist_cnn.h5</code>). Descarga MNIST (unos 11 MB) la primera vez y entrena 10 pasadas: cerca de <b>5 minutos</b> en CPU, ~99 % al final. Para que la versión del navegador use el modelo nuevo, después: <code>app\exportar_pesos_web.py</code>.</div>
+    <div class="panel-accion" id="run-p2-entrenar"></div>
+  </details>
+</section>
 
-      <div class="maestro-esclavo">
-        <div class="me-caja me-a"><b>ESP-A · maestro</b><small>MicroPython · va al PC por USB</small><span>Genera el reloj SPI y decide cuándo se habla. Recibe <code>DIGIT:n</code> del PC, lo reenvía y contesta <code>REENVIADO:n</code>.</span></div>
-        <div class="me-cables">
-          <div class="me-linea spi"><span>SCK · MOSI · MISO · CS</span><em>SPI: sin cruzar</em></div>
-          <div class="me-linea uart"><span>TX → RX</span><em>UART2: cruzados</em></div>
-          <div class="me-linea gnd"><span>GND ↔ GND</span><em>tierra común</em></div>
-        </div>
-        <div class="me-caja me-b"><b>ESP-B · esclavo</b><small>Arduino · solo necesita alimentación</small><span>Escucha. Cuando el maestro baja CS, recibe 1 byte con el dígito y lo pinta en la OLED.</span></div>
+<section data-seccion="Conexiones" data-icono="⏚" data-sub="dos ESP32 + OLED" data-punto="p2" id="s-p2-conexiones">
+  <h2>Punto 2 · Cómo se conectan los dos ESP32 y la OLED</h2>
+  <p class="aviso-suave"><b>Para probar el reconocimiento en este PC no hace falta ningún ESP32.</b> Esto es para el montaje real.</p>
+  <div class="maestro-esclavo">
+    <div class="me-caja me-a"><b>ESP-A · maestro</b><small>MicroPython · va al PC por USB</small><span>Genera el reloj SPI y decide cuándo se habla. Recibe <code>DIGIT:n</code> del PC, lo reenvía y contesta <code>REENVIADO:n</code>.</span></div>
+    <div class="me-cables">
+      <div class="me-linea spi"><span>SCK · MOSI · MISO · CS</span><em>SPI: sin cruzar</em></div>
+      <div class="me-linea uart"><span>TX → RX</span><em>UART2: cruzados</em></div>
+      <div class="me-linea gnd"><span>GND ↔ GND</span><em>tierra común</em></div>
+    </div>
+    <div class="me-caja me-b"><b>ESP-B · esclavo</b><small>Arduino · solo necesita alimentación</small><span>Escucha. Cuando el maestro baja CS, recibe 1 byte con el dígito y lo pinta en la OLED.</span></div>
+  </div>
+  <p><b>Maestro y esclavo:</b> en SPI uno manda (pone el reloj y baja <code>CS</code> para decir "te hablo a ti") y el otro escucha; por eso sus cables <b>no se cruzan</b> (MOSI = del maestro al esclavo). En UART no hay reloj ni jefe: cada uno habla por su TX y escucha por su RX, y esos cables <b>sí se cruzan</b>. El ESP-A manda cada dígito <b>por los dos caminos a la vez</b>. El ESP-B está en Arduino porque MicroPython no tiene modo SPI esclavo.</p>
+  <div class="dos-col">
+    <figure>
+      <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-2-reconocimiento-oled-spi/img/montaje-3d.jpg" alt="Montaje 3D de los dos ESP32 con la OLED">
+      <figcaption>Los dos ESP32 y la OLED en 3D, con cada conexión rotulada.</figcaption>
+    </figure>
+    <div class="tablas-p2">
+      <div>
+        <h3>SPI (sin cruzar)</h3>
+        <table>
+          <thead><tr><th>Señal</th><th>ESP-A</th><th>ESP-B</th></tr></thead>
+          <tbody>
+            <tr><td><code>SCK</code></td><td><code>GPIO18</code></td><td><code>GPIO14</code></td></tr>
+            <tr><td><code>MOSI</code></td><td><code>GPIO23</code></td><td><code>GPIO13</code></td></tr>
+            <tr><td><code>MISO</code></td><td><code>GPIO19</code></td><td><code>GPIO12</code></td></tr>
+            <tr><td><code>CS</code></td><td><code>GPIO5</code></td><td><code>GPIO15</code></td></tr>
+            <tr><td><code>GND</code></td><td><code>GND</code></td><td><code>GND</code></td></tr>
+          </tbody>
+        </table>
       </div>
-      <p><b>Maestro y esclavo:</b> en SPI siempre hay uno que manda (pone el reloj y baja la línea <code>CS</code> para decir "te hablo a ti") y otro que escucha. Por eso los cables SPI <b>no se cruzan</b>: los nombres ya dicen quién manda (MOSI = del maestro al esclavo). En UART no hay reloj ni jefe: cada uno habla por su TX y escucha por su RX, y por eso esos cables <b>sí se cruzan</b>. El ESP-A manda cada dígito <b>por los dos caminos a la vez</b>: si un cable falla, el otro lo entrega. El ESP-B está en Arduino porque MicroPython no tiene modo SPI esclavo.</p>
-
-      <figure class="fig-ancha">
-        <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-2-reconocimiento-oled-spi/img/montaje-3d.png" alt="Montaje 3D de los dos ESP32 con la OLED">
-        <figcaption>Los dos ESP32 y la OLED en 3D, con cada conexión rotulada (clic para ampliar).</figcaption>
-      </figure>
-      <div class="tres-col">
-        <div>
-          <h3>SPI (sin cruzar)</h3>
-          <table>
-            <thead><tr><th>Señal</th><th>ESP-A</th><th>ESP-B</th></tr></thead>
-            <tbody>
-              <tr><td><code>SCK</code></td><td><code>GPIO18</code></td><td><code>GPIO14</code></td></tr>
-              <tr><td><code>MOSI</code></td><td><code>GPIO23</code></td><td><code>GPIO13</code></td></tr>
-              <tr><td><code>MISO</code></td><td><code>GPIO19</code></td><td><code>GPIO12</code></td></tr>
-              <tr><td><code>CS</code></td><td><code>GPIO5</code></td><td><code>GPIO15</code></td></tr>
-              <tr><td><code>GND</code></td><td><code>GND</code></td><td><code>GND</code></td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div>
-          <h3>UART2 (cruzados)</h3>
-          <table>
-            <thead><tr><th>ESP-A</th><th>ESP-B</th></tr></thead>
-            <tbody>
-              <tr><td><code>GPIO17</code> (TX2)</td><td><code>GPIO16</code> (RX2)</td></tr>
-              <tr><td><code>GPIO16</code> (RX2)</td><td><code>GPIO17</code> (TX2)</td></tr>
-              <tr><td><code>GND</code></td><td><code>GND</code></td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div>
-          <h3>OLED → ESP-B (I2C)</h3>
-          <table>
-            <thead><tr><th>OLED</th><th>ESP-B</th></tr></thead>
-            <tbody>
-              <tr><td><code>VCC</code></td><td><code>3V3</code></td></tr>
-              <tr><td><code>GND</code></td><td><code>GND</code></td></tr>
-              <tr><td><code>SDA</code></td><td><code>GPIO21</code></td></tr>
-              <tr><td><code>SCL</code></td><td><code>GPIO22</code></td></tr>
-            </tbody>
-          </table>
-          <p class="nota">Dirección <code>0x3C</code> (algunas OLED usan <code>0x3D</code>).</p>
-        </div>
+      <div>
+        <h3>UART2 (cruzados)</h3>
+        <table>
+          <thead><tr><th>ESP-A</th><th>ESP-B</th></tr></thead>
+          <tbody>
+            <tr><td><code>GPIO17</code> (TX2)</td><td><code>GPIO16</code> (RX2)</td></tr>
+            <tr><td><code>GPIO16</code> (RX2)</td><td><code>GPIO17</code> (TX2)</td></tr>
+          </tbody>
+        </table>
+        <h3>OLED → ESP-B (I2C)</h3>
+        <table>
+          <thead><tr><th>OLED</th><th>ESP-B</th></tr></thead>
+          <tbody>
+            <tr><td><code>VCC</code> / <code>GND</code></td><td><code>3V3</code> / <code>GND</code></td></tr>
+            <tr><td><code>SDA</code> / <code>SCL</code></td><td><code>GPIO21</code> / <code>GPIO22</code></td></tr>
+          </tbody>
+        </table>
+        <p class="nota">Dirección <code>0x3C</code> (algunas OLED usan <code>0x3D</code>).</p>
       </div>
-      <p class="nota"><b>Ojo con el arranque del ESP-B:</b> <code>GPIO12</code> y <code>GPIO15</code> son pines que el ESP32 lee al encender. Si el ESP-B no arranca o se reinicia solo con el cable MISO puesto, resetea primero el ESP-A, espera a que arranque, y luego resetea el ESP-B.</p>
-      <div class="galeria">
-        <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-2-reconocimiento-oled-spi/img/foto-dos-esp32.jpg" alt="Los dos ESP32 unidos por la cinta">
-        <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-2-reconocimiento-oled-spi/img/foto-esp-b-cableado.jpg" alt="El ESP-B con la cinta y la OLED">
-        <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-2-reconocimiento-oled-spi/img/foto-oled-digito.jpg" alt="La OLED encendida">
-        <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-2-reconocimiento-oled-spi/img/foto-oled-junto-al-pc.jpg" alt="La OLED junto al PC">
-      </div>
-      <p class="nota">Fotos del montaje real: las dos placas unidas por la cinta (SPI + UART2 + GND), el ESP-B con la OLED, y la OLED junto al PC que reconoce.</p>
-    </section>
+    </div>
+  </div>
+  <p class="nota"><b>Ojo con el arranque del ESP-B:</b> <code>GPIO12</code> y <code>GPIO15</code> son pines que el ESP32 lee al encender. Si el ESP-B no arranca con el cable MISO puesto, resetea primero el ESP-A y luego el ESP-B.</p>
+  <div class="galeria">
+    <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-2-reconocimiento-oled-spi/img/foto-dos-esp32.jpg" alt="Los dos ESP32 unidos por la cinta">
+    <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-2-reconocimiento-oled-spi/img/foto-esp-b-cableado.jpg" alt="El ESP-B con la cinta y la OLED">
+    <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-2-reconocimiento-oled-spi/img/foto-oled-digito.jpg" alt="La OLED encendida">
+    <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-2-reconocimiento-oled-spi/img/foto-oled-junto-al-pc.jpg" alt="La OLED junto al PC">
+  </div>
+</section>
 
-    <section class="paso" id="p2-paso-3" data-titulo="Pruébalo">
-      <h2>Pruébalo sin ESP32</h2>
-      <p class="aviso-suave">Las dos formas abren el <b>mismo programa</b>: la misma limpieza de la imagen, la misma red y la misma votación. Tarda unos segundos en abrir porque carga TensorFlow.</p>
-
-      <div class="prueba">
-        <div class="prueba-explica">
-          <h3>Dibuja un número con el mouse</h3>
-          <p>No necesita cámara: se abre un <b>lienzo blanco</b> donde dibujas el dígito con el mouse, y una ventana chica con lo que ve la red.</p>
-        </div>
-        <div class="panel-accion" id="run-p2-mouse"></div>
-      </div>
-
-      <div class="prueba">
-        <div class="prueba-explica">
-          <h3>Con tu cámara</h3>
-          <p>Antes de pulsar, escribe un dígito con <b>trazo grueso</b> (marcador) en una hoja blanca y ten buena luz.</p>
-          <p class="nota">La cámara solo se usa en este PC; no se graba ni se manda a ningún lado.</p>
-        </div>
-        <div class="panel-accion" id="run-p2-camara"></div>
-      </div>
-
-      <p class="nota">En "Lo que dice el programa" es normal leer <code>No se encontro el ESP-A en COM7: el reconocimiento sigue, pero no se manda nada.</code> y abajo de la ventana <code>ESP-A: no conectado</code> en rojo.</p>
-
-      <h3 class="sep">El lado de los ESP32, en el navegador</h3>
-      <p>Simula lo que pasa después de la red: los botones del 0 al 9 hacen de "la red reconoció este dígito" y la OLED simulada lo pinta como el ESP-B. Funciona solo en "Modo prueba".</p>
-      <div class="marco-preview">
-        <iframe data-src="/repo/8-digitos-brazo-y-vision/punto-2-reconocimiento-oled-spi/preview.html" title="ESP-A + OLED simulados" allow="serial" loading="lazy"></iframe>
-      </div>
-
-      <details class="avanzado">
-        <summary>Avanzado (opcional): volver a entrenar la red</summary>
-        <div class="aviso-peligro"><b>No hace falta:</b> la red ya viene entrenada. Esto <b>sobrescribe el modelo</b> (<code>modelo_mnist_cnn.h5</code>) con uno nuevo. Descarga MNIST (unos 11 MB) la primera vez y entrena 10 pasadas: cerca de <b>5 minutos</b> en CPU. Debería terminar con alrededor de 99 % de precisión; si lo cortas a la mitad, el modelo anterior queda como estaba.</div>
-        <div class="panel-accion" id="run-p2-entrenar"></div>
-      </details>
-    </section>
-
-    <section class="paso" id="p2-paso-4" data-titulo="Con los ESP32 reales">
-      <h2>Con los dos ESP32 de verdad (opcional)</h2>
-      <ol class="pasos-reales">
-        <li><b>ESP-A (maestro)</b>: con Thonny, guarda <code>esp-a-maestro/esp_a_maestro.py</code> en la placa como <code>main.py</code>.</li>
-        <li><b>ESP-B (esclavo)</b>: abre <code>esp-b-esclavo/esp_b_esclavo.ino</code> en el Arduino IDE, instala el paquete de placas ESP32 y las librerías <code>ESP32SPISlave</code>, <code>Adafruit SSD1306</code> y <code>Adafruit GFX Library</code> (Gestor de Librerías), elige "ESP32 Dev Module" y súbelo.</li>
-        <li><b>Arma las conexiones</b> del paso "Cómo se conecta": SPI, UART2 o los dos, <b>siempre con GND común</b>, y la OLED en el ESP-B.</li>
-        <li><b>Conecta solo el ESP-A al PC</b> por USB y <b>cierra Thonny</b>. El ESP-B solo necesita alimentación (puede ir a un cargador).</li>
-        <li><b>Prueba el ESP-A solo</b> con el botón de abajo: le manda <code>DIGIT:5</code>. Debe salir <code>REENVIADO:5</code> y la OLED debe mostrar un 5.</li>
-        <li><b>Vuelve a "Pruébalo"</b> y usa el mouse o la cámara: cada dígito confirmado aparece en la OLED, y abajo de la ventana sale <code>ESP-A confirmo el reenvio de: n</code> con el led verde.</li>
-        <li><b>Para ver el lado del ESP-B</b> (opcional): conéctalo por USB y abre el Monitor Serie del Arduino IDE a 115200. Cada dígito imprime <code>OLED:n (UART2)</code> y/o <code>OLED:n (SPI)</code>, según el camino cableado.</li>
-      </ol>
+<section data-seccion="Con los ESP32" data-icono="⚡" data-sub="montaje real" data-punto="p2" id="s-p2-esp32">
+  <h2>Punto 2 · Con los dos ESP32 de verdad (opcional)</h2>
+  <div class="dos-col">
+    <ol class="pasos-reales">
+      <li><b>ESP-A (maestro)</b>: con Thonny, guarda <code>esp-a-maestro/esp_a_maestro.py</code> en la placa como <code>main.py</code>.</li>
+      <li><b>ESP-B (esclavo)</b>: abre <code>esp-b-esclavo/esp_b_esclavo.ino</code> en el Arduino IDE, instala las placas ESP32 y las librerías <code>ESP32SPISlave</code>, <code>Adafruit SSD1306</code> y <code>Adafruit GFX Library</code>, elige "ESP32 Dev Module" y súbelo.</li>
+      <li><b>Arma las conexiones</b>: SPI, UART2 o los dos, <b>siempre con GND común</b>, y la OLED en el ESP-B.</li>
+      <li><b>Conecta solo el ESP-A al PC</b> y <b>cierra Thonny</b>. El ESP-B solo necesita alimentación.</li>
+      <li><b>Prueba el ESP-A solo</b> con el botón de la derecha: le manda <code>DIGIT:5</code>. Debe salir <code>REENVIADO:5</code> y la OLED mostrar un 5.</li>
+      <li><b>Vuelve a "La red en vivo"</b>, elige <i>Programa de Python</i> y dibuja: cada dígito confirmado aparece en la OLED, y abajo de la ventana sale <code>ESP-A confirmo el reenvio de: n</code>.</li>
+      <li><b>Para ver el lado del ESP-B</b> (opcional): Monitor Serie del Arduino IDE a 115200: <code>OLED:n (UART2)</code> y/o <code>OLED:n (SPI)</code>.</li>
+    </ol>
+    <div>
       <div class="prueba">
         <div class="prueba-explica">
           <h3>Probar el ESP-A solo</h3>
-          <p>Sin cámara ni red: abre el puerto <code>COM7</code>, muestra lo que el ESP-A dice al arrancar, le manda <code>DIGIT:5</code> y muestra todo lo que conteste durante 5 segundos. Termina solo.</p>
+          <p>Sin cámara ni red: abre <code>COM7</code>, muestra lo que el ESP-A dice al arrancar, le manda <code>DIGIT:5</code> y muestra lo que conteste durante 5 segundos. Termina solo.</p>
         </div>
         <div class="panel-accion" id="run-p2-probar-esp-a"></div>
       </div>
@@ -391,51 +391,62 @@
         <h3>Si no llega a la OLED</h3>
         <ul>
           <li>Nunca aparece <code>REENVIADO:</code>: el ESP-A no tiene <code>main.py</code>, Thonny tiene el puerto, o el COM no es <code>COM7</code>.</li>
-          <li><code>REENVIADO:n</code> sí, pero el Monitor Serie del ESP-B no imprime <code>OLED:n</code>: son los cables entre placas (TX/RX cruzados, SPI sin cruzar, GND común).</li>
-          <li><code>OLED:n</code> sí, pero la pantalla no cambia: prueba la dirección <code>0x3D</code> en vez de <code>0x3C</code> en el sketch.</li>
-          <li>No escribas <code>DIGIT:5</code> en la consola de Thonny: Thonny lo manda como código y corta el programa. Para eso está el botón de arriba.</li>
+          <li><code>REENVIADO:n</code> sí, pero el ESP-B no imprime <code>OLED:n</code>: cables entre placas (TX/RX cruzados, SPI sin cruzar, GND común).</li>
+          <li><code>OLED:n</code> sí, pero la pantalla no cambia: prueba la dirección <code>0x3D</code>.</li>
+          <li>No escribas <code>DIGIT:5</code> en la consola de Thonny: lo manda como código y corta el programa.</li>
         </ul>
       </div>
-      <p>El navegador también le puede hablar al ESP-A: en la OLED simulada de "Pruébalo", pasa a <b>Conectado</b>, elige su puerto (Chrome o Edge) y pulsa un dígito; verás su <code>REENVIADO:n</code>. Solo se conecta el ESP-A: el ESP-B se comprueba con su propio Monitor Serie.</p>
-    </section>
-
-    <section class="paso" id="p2-paso-5" data-titulo="Resultados">
-      <h2>Resultados del punto 2</h2>
-      <figure class="fig-ancha">
-        <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-2-reconocimiento-oled-spi/img/demo-reconocimiento.gif" alt="Animación del reconocimiento hasta la OLED">
-        <figcaption>Dígitos a mano pasando por el preprocesamiento y el modelo reales: entrada 28×28, probabilidades, votos y la OLED. En los 85 cuadros la red acertó todos.</figcaption>
-      </figure>
-      <div class="cifras">
-        <div><b>98.3 %</b><span>de acierto en un lote de 240 imágenes de prueba (empezó en 78.3 % antes de ajustar el preprocesamiento)</span></div>
-        <div><b>~99 %</b><span>de precisión de la CNN sobre las 10 000 imágenes de prueba de MNIST</span></div>
-        <div><b>12 / 15</b><span>cuadros que tiene que ganar un dígito antes de mandarse</span></div>
-      </div>
-      <div class="dos-col">
-        <figure><img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-2-reconocimiento-oled-spi/img/foto-oled-digito.jpg" alt="La OLED real"><figcaption>La OLED real del ESP-B.</figcaption></figure>
-        <figure><img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-2-reconocimiento-oled-spi/img/interfaz-web-oled.png" alt="La previsualización con el 7"><figcaption>La previsualización en el navegador después de pulsar 7.</figcaption></figure>
-      </div>
-      <p class="nota">Honestamente: el ESP-A se probó conectado de verdad; el sketch del ESP-B se comparó línea por línea con el ejemplo oficial de su librería, y su prueba completa con las dos placas queda para el montaje.</p>
-      <details class="tecnico"><summary>Detalles técnicos</summary>
-        <ul>
-          <li>Programa del PC: <code>punto-2-reconocimiento-oled-spi/reconocer_digito.py</code> (con <code>--mouse</code> usa el lienzo); modelo: <code>modelo_mnist_cnn.h5</code>; entrenamiento: <code>entrenar_modelo.py</code>.</li>
-          <li>Puerto: <code>PUERTO_SERIAL = "COM7"</code> al principio de <code>reconocer_digito.py</code> y de <code>probar_esp_a.py</code>, 115200 baudios. El PC manda <code>DIGIT:n</code>; el ESP-A contesta <code>REENVIADO:n</code>.</li>
-          <li>ESP-A: SPI maestro <code>SPI(2, 1 MHz, modo 0)</code> con CS a mano en GPIO5, manda 1 byte con el valor; UART2 manda el texto <code>DIGIT:n\n</code>.</li>
-          <li>ESP-B: <code>ESP32SPISlave</code> (HSPI) + <code>HardwareSerial(2)</code>, sin bloquear; OLED SSD1306 por I2C <code>0x3C</code>.</li>
-          <li>Entorno: <code>punto-2-reconocimiento-oled-spi/entorno</code> (Python 3.12) con <code>tensorflow==2.21.0</code>, <code>opencv-python</code>, <code>numpy</code>, <code>scipy</code> y <code>pyserial</code>. A mano: <code>entorno\Scripts\python reconocer_digito.py --mouse</code>.</li>
-          <li>Constantes: <code>TAM_VENTANA = 15</code>, <code>UMBRAL_CONFIANZA = 60</code>, <code>UMBRAL_CONFIRMACION = 0.8</code>.</li>
-        </ul>
-      </details>
-    </section>
+    </div>
   </div>
-</div>
-</main>
+  <h3 class="sep">ESP-A + OLED en el navegador</h3>
+  <p>Los botones 0-9 hacen de "la red reconoció este dígito" y la OLED simulada lo pinta como el ESP-B. Con <b>Conectado</b> le habla al ESP-A real por Web Serial y muestra su <code>REENVIADO:n</code> (solo se conecta el ESP-A).</p>
+  <div class="marco-preview">
+    <iframe data-src="/repo/8-digitos-brazo-y-vision/punto-2-reconocimiento-oled-spi/preview.html" title="ESP-A + OLED simulados" allow="serial" loading="lazy"></iframe>
+  </div>
+  <details class="tecnico"><summary>Detalles técnicos</summary>
+    <ul>
+      <li>Programa del PC: <code>punto-2-reconocimiento-oled-spi/reconocer_digito.py</code> (<code>--mouse</code> usa el lienzo; <code>--estado archivo.json</code> escribe lo que ve, para esta app); modelo: <code>modelo_mnist_cnn.h5</code>; entrenamiento: <code>entrenar_modelo.py</code>.</li>
+      <li>Puerto: <code>PUERTO_SERIAL = "COM7"</code> en <code>reconocer_digito.py</code> y <code>probar_esp_a.py</code>, 115200 baudios. El PC manda <code>DIGIT:n</code>; el ESP-A contesta <code>REENVIADO:n</code>.</li>
+      <li>ESP-A: SPI maestro <code>SPI(2, 1 MHz, modo 0)</code> con CS a mano en GPIO5 (1 byte); UART2 manda <code>DIGIT:n\n</code>.</li>
+      <li>ESP-B: <code>ESP32SPISlave</code> (HSPI) + <code>HardwareSerial(2)</code>, sin bloquear; OLED SSD1306 por I2C <code>0x3C</code>.</li>
+      <li>Constantes: <code>TAM_VENTANA = 15</code>, <code>UMBRAL_CONFIANZA = 60</code>, <code>UMBRAL_CONFIRMACION = 0.8</code>.</li>
+    </ul>
+  </details>
+</section>
 
-<footer class="pie">
-  <span>Tema 8 · Sensores-Teoria</span>
-  <a href="https://github.com/Dathinel/Sensores-Teoria/tree/main/8-digitos-brazo-y-vision" target="_blank" rel="noopener">Ver en GitHub</a>
-</footer>
+<!-- ============================ RESULTADOS ============================ -->
+<section data-seccion="Resultados" data-icono="★" data-sub="los dos puntos" id="s-resultados">
+  <h2>Resultados</h2>
+  <div class="cifras">
+    <div><b>98.3 %</b><span>de acierto en un lote de 240 imágenes de prueba (empezó en 78.3 % antes de ajustar el preprocesamiento)</span></div>
+    <div><b>~99 %</b><span>de precisión de la CNN sobre las 10 000 imágenes de prueba de MNIST</span></div>
+    <div><b>12 / 15</b><span>cuadros que tiene que ganar un dígito antes de mandarse</span></div>
+  </div>
+  <div class="dos-col">
+    <figure>
+      <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-2-reconocimiento-oled-spi/img/demo-reconocimiento.gif" alt="Animación del reconocimiento hasta la OLED">
+      <figcaption>Punto 2: dígitos a mano por el preprocesamiento y el modelo reales, los votos y la OLED (la red acertó los 85 cuadros).</figcaption>
+    </figure>
+    <figure>
+      <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-1-teclado-brazo-dibujando/img/demo-dibujo.gif" alt="El brazo dibujando 3, 7 y 0">
+      <figcaption>Punto 1: el brazo dibujando 3, 7 y 0 con la lógica real del programa, la LCD y la tecla apretada.</figcaption>
+    </figure>
+  </div>
+  <figure class="fig-ancha">
+    <img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-1-teclado-brazo-dibujando/img/digitos-dibujados.png" alt="Los 10 dígitos dibujados por el brazo">
+    <figcaption>Punto 1: los diez dígitos como los traza el brazo (el trazo amarillo se proyectó aparte: PyBullet no incluye sus líneas en las capturas de su cámara).</figcaption>
+  </figure>
+  <div class="tres-col">
+    <figure><img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-2-reconocimiento-oled-spi/img/foto-oled-digito.jpg" alt="La OLED real"><figcaption>La OLED real del ESP-B.</figcaption></figure>
+    <figure><img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-2-reconocimiento-oled-spi/img/interfaz-web-oled.png" alt="La previsualización con el 7"><figcaption>La OLED simulada en el navegador después de pulsar 7.</figcaption></figure>
+    <figure><img class="ampliable" src="/repo/8-digitos-brazo-y-vision/punto-1-teclado-brazo-dibujando/img/interfaz-web-dibujo.png" alt="La previsualización después de apretar 7"><figcaption>El teclado y la LCD simulados después de apretar el 7.</figcaption></figure>
+  </div>
+  <p class="nota">Honestamente: el ESP-A se probó conectado de verdad; el sketch del ESP-B se comparó línea por línea con el ejemplo oficial de su librería, y su prueba completa con las dos placas queda para el montaje.</p>
+  <p><a class="enlace" href="https://github.com/Dathinel/Sensores-Teoria/tree/main/8-digitos-brazo-y-vision" target="_blank" rel="noopener">Ver el tema completo en GitHub →</a></p>
+</section>
 
 <script src="/comun/app.js"></script>
+<script src="cnn.js"></script>
 <script src="app8.js"></script>
 </body>
 </html>

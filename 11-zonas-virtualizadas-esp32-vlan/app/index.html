@@ -26,7 +26,7 @@
       <h1>Centro de control del laboratorio</h1>
     </div>
   </div>
-  <button class="c11-chip-estado" id="chipEstado" title="Ir al estado en vivo">
+  <button class="c11-chip-estado" id="chipEstado" title="Ir al laboratorio en vivo">
     <span class="c11-punto"></span><span id="chipTexto">Laboratorio: sin mirar todavía</span>
   </button>
 </header>
@@ -61,13 +61,17 @@
 
     <p class="c11-etiqueta" style="margin-top:1.4rem">Elige por dónde empezar</p>
     <div class="c11-caminos">
+      <button class="c11-camino" data-ir="Docker paso a paso">
+        <i>entender · 3 min</i><b>Cómo funciona Docker aquí</b>
+        <span>Animación paso a paso: imagen, contenedor, red (VLAN), el router y cómo el DROP bloquea un paquete.</span>
+      </button>
+      <button class="c11-camino" data-ir="Levantar el laboratorio">
+        <i>con Docker Desktop · 30 s a 6 min</i><b>Levantar el laboratorio de verdad</b>
+        <span>Los 16 contenedores con su progreso real (qué imagen baja, qué red se crea, qué contenedor arranca).</span>
+      </button>
       <button class="c11-camino" data-ir="Sin Docker">
         <i>sin instalar nada · 0 min</i><b>Verlo en el navegador</b>
         <span>Todo el laboratorio simulado en esta misma ventana: joystick virtual, robots con deslizadores, fallas y LED.</span>
-      </button>
-      <button class="c11-camino" data-ir="Levantar el laboratorio">
-        <i>con Docker Desktop · 1 a 10 min</i><b>Levantar el laboratorio de verdad</b>
-        <span>Los 16 contenedores, con el estado en vivo aquí dentro y los visores de la carrera y los robots.</span>
       </button>
       <button class="c11-camino" data-ir="Resultados">
         <i>solo mirar · 2 min</i><b>Ver lo que ya salió</b>
@@ -82,11 +86,38 @@
   </div>
 </section>
 
-<!-- =============================== 2. CÓMO FUNCIONA =============================== -->
-<section class="paso" data-titulo="Cómo funciona">
+<!-- =============================== 2. DOCKER PASO A PASO =============================== -->
+<section class="paso" data-titulo="Docker paso a paso">
   <div class="c11-contenedor">
-    <h2>Las ideas, en simple</h2>
-    <p class="c11-nota">Seis palabras que aparecen en todo el laboratorio. Cada tarjeta trae una comparación de la vida diaria.
+    <h2>Cómo funciona Docker en este laboratorio</h2>
+    <p class="c11-nota">Seis escenas animadas, de la receta al laboratorio entero. Debajo de cada una, su explicación y, al lado, <b>la prueba</b>:
+      lo mismo, pero leído de tu Docker de verdad (si el laboratorio está levantado) o de los resultados de la entrega.</p>
+
+    <div class="c11-anim" id="anim">
+      <div class="c11-anim-escenario">
+        <svg id="animSvg" viewBox="0 0 900 430" role="img" aria-label="Animación de cómo funciona Docker en el laboratorio"></svg>
+        <div class="c11-anim-controles">
+          <button class="c11-btn" id="animAnt" title="Escena anterior">◀ Anterior</button>
+          <button class="c11-btn primario" id="animPlay" title="Reproducir o pausar">❚❚ Pausa</button>
+          <button class="c11-btn" id="animSig" title="Escena siguiente">Siguiente ▶</button>
+          <div class="c11-anim-puntos" id="animPuntos"></div>
+        </div>
+      </div>
+      <aside class="c11-anim-texto">
+        <div>
+          <p class="c11-etiqueta" id="animNum">Escena 1 de 6</p>
+          <h3 id="animTitulo">—</h3>
+          <div id="animExplica" class="c11-anim-explica"></div>
+        </div>
+        <div class="c11-anim-prueba">
+          <p class="c11-etiqueta">La prueba, en tu laboratorio</p>
+          <div id="animPrueba"></div>
+        </div>
+      </aside>
+    </div>
+
+    <h2 style="margin-top:1.6rem">Las ideas, en simple</h2>
+    <p class="c11-nota">Seis palabras que aparecen en todo el laboratorio, cada una con una comparación de la vida diaria.
       La explicación completa (con los detalles técnicos) está al final, plegada.</p>
 
     <div class="c11-rejilla dos" style="margin-top:1rem">
@@ -94,69 +125,24 @@
         <h3>VLAN: varias redes en un mismo aparato</h3>
         <p>Una <b>VLAN</b> (red local virtual) parte un mismo switch en varias redes separadas, como si fueran switches distintos.
           Los equipos de una VLAN no reciben nada de las otras, aunque estén enchufados al mismo aparato.</p>
-        <div class="c11-dibujo">
-          <svg viewBox="0 0 360 110" role="img" aria-label="Un switch partido en tres VLAN">
-            <rect x="10" y="40" width="340" height="30" rx="5" fill="#1c2126" stroke="#3a4048"/>
-            <text x="180" y="59" fill="#8b929b" font-size="10" text-anchor="middle" font-family="IBM Plex Mono">un solo switch</text>
-            <g font-family="IBM Plex Mono" font-size="10" text-anchor="middle">
-              <rect x="20" y="6" width="96" height="24" rx="4" fill="rgba(63,191,143,.15)" stroke="#3fbf8f"/><text x="68" y="22" fill="#3fbf8f">VLAN 1 gamer</text>
-              <rect x="132" y="6" width="96" height="24" rx="4" fill="rgba(240,145,58,.15)" stroke="#f0913a"/><text x="180" y="22" fill="#f0913a">VLAN 2 robots</text>
-              <rect x="244" y="6" width="96" height="24" rx="4" fill="rgba(167,123,232,.15)" stroke="#a77be8"/><text x="292" y="22" fill="#a77be8">VLAN 3 admin</text>
-              <line x1="68" y1="30" x2="68" y2="40" stroke="#3fbf8f"/><line x1="180" y1="30" x2="180" y2="40" stroke="#f0913a"/><line x1="292" y1="30" x2="292" y2="40" stroke="#a77be8"/>
-              <text x="124" y="92" fill="#d9534f">✕ no se ven ✕</text><text x="240" y="92" fill="#8b929b">salvo por el router</text>
-            </g>
-          </svg>
-        </div>
         <p class="c11-analogia"><b>Como un edificio:</b> tres pisos con la puerta de la escalera cerrada. Cada piso es su propio mundo.
           Aquí cada "piso" es una red de Docker: 192.168.10.x, 192.168.20.x y 192.168.30.x.</p>
       </article>
-
       <article class="c11-panel c11-concepto" style="--c11-color: var(--c11-router)">
         <h3>Router: el único paso entre redes</h3>
         <p>El <b>router</b> tiene una pata en cada red y pasa paquetes de una a otra. Como todo cruce pasa por él, ahí se pone el
           <b>cortafuegos</b> (iptables): la sala de control puede hablar con las dos zonas; de la zona gamer a la de robots, <b>nada</b>.</p>
-        <div class="c11-dibujo">
-          <svg viewBox="0 0 360 110" role="img" aria-label="El router deja pasar del admin a las zonas y bloquea entre zonas">
-            <g font-family="IBM Plex Mono" font-size="10" text-anchor="middle">
-              <rect x="10" y="10" width="90" height="26" rx="5" fill="rgba(63,191,143,.15)" stroke="#3fbf8f"/><text x="55" y="27" fill="#3fbf8f">player-1</text>
-              <rect x="260" y="10" width="90" height="26" rx="5" fill="rgba(240,145,58,.15)" stroke="#f0913a"/><text x="305" y="27" fill="#f0913a">sim-nao</text>
-              <rect x="135" y="76" width="90" height="26" rx="5" fill="rgba(167,123,232,.15)" stroke="#a77be8"/><text x="180" y="93" fill="#a77be8">admin</text>
-              <circle cx="180" cy="40" r="15" fill="#13263a" stroke="#4f8fce" stroke-width="2"/><text x="180" y="44" fill="#4f8fce" font-size="9">R</text>
-              <line x1="100" y1="23" x2="165" y2="37" stroke="#d9534f" stroke-dasharray="4 3"/>
-              <line x1="195" y1="37" x2="260" y2="23" stroke="#d9534f" stroke-dasharray="4 3"/>
-              <text x="130" y="19" fill="#d9534f">DROP</text>
-              <line x1="180" y1="55" x2="180" y2="76" stroke="#4caf7d" stroke-width="2"/>
-              <text x="230" y="68" fill="#4caf7d">permitido</text>
-            </g>
-          </svg>
-        </div>
         <p class="c11-analogia"><b>Como el portero del edificio:</b> la administración tiene llave de todos los pisos; los vecinos
           del piso 1 no pueden subir al piso 2.</p>
       </article>
-
       <article class="c11-panel c11-concepto" style="--c11-color: var(--c11-admin)">
         <h3>MQTT: un tablero de anuncios</h3>
         <p>En vez de que cada equipo le hable a cada otro, todos se conectan a un servidor central, el <b>broker</b>. Uno
           <b>publica</b> en un tema (por ejemplo <span class="c11-mono">lab/estado/player-1 = OK</span>) y le llega a todos los que estén
           <b>suscritos</b> a ese tema. La ESP32 de los LED solo escucha los estados y prende sus LED.</p>
-        <div class="c11-dibujo">
-          <svg viewBox="0 0 360 100" role="img" aria-label="Publicar y suscribir con un broker">
-            <g font-family="IBM Plex Mono" font-size="10" text-anchor="middle">
-              <rect x="10" y="38" width="92" height="26" rx="5" fill="#1c2126" stroke="#3a4048"/><text x="56" y="55" fill="#e7e9ec">admin</text>
-              <rect x="134" y="30" width="92" height="42" rx="7" fill="rgba(167,123,232,.15)" stroke="#a77be8"/><text x="180" y="49" fill="#a77be8">broker</text><text x="180" y="62" fill="#8b929b" font-size="8">Mosquitto</text>
-              <rect x="258" y="38" width="92" height="26" rx="5" fill="#123425" stroke="#3fbf8f"/><text x="304" y="55" fill="#9ff7c6">ESP32 LED</text>
-              <path d="M102 51 L134 51" stroke="#a77be8" stroke-width="2" marker-end="url(#fl1)"/>
-              <path d="M226 51 L258 51" stroke="#a77be8" stroke-width="2" marker-end="url(#fl1)"/>
-              <text x="118" y="24" fill="#8b929b" font-size="9">publica</text><text x="242" y="24" fill="#8b929b" font-size="9">entrega</text>
-              <text x="180" y="92" fill="#e7e9ec" font-size="9">lab/estado/player-1 = OK</text>
-            </g>
-            <defs><marker id="fl1" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#a77be8"/></marker></defs>
-          </svg>
-        </div>
         <p class="c11-analogia"><b>Como un grupo de WhatsApp de avisos:</b> el que avisa no sabe cuántos leen, y el que entra tarde ve
           el último aviso fijado (el mensaje "retenido").</p>
       </article>
-
       <article class="c11-panel c11-concepto" style="--c11-color: #2496ed">
         <h3>Docker: cada programa en su cajita</h3>
         <p>Un <b>contenedor</b> es un programa empacado con todo lo que necesita (su Linux, su Python, sus librerías), que corre
@@ -165,28 +151,15 @@
         <p class="c11-analogia"><b>Como contenedores de un barco:</b> da igual qué lleve adentro; todos se cargan, se apilan y se
           mueven igual. Por eso el laboratorio corre igual en cualquier PC con Docker.</p>
       </article>
-
       <article class="c11-panel c11-concepto" style="--c11-color: var(--c11-lento)">
         <h3>Latencia, jitter y disponibilidad</h3>
         <p><b>Latencia</b>: cuánto tarda un mensaje en ir y volver (RTT). <b>Jitter</b>: cuánto <i>cambia</i> esa latencia de un mensaje
           al siguiente (una red que alterna entre 5 y 55 ms se siente a tirones). <b>Disponibilidad</b>: qué parte del tiempo estuvo
           funcionando un servicio. Con eso la sala de control decide <span class="c11-insignia OK">OK</span>
           <span class="c11-insignia LENTO">LENTO</span> o <span class="c11-insignia CAIDO">CAIDO</span>.</p>
-        <div class="c11-dibujo">
-          <svg viewBox="0 0 360 74" role="img" aria-label="Latencia estable frente a jitter alto">
-            <g font-family="IBM Plex Mono" font-size="9">
-              <text x="6" y="14" fill="#8b929b">poco jitter</text>
-              <g fill="#4caf7d"><rect x="90" y="6" width="8" height="10"/><rect x="120" y="6" width="8" height="10"/><rect x="150" y="6" width="8" height="10"/><rect x="180" y="6" width="8" height="10"/><rect x="210" y="6" width="8" height="10"/><rect x="240" y="6" width="8" height="10"/><rect x="270" y="6" width="8" height="10"/><rect x="300" y="6" width="8" height="10"/></g>
-              <text x="6" y="48" fill="#8b929b">mucho jitter</text>
-              <g fill="#e8b930"><rect x="90" y="40" width="8" height="10"/><rect x="104" y="40" width="8" height="10"/><rect x="170" y="40" width="8" height="10"/><rect x="186" y="40" width="8" height="10"/><rect x="250" y="40" width="8" height="10"/><rect x="300" y="40" width="8" height="10"/><rect x="312" y="40" width="8" height="10"/><rect x="326" y="40" width="8" height="10"/></g>
-              <text x="90" y="68" fill="#8b929b">llegada de cada orden del joystick →</text>
-            </g>
-          </svg>
-        </div>
         <p class="c11-analogia"><b>Como un bus:</b> latencia es cuánto tarda en llegar; jitter es qué tan impuntual es; disponibilidad,
           qué parte del día está pasando.</p>
       </article>
-
       <article class="c11-panel c11-concepto" style="--c11-color: var(--c11-robot)">
         <h3>ESP32 maestras, esclava y emuladas</h3>
         <p>Seis <b>maestras</b> mandan órdenes: tres con joystick (los carros) y tres con potenciómetros (los ángulos de cada robot:
@@ -205,61 +178,35 @@
   </div>
 </section>
 
-<!-- =============================== 3. EL MAPA =============================== -->
-<section class="paso" data-titulo="El mapa de las 3 zonas">
-  <div class="c11-contenedor">
-    <h2>El mapa del laboratorio</h2>
-    <p class="c11-nota">Los 16 contenedores, cada uno en su red y con su IP fija. <b>Toca cualquier caja</b> para ver qué hace.
-      Si el laboratorio está levantado y miras el estado en vivo (paso "Levantar el laboratorio"), las cajas se pintan con su
-      estado real: verde OK, amarillo LENTO, rojo CAIDO.</p>
-    <div class="c11-mapa-caja" style="margin-top:.8rem">
-      <div class="c11-mapa" id="mapa"></div>
-      <aside class="c11-panel c11-ficha" id="ficha">
-        <p class="c11-etiqueta">Ficha</p>
-        <h4>Toca una caja del mapa</h4>
-        <p class="c11-nota">Verás su IP, su red, qué programa corre, qué ESP32 lo maneja y, si tiene, su visor.</p>
-      </aside>
-    </div>
-    <div class="c11-leyenda">
-      <span><i style="border-color:#4caf7d"></i>tráfico permitido por el router</span>
-      <span><i style="border-color:#d9534f;border-top-style:dashed"></i>bloqueado (DROP) entre VLAN 1 y VLAN 2</span>
-      <span><i style="border-color:#8b929b;border-top-style:dotted"></i>ESP32 emulado → su contenedor</span>
-    </div>
-
-    <div class="c11-panel" style="margin-top:1rem">
-      <p class="c11-etiqueta">Puertos que el laboratorio abre en tu PC</p>
-      <div class="c11-tabla-envoltura">
-        <table class="c11-tabla">
-          <thead><tr><th>Puerto</th><th>Qué es</th><th>Para qué</th></tr></thead>
-          <tbody>
-            <tr><td class="c11-mono">8080</td><td>Dashboard del admin</td><td>Ver el estado, la latencia y los LED de todo</td></tr>
-            <tr><td class="c11-mono">8010</td><td>Visor de la pista</td><td>Ver la carrera en vivo</td></tr>
-            <tr><td class="c11-mono">8011 · 8012 · 8013</td><td>Visores de Spot, Pepper y NAO</td><td>Ver cada robot copiando a su mando</td></tr>
-            <tr><td class="c11-mono">1883</td><td>Broker MQTT</td><td>Por donde la ESP32 esclava física recibiría los estados</td></tr>
-            <tr><td class="c11-mono">5001-5003 · 5101-5103 · 5300 (UDP)</td><td>Entradas de los ESP32</td><td>Solo se usan con placas físicas por WiFi</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- =============================== 4. LEVANTAR =============================== -->
+<!-- =============================== 3. LEVANTAR =============================== -->
 <section class="paso" data-titulo="Levantar el laboratorio">
   <div class="c11-contenedor">
     <h2>Levantar el laboratorio</h2>
     <p class="c11-nota">Aquí se encienden los 16 contenedores. Necesitas <b>Docker Desktop abierto</b> y diciendo
       "Engine running" (si no lo tienes, la app te lo dice y no pasa nada; puedes usar el paso "Sin Docker").</p>
 
-    <div class="c11-aviso">
-      <b>La primera vez tarda.</b> Docker necesita las 6 imágenes del laboratorio: unos <b>2,4 GB</b> en disco
-      (las dos grandes, la pista y los robots, traen PyBullet y los modelos de los robots: unos 900 MB cada una).
-      Con el botón de abajo <b>las baja ya hechas de Docker Hub</b> (unos minutos según tu internet). Si prefieres construirlas
-      desde el código, está más abajo, plegado (10 a 20 minutos). Después de la primera vez arranca en segundos.
+    <div class="c11-tiempos">
+      <div><b>~30 s</b><span>si las imágenes ya están en tu PC (de la segunda vez en adelante)</span></div>
+      <div><b>2 a 6 min</b><span>la primera vez: baja <b>~415 MB</b> comprimidos de Docker Hub, que ocupan <b>~2,4 GB</b> en disco</span></div>
+      <div><b>10 a 20 min</b><span>si prefieres construir las imágenes desde el código (más abajo, plegado)</span></div>
+    </div>
+
+    <div class="c11-panel c11-progreso" id="progreso">
+      <div class="c11-progreso-cab">
+        <div>
+          <p class="c11-etiqueta">Progreso real (leído de lo que va diciendo <span class="c11-mono">docker compose</span>)</p>
+          <h3 id="progTitulo">Todavía no has pulsado "Levantar el laboratorio"</h3>
+        </div>
+        <div class="c11-progreso-reloj" id="progReloj">—</div>
+      </div>
+      <div class="c11-progreso-barra"><i id="progBarra"></i></div>
+      <div class="c11-fases" id="progFases"></div>
+      <p class="c11-nota" id="progNota" style="margin-top:.5rem">Al pulsar el botón de abajo, aquí verás en orden: qué imagen se baja
+        (o se construye), qué red se crea y qué contenedor arranca. Al final, la sala de control empieza a ver a todos.</p>
     </div>
 
     <div class="c11-panel">
-      <p class="c11-etiqueta">Paso A · encender</p>
+      <p class="c11-etiqueta">Encender (baja de Docker Hub lo que falte)</p>
       <div id="panelStack"></div>
     </div>
 
@@ -267,27 +214,82 @@
       <summary>Prefiero construir las imágenes desde el código (más lento, no necesita Docker Hub)</summary>
       <div class="c11-dentro">
         <p class="c11-nota">Hace lo mismo pero construye las 6 imágenes en tu PC a partir de los Dockerfile del repositorio
-          (<span class="c11-mono">--build</span>). Úsalo si cambiaste algo del código o si no puedes bajar de Docker Hub.</p>
+          (<span class="c11-mono">--build</span>). Úsalo si cambiaste algo del código o si no puedes bajar de Docker Hub. El progreso
+          de arriba también sigue esta opción (muestra el paso "k de n" de cada Dockerfile).</p>
         <div id="panelStackBuild"></div>
       </div>
     </details>
 
-    <div class="c11-panel" id="panelVivo" style="margin-top:1rem">
+    <details class="c11-plegable">
+      <summary>Si algo no arranca</summary>
+      <div class="c11-dentro c11-nota">
+        <ul>
+          <li><b>"Docker no responde"</b>: abre Docker Desktop y espera a que diga "Engine running"; vuelve a pulsar.</li>
+          <li><b>"port is already allocated"</b>: otro programa usa el 8180, el 1883, el 8765 o el 8010-8013 (por ejemplo, un Mosquitto
+            instalado en Windows). Ciérralo y vuelve a intentar. El dashboard se publica en el <b>8180</b> (no en el 8080) justamente
+            porque el 8080 suele estar ocupado.</li>
+          <li><b>"Pool overlaps with other one"</b>: otro proyecto de Docker usa las redes 192.168.10/20/30.0/24. Apágalo primero.</li>
+          <li><b>Los robots salen en OK tarde</b>: tardan unos segundos en cargar sus modelos; es normal.</li>
+        </ul>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- =============================== 4. EN VIVO =============================== -->
+<section class="paso" data-titulo="El laboratorio en vivo">
+  <div class="c11-contenedor">
+    <div class="c11-vivo-cab">
+      <div>
+        <h2 style="margin:0">El laboratorio en vivo</h2>
+        <p class="c11-vivo-txt" id="vivoTexto">Pulsa "Mirar en vivo" con el laboratorio levantado. La app lee cada segundo lo mismo que el dashboard del admin, y cada 3 s le pregunta a Docker por sus contenedores.</p>
+      </div>
+      <div class="c11-botonera" style="margin-top:0">
+        <button class="c11-btn primario" id="btnVivo">Mirar en vivo</button>
+        <button class="c11-btn" id="btnVivoParar" disabled>Dejar de mirar</button>
+      </div>
+    </div>
+
+    <div class="c11-mapa-caja" style="margin-top:.8rem">
+      <div>
+        <div class="c11-mapa" id="mapa"></div>
+        <div class="c11-leyenda">
+          <span><i style="border-color:#4caf7d"></i>tráfico permitido por el router</span>
+          <span><i style="border-color:#d9534f;border-top-style:dashed"></i>bloqueado (DROP) entre VLAN 1 y VLAN 2</span>
+          <span><i style="border-color:#8b929b;border-top-style:dotted"></i>ESP32 emulado → su contenedor</span>
+          <span>luz de cada caja: <b style="color:#4caf7d">OK</b> · <b style="color:#e8b930">LENTO</b> · <b style="color:#d9534f">CAIDO</b> · gris sin dato</span>
+        </div>
+      </div>
+      <aside class="c11-panel c11-ficha" id="ficha">
+        <p class="c11-etiqueta">Ficha</p>
+        <h4>Toca una caja del mapa</h4>
+        <p class="c11-nota">Verás su IP, su red, qué programa corre, qué ESP32 lo maneja y, si tiene, su visor.</p>
+      </aside>
+    </div>
+
+    <div class="c11-placa">
+      <div class="c11-leds" id="leds"></div>
+    </div>
+
+    <div class="c11-panel">
       <div class="c11-vivo-cab">
         <div>
-          <p class="c11-etiqueta">Paso B · el estado en vivo</p>
-          <h3>Lo que ve la sala de control ahora mismo</h3>
+          <p class="c11-etiqueta">Contenedores (como en Docker Desktop)</p>
+          <h3 id="contTitulo">Sin leer Docker todavía</h3>
         </div>
-        <div class="c11-botonera" style="margin-top:0">
-          <button class="c11-btn primario" id="btnVivo">Mirar en vivo</button>
-          <button class="c11-btn" id="btnVivoParar" disabled>Dejar de mirar</button>
-        </div>
+        <div class="c11-filtros" id="contFiltros"></div>
       </div>
-      <p class="c11-vivo-txt" id="vivoTexto">Pulsa "Mirar en vivo" con el laboratorio levantado. La app lee cada segundo lo mismo que el dashboard del admin.</p>
+      <div class="c11-tabla-envoltura" style="margin-top:.5rem">
+        <table class="c11-tabla c11-contenedores" id="tablaCont">
+          <thead><tr><th></th><th>Nombre</th><th>Red</th><th>Imagen</th><th>Estado</th><th>Puertos en tu PC</th></tr></thead>
+          <tbody><tr><td colspan="6" class="c11-nota">Pulsa "Mirar en vivo".</td></tr></tbody>
+        </table>
+      </div>
+      <p class="c11-nota" id="contImgs" style="margin-top:.5rem"></p>
+    </div>
 
-      <div class="c11-placa">
-        <div class="c11-leds" id="leds"></div>
-      </div>
+    <div class="c11-panel">
+      <p class="c11-etiqueta">Lo que mide la sala de control (a través del router)</p>
       <div class="c11-tabla-envoltura">
         <table class="c11-tabla" id="tablaVivo">
           <thead><tr><th>Servicio</th><th>Red</th><th>Estado</th><th style="text-align:right">RTT ahora</th><th style="text-align:right">RTT p95</th><th style="text-align:right">Jitter</th><th style="text-align:right">Disponible (60 s)</th><th>Por qué</th></tr></thead>
@@ -296,35 +298,22 @@
       </div>
       <p class="c11-etiqueta" style="margin-top:.8rem">Latidos de los ESP32 (cada uno avisa "estoy vivo" una vez por segundo)</p>
       <div class="c11-latidos" id="latidos"><span class="c11-nota">—</span></div>
+    </div>
 
+    <div class="c11-panel">
+      <p class="c11-etiqueta">Los visores (se abren en otra pestaña)</p>
+      <p class="c11-nota">Cada contenedor con pantalla sirve su propia página en tu PC. Con el laboratorio arriba, toca uno:</p>
+      <div class="c11-visores" id="visores"></div>
       <details class="c11-plegable" id="plegableIframe">
         <summary>Ver el dashboard original del admin aquí dentro</summary>
         <div class="c11-dentro">
           <p class="c11-nota">Es la página que sirve el propio contenedor <span class="c11-mono">admin</span> en
-            <span class="c11-mono">http://localhost:8080</span>. Si sale en blanco, el laboratorio no está levantado.</p>
+            <span class="c11-mono">http://127.0.0.1:8180</span> (dentro del contenedor escucha en el 8080). Si sale en blanco, el
+            laboratorio no está levantado.</p>
           <iframe class="c11-iframe oscuro" id="iframeDashboard" title="Dashboard del admin" style="height:760px"></iframe>
         </div>
       </details>
     </div>
-
-    <div class="c11-panel" style="margin-top:1rem">
-      <p class="c11-etiqueta">Paso C · los visores (se abren en otra pestaña)</p>
-      <p class="c11-nota">Cada contenedor con pantalla sirve su propia página. Con el laboratorio arriba, toca uno:</p>
-      <div class="c11-visores" id="visores"></div>
-    </div>
-
-    <details class="c11-plegable">
-      <summary>Si algo no arranca</summary>
-      <div class="c11-dentro c11-nota">
-        <ul>
-          <li><b>"Docker no responde"</b>: abre Docker Desktop y espera a que diga "Engine running"; vuelve a pulsar.</li>
-          <li><b>"port is already allocated"</b>: otro programa usa el 8080, el 1883 o el 8765 (por ejemplo, un Mosquitto instalado
-            en Windows). Ciérralo y vuelve a intentar.</li>
-          <li><b>"Pool overlaps with other one"</b>: otro proyecto de Docker usa las redes 192.168.10/20/30.0/24. Apágalo primero.</li>
-          <li><b>Los robots salen en OK tarde</b>: tardan unos segundos en cargar sus modelos; es normal.</li>
-        </ul>
-      </div>
-    </details>
   </div>
 </section>
 
@@ -336,29 +325,31 @@
       resultado guardado</b> (el de la entrega, o el tuyo si la vuelves a correr), dibujado para leerlo de un vistazo.
       La primera no necesita Docker; las otras tres necesitan el laboratorio levantado.</p>
 
-    <article class="c11-panel c11-prueba" style="--c11-color: var(--c11-acento)">
-      <div class="c11-prueba-cab">
-        <div>
-          <h3>1 · El protocolo de mensajes</h3>
-          <p class="c11-nota">Comprueba que los mensajes de los ESP32 (<span class="c11-mono">CTRL</span>, <span class="c11-mono">JOINTS</span>,
-            <span class="c11-mono">HB</span>, <span class="c11-mono">PING/PONG</span>) se arman y se leen bien, que la basura no rompe nada,
-            que se cuentan los paquetes perdidos y que el jitter da lo mismo que calculado a mano.</p>
-        </div>
-        <div class="c11-meta"><span>sin Docker</span><span>~2 s</span><span>40 casos</span></div>
-      </div>
-      <div id="panelUnitarias"></div>
-      <div class="c11-resultado" id="resUnitarias"></div>
-    </article>
-
     <article class="c11-panel c11-prueba" style="--c11-color: var(--c11-router)">
       <div class="c11-prueba-cab">
         <div>
-          <h3>2 · Aislamiento entre VLAN</h3>
+          <h3>1 · Aislamiento entre VLAN</h3>
           <p class="c11-nota">Intenta hablar de la zona gamer a la de robots (y al revés) con ping y TCP, incluso forzando el camino por el
             router, y revisa los contadores del cortafuegos. Después comprueba que el admin sí llega a todos, pasando por el router
-            (<span class="c11-mono">ttl=63</span>: un salto).</p>
+            (<span class="c11-mono">ttl=63</span>: un salto). <b>Mientras corre, cada caso se dibuja en el mapa de abajo.</b></p>
         </div>
         <div class="c11-meta"><span>con el laboratorio</span><span>~30 s</span><span>45 casos</span></div>
+      </div>
+      <div class="c11-aisla" id="aisla">
+        <svg id="aislaSvg" viewBox="0 0 640 330" role="img" aria-label="Cada caso de la prueba de aislamiento dibujado como un paquete"></svg>
+        <div class="c11-aisla-lado">
+          <p class="c11-etiqueta">Caso que se está dibujando</p>
+          <p class="c11-aisla-caso" id="aislaCaso">—</p>
+          <div class="c11-aisla-cuentas">
+            <div><b id="aislaBloq">0</b><span>bloqueados</span></div>
+            <div><b id="aislaPasan">0</b><span>llegaron</span></div>
+            <div><b id="aislaDrop">0</b><span>DROP en el router</span></div>
+          </div>
+          <div class="c11-botonera"><button class="c11-btn" id="btnAislaRepetir">Repetir los 45 casos guardados en el mapa</button></div>
+          <p class="c11-nota" style="font-size:.74rem">Sin ruta, el paquete sale por la puerta <span class="c11-mono">.1</span> de Docker y
+            Docker lo tira (<span class="c11-mono">DOCKER-ISOLATION</span>). Con la ruta forzada llega al router y el router lo tira
+            (<span class="c11-mono">DROP</span>, cadena <span class="c11-mono">AISLAR_V1_V2</span>): ese contador es la prueba de que el cortafuegos funciona.</p>
+        </div>
       </div>
       <div id="panelAislamiento"></div>
       <div class="c11-resultado" id="resAislamiento"></div>
@@ -367,14 +358,16 @@
     <article class="c11-panel c11-prueba" style="--c11-color: var(--c11-caido)">
       <div class="c11-prueba-cab">
         <div>
-          <h3>3 · Disponibilidad: qué pasa cuando algo se cae</h3>
+          <h3>2 · Disponibilidad: qué pasa cuando algo se cae</h3>
           <p class="c11-nota">Apaga a propósito el robot Pepper, luego un jugador y luego la propia sala de control, y mide cuánto tarda el
             admin en marcarlos CAIDO y en volver a OK, y que las demás zonas sigan funcionando.</p>
         </div>
         <div class="c11-meta"><span>con el laboratorio</span><span>~3 min</span></div>
       </div>
       <div class="c11-aviso">Esta prueba <b>detiene y vuelve a arrancar</b> tres contenedores. Al terminar todo queda arriba otra vez,
-        pero durante la prueba verás LED apagados y servicios en CAIDO: es justo lo que se mide.</div>
+        pero durante la prueba verás LED apagados y servicios en CAIDO: es justo lo que se mide. Los LED de aquí abajo siguen el estado
+        en vivo mientras corre.</div>
+      <div class="c11-placa c11-placa-mini"><div class="c11-leds" id="ledsDisp"></div></div>
       <div id="panelDisponibilidad"></div>
       <div class="c11-resultado" id="resDisponibilidad"></div>
     </article>
@@ -382,7 +375,7 @@
     <article class="c11-panel c11-prueba" style="--c11-color: var(--c11-lento)">
       <div class="c11-prueba-cab">
         <div>
-          <h3>4 · Medir latencia y jitter</h3>
+          <h3>3 · Medir latencia y jitter</h3>
           <p class="c11-nota">5 minutos de ping desde el admin a cada servicio (cada 0,5 s, cruzando el router) más lo que publica el admin por
             MQTT: promedio, p95, máximo, jitter, pérdida y disponibilidad, con gráficas. La entrega trae además dos escenarios
             extra: con 30 ± 10 ms de retardo metido en el router a la VLAN 2, y con los mandos a 100 mensajes por segundo.</p>
@@ -392,31 +385,24 @@
       <div id="panelRed"></div>
       <div class="c11-resultado" id="resRed"></div>
     </article>
-  </div>
-</section>
 
-<!-- =============================== 6. DETENER =============================== -->
-<section class="paso" data-titulo="Detener el laboratorio">
-  <div class="c11-contenedor">
-    <h2>Detener el laboratorio</h2>
-    <p class="c11-nota">Los 16 contenedores siguen corriendo aunque cierres esta ventana (es lo normal en Docker). Cuando termines,
-      detenlos aquí. <b>No se borra nada</b>: la próxima vez el laboratorio arranca en segundos.</p>
-    <div class="c11-panel">
-      <div id="panelParar"></div>
-    </div>
-    <details class="c11-plegable">
-      <summary>Quiero liberar el espacio en disco</summary>
-      <div class="c11-dentro c11-nota">
-        <p>Detener no libera los ~2,4 GB de imágenes. Para borrarlo todo: en Docker Desktop, pestaña <b>Containers</b>, borra el grupo
-          <span class="c11-mono">zonas-esp32</span>; luego en <b>Images</b> borra las que empiezan por
-          <span class="c11-mono">dathinel/zonas-esp32-</span>. (Por consola: <span class="c11-mono">docker compose --profile emulado down --rmi all</span>
-          dentro de la carpeta del tema.)</p>
+    <article class="c11-panel c11-prueba" style="--c11-color: var(--c11-acento)">
+      <div class="c11-prueba-cab">
+        <div>
+          <h3>4 · El protocolo de mensajes</h3>
+          <p class="c11-nota">Comprueba que los mensajes de los ESP32 (<span class="c11-mono">CTRL</span>, <span class="c11-mono">JOINTS</span>,
+            <span class="c11-mono">HB</span>, <span class="c11-mono">PING/PONG</span>) se arman y se leen bien, que la basura no rompe nada,
+            que se cuentan los paquetes perdidos y que el jitter da lo mismo que calculado a mano.</p>
+        </div>
+        <div class="c11-meta"><span>sin Docker</span><span>~2 s</span><span>40 casos</span></div>
       </div>
-    </details>
+      <div id="panelUnitarias"></div>
+      <div class="c11-resultado" id="resUnitarias"></div>
+    </article>
   </div>
 </section>
 
-<!-- =============================== 7. SIN DOCKER =============================== -->
+<!-- =============================== 6. SIN DOCKER =============================== -->
 <section class="paso" data-titulo="Sin Docker">
   <div class="c11-contenedor">
     <h2>Todo el laboratorio en el navegador, sin instalar nada</h2>
@@ -438,7 +424,7 @@
   </div>
 </section>
 
-<!-- =============================== 8. MONTAJE =============================== -->
+<!-- =============================== 7. MONTAJE =============================== -->
 <section class="paso" data-titulo="Montaje 3D">
   <div class="c11-contenedor">
     <h2>Cómo se conectarían las placas</h2>
@@ -448,7 +434,7 @@
       Toca una imagen para verla grande.</p>
 
     <div class="c11-panel c11-placa-3d" style="margin-top:.8rem">
-      <img data-src="img/montaje-3d-gamer.png" alt="Montaje 3D de la maestra gamer con joystick KY-023">
+      <img data-src="img/montaje-3d-gamer.jpg" alt="Montaje 3D de la maestra gamer con joystick KY-023">
       <div>
         <p class="c11-etiqueta c11-zona-g">Zona gamer · ctrl-1, ctrl-2, ctrl-3</p>
         <h3>Maestra con joystick</h3>
@@ -464,7 +450,7 @@
     </div>
 
     <div class="c11-panel c11-placa-3d">
-      <img data-src="img/montaje-3d-robot.png" alt="Montaje 3D de la maestra robot con tres potenciómetros y un pulsador">
+      <img data-src="img/montaje-3d-robot.jpg" alt="Montaje 3D de la maestra robot con tres potenciómetros y un pulsador">
       <div>
         <p class="c11-etiqueta c11-zona-r">Zona robótica · ctrl-spot, ctrl-pepper, ctrl-nao</p>
         <h3>Maestra con 3 potenciómetros</h3>
@@ -480,7 +466,7 @@
     </div>
 
     <div class="c11-panel c11-placa-3d">
-      <img data-src="img/montaje-3d-esclava.png" alt="Montaje 3D de la ESP32 esclava con seis LED">
+      <img data-src="img/montaje-3d-esclava.jpg" alt="Montaje 3D de la ESP32 esclava con seis LED">
       <div>
         <p class="c11-etiqueta c11-zona-a">Plano de administración · la esclava</p>
         <h3>Esclava con 6 LED</h3>
@@ -514,12 +500,12 @@
   </div>
 </section>
 
-<!-- =============================== 9. RESULTADOS =============================== -->
+<!-- =============================== 8. RESULTADOS =============================== -->
 <section class="paso" data-titulo="Resultados">
   <div class="c11-contenedor">
     <h2>Lo que salió</h2>
     <div class="c11-panel">
-      <p class="c11-etiqueta">El video de la demo</p>
+      <p class="c11-etiqueta">El video de la demo (60 s)</p>
       <video class="c11-video" id="video" controls preload="metadata"></video>
       <p class="c11-nota" style="margin-top:.5rem">Arriba la pista, abajo los tres robots, y una barra con los 6 LED de la esclava y la latencia
         de cada servicio leídos por MQTT. A mitad se detiene <span class="c11-mono">sim-pepper</span>: el admin lo marca CAIDO, su LED se apaga y
@@ -557,9 +543,10 @@ entorno\Scripts\python pruebas\prueba_aislamiento.py
 entorno\Scripts\python pruebas\prueba_disponibilidad.py
 entorno\Scripts\python pruebas\medir_red.py --escenario base --minutos 5</pre>
         <p>El estado en vivo lo lee <span class="c11-mono">app/estado_vivo.py</span>: pide cada segundo
-          <span class="c11-mono">http://localhost:8080/api/resumen.json</span> (lo mismo que el dashboard) y se lo pasa a la app. Hace falta
-          porque el navegador no deja que una página lea datos de otro puerto si ese servidor no lo permite (CORS). Solo lee: no se conecta
-          al broker ni toca contenedores.</p>
+          <span class="c11-mono">http://127.0.0.1:8180/api/resumen.json</span> (lo mismo que el dashboard) y cada 3 s corre
+          <span class="c11-mono">docker ps</span> (y de vez en cuando <span class="c11-mono">docker images</span> y
+          <span class="c11-mono">docker network inspect</span>), y se lo pasa a la app. Hace falta porque el navegador no deja que una página
+          lea datos de otro puerto si ese servidor no lo permite (CORS). Solo lee: no se conecta al broker ni toca contenedores.</p>
         <p>Los resultados de las pruebas quedan en <span class="c11-mono">pruebas/resultados/</span>; el código de cada contenedor, en
           <span class="c11-mono">router/</span>, <span class="c11-mono">plano-admin/</span>, <span class="c11-mono">zona-gamer/</span>,
           <span class="c11-mono">zona-robotica/</span> y <span class="c11-mono">emulador/</span>; el firmware, en <span class="c11-mono">firmware/</span>.</p>
@@ -568,9 +555,31 @@ entorno\Scripts\python pruebas\medir_red.py --escenario base --minutos 5</pre>
   </div>
 </section>
 
+<!-- =============================== 9. DETENER =============================== -->
+<section class="paso" data-titulo="Detener el laboratorio">
+  <div class="c11-contenedor">
+    <h2>Detener el laboratorio</h2>
+    <p class="c11-nota">Los 16 contenedores siguen corriendo aunque cierres esta ventana (es lo normal en Docker) y gastan CPU. Cuando
+      termines, detenlos aquí. <b>No se borra nada</b>: la próxima vez el laboratorio arranca en unos 30 s.</p>
+    <div class="c11-panel">
+      <div id="panelParar"></div>
+    </div>
+    <details class="c11-plegable">
+      <summary>Quiero liberar el espacio en disco</summary>
+      <div class="c11-dentro c11-nota">
+        <p>Detener no libera los ~2,4 GB de imágenes. Para borrarlo todo: en Docker Desktop, pestaña <b>Containers</b>, borra el grupo
+          <span class="c11-mono">zonas-esp32</span>; luego en <b>Images</b> borra las que empiezan por
+          <span class="c11-mono">dathinel/zonas-esp32-</span>. (Por consola: <span class="c11-mono">docker compose --profile emulado down --rmi all</span>
+          dentro de la carpeta del tema.)</p>
+      </div>
+    </details>
+  </div>
+</section>
+
 </main>
 
 <script src="/comun/app.js"></script>
+<script src="docker-anim.js"></script>
 <script src="centro.js"></script>
 </body>
 </html>

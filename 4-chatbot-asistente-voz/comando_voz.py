@@ -31,7 +31,7 @@ load_dotenv()
 
 # Opciones de linea de comandos, todas opcionales (sin ninguna, el script se
 # comporta como siempre). Sirven para forzar un modo de prueba aunque el PC si
-# tenga microfono o el .env si tenga clave; las usa el lanzador probar.py del repo.
+# tenga microfono o el .env si tenga clave; las usa la app de la práctica (ABRIR.bat, motor en _lanzador/lanzador.py).
 opciones = argparse.ArgumentParser(description="Asistente de voz para dos LEDs")
 opciones.add_argument("--texto", action="store_true",
                       help="no abrir el microfono: solo comandos escritos")

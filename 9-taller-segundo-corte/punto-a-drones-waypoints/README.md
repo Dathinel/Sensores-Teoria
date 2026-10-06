@@ -1,8 +1,10 @@
 # Punto a) Drones: mover entre 3 puntos A, B y C
 
+> **¿Quiere probarlo?** Doble clic en [`ABRIR.bat`](../ABRIR.bat) (carpeta del tema 9) → paso **a) Drones** de la app: la prueba rápida dibuja en la app la ruta A → B → C del líder a partir de lo que imprime la simulación. **¿Quiere saber cómo funciona?** Aquí está todo: [qué es un waypoint](#qué-es-un-waypoint) · [cómo vuela un cuadricóptero](#qué-es-un-cuadricóptero-y-cómo-vuela) · [control PD](#qué-es-un-control-pd) · [cascada](#qué-es-el-control-en-cascada) · [mezclador](#qué-es-el-mezclador) · [idea general](#la-idea-general) · [el código paso a paso](#la-lógica-del-código-paso-a-paso) · [lo que probamos](#lo-que-probamos-y-descartamos) · [cómo probarlo a mano](#cómo-probarlo).
+
 Basado en [gym-pybullet-drones](https://github.com/utiasDSL/gym-pybullet-drones). El enunciado pide mover los drones de un lugar A a un lugar B y a un lugar C, con el control gestionado desde el ESP32:
 
-![Enunciado del punto a)](enunciado-actividad.png)
+![Enunciado del punto a)](img/enunciado-actividad.png)
 
 ## Qué pedía y qué hicimos
 
@@ -164,8 +166,8 @@ Solo el teclado matricial va al ESP32, conectado directo a 8 GPIO: filas en `GPI
 - **`drones_pybullet.py`**: todo el punto a). Crea el mundo, carga los 5 drones, tiene el controlador de cada uno (`Dron`), lo que hace cada tecla (`Mando`), la lectura del serial (`leer_teclas`) y el bucle principal (`volar`). Se corre con ventana (`python drones_pybullet.py`, opcionalmente `--puerto COM5`, o `--mision` para que arranque volando la misión) o sin ventana como prueba automática (`--prueba`).
 - **`dron.urdf`**: la descripción del dron. Es un solo link (no tiene articulaciones: las hélices no giran de verdad en la simulación, su efecto está en las fuerzas que aplica el script). Tiene la parte visual (cuerpo rojo de 10 cm, 4 brazos en X, motores y discos de hélice semitransparentes), una caja de colisión chata de 56 × 56 × 4 cm para que se apoye en el piso y los drones no se atraviesen entre sí, y la parte inercial: 0,35 kg e inercias `ixx = iyy = 0,0045`, `izz = 0,0085` kg·m² (aproximadas como un cuerpo central más 4 masas en las puntas).
 - **`../esp32_teclado.py`**: el firmware común del ESP32 (ver el README del taller).
-- **`enunciado-actividad.png`**: la captura del enunciado de este punto.
-- **`video/`**: la misión A → B → C grabada (`drones-mision.gif` para verla en GitHub y `drones-mision.mp4` completo).
+- **`img/enunciado-actividad.png`**: la captura del enunciado de este punto.
+- **`video/`**: la misión A → B → C grabada (`drones-mision.gif`: la grabación completa, se ve directo en GitHub y en la app).
 
 ## La lógica del código paso a paso
 
@@ -266,7 +268,7 @@ Así se ve la misión A → B → C: el líder rojo va de punto en punto inclin�
 
 ![Los cinco drones volando la misión A → B → C en PyBullet](video/drones-mision.gif)
 
-Video completo: [drones-mision.mp4](video/drones-mision.mp4)
+El GIF es la grabación completa (15 s).
 
 ## Cómo probarlo
 

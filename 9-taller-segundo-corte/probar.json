@@ -9,8 +9,15 @@
     "Entrega: README con la arquitectura, el análisis, el paso a paso, videos del funcionamiento y los códigos explicados"
   ],
   "python": {
-    "versiones": ["3.13", "3.14", "3.12"],
-    "paquetes": ["pybullet==3.2.7", "pyserial==3.5"]
+    "versiones": [
+      "3.13",
+      "3.14",
+      "3.12"
+    ],
+    "paquetes": [
+      "pybullet==3.2.7",
+      "pyserial==3.5"
+    ]
   },
   "acciones": [
     {
@@ -20,8 +27,11 @@
       "script": "descargar_modelos.py",
       "args": [],
       "cwd": ".",
-      "descripcion": "Baja de GitHub (repositorio pybullet_robots del profesor) las mallas reales de Baxter y Atlas, unos 37 MB, a la carpeta modelos/ (no se sube a git). Hace falta internet. Si ya están, no las vuelve a bajar. Las simulaciones de Baxter y Atlas también lo corren solas la primera vez si faltan.",
-      "cubre": []
+      "descripcion": "Baja de GitHub (repositorio pybullet_robots del profesor) las mallas reales de Baxter y Atlas, unos 37 MB, a la carpeta modelos/ (no se sube a git), mostrando los MB que lleva ('bajando 12.34/36.70 MB'). Hace falta internet. Si ya están, no las vuelve a bajar. Las simulaciones de Baxter y Atlas también lo corren solas la primera vez si faltan.",
+      "cubre": [],
+      "duracion": "~1 min (37 MB, solo la primera vez)",
+      "duracion_s": 60,
+      "progreso_regex": "bajando ([\\d.]+)/([\\d.]+) MB"
     },
     {
       "id": "drones",
@@ -32,28 +42,42 @@
       "cwd": ".",
       "ventana": true,
       "descripcion": "Abre PyBullet con cinco drones en el piso (física real: gravedad y la fuerza de los 4 motores de cada uno). Sin ESP32 se manejan con los 14 botones del panel derecho (Params): Despegar, jog en X, Y y Z, Ir a A / B / C, Home, Aterrizar y Mision A -> B -> C. Cada click equivale a una pulsación de la tecla. Se cierra cerrando la ventana.",
-      "cubre": ["a) Mover los drones de un lugar A a un lugar B y a un lugar C"]
+      "cubre": [
+        "a) Mover los drones de un lugar A a un lugar B y a un lugar C"
+      ],
+      "duracion": "abre en ~5 s"
     },
     {
       "id": "drones-mision",
       "nombre": "a) Drones: misión A → B → C automática",
       "tipo": "python",
       "script": "punto-a-drones-waypoints/drones_pybullet.py",
-      "args": ["--mision"],
+      "args": [
+        "--mision"
+      ],
       "cwd": ".",
       "ventana": true,
       "descripcion": "La misma ventana, pero despega sola y al segundo vuela la misión A → B → C (las esferas azul, naranja y verde); el líder rojo deja un trazo amarillo y los cuatro azules lo siguen en V. Al terminar sigue el control normal con los botones.",
-      "cubre": ["a) Mover los drones de un lugar A a un lugar B y a un lugar C"]
+      "cubre": [
+        "a) Mover los drones de un lugar A a un lugar B y a un lugar C"
+      ],
+      "duracion": "abre en ~5 s"
     },
     {
       "id": "drones-prueba",
       "nombre": "a) Drones: prueba sin ventana",
       "tipo": "python",
       "script": "punto-a-drones-waypoints/drones_pybullet.py",
-      "args": ["--prueba"],
+      "args": [
+        "--prueba"
+      ],
       "cwd": ".",
-      "descripcion": "Sin ventana: vuela la misión A → B → C, imprime en cuántos segundos llegó a cada punto y la inclinación máxima, y termina con PRUEBA OK (unos segundos).",
-      "cubre": ["a) Mover los drones de un lugar A a un lugar B y a un lugar C"]
+      "descripcion": "Sin ventana: vuela la misión A → B → C, imprime la posición del líder cada 0,1 s (líneas RUTA t x y z, que la app dibuja como la ruta vista desde arriba y la altura en el tiempo), en cuántos segundos llegó a cada punto y la inclinación máxima, y termina con PRUEBA OK (unos segundos).",
+      "cubre": [
+        "a) Mover los drones de un lugar A a un lugar B y a un lugar C"
+      ],
+      "duracion": "~5 s",
+      "duracion_s": 5
     },
     {
       "id": "baxter",
@@ -64,7 +88,10 @@
       "cwd": ".",
       "ventana": true,
       "descripcion": "Abre PyBullet con el robot Baxter real frente a una mesa con un cubo. Necesita los modelos (si faltan, los baja solo la primera vez). Sin ESP32 se maneja con los 13 botones del panel derecho: 'Demo: coger y mover [D]' hace todo el punto de un click; también hay jog X/Y/Z de la pinza (1,5 cm por click), abrir/cerrar pinza, cambiar de brazo [*] y reponer el cubo [0].",
-      "cubre": ["b) Consola de mandos con el ESP32 para mover a Baxter"]
+      "cubre": [
+        "b) Consola de mandos con el ESP32 para mover a Baxter"
+      ],
+      "duracion": "abre en ~10 s (la 1ª vez baja 37 MB de modelos)"
     },
     {
       "id": "baxter-prueba",
@@ -73,8 +100,12 @@
       "script": "punto-b-brazo-tipo-baxter/probar_baxter.py",
       "args": [],
       "cwd": ".",
-      "descripcion": "Sin ventana: mide la cinemática inversa de los dos brazos, la demo de coger y mover el cubo con cada brazo, la regla de flancos del teclado y los choques. Termina con 'Todas las pruebas pasaron.'. Necesita los modelos (los baja solo si faltan).",
-      "cubre": ["b) Consola de mandos con el ESP32 para mover a Baxter"]
+      "descripcion": "Sin ventana (unos 40 s): mide la cinemática inversa de los dos brazos, la demo de coger y mover el cubo con cada brazo, la regla de flancos del teclado y los choques. Cada comprobación sale con OK o FALLA (la app las muestra como un tablero con lo medido contra el límite). Termina con 'Todas las pruebas pasaron.'. Necesita los modelos (los baja solos si faltan).",
+      "cubre": [
+        "b) Consola de mandos con el ESP32 para mover a Baxter"
+      ],
+      "duracion": "~40 s",
+      "duracion_s": 40
     },
     {
       "id": "atlas",
@@ -85,7 +116,10 @@
       "cwd": ".",
       "ventana": true,
       "descripcion": "Abre PyBullet con el humanoide Atlas real, de pie y con el asistente de equilibrio prendido. Necesita los modelos (si faltan, los baja solo la primera vez). Sin ESP32 hay 16 botones: caminar y girar se prenden con un click y se apagan con el siguiente; 'Asistente ON/OFF (A)' para comparar, 'Ponerlo de pie (B)' si se cae, poses (saludar, agacharse, brazos arriba) y jog de juntas por grupos.",
-      "cubre": ["c) Consola de mandos con el ESP32 para una movilidad real del robot"]
+      "cubre": [
+        "c) Consola de mandos con el ESP32 para una movilidad real del robot"
+      ],
+      "duracion": "abre en ~10 s (la 1ª vez baja 37 MB de modelos)"
     },
     {
       "id": "atlas-prueba",
@@ -94,8 +128,12 @@
       "script": "punto-c-atlas/probar_atlas.py",
       "args": [],
       "cwd": ".",
-      "descripcion": "Sin ventana (alrededor de un minuto): de pie, caminar, arrancar y frenar, girar, retroceder y poses, con y sin asistente; imprime cuándo se cae y cuánto avanzó. Necesita los modelos (los baja solo si faltan).",
-      "cubre": ["c) Consola de mandos con el ESP32 para una movilidad real del robot"]
+      "descripcion": "Sin ventana (unos 3 a 4 minutos): de pie, caminar, arrancar y frenar, girar, retroceder y poses, con y sin asistente; imprime cada resultado apenas lo mide (cuándo se cae y cuánto avanzó), que la app va dibujando como una gráfica de barras con y sin asistente. Al final, 3 intentos de tirarlo y levantarlo con B y la prueba de flanco de la tecla A. Necesita los modelos (los baja solos si faltan).",
+      "cubre": [
+        "c) Consola de mandos con el ESP32 para una movilidad real del robot"
+      ],
+      "duracion": "~3-4 min",
+      "duracion_s": 220
     },
     {
       "id": "preview",
@@ -103,31 +141,35 @@
       "tipo": "html",
       "archivo": "preview.html",
       "descripcion": "Página suelta, sin Python: un teclado 4x4 clicable con las tres configuraciones (drones, Baxter, Atlas) en un esquema 2D, con las mismas teclas y la misma regla de flancos que los scripts. En 'Modo prueba' se juega con el mouse; 'Conectado (Web Serial)' usa el ESP32 real en Chrome o Edge y muestra las líneas TECLA:x que llegan.",
-      "cubre": ["a) Drones (esquema 2D)", "b) Baxter (esquema 2D)", "c) Atlas (esquema 2D)"]
+      "cubre": [
+        "a) Drones (esquema 2D)",
+        "b) Baxter (esquema 2D)",
+        "c) Atlas (esquema 2D)"
+      ]
     },
     {
       "id": "video-drones",
       "nombre": "Video: drones volando A → B → C",
       "tipo": "archivo",
-      "archivo": "punto-a-drones-waypoints/video/drones-mision.mp4"
+      "archivo": "punto-a-drones-waypoints/video/drones-mision.gif"
     },
     {
       "id": "video-baxter",
       "nombre": "Video: Baxter coge y lleva el cubo",
       "tipo": "archivo",
-      "archivo": "punto-b-brazo-tipo-baxter/video/baxter-demo.mp4"
+      "archivo": "punto-b-brazo-tipo-baxter/video/baxter-demo.gif"
     },
     {
       "id": "video-atlas-con",
       "nombre": "Video: Atlas con asistente",
       "tipo": "archivo",
-      "archivo": "punto-c-atlas/video/atlas-con-asistente.mp4"
+      "archivo": "punto-c-atlas/video/atlas-con-asistente.gif"
     },
     {
       "id": "video-atlas-sin",
       "nombre": "Video: Atlas sin asistente (se cae y se levanta)",
       "tipo": "archivo",
-      "archivo": "punto-c-atlas/video/atlas-sin-asistente.mp4"
+      "archivo": "punto-c-atlas/video/atlas-sin-asistente.gif"
     },
     {
       "id": "fw",
@@ -137,5 +179,5 @@
       "descripcion": "MicroPython: barre el teclado 4x4 (filas GPIO 14, 27, 26, 25; columnas GPIO 33, 32, 18, 19 con pull-up interna) y manda 'TECLA:x' por USB cada 50 ms a 115200 baudios. Se guarda como main.py con Thonny. No hace falta para probar: sin ESP32 los scripts usan botones."
     }
   ],
-  "notas": "pybullet 3.2.7 no publica ruedas para Windows: pip lo compila desde el código fuente (hace falta Visual Studio Build Tools con C++ y que la carpeta 'Microsoft Visual Studio\\Installer' esté en el PATH, porque vcvarsall.bat llama a vswhere.exe; tarda varios minutos la primera vez). Baxter y Atlas necesitan internet la primera vez para bajar sus modelos (unos 37 MB). Con el ESP32 conectado el puerto por defecto es COM7 (drones: --puerto COMx; Baxter y Atlas: constante PUERTO_SERIAL)."
+  "notas": "pybullet 3.2.7 no publica ruedas para Windows: pip lo compila desde el código fuente (hace falta Visual Studio Build Tools con C++ y que la carpeta 'Microsoft Visual Studio\\Installer' esté en el PATH, porque vcvarsall.bat llama a vswhere.exe; tarda unos 10 minutos la primera vez si no está en la caché de pip). Baxter y Atlas necesitan internet la primera vez para bajar sus modelos (unos 37 MB). Con el ESP32 conectado el puerto por defecto es COM7 (drones: --puerto COMx; Baxter y Atlas: constante PUERTO_SERIAL)."
 }

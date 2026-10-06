@@ -15,19 +15,30 @@
 #   python deteccion_pc.py --imagen foto1.jpg ...    -> fotos propias
 #   python deteccion_pc.py --video archivo.mp4       -> un video (o un .gif), en bucle
 #
+# Para la app de la practica (ABRIR.bat) hay dos opciones mas, que no cambian
+# nada del uso normal si no se ponen:
+#   --vista CARPETA   guarda ahi el ultimo cuadro procesado (ultimo.jpg) y un
+#                     estado.json con lo que vio YOLO, el mensaje y la fase de
+#                     arranque; la app los lee para mostrar todo en la pagina.
+#   --sin-ventana     no abre la ventana de OpenCV (todo se ve en la app; se
+#                     para con el boton Detener de la app en vez de la tecla q).
+#
 # Si el ESP32 no esta conectado (o el puerto esta ocupado por Thonny), el
 # script NO se cae: sigue mostrando la camara con las detecciones y escribe
 # en pantalla el mensaje que le habria mandado, para poder probar la parte
 # de vision sin el hardware a la mano.
+#
+# El modelo yolov8n.pt (6 MB) NO viene en el repositorio: la primera vez que se
+# corre, ultralytics lo descarga solo desde GitHub a esta misma carpeta (hace
+# falta internet esa vez); despues se usa el archivo ya descargado.
 
 import argparse
+import json
+import os
+import signal
 import sys
 import time
 from pathlib import Path
-
-import cv2
-import serial
-from ultralytics import YOLO
 
 PUERTO_SERIAL = "COM7"
 BAUDIOS = 115200  # tiene que ser el mismo del lado del ESP32 (por USB, MicroPython usa 115200)
@@ -36,7 +47,11 @@ BAUDIOS = 115200  # tiene que ser el mismo del lado del ESP32 (por USB, MicroPyt
 # no en la carpeta desde donde se lanzo el comando, asi funciona igual si se
 # corre desde otro lado (por ejemplo desde el lanzador de la raiz del repo).
 CARPETA = Path(__file__).resolve().parent
+MODELO = CARPETA / "yolov8n.pt"
 
+# Los argumentos se leen ANTES de importar cv2/ultralytics: importar PyTorch
+# tarda 10-30 s, y asi un error de argumentos (o --help) responde al instante y
+# la app puede mostrar desde el primer segundo en que fase va el arranque.
 parser = argparse.ArgumentParser(description="YOLOv8 -> LEDs del ESP32 por serial")
 parser.add_argument("--carro-moto", action="store_true",
                     help="detectar carro y moto en vez de silla y celular")
@@ -45,7 +60,69 @@ parser.add_argument("--imagen", nargs="*", metavar="ARCHIVO",
                     help="usar fotos en vez de la camara (sin archivos: las de ejemplo)")
 parser.add_argument("--video", metavar="ARCHIVO",
                     help="usar un video (o gif) en vez de la camara; se repite en bucle")
+parser.add_argument("--vista", metavar="CARPETA",
+                    help="guardar el ultimo cuadro (ultimo.jpg) y estado.json ahi (para la app)")
+parser.add_argument("--sin-ventana", action="store_true",
+                    help="no abrir la ventana de OpenCV (se para con Ctrl+C o desde la app)")
 args = parser.parse_args()
+
+# --- Vista para la app: ultimo cuadro + estado en archivos ---------------------
+# La app no puede ver la ventana de OpenCV, asi que el programa le deja dos
+# archivos que ella vuelve a leer cada medio segundo. Se escriben primero con
+# otro nombre y luego se reemplazan de golpe (os.replace): asi la app nunca lee
+# un JPG o un JSON a medio escribir.
+VISTA = None
+if args.vista:
+    VISTA = Path(args.vista)
+    if not VISTA.is_absolute():
+        VISTA = CARPETA / VISTA
+    VISTA.mkdir(parents=True, exist_ok=True)
+    for viejo in ("ultimo.jpg", "estado.json"):
+        try:
+            (VISTA / viejo).unlink()  # que la app no muestre lo de una corrida anterior
+        except OSError:
+            pass
+INICIO_PROGRAMA = time.time()
+IMG_T = [0.0]  # cuando se escribio ultimo.jpg por ultima vez (la app lo usa para no recargarla de balde)
+
+
+def guardar_vista(datos, imagen=None):
+    """Escribe estado.json (y ultimo.jpg si se da la imagen) en la carpeta --vista."""
+    if VISTA is None:
+        return
+    datos = dict(datos, t=time.time(), inicio=INICIO_PROGRAMA, pid=os.getpid())
+    try:
+        if imagen is not None:
+            # 800 px de ancho bastan para verla en la app y el archivo queda en
+            # unos 60-120 KB (calidad 80), rapido de leer cada medio segundo.
+            alto, ancho = imagen.shape[:2]
+            if ancho > 800:
+                imagen = cv2.resize(imagen, (800, int(alto * 800 / ancho)), interpolation=cv2.INTER_AREA)
+            ok, jpg = cv2.imencode(".jpg", imagen, [cv2.IMWRITE_JPEG_QUALITY, 80])
+            if ok:
+                (VISTA / "ultimo.tmp.jpg").write_bytes(jpg.tobytes())
+                os.replace(VISTA / "ultimo.tmp.jpg", VISTA / "ultimo.jpg")
+                IMG_T[0] = time.time()
+        datos["img_t"] = IMG_T[0]
+        (VISTA / "estado.tmp.json").write_text(json.dumps(datos, ensure_ascii=False), encoding="utf-8")
+        os.replace(VISTA / "estado.tmp.json", VISTA / "estado.json")
+    except OSError:
+        # En Windows el reemplazo falla si justo en ese instante el servidor
+        # esta leyendo el archivo: se ignora, el siguiente cuadro lo vuelve a escribir.
+        pass
+
+
+# Fases del arranque: se imprimen como "Arranque 1/3: ..." (la app las usa para
+# su barra de carga) y se dejan en estado.json.
+def fase(n, texto):
+    print(f"Arranque {n}/3: {texto}", flush=True)
+    guardar_vista({"fase": "arranque", "paso": n, "pasos": 3, "texto": texto})
+
+
+fase(1, "cargando PyTorch, OpenCV y YOLO (tarda 10-30 s la primera vez que se abre)")
+import cv2  # noqa: E402  (va aqui a proposito: ver el comentario de arriba)
+import serial  # noqa: E402
+from ultralytics import YOLO  # noqa: E402
 
 # Nombres exactos de las clases dentro del dataset COCO con el que se entreno
 # YOLOv8. El ORDEN importa: el primer objetivo es el primer caracter del
@@ -78,8 +155,14 @@ CONFIANZA_MINIMA = 0.4
 REENVIO_S = 0.5
 
 # "n" = nano: la version mas liviana de YOLOv8, la unica que corre fluida sin
-# GPU. Si el archivo no esta en la carpeta, ultralytics lo descarga solo.
-model = YOLO(str(CARPETA / "yolov8n.pt"))
+# GPU. Si el archivo no esta en la carpeta (no se sube al repositorio), YOLO()
+# lo descarga solo desde los "releases" de ultralytics en GitHub y lo guarda en
+# esa misma ruta; las siguientes veces ya lo encuentra y no descarga nada.
+if MODELO.exists():
+    fase(2, "cargando el modelo yolov8n.pt")
+else:
+    fase(2, "descargando el modelo yolov8n.pt (6 MB, solo la primera vez; necesita internet)")
+model = YOLO(str(MODELO))
 
 # --- Puerto serial, con respaldo si no hay ESP32 ---------------------------
 try:
@@ -92,13 +175,14 @@ try:
 except serial.SerialException as error:
     ser = None
     print(f"Sin ESP32 ({error}). Se sigue solo con la vision: el mensaje "
-          "que se mandaria aparece escrito en la ventana.")
+          "que se mandaria aparece escrito en la ventana (o en la app).")
 
 # --- De donde salen las imagenes: camara, video o fotos ------------------------
 # El resto del programa (YOLO, mensaje, serial) es exactamente el mismo en los
 # tres casos: solo cambia de donde sale cada fotograma.
 cap = None
 imagenes = []
+nombres_fotos = []
 if args.imagen is not None:
     rutas = args.imagen or [str(CARPETA / "img" / "ejemplos" / n) for n in EJEMPLOS]
     for ruta in rutas:
@@ -107,6 +191,7 @@ if args.imagen is not None:
             print(f"No se pudo leer la imagen {ruta}")
             sys.exit(1)
         imagenes.append(img)
+        nombres_fotos.append(Path(ruta).name)
     fuente = f"FOTOS ({len(imagenes)}, cambia cada {SEGUNDOS_POR_IMAGEN:.0f} s)"
 elif args.video:
     cap = cv2.VideoCapture(args.video)
@@ -127,14 +212,33 @@ if cap is not None and not cap.isOpened():
               "python deteccion_pc.py --imagen")
     sys.exit(1)
 
-print(f"Objetivos: {OBJETIVOS}. Fuente: {fuente}. Presiona 'q' en la ventana para salir.")
+fase(3, "listo: YOLO ya esta mirando")
+if args.sin_ventana:
+    print(f"Objetivos: {OBJETIVOS}. Fuente: {fuente}. Sin ventana: se ve en la app (Ctrl+C o Detener para salir).")
+else:
+    print(f"Objetivos: {OBJETIVOS}. Fuente: {fuente}. Presiona 'q' en la ventana para salir.")
 estado_anterior = None
+ultima_vista = 0.0  # cuando se guardo el ultimo cuadro para la app
+foto_vista = None   # que foto se guardo la ultima vez (con --imagen)
 ultimo_envio = 0.0
 ultima_linea_esp = "(nada todavia)"
 inicio = time.time()
 cache_fotos = {}  # indice de foto -> resultado de YOLO (una foto quieta no cambia)
 
-while True:
+# Ctrl+C (lo unico que hay para salir con --sin-ventana) no corta el programa a
+# la mitad de una vuelta: solo levanta esta bandera, el bucle termina la vuelta
+# y se ejecuta la limpieza del final (manda "00" al ESP32 y cierra el puerto).
+salir = False
+
+
+def pedir_salida(*_):
+    global salir
+    salir = True
+
+
+signal.signal(signal.SIGINT, pedir_salida)
+
+while not salir:
     if imagenes:
         # Que foto toca segun el tiempo transcurrido; vuelve a la primera al final.
         indice = int((time.time() - inicio) / SEGUNDOS_POR_IMAGEN) % len(imagenes)
@@ -209,6 +313,42 @@ while True:
         cv2.putText(annotated_frame, texto, (8, y), cv2.FONT_HERSHEY_SIMPLEX,
                     0.55, (255, 255, 255), 1, cv2.LINE_AA)
 
+    # Para la app (--vista): el cuadro con las cajas y lo que vio YOLO. Con la
+    # camara se guarda como mucho 4 veces por segundo (escribir un JPG en cada
+    # fotograma le quitaria tiempo a YOLO); con fotos, solo cuando cambia la foto
+    # (y cada 0,5 s el estado, para que la app vea que el programa sigue vivo).
+    if VISTA is not None:
+        cambio_foto = imagenes and indice != foto_vista
+        if cambio_foto or ahora - ultima_vista >= (0.5 if imagenes else 0.25):
+            cajas = []
+            for box in results[0].boxes:
+                clase = model.names[int(box.cls[0])]
+                conf = float(box.conf[0])
+                cajas.append({"clase": clase, "conf": round(conf, 3),
+                              "objetivo": clase in OBJETIVOS,
+                              "cuenta": clase in OBJETIVOS and conf >= CONFIANZA_MINIMA})
+            cajas.sort(key=lambda c: -c["conf"])
+            datos = {
+                "fase": "detectando", "fuente": fuente, "objetivos": OBJETIVOS,
+                "confianza_minima": CONFIANZA_MINIMA, "detecciones": cajas, "mensaje": estado,
+                "esp32": PUERTO_SERIAL if ser is not None else None,
+                "esp32_dice": ultima_linea_esp if ser is not None else None,
+            }
+            if imagenes:
+                datos.update(foto=indice + 1, fotos=len(imagenes), nombre_foto=nombres_fotos[indice],
+                             segundos_por_foto=SEGUNDOS_POR_IMAGEN)
+            # La imagen solo se reescribe si cambio (con fotos quietas es la misma).
+            guardar_vista(datos, annotated_frame if (cambio_foto or not imagenes) else None)
+            ultima_vista = ahora
+            if imagenes:
+                foto_vista = indice
+
+    if args.sin_ventana:
+        # Sin ventana no hay tecla q: se sale con Ctrl+C (o Detener en la app).
+        # Una pausa corta para no ocupar un nucleo entero en vueltas vacias.
+        time.sleep(0.03 if imagenes else 0.001)
+        continue
+
     cv2.imshow("Deteccion en tiempo real", annotated_frame)
 
     # Con fotos quietas no hace falta ir a toda velocidad: 30 ms entre vueltas
@@ -227,3 +367,5 @@ if ser is not None:
 if cap is not None:
     cap.release()
 cv2.destroyAllWindows()
+guardar_vista({"fase": "terminado"})
+print("Programa terminado.")

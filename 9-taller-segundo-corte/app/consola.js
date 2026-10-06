@@ -1,7 +1,12 @@
 /* Consola de mando del tema 9.
    Usa la API común (window.App, de /comun/app.js) para correr las simulaciones y mostrar su
-   salida dentro de la página; lo propio de esta app es el teclado 4x4 interactivo con lo que
-   hace cada tecla en cada simulación y el resumen de la prueba rápida de los drones. */
+   salida dentro de la página. Lo propio de esta app:
+   - el armazón tipo Docker Desktop: barra de estado arriba (entorno, modelos, qué está en marcha),
+     menú lateral con las secciones y una sola sección a la vista;
+   - el teclado 4x4 interactivo con lo que hace cada tecla en cada simulación;
+   - las pruebas visuales: la ruta A → B → C de los drones dibujada con lo que imprime la prueba,
+     el tablero "medido contra el límite" de Baxter y la gráfica con/sin asistente de Atlas;
+   - la barra de MB de la descarga de modelos. */
 (function () {
   "use strict";
 
@@ -10,11 +15,42 @@
   const CARPETA = partes[0] === "app" && partes[1] ? decodeURIComponent(partes[1]) : "9-taller-segundo-corte";
   const REPO = "/repo/" + encodeURIComponent(CARPETA) + "/";
   const repo = (rel) => REPO + rel.split("/").map(encodeURIComponent).join("/");
+  const $ = (s) => document.querySelector(s);
+  const NS = "http://www.w3.org/2000/svg";
+  const coma = (n, d = 1) => Number(n).toFixed(d).replace(".", ",");
 
-  // ------------------------------------------------------------------------------------------
-  // Qué hace cada tecla (sacado de Mando.tecla, procesar_tecla y los botones de cada script).
-  // tipo: jog | golpe | sostener | objetivo | nada ; boton: nombre del botón en la ventana.
-  // ------------------------------------------------------------------------------------------
+  function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+  function guardar(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* sin almacenamiento: no pasa nada */ } }
+  function leer(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+  // ==========================================================================================
+  // 1. Navegación: una sección a la vista, elegida en el menú lateral (como Docker Desktop).
+  // ==========================================================================================
+  const CLAVE_VISTA = "c9-vista:" + CARPETA;
+  const alMostrar = {};   // vista -> función que se llama la primera vez que se muestra
+
+  function mostrarVista(id, guardarla = true) {
+    const vista = document.getElementById("v-" + id);
+    if (!vista) return;
+    document.querySelectorAll(".c9-vista").forEach((v) => { v.hidden = v !== vista; });
+    document.querySelectorAll("#lateral [data-vista]").forEach((b) => b.classList.toggle("activo", b.dataset.vista === id));
+    $("#principal").scrollTop = 0;
+    if (guardarla) { guardar(CLAVE_VISTA, id); history.replaceState(null, "", "#" + id); }
+    if (alMostrar[id]) { const f = alMostrar[id]; delete alMostrar[id]; f(); }
+    document.body.classList.remove("menu-abierto");
+  }
+
+  function vistaInicial() {
+    const h = location.hash.replace("#", "");
+    if (h && document.getElementById("v-" + h)) return h;
+    const g = leer(CLAVE_VISTA);
+    return g && document.getElementById("v-" + g) ? g : "inicio";
+  }
+
+  // ==========================================================================================
+  // 2. El teclado: qué hace cada tecla (sacado de Mando.tecla, procesar_tecla y los botones).
+  //    tipo: jog | golpe | sostener | objetivo | nada ; boton: nombre del botón en la ventana.
+  // ==========================================================================================
   const FILAS = [["1", "2", "3", "A"], ["4", "5", "6", "B"], ["7", "8", "9", "C"], ["*", "0", "#", "D"]];
   const NADA = { c: "—", t: "Sin uso en esta simulación.", tipo: "nada" };
   const MAPA = {
@@ -82,16 +118,13 @@
 
   let simActual = "drones";
   let teclaActual = "0";
-
-  function dato(sim, k) { return MAPA[sim][k] || NADA; }
-  function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+  const dato = (sim, k) => MAPA[sim][k] || NADA;
 
   function pintarTeclado() {
-    const cont = document.getElementById("teclado");
+    const cont = $("#teclado");
     if (!cont) return;
     cont.innerHTML = "";
-    const colorSim = { drones: "var(--c9-drones)", baxter: "var(--c9-baxter)", atlas: "var(--c9-atlas)" }[simActual];
-    cont.style.setProperty("--sim", colorSim);
+    cont.style.setProperty("--sim", { drones: "var(--c9-drones)", baxter: "var(--c9-baxter)", atlas: "var(--c9-atlas)" }[simActual]);
     FILAS.flat().forEach((k) => {
       const d = dato(simActual, k);
       const b = document.createElement("button");
@@ -104,13 +137,12 @@
       b.addEventListener("click", () => elegirTecla(k));
       cont.appendChild(b);
     });
-    const nota = document.getElementById("nota-sim");
-    if (nota) nota.textContent = NOTA_SIM[simActual];
+    $("#nota-sim").textContent = NOTA_SIM[simActual];
     pintarDetalle();
   }
 
   function pintarDetalle() {
-    const det = document.getElementById("detalle");
+    const det = $("#detalle");
     if (!det) return;
     const d = dato(simActual, teclaActual);
     const otros = Object.keys(MAPA).filter((s) => s !== simActual).map((s) => {
@@ -129,10 +161,7 @@
     teclaActual = k;
     document.querySelectorAll("#teclado .c9-tecla").forEach((b) => {
       b.classList.toggle("activa", b.dataset.k === k);
-      if (b.dataset.k === k) {
-        b.classList.add("pulso");
-        setTimeout(() => b.classList.remove("pulso"), 120);
-      }
+      if (b.dataset.k === k) { b.classList.add("pulso"); setTimeout(() => b.classList.remove("pulso"), 120); }
     });
     pintarDetalle();
   }
@@ -143,43 +172,38 @@
     pintarTeclado();
   }
 
-  // Teclas del PC: solo cuando el teclado dibujado está a la vista (paso 2) y no se escribe en una caja.
+  // Teclas del PC: solo con el teclado dibujado a la vista y sin estar escribiendo en una caja.
   document.addEventListener("keydown", (ev) => {
     const t = ev.target;
     if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
-    const cont = document.getElementById("teclado");
+    const cont = $("#teclado");
     if (!cont || cont.offsetParent === null) return;
     const k = ev.key.length === 1 ? ev.key.toUpperCase() : "";
     if (k && FILAS.flat().includes(k)) elegirTecla(k);
   });
 
-  // ------------------------------------------------------------------------------------------
-  // Medios: imágenes y videos se piden a /repo/ (el servidor del lanzador sirve el repo).
-  // ------------------------------------------------------------------------------------------
+  // ==========================================================================================
+  // 3. Medios (imágenes y GIF por /repo/), preview y firmware.
+  // ==========================================================================================
   function cargarMedios() {
-    document.querySelectorAll("[data-src]").forEach((el) => {
-      el.src = repo(el.dataset.src);
-      if (el.tagName === "VIDEO" && el.autoplay) el.play && el.play().catch(() => {});
-    });
     document.querySelectorAll("img[data-src]").forEach((img) => {
+      img.loading = "lazy";
+      img.src = repo(img.dataset.src);
       try { if (window.App && App.imagen) App.imagen(img); } catch (e) { /* sin ampliar: no es grave */ }
     });
-    const marco = document.getElementById("marco-preview");
-    if (marco) { marco.src = repo("preview.html"); escalarPreview(); }
   }
 
-  // El preview pasa a una sola columna por debajo de 1100 px: se dibuja a 1240 px y se escala
-  // al ancho del recuadro para que se vea como en una pantalla grande (en el celular, sin escalar).
-  function escalarPreview() {
-    const env = document.getElementById("env-preview");
-    const marco = document.getElementById("marco-preview");
+  // El preview se dibuja a 1240 px (su diseño de tres columnas) y se escala al ancho del recuadro.
+  function cargarPreview() {
+    const env = $("#env-preview");
+    const marco = $("#marco-preview");
     if (!env || !marco) return;
+    marco.src = repo("preview.html");
     const ajustar = () => {
       const w = env.clientWidth;
       if (!w) return;
       const s = w >= 640 ? Math.min(1, w / 1240) : 1;
-      const anchoReal = s < 1 ? 1240 : w;
-      marco.style.width = anchoReal + "px";
+      marco.style.width = (s < 1 ? 1240 : w) + "px";
       marco.style.height = (env.clientHeight / s) + "px";
       marco.style.transform = s < 1 ? "scale(" + s + ")" : "none";
     };
@@ -188,14 +212,12 @@
   }
 
   function abrir(rel) {
-    const url = repo(rel);
-    if (window.App && App.abrir) { try { return App.abrir(rel); } catch (e) { /* cae al plan B */ } }
-    window.open(url, "_blank", "noopener");
+    if (window.App && App.abrir) { try { return App.abrir(rel); } catch (e) { /* plan B */ } }
+    window.open(repo(rel), "_blank", "noopener");
   }
 
   async function cargarFirmware() {
-    const pre = document.getElementById("codigo-firmware");
-    if (!pre) return;
+    const pre = $("#codigo-firmware");
     try {
       const r = await fetch(repo("esp32_teclado.py"));
       pre.textContent = r.ok ? await r.text() : "No se pudo leer el archivo (está en la carpeta del tema 9 como esp32_teclado.py).";
@@ -204,61 +226,360 @@
     }
   }
 
-  // ------------------------------------------------------------------------------------------
-  // Navegación entre pasos (los botones de la portada y las tarjetas de cada simulación).
-  // ------------------------------------------------------------------------------------------
-  let asistente = null;
-  function irAPaso(n) {
-    const i = Number(n) - 1;
-    const secciones = document.querySelectorAll("#pasos > section.paso");
-    if (asistente && typeof asistente.ir === "function") { asistente.ir(i); }
-    else if (asistente && typeof asistente.irA === "function") { asistente.irA(i); }
-    else if (secciones[i]) {
-      // Sin el asistente: se muestran todos los pasos y basta con bajar hasta el que toca.
-      secciones[i].hidden = false;
-    }
-    const s = secciones[i];
-    if (s) setTimeout(() => s.scrollIntoView({ behavior: "smooth", block: "start" }), 30);
+  // ==========================================================================================
+  // 4. Barra de estado: entorno, modelos y qué está en marcha.
+  // ==========================================================================================
+  function chip(id, texto, tipo, titulo) {
+    const c = document.getElementById(id);
+    if (!c) return;
+    c.className = "c9-chip " + (tipo || "");
+    c.querySelector("span").textContent = texto;
+    if (titulo) c.title = titulo;
   }
 
-  // ------------------------------------------------------------------------------------------
-  // Prueba rápida de drones: además del panel "Lo que dice el programa", se resume en 4 casillas.
-  // ------------------------------------------------------------------------------------------
-  function resumenDrones(linea) {
-    const caja = document.getElementById("ruta-drones");
-    if (!caja || typeof linea !== "string") return;
-    const m = linea.match(/Llego a ([ABC]) a los ([\d.]+) s/);
-    if (m) {
-      const c = caja.querySelector('[data-p="' + m[1] + '"]');
-      if (c) { c.classList.add("llego"); c.querySelector("span").textContent = "llegó a los " + m[2].replace(".", ",") + " s"; }
+  function pintarEntorno() {
+    const e = (window.App && App.entorno) || {};
+    const estado = e.estado || "";
+    let txt, tipo, largo;
+    if (estado === "listo") {
+      txt = "Entorno listo"; tipo = "ok";
+      largo = "El entorno de Python ya tiene PyBullet y pyserial: las simulaciones abren en segundos.";
+    } else if (estado === "sin-python") {
+      txt = "Falta Python"; tipo = "mal";
+      largo = "No se encontró la versión de Python que pide la práctica (3.12 a 3.14). " + (e.detalle || "");
+    } else if (estado === "roto") {
+      txt = "Entorno dañado"; tipo = "mal";
+      largo = "El entorno existe pero no funciona; al pulsar Iniciar se intenta reparar. " + (e.detalle || "");
+    } else if (estado) {
+      txt = "1ª vez: compila PyBullet (~10 min)"; tipo = "aviso";
+      largo = "El primer Iniciar crea el entorno e instala PyBullet. Si no está en la caché de pip, se compila: unos 10 minutos con barra de progreso. Después abre en segundos.";
+    } else {
+      txt = "Entorno: sin lanzador"; tipo = "";
+      largo = "Abre la app con ABRIR.bat para poder correr las simulaciones.";
     }
-    const inc = linea.match(/inclinacion_max_grados['"]?\s*:\s*([\d.]+)/);
-    if (inc) caja.dataset.inclinacion = inc[1];
-    if (/PRUEBA OK/.test(linea) || /PRUEBA FALLIDA/.test(linea)) {
-      const ok = /PRUEBA OK/.test(linea);
-      const c = caja.querySelector('[data-p="OK"]');
-      c.classList.toggle("llego", ok);
-      c.classList.toggle("falla", !ok);
-      c.querySelector("b").textContent = ok ? "PRUEBA OK" : "FALLÓ";
-      c.querySelector("span").textContent = caja.dataset.inclinacion
-        ? "inclinación máxima " + Number(caja.dataset.inclinacion).toFixed(1).replace(".", ",") + "°"
-        : (ok ? "las tres llegadas" : "mira lo que dice el programa");
-    }
+    chip("chip-entorno", txt, tipo, largo);
+    const g = $("#estado-entorno");
+    if (g) { g.className = "c9-estado-grande " + tipo; g.textContent = largo; }
   }
-  function reiniciarResumenDrones() {
-    const caja = document.getElementById("ruta-drones");
-    if (!caja) return;
-    caja.querySelectorAll("div").forEach((d) => {
+
+  async function existe(rel) {
+    // GET con Range (el servidor del lanzador no acepta HEAD): basta el primer byte.
+    try { const r = await fetch(repo(rel), { headers: { Range: "bytes=0-0" }, cache: "no-store" }); return r.ok; } catch (e) { return false; }
+  }
+  let modelosListos = null;
+  async function revisarModelos() {
+    const [b, a] = await Promise.all([
+      existe("modelos/baxter_common/baxter_description/urdf/toms_baxter.urdf"),
+      existe("modelos/atlas/atlas_v4_with_multisense.urdf"),
+    ]);
+    modelosListos = a && b;
+    const falta = [!b && "Baxter", !a && "Atlas"].filter(Boolean).join(" y ");
+    chip("chip-modelos", modelosListos ? "Modelos descargados" : "Modelos: faltan (37 MB)",
+      modelosListos ? "ok" : "aviso",
+      modelosListos ? "Las mallas de Baxter y Atlas ya están en modelos/." : "Faltan las mallas de " + falta + ": se bajan solas (37 MB) en 'Antes de probar' o al abrir Baxter/Atlas.");
+    const g = $("#estado-modelos");
+    if (g) {
+      g.className = "c9-estado-grande " + (modelosListos ? "ok" : "aviso");
+      g.textContent = modelosListos ? "Ya están descargados en modelos/: no hace falta hacer nada."
+        : "Faltan las mallas de " + falta + ". Pulsa Iniciar abajo (o se bajan solas al abrir Baxter o Atlas).";
+    }
+    marcar("modelos", modelosListos);
+  }
+
+  const enMarcha = new Set();
+  const NOMBRES_ACCION = {
+    "modelos": "descarga de modelos", "drones-prueba": "prueba de drones", "drones-mision": "misión de drones",
+    "drones": "drones a mano", "baxter": "Baxter", "baxter-prueba": "prueba de Baxter", "atlas": "Atlas", "atlas-prueba": "prueba de Atlas",
+  };
+  function pintarMarcha() {
+    const n = enMarcha.size;
+    chip("chip-marcha", n ? "En marcha: " + [...enMarcha].map((i) => NOMBRES_ACCION[i] || i).join(", ") : "Nada en marcha",
+      n ? "corre" : "", "Programas corriendo desde esta app");
+  }
+
+  // Marca verde en el menú lateral cuando una prueba de esa sección terminó bien.
+  const VISTA_DE = { "modelos": "modelos", "drones-prueba": "drones", "drones-mision": "drones", "drones": "drones",
+    "baxter": "baxter", "baxter-prueba": "baxter", "atlas": "atlas", "atlas-prueba": "atlas" };
+  function marcar(m, ok) {
+    const el = document.querySelector('[data-marca="' + m + '"]');
+    if (el) el.classList.toggle("ok", !!ok);
+  }
+
+  // ==========================================================================================
+  // 5. Prueba visual de los drones: la ruta del líder dibujada con las líneas "RUTA t x y z".
+  //    La prueba vuela en menos de un segundo de reloj (sin ventana PyBullet va más rápido que el
+  //    tiempo real), así que la ruta se REPRODUCE a la velocidad real de la simulación: 1 s de
+  //    simulación = 1 s en pantalla, para que se vea cómo despega, se inclina, se pasa y corrige.
+  // ==========================================================================================
+  const PUNTOS_DEF = { A: [0, 0.9, 1.2], B: [1.4, -0.6, 1.6], C: [-1.3, 0.4, 0.9] };
+  const COLOR_PUNTO = { A: "#5b9bd5", B: "#e8963a", C: "#4caf7d" };
+  const T_MISION = 1.0;   // la misión arranca 1 s después del despegue (paso 240 en drones_pybullet.py)
+  const ruta = { puntos: { ...PUNTOS_DEF }, pts: [], llegadas: {}, ok: null, inclinacion: null, t0: 0, anim: 0 };
+  const sx = (x) => 200 + x * 100;   // 100 px por metro; X de −2 a 2 m
+  const sy = (y) => 150 - y * 100;   // Y de −1,5 a 1,5 m (hacia arriba)
+  const ax = (t) => 34 + t * 52;     // altura: 0 a ~7 s
+  const ay = (z) => 62 - z * 28;     // 0 a 2 m
+
+  function svgEl(tag, attrs, padre) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (padre) padre.appendChild(e);
+    return e;
+  }
+
+  function dibujarFondoRuta() {
+    const svg = $("#ruta-svg"), alto = $("#ruta-alto");
+    if (!svg || !alto) return;
+    svg.innerHTML = ""; alto.innerHTML = "";
+    // cuadrícula de 50 cm
+    for (let x = -2; x <= 2.001; x += 0.5) svgEl("line", { x1: sx(x), y1: 0, x2: sx(x), y2: 300, class: Math.abs(x) < 0.01 ? "eje" : "rejilla" }, svg);
+    for (let y = -1.5; y <= 1.501; y += 0.5) svgEl("line", { x1: 0, y1: sy(y), x2: 400, y2: sy(y), class: Math.abs(y) < 0.01 ? "eje" : "rejilla" }, svg);
+    svgEl("text", { x: 394, y: 146, class: "eje-txt", "text-anchor": "end" }, svg).textContent = "X";
+    svgEl("text", { x: 205, y: 12, class: "eje-txt" }, svg).textContent = "Y";
+    svgEl("text", { x: 6, y: 294, class: "eje-txt" }, svg).textContent = "cuadros de 50 cm";
+    // origen (despegue)
+    svgEl("rect", { x: sx(0) - 5, y: sy(0) - 5, width: 10, height: 10, class: "origen" }, svg);
+    svgEl("text", { x: sx(0) + 8, y: sy(0) + 16, class: "eje-txt" }, svg).textContent = "despega";
+    for (const [n, [x, y, z]] of Object.entries(ruta.puntos)) {
+      svgEl("circle", { cx: sx(x), cy: sy(y), r: 12, fill: COLOR_PUNTO[n], "fill-opacity": 0.18, stroke: COLOR_PUNTO[n], "stroke-width": 1.5, id: "punto-" + n }, svg);
+      svgEl("text", { x: sx(x), y: sy(y) + 5, "text-anchor": "middle", class: "punto-letra", fill: COLOR_PUNTO[n] }, svg).textContent = n;
+      svgEl("text", { x: sx(x), y: sy(y) + 27, "text-anchor": "middle", class: "eje-txt" }, svg).textContent = "z " + coma(z) + " m";
+    }
+    svgEl("polyline", { id: "ruta-linea", class: "ruta-linea", points: "" }, svg);
+    svgEl("circle", { id: "ruta-dron", r: 5, cx: -20, cy: -20, class: "ruta-dron" }, svg);
+    // altura en el tiempo
+    for (const z of [0, 1, 2]) {
+      svgEl("line", { x1: 34, y1: ay(z), x2: 396, y2: ay(z), class: z ? "rejilla" : "eje" }, alto);
+      svgEl("text", { x: 4, y: ay(z) + 4, class: "eje-txt" }, alto).textContent = z + " m";
+    }
+    svgEl("line", { x1: ax(T_MISION), y1: 4, x2: ax(T_MISION), y2: 62, class: "marca-mision" }, alto);
+    svgEl("text", { x: ax(T_MISION) + 3, y: 11, class: "eje-txt" }, alto).textContent = "empieza la misión";
+    svgEl("polyline", { id: "alto-linea", class: "ruta-linea", points: "" }, alto);
+  }
+
+  function reiniciarRuta() {
+    cancelAnimationFrame(ruta.anim);
+    Object.assign(ruta, { puntos: { ...PUNTOS_DEF }, pts: [], llegadas: {}, ok: null, inclinacion: null, t0: 0, anim: 0 });
+    dibujarFondoRuta();
+    document.querySelectorAll("#ruta-drones > div").forEach((d) => {
       d.classList.remove("llego", "falla");
       d.querySelector("span").textContent = d.dataset.p === "OK" ? "corriendo…" : "esperando";
       if (d.dataset.p === "OK") d.querySelector("b").textContent = "Resultado";
     });
-    delete caja.dataset.inclinacion;
+    $("#ruta-estado").textContent = "volando…";
   }
 
-  // Los textos "Qué va a pasar / Qué hacer / Qué deberías ver" están escritos en el HTML (así se
-  // leen aunque la página se abra sin el lanzador); con el lanzador se le pasan al panel común,
-  // que los muestra junto al botón Iniciar, y se quita la copia del HTML para no repetirlos.
+  function lineaDrones(linea) {
+    if (typeof linea !== "string") return;
+    let m;
+    if ((m = linea.match(/^PUNTO ([ABC]) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+)/))) {
+      ruta.puntos[m[1]] = [+m[2], +m[3], +m[4]];
+      if (m[1] === "C") dibujarFondoRuta();
+    } else if ((m = linea.match(/^RUTA (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+)/))) {
+      if (!ruta.pts.length) { ruta.t0 = performance.now(); animarRuta(); }
+      ruta.pts.push([+m[1], +m[2], +m[3], +m[4]]);
+    } else if ((m = linea.match(/Llego a ([ABC]) a los ([\d.]+) s/))) {
+      ruta.llegadas[m[1]] = +m[2];
+    } else if ((m = linea.match(/inclinacion_max_grados['"]?\s*:\s*([\d.]+)/))) {
+      ruta.inclinacion = +m[1];
+    } else if (/PRUEBA (OK|FALLIDA)/.test(linea)) {
+      ruta.ok = /PRUEBA OK/.test(linea);
+      if (!ruta.pts.length) pintarResultadoRuta();   // salida vieja sin RUTA: igual se muestra el resultado
+    }
+  }
+
+  function animarRuta() {
+    const paso = () => {
+      const tReloj = (performance.now() - ruta.t0) / 1000;
+      const visibles = ruta.pts.filter((p) => p[0] <= tReloj);
+      $("#ruta-linea").setAttribute("points", visibles.map((p) => sx(p[1]) + "," + sy(p[2])).join(" "));
+      $("#alto-linea").setAttribute("points", visibles.map((p) => ax(p[0]) + "," + ay(p[3])).join(" "));
+      const u = visibles[visibles.length - 1];
+      if (u) { const d = $("#ruta-dron"); d.setAttribute("cx", sx(u[1])); d.setAttribute("cy", sy(u[2])); }
+      for (const [n, t] of Object.entries(ruta.llegadas)) {
+        const caja = document.querySelector('#ruta-drones [data-p="' + n + '"]');
+        if (caja && !caja.classList.contains("llego") && tReloj >= T_MISION + t) {
+          caja.classList.add("llego");
+          caja.querySelector("span").textContent = "llegó a los " + coma(t) + " s";
+          const c = $("#punto-" + n); if (c) c.setAttribute("fill-opacity", 0.55);
+        }
+      }
+      if (u) $("#ruta-estado").textContent = "t = " + coma(u[0]) + " s · z = " + coma(u[3], 2) + " m";
+      const ultimo = ruta.pts[ruta.pts.length - 1];
+      if (ruta.ok !== null && ultimo && tReloj > ultimo[0] + 0.2) { pintarResultadoRuta(); return; }
+      ruta.anim = requestAnimationFrame(paso);
+    };
+    ruta.anim = requestAnimationFrame(paso);
+  }
+
+  function pintarResultadoRuta() {
+    const c = document.querySelector('#ruta-drones [data-p="OK"]');
+    c.classList.toggle("llego", ruta.ok === true);
+    c.classList.toggle("falla", ruta.ok === false);
+    c.querySelector("b").textContent = ruta.ok ? "PRUEBA OK" : "FALLÓ";
+    c.querySelector("span").textContent = ruta.inclinacion != null ? "inclinación máx. " + coma(ruta.inclinacion) + "°" : "";
+    for (const [n, t] of Object.entries(ruta.llegadas)) {
+      const caja = document.querySelector('#ruta-drones [data-p="' + n + '"]');
+      caja.classList.add("llego"); caja.querySelector("span").textContent = "llegó a los " + coma(t) + " s";
+    }
+    $("#ruta-estado").textContent = ruta.ok ? "misión completa: A → B → C" : "no completó la misión: mira lo que dice el programa";
+  }
+
+  // ==========================================================================================
+  // 6. Prueba de Baxter: tablero "medido contra el límite" con las líneas OK / FALLA.
+  // ==========================================================================================
+  const BAXTER_TOTAL = 18;   // comprobaciones que imprime probar_baxter.py (6 IK + 6 demo + 1 choques + 5 serial)
+  const bax = { n: 0, mal: 0, seccion: null };
+  function reiniciarBaxter() {
+    Object.assign(bax, { n: 0, mal: 0, seccion: null });
+    $("#baxter-tablero").innerHTML = "";
+    $("#baxter-barra").style.width = "0%";
+    $("#baxter-cuenta").textContent = "cargando Baxter…";
+  }
+  function lineaBaxter(linea) {
+    if (typeof linea !== "string") return;
+    const tab = $("#baxter-tablero");
+    let m;
+    if ((m = linea.match(/^(\d)\) (.*)$/))) {
+      bax.seccion = document.createElement("div");
+      bax.seccion.className = "c9-tab-sec";
+      bax.seccion.innerHTML = "<h4>" + esc(m[1] + ") " + m[2]) + "</h4>";
+      tab.appendChild(bax.seccion);
+    } else if ((m = linea.match(/^\s+(OK|FALLA)\s+(.*)$/))) {
+      if (!bax.seccion) { bax.seccion = document.createElement("div"); bax.seccion.className = "c9-tab-sec"; tab.appendChild(bax.seccion); }
+      const ok = m[1] === "OK";
+      bax.n += 1; bax.mal += ok ? 0 : 1;
+      const fila = document.createElement("div");
+      fila.className = "c9-tab-fila " + (ok ? "ok" : "mal");
+      let barra = "";
+      const lim = m[2].match(/([\d.]+) cm \(([<>]) ([\d.]+) cm\)/);
+      if (lim) {
+        const v = +lim[1], l = +lim[3];
+        const pct = Math.min(100, (v / Math.max(v, l) / (lim[2] === ">" ? 1 : 1)) * 100);
+        barra = '<span class="c9-mini"><i style="width:' + pct.toFixed(1) + '%"></i><em style="left:' + (lim[2] === "<" ? 100 : (l / Math.max(v, l)) * 100).toFixed(1) + '%"></em></span>' +
+          '<span class="c9-mini-txt">' + coma(v, 2) + " de " + (lim[2] === "<" ? "máx. " : "mín. ") + coma(l, 0) + " cm</span>";
+      }
+      fila.innerHTML = '<span class="c9-tab-ok">' + (ok ? "✓" : "✗") + "</span><span class=\"c9-tab-txt\">" + esc(m[2].replace(/\s*\([<>] [\d.]+ cm\)/, "")) + "</span>" + barra;
+      bax.seccion.appendChild(fila);
+      $("#baxter-barra").style.width = Math.min(100, (bax.n / BAXTER_TOTAL) * 100) + "%";
+      $("#baxter-cuenta").textContent = bax.n + " de " + BAXTER_TOTAL + " comprobaciones" + (bax.mal ? " · " + bax.mal + " fallaron" : "");
+    } else if (/Todas las pruebas pasaron/.test(linea)) {
+      $("#baxter-barra").style.width = "100%";
+      $("#baxter-cuenta").textContent = "Todas las pruebas pasaron (" + bax.n + " de " + BAXTER_TOTAL + ")";
+    }
+  }
+
+  // ==========================================================================================
+  // 7. Prueba de estrés de Atlas: gráfica de barras con y sin asistente.
+  //    Antes de correrla se ve lo que medimos (tabla del README); al correrla se borra y cada
+  //    barra aparece cuando probar_atlas.py imprime su línea.
+  // ==========================================================================================
+  const ATLAS_PRUEBAS = [
+    { clave: "De pie quieto", nombre: "De pie quieto", dura: 20 },
+    { clave: "Caminar adelante", nombre: "Caminar adelante (8)", dura: 15 },
+    { clave: "Arrancar/frenar", nombre: "Arrancar y frenar ×5", dura: 20 },
+    { clave: "Girar a la izquierda", nombre: "Girar a la izquierda (4)", dura: 8 },
+    { clave: "Caminar atras", nombre: "Caminar atrás (2)", dura: 8 },
+    { clave: "Poses seguidas", nombre: "Poses C, D, #, 5", dura: 16 },
+  ];
+  const ATLAS_TOTAL = 16;   // 6 + 6 pruebas, 3 intentos de levantarlo y la prueba de flanco
+  // Lo medido antes (tabla "Lo que medimos" del README del punto c).
+  const ATLAS_ANTES = {
+    con: [[20, ""], [15, "avanzó 188 cm"], [20, "avanzó 129 cm"], [8, "giró 151°"], [8, "retrocedió 94 cm"], [16, "todas bien"]],
+    sin: [[20, ""], [15, "al borde: a veces se cae a los 5,4 s"], [9.8, "se cae"], [2.5, "se cae"], [2.4, "se cae"], [16, "todas bien"]],
+  };
+  const atl = { modo: null, n: 0, valores: { con: [], sin: [] }, previo: true, extra: "" };
+
+  function pintarGraficaAtlas() {
+    const g = $("#atlas-grafica");
+    if (!g) return;
+    g.classList.toggle("previo", atl.previo);
+    g.innerHTML = ATLAS_PRUEBAS.map((p, i) => {
+      const fila = (modo) => {
+        const v = atl.valores[modo][i];
+        if (!v) return '<div class="c9-g-barra ' + modo + ' vacia"><span class="c9-g-pista"></span><span class="c9-g-val">…</span></div>';
+        const [s, txt] = v;
+        const lleno = s >= p.dura - 0.05;
+        return '<div class="c9-g-barra ' + modo + (lleno ? "" : " cae") + '"><span class="c9-g-pista"><i style="width:' +
+          (Math.min(1, s / p.dura) * 100).toFixed(1) + '%"></i></span><span class="c9-g-val">' +
+          (lleno ? (txt ? "✓ " + esc(txt) : "de pie los " + coma(p.dura, 0) + " s") : "cae a " + coma(s) + " s" + (txt ? " · " + esc(txt) : "")) + "</span></div>";
+      };
+      return '<div class="c9-g-fila"><div class="c9-g-nombre">' + esc(p.nombre) + "<small>" + p.dura + " s</small></div>" +
+        '<div class="c9-g-barras">' + fila("con") + fila("sin") + "</div></div>";
+    }).join("") + (atl.extra ? '<div class="c9-g-extra">' + esc(atl.extra) + "</div>" : "");
+  }
+
+  function reiniciarAtlas() {
+    Object.assign(atl, { modo: null, n: 0, valores: { con: [], sin: [] }, previo: false, extra: "" });
+    $("#atlas-barra").style.width = "0%";
+    $("#atlas-cuenta").textContent = "cargando Atlas…";
+    pintarGraficaAtlas();
+  }
+
+  function avanceAtlas() {
+    $("#atlas-barra").style.width = Math.min(100, (atl.n / ATLAS_TOTAL) * 100) + "%";
+    $("#atlas-cuenta").textContent = atl.n + " de " + ATLAS_TOTAL + " pruebas" + (atl.n >= ATLAS_TOTAL ? " · terminó" : "");
+  }
+
+  function lineaAtlas(linea) {
+    if (typeof linea !== "string") return;
+    let m;
+    if (/^Atlas cargado/.test(linea)) { $("#atlas-cuenta").textContent = "0 de " + ATLAS_TOTAL + " pruebas · " + linea.replace("Atlas cargado: ", ""); return; }
+    if ((m = linea.match(/=== (CON|SIN) asistente ===/))) { atl.modo = m[1] === "CON" ? "con" : "sin"; return; }
+    if (/intento \d+:/.test(linea) || /conmutaciones=/.test(linea)) { atl.n += 1; avanceAtlas(); }
+    if ((m = linea.match(/-> (\d)\/3 quedaron de pie/))) {
+      atl.extra = "Tirarlo con un empujón y levantarlo con B: " + m[1] + " de 3 veces quedó de pie 5 s sin asistente.";
+      pintarGraficaAtlas();
+    }
+    if ((m = linea.match(/conmutaciones=(\d+)/))) {
+      atl.extra += (atl.extra ? " " : "") + "Tecla A sostenida (10 líneas): el asistente cambió " + m[1] + (m[1] === "1" ? " vez (flanco correcto)." : " veces.");
+      pintarGraficaAtlas();
+    }
+    if (!atl.modo) return;
+    const i = ATLAS_PRUEBAS.findIndex((p) => linea.trim().startsWith(p.clave));
+    if (i < 0) return;
+    const p = ATLAS_PRUEBAS[i];
+    const resto = linea.trim().slice(linea.trim().search(/\s{2,}/)).trim();
+    let s = p.dura, txt = "";
+    if (i === 5) {   // poses: "saludar: ok; agacharse: cae a los 2.1 s"
+      const partes = resto.split(";").map((x) => x.trim());
+      const k = partes.findIndex((x) => /cae a los/.test(x));
+      if (k >= 0) { s = 4 * k + parseFloat(partes[k].match(/cae a los ([\d.]+)/)[1]); txt = partes[k].split(":")[0]; }
+      else txt = "todas bien";
+    } else {
+      const cae = resto.match(/se cae a los ([\d.]+) s/);
+      if (cae) s = parseFloat(cae[1]);
+      const e = resto.match(/(avanzo|giro|retrocedio) (-?\d+) (cm|grados)/);
+      if (e) txt = { avanzo: "avanzó ", giro: "giró ", retrocedio: "retrocedió " }[e[1]] + e[2] + (e[3] === "grados" ? "°" : " cm");
+    }
+    atl.valores[atl.modo][i] = [s, txt];
+    atl.n += 1;
+    avanceAtlas();
+    pintarGraficaAtlas();
+  }
+
+  // ==========================================================================================
+  // 8. Descarga de modelos: barra con los MB reales ("bajando 12.34/36.70 MB").
+  // ==========================================================================================
+  function lineaModelos(linea) {
+    if (typeof linea !== "string") return;
+    const caja = $("#descarga"), barra = $("#descarga-barra"), txt = $("#descarga-txt");
+    let m;
+    if ((m = linea.match(/Hay que bajar ([\d.]+) MB/))) { caja.hidden = false; barra.style.width = "0%"; txt.textContent = "0 de " + coma(+m[1]) + " MB"; }
+    else if ((m = linea.match(/bajando ([\d.]+)\/([\d.]+) MB\s+(.*)/))) {
+      caja.hidden = false;
+      const total = +m[2] || 1;
+      barra.style.width = Math.min(100, (+m[1] / total) * 100) + "%";
+      txt.textContent = coma(+m[1]) + " de " + coma(total) + " MB · " + m[3];
+    } else if (/ya estaban completos/.test(linea)) { caja.hidden = false; barra.style.width = "100%"; txt.textContent = "Ya estaban: no se bajó nada."; }
+    else if ((m = linea.match(/^Listo: ([\d.]+) MB/))) { caja.hidden = false; barra.style.width = "100%"; txt.textContent = "Listo: " + coma(+m[1]) + " MB en modelos/"; }
+  }
+
+  // ==========================================================================================
+  // 9. Paneles de ejecución (componente común) con los textos de cada bloque.
+  // ==========================================================================================
+  // Los textos "Qué va a pasar / Qué hacer / Qué deberías ver" están en el HTML (se leen aunque la
+  // página se abra sin el lanzador); con el lanzador se le pasan al panel común y se quita la copia.
   function textosDelBloque(el) {
     const bloque = el.closest(".c9-prueba");
     const que = bloque && bloque.querySelector(".c9-que");
@@ -266,63 +587,91 @@
     const partes = [...que.children].map((d) => {
       const c = d.cloneNode(true);
       const b = c.querySelector(":scope > b"); if (b) b.remove();
-      const span = document.createElement("div");
-      span.className = "c9-texto-panel";
-      span.innerHTML = c.innerHTML;
-      return span;
+      const div = document.createElement("div");
+      div.className = "c9-texto-panel";
+      div.innerHTML = c.innerHTML;
+      return div;
     });
     que.remove();
     return { queVaAPasar: partes[0], queHacer: partes[1], queDeberiasVer: partes[2] };
   }
 
+  // Qué hace cada acción con su salida y al empezar (para las pruebas visuales).
+  const VISUAL = {
+    "drones-prueba": { linea: lineaDrones, reiniciar: reiniciarRuta },
+    "baxter-prueba": { linea: lineaBaxter, reiniciar: reiniciarBaxter },
+    "atlas-prueba": { linea: lineaAtlas, reiniciar: reiniciarAtlas },
+    "modelos": { linea: lineaModelos, reiniciar: () => { $("#descarga").hidden = false; $("#descarga-barra").style.width = "0%"; $("#descarga-txt").textContent = "leyendo la lista de archivos de GitHub…"; } },
+  };
+  const ACTIVOS = ["preparando", "instalando", "lanzada"];
+
   const paneles = {};
   function montarPaneles() {
     document.querySelectorAll("[data-panel]").forEach((el) => {
       const id = el.dataset.panel;
-      const opciones = textosDelBloque(el);
-      if (id === "drones-prueba") {
-        let enMarcha = false;
-        opciones.alLinea = resumenDrones;
-        opciones.alEstado = (t) => {
-          const e = (t && t.estado) || "";
-          const activo = ["preparando", "instalando", "lanzada"].includes(e);
-          if (activo && !enMarcha) reiniciarResumenDrones();
-          enMarcha = activo;
-        };
-      }
+      const op = textosDelBloque(el);
+      const v = VISUAL[id];
+      let activo = false;
+      if (v) op.alLinea = (texto) => v.linea(texto);
+      op.alEstado = (t) => {
+        const e = (t && t.estado) || "";
+        const ahora = ACTIVOS.includes(e);
+        if (ahora && !activo && v) v.reiniciar();
+        activo = ahora;
+        if (ahora) enMarcha.add(id); else enMarcha.delete(id);
+        pintarMarcha();
+      };
+      op.alTerminar = (t) => {
+        enMarcha.delete(id); pintarMarcha();
+        if (id === "modelos" || id === "baxter" || id === "atlas" || id === "baxter-prueba" || id === "atlas-prueba") revisarModelos();
+        if (t && t.estado === "terminada" && VISTA_DE[id]) marcar(VISTA_DE[id], true);
+      };
       try {
-        paneles[id] = App.panelEjecucion(el, id, opciones);
+        paneles[id] = App.panelEjecucion(el, id, op);
       } catch (e) {
         el.innerHTML = '<p class="c9-nota">No se pudo armar este botón: ' + esc(e && e.message ? e.message : e) + "</p>";
       }
     });
   }
 
-  // ------------------------------------------------------------------------------------------
-  // Arranque
-  // ------------------------------------------------------------------------------------------
+  // ==========================================================================================
+  // 10. Arranque
+  // ==========================================================================================
   async function iniciar() {
+    // navegación
+    document.querySelectorAll("#lateral [data-vista]").forEach((b) => b.addEventListener("click", () => mostrarVista(b.dataset.vista)));
+    document.querySelectorAll("[data-ir]").forEach((b) => b.addEventListener("click", () => mostrarVista(b.dataset.ir)));
+    document.querySelectorAll("[data-readme]").forEach((b) => b.addEventListener("click", () => abrir(b.dataset.readme)));
+    $("#btn-menu").addEventListener("click", () => document.body.classList.toggle("menu-abierto"));
+    $("#btn-readme").addEventListener("click", () => abrir("README.md"));
+    $("#btn-completa").addEventListener("click", () => {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+    });
+    document.addEventListener("fullscreenchange", () => {
+      $("#btn-completa").textContent = document.fullscreenElement ? "⛶ Salir de pantalla completa" : "⛶ Pantalla completa";
+    });
+    $("#abrir-preview").addEventListener("click", () => abrir("preview.html"));
     document.querySelectorAll("#pestanas button").forEach((b) => b.addEventListener("click", () => elegirSim(b.dataset.sim)));
     pintarTeclado();
-    document.querySelectorAll("[data-ir]").forEach((b) => b.addEventListener("click", () => irAPaso(b.dataset.ir)));
-    document.querySelectorAll("[data-abrir]").forEach((b) => b.addEventListener("click", () => abrir(b.dataset.abrir)));
-    const bp = document.getElementById("abrir-preview");
-    if (bp) bp.addEventListener("click", () => abrir("preview.html"));
+    dibujarFondoRuta();
+    ATLAS_PRUEBAS.forEach((_, i) => { atl.valores.con[i] = ATLAS_ANTES.con[i]; atl.valores.sin[i] = ATLAS_ANTES.sin[i]; });
+    pintarGraficaAtlas();
+    alMostrar.preview = cargarPreview;
+    alMostrar.esp32 = cargarFirmware;
+    mostrarVista(vistaInicial(), false);
 
     if (!window.App) {
-      document.getElementById("sinapp").style.display = "block";
-      cargarMedios();
-      cargarFirmware();
-      document.getElementById("checklist").innerHTML = '<p class="c9-intro">Ábrela desde ABRIR.bat para ver y marcar la lista.</p>';
+      $("#sinapp").style.display = "block";
+      cargarMedios(); pintarEntorno();
+      $("#checklist").innerHTML = '<p class="c9-intro">Ábrela desde ABRIR.bat para ver y marcar la lista.</p>';
       return;
     }
-    try { await App.iniciar(); } catch (e) {
-      document.getElementById("sinapp").style.display = "block";
-    }
+    try { await App.iniciar(); } catch (e) { $("#sinapp").style.display = "block"; }
     cargarMedios();
-    cargarFirmware();
-    // La misma lista sale en la portada y en el último paso: si se marca a mano en una, se
-    // vuelve a dibujar la otra (las dos leen lo guardado en el navegador).
+    pintarEntorno();
+    revisarModelos();
+    // La misma lista sale en el resumen y en el checklist: si se marca a mano en una, se redibuja la otra.
     const listas = ["checklist", "checklist-final"];
     listas.forEach((id, i) => {
       const el = document.getElementById(id);
@@ -335,12 +684,10 @@
     });
     montarPaneles();
     try {
-      App.markdown(document.getElementById("md-protocolo"), "README.md",
-        { desde: "## El protocolo `TECLA:x` y cómo lo lee el PC", hasta: "## Conexiones" });
+      App.markdown($("#md-protocolo"), "README.md", { desde: "## El protocolo `TECLA:x` y cómo lo lee el PC", hasta: "## Conexiones" });
     } catch (e) { /* solo es un extra plegado */ }
-    try { asistente = App.pasos(document.getElementById("pasos")); } catch (e) { asistente = null; }
-    // Para las pruebas automáticas (captura con Chrome): paneles e ir a un paso.
-    window.Consola9 = { paneles, irAPaso };
+    // Para las pruebas automáticas (captura con Chrome): paneles e ir a una sección.
+    window.Consola9 = { paneles, mostrarVista, lineaDrones, lineaAtlas, lineaBaxter, reiniciarRuta, reiniciarAtlas, reiniciarBaxter };
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar);

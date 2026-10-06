@@ -122,6 +122,129 @@
     }));
   }
 
+  // ---------- portada: el duelo animado ----------
+  // Una carrera ilustrativa (no a escala) de lo que pasa en cada camino: C/C++ tarda en arrancar
+  // (compilar y grabar) pero después cambia el pin muy rápido; MicroPython arranca al instante y
+  // cada línea pasa por el intérprete, así que el LED cambia más despacio.
+  const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
+  let carrera = 0;                                  // id de la reproducción en curso (para cortarla)
+  function iniciarDuelo() {
+    const duelo = $("#duelo"), boton = $("#bCorrer");
+    if (!duelo || !boton) return;
+    const lado = (cl) => {
+      const el = duelo.querySelector(cl);
+      return { pasos: Array.from(el.querySelectorAll(".tubo li")), barra: el.querySelector(".carril-barra div"),
+               led: el.querySelector(".led-mini"), txt: el.querySelector(".carril-txt"),
+               lineas: Array.from(el.querySelectorAll(".carril-cod span")), textoInicial: el.querySelector(".carril-txt").textContent };
+    };
+    const cc = lado(".lado-cc"), mp = lado(".lado-mp");
+    const marcar = (l, i) => l.pasos.forEach((li, k) => { li.classList.toggle("activo", k === i); li.classList.toggle("hecho", k < i); });
+    const llenar = async (l, ms, id) => {        // barra de 0 a 100 % en ms milisegundos
+      const t0 = performance.now();
+      while (carrera === id) {
+        const f = Math.min(1, (performance.now() - t0) / ms);
+        l.barra.style.width = (f * 100) + "%";
+        if (f >= 1) return;
+        await dormir(40);
+      }
+    };
+    const parpadear = async (l, ms, total, id) => {
+      const fin = performance.now() + total;
+      while (carrera === id && performance.now() < fin) { l.led.classList.toggle("on"); await dormir(ms); }
+    };
+    const reiniciar = () => {
+      duelo.classList.remove("jugando");
+      for (const l of [cc, mp]) {
+        l.pasos.forEach((li) => li.classList.remove("activo", "hecho"));
+        l.led.classList.remove("on"); l.txt.textContent = l.textoInicial;
+        if (l.barra) l.barra.style.width = "0";
+        l.lineas.forEach((s) => s.classList.remove("leyendo"));
+      }
+      boton.textContent = "▶ Ver cómo corre cada uno";
+    };
+    async function correrCC(id) {
+      marcar(cc, 0); cc.txt.textContent = "Escribes el programa completo…"; await dormir(700);
+      if (carrera !== id) return;
+      marcar(cc, 1); cc.txt.textContent = "Compilando TODO el programa…"; await llenar(cc, 2200, id);
+      if (carrera !== id) return;
+      marcar(cc, 2); cc.barra.style.width = "0"; cc.txt.textContent = "Grabando el binario en la flash…"; await llenar(cc, 1300, id);
+      if (carrera !== id) return;
+      marcar(cc, 3); cc.txt.textContent = "Corriendo: el LED cambia muy rápido";
+      await parpadear(cc, 90, 5200, id);
+      if (carrera === id) cc.txt.textContent = "Arrancó tarde (compilar y grabar), pero corre rápido.";
+    }
+    async function correrMP(id) {
+      marcar(mp, 0); mp.txt.textContent = "El intérprete ya espera en la flash"; await dormir(500);
+      if (carrera !== id) return;
+      marcar(mp, 1); mp.txt.textContent = "F5: Thonny manda el .py por USB"; await dormir(600);
+      if (carrera !== id) return;
+      marcar(mp, 2);
+      for (let vuelta = 0; vuelta < 4 && carrera === id; vuelta++) {
+        for (let k = 0; k < mp.lineas.length && carrera === id; k++) {
+          if (vuelta > 0 && k === 0) continue;               // el Pin se crea una sola vez
+          mp.lineas.forEach((s, j) => s.classList.toggle("leyendo", j === k));
+          mp.txt.textContent = "Leyendo e interpretando: " + mp.lineas[k].textContent;
+          if (k === 1) mp.led.classList.add("on");
+          if (k === 2) mp.led.classList.remove("on");
+          await dormir(650);
+        }
+      }
+      if (carrera !== id) return;
+      mp.lineas.forEach((s) => s.classList.remove("leyendo"));
+      marcar(mp, 3); mp.txt.textContent = "Arrancó al instante; cada línea pasa por el intérprete.";
+    }
+    let corriendo = false;
+    boton.addEventListener("click", async () => {
+      // Mientras corre, el botón detiene; al terminar, queda el estado final a la vista y el
+      // siguiente clic vuelve a empezar.
+      if (corriendo) { carrera++; corriendo = false; reiniciar(); return; }
+      const id = ++carrera;
+      reiniciar(); duelo.classList.add("jugando"); corriendo = true;
+      boton.textContent = "■ Detener";
+      await Promise.all([correrCC(id), correrMP(id)]);
+      if (carrera === id) { corriendo = false; boton.textContent = "↺ Otra vez"; }
+    });
+  }
+
+  // ---------- ejemplo 1: qué segmentos lleva cada número ----------
+  // Display de cátodo común: un segmento se prende con el pin en 1 (HIGH).
+  const SEGMENTOS = ["a", "b", "c", "d", "e", "f", "g"];
+  const GPIO7 = { a: 17, b: 16, c: 32, d: 33, e: 25, f: 14, g: 12 };
+  const DIGITOS = { 0: "abcdef", 1: "bc", 2: "abdeg", 3: "abcdg", 4: "bcfg", 5: "acdfg", 6: "acdefg", 7: "abc", 8: "abcdefg", 9: "abcdfg" };
+  let digito = 2;
+  function pintarDigito() {
+    const on = DIGITOS[digito];
+    document.querySelectorAll(".display7 .seg").forEach((g, i) => g.classList.toggle("on", on.includes(SEGMENTOS[i])));
+    document.querySelectorAll("#tabla7 tbody tr").forEach((tr, i) => {
+      if (i >= SEGMENTOS.length) return;
+      const td = tr.cells[2], si = on.includes(SEGMENTOS[i]);
+      td.textContent = si ? "encendido" : "apagado"; td.classList.toggle("on", si);
+    });
+    $("#thDig").textContent = 'Para el "' + digito + '"';
+    $("#digTxt").textContent = digito;
+    document.querySelectorAll(".dig").forEach((b) => b.classList.toggle("activo", +b.dataset.d === digito));
+    const l = $("#ejemplo-7seg").dataset.leng || "mp";
+    $("#codDigito").innerHTML = SEGMENTOS.map((s) => {
+      const si = on.includes(s), S = s.toUpperCase();
+      const linea = l === "mp" ? "s" + S + ".value(" + (si ? 1 : 0) + ")" : "digitalWrite(s" + S + ", " + (si ? "HIGH" : "LOW") + ");";
+      return '<span class="' + (si ? "on" : "off") + '">' + linea + "</span>";
+    }).join("\n") + '\n<span class="off">' + (l === "mp" ? "# segmento a = GPIO" + GPIO7.a + ", g = GPIO" + GPIO7.g : "// segmento a = GPIO" + GPIO7.a + ", g = GPIO" + GPIO7.g) + "</span>";
+  }
+  function iniciarDigitos() {
+    const caja = $("#digitos");
+    if (!caja) return;
+    for (let d = 0; d <= 9; d++) {
+      const b = document.createElement("button");
+      b.className = "dig"; b.dataset.d = d; b.textContent = d; b.type = "button";
+      b.title = "Mostrar el " + d + " (segmentos " + DIGITOS[d].split("").join(", ") + ")";
+      b.addEventListener("click", () => { digito = d; pintarDigito(); });
+      caja.appendChild(b);
+    }
+    // El código de ejemplo sigue al selector de lenguaje del paso.
+    document.querySelectorAll('.selector-leng[data-ejemplo="7seg"] .sl').forEach((b) => b.addEventListener("click", () => setTimeout(pintarDigito, 0)));
+    pintarDigito();
+  }
+
   // ---------- instalación: lista con memoria ----------
   function iniciarInstalacion() {
     const casillas = Array.from(document.querySelectorAll("#instalacion input"));
@@ -153,6 +276,8 @@
   // ---------- arranque ----------
   async function iniciar() {
     iniciarEjemplos();
+    iniciarDigitos();
+    iniciarDuelo();
     iniciarInstalacion();
     iniciarLadoALado();
     const app = A();

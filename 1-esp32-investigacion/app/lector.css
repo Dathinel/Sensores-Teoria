@@ -99,6 +99,7 @@ body.lector {
 .md { font-size: 1rem; }
 .md h2 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 1rem; }
 .md h3 { font-size: 1.15rem; margin: 1.5rem 0 .5rem; color: #fff; }
+.capitulo h2, .md h3, .md strong, .md table, .md .mermaid { scroll-margin-top: 72px; }
 .md p, .md li { color: #d5dbe1; }
 .md a { color: var(--l-acento); }
 .md strong { color: #fff; }
@@ -112,7 +113,10 @@ body.lector {
 .md .tabla-scroll { overflow-x: auto; }
 .md img { max-width: 100%; border-radius: 8px; cursor: zoom-in; }
 .md .mermaid { margin: 1rem 0; }
-.cargando { color: var(--l-suave); font-style: italic; }
+.cargando { color: var(--l-suave); font-style: italic; display: flex; align-items: center; gap: .55rem; }
+.cargando::before { content: ""; flex: none; width: .9em; height: .9em; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: girar .8s linear infinite; }
+.indice li.cargando { padding: .4rem .5rem; font-size: .85rem; }
+@keyframes girar { to { transform: rotate(360deg); } }
 
 /* ---------- capítulo de la placa ---------- */
 .aviso-placa { display: flex; gap: 1rem; align-items: flex-start; background: linear-gradient(90deg, #1b2a19, #141a20); border: 1px solid #36502f; border-radius: 12px; padding: 1rem 1.1rem; }
@@ -147,6 +151,22 @@ body.lector {
 .paginacion { max-width: 860px; display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--l-borde); }
 .paginacion span { color: var(--l-suave); font-size: .82rem; font-family: var(--l-mono); text-align: center; }
 
+/* ---------- herramientas comunes (pantalla completa, estado) en la barra ---------- */
+.barra-herr .app-herr { display: flex; align-items: center; gap: .4rem; }
+
+/* ---------- pantallas anchas: tercera columna "En este capítulo" ---------- */
+.en-cap { display: none; }
+@media (min-width: 1500px) {
+  .cuerpo { grid-template-columns: 280px minmax(0, 1fr) 250px; }
+  .hoja { justify-self: center; max-width: 1040px; }
+  .en-cap:not([hidden]) { display: block; position: sticky; top: 56px; height: calc(100vh - 56px); overflow-y: auto; padding: 2rem 1rem 1rem .6rem; border-left: 1px solid var(--l-borde); }
+  .en-cap ol { list-style: none; margin: 0; padding: 0; }
+  .en-cap a { display: block; padding: .28rem .5rem; border-radius: 6px; color: var(--l-suave); text-decoration: none; font-size: .84rem; line-height: 1.35; border-left: 2px solid transparent; }
+  .en-cap a:hover { color: var(--l-texto); background: #151c23; }
+  .en-cap a.objeto { font-family: var(--l-mono); font-size: .76rem; }
+  .en-cap a.visto { color: var(--l-texto); border-left-color: var(--l-acento); }
+}
+
 /* ---------- pantallas chicas ---------- */
 @media (max-width: 900px) {
   .cuerpo { grid-template-columns: 1fr; }
@@ -155,4 +175,5 @@ body.lector {
   .menu-movil { display: inline-block; background: none; border: 1px solid var(--l-borde); color: var(--l-texto); border-radius: 6px; padding: .2rem .55rem; font-size: 1.1rem; cursor: pointer; }
   .portada, .dos-columnas { grid-template-columns: 1fr; }
   .barra-progreso, .barra-leidos { display: none; }
+  .barra-herr .app-herr-estado { display: none; }
 }

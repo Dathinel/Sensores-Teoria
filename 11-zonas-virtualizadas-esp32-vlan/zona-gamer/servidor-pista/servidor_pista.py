@@ -718,7 +718,7 @@ small{color:#969ba8}b{color:#e8e9ee;font-weight:600}
 nav{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}nav a{color:#e8e9ee;text-decoration:none;font-size:.82rem;
 border:1px solid #2c303a;border-radius:8px;padding:5px 10px;background:#1b1e26}nav a:hover{border-color:#e8b930}
 nav a.aqui{border-color:#e8b930;color:#e8b930}#e{font-family:ui-monospace,monospace}</style></head><body><main>
-<nav id="nav"><a data-p="8080">Dashboard del admin</a><a data-p="8010" class="aqui">Pista</a><a data-p="8011">Spot</a>
+<nav id="nav"><a data-p="8180">Dashboard del admin</a><a data-p="8010" class="aqui">Pista</a><a data-p="8011">Spot</a>
 <a data-p="8012">Pepper</a><a data-p="8013">NAO</a></nav>
 <h1>Servidor de pista · Zona Gamer (VLAN 1)</h1>
 <p>Simulación en <b>PyBullet</b> (física a 240 Hz, sin ventana) de una pista ovalada con seis carros:

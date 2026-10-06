@@ -47,7 +47,9 @@
         "Dashboard con el seguimiento de la ruta y el valor, peso y cantidad de las monedas procesadas",
         "Aplicativo web en Streamlit comunicado de forma inalámbrica con el ESP32",
         "Grupo 7 (elemento diferencial): detector de elementos de monedas y vasos, cada filtro demostrable por separado"
-      ]
+      ],
+      "duracion": "~8-10 s en responder",
+      "duracion_s": 10
     },
     {
       "id": "asistente",
@@ -58,7 +60,9 @@
       "cwd": ".",
       "entrada": true,
       "descripcion": "Se le escribe al asistente y responde el intérprete de reglas (sin clave de DeepSeek y sin internet) con las cifras de la última corrida guardada, por ejemplo: '¿cuántas monedas se aceptaron?', '¿qué sensor detecta el metal?' o 'avanza 20 cm'. Trabaja sobre una copia de la base: las órdenes se entienden pero NO se mandan a la línea. Para dar órdenes de verdad, con voz, el modelo local (Ollama) o DeepSeek (clave en .env): pestaña Asistente del dashboard, con el visor en vivo corriendo. 'salir' termina.",
-      "cubre": ["Chatbot asistente que exponga los datos del proyecto"]
+      "cubre": ["Chatbot asistente que exponga los datos del proyecto"],
+      "duracion": "~5 s en arrancar",
+      "duracion_s": 5
     },
     {
       "id": "portable",
@@ -80,7 +84,9 @@
       "cubre": [
         "Grupo 7 (elemento diferencial): detector de elementos de monedas y vasos, cada filtro demostrable por separado",
         "Contador de monedas, módulo de transporte y embalaje en vasos, y recolección de los vasos"
-      ]
+      ],
+      "duracion": "~5 s en abrir la ventana",
+      "duracion_s": 5
     },
     {
       "id": "sim-vasos",
@@ -94,7 +100,9 @@
       "cubre": [
         "Contador de monedas, módulo de transporte y embalaje en vasos, y recolección de los vasos",
         "Grupo 7 (elemento diferencial): detector de elementos de monedas y vasos, cada filtro demostrable por separado"
-      ]
+      ],
+      "duracion": "~5 s en abrir la ventana",
+      "duracion_s": 5
     },
     {
       "id": "sim-carro",
@@ -105,7 +113,9 @@
       "cwd": ".",
       "ventana": true,
       "descripcion": "El carro con motores y ruedas: sigue la línea, esquiva los tres muros, llega a la meta y vuelve de reversa al muelle. Espacio pausa, r reinicia, q sale.",
-      "cubre": ["Vehículo que sigue una trayectoria con tres obstáculos hasta la meta"]
+      "cubre": ["Vehículo que sigue una trayectoria con tres obstáculos hasta la meta"],
+      "duracion": "~5 s en abrir la ventana",
+      "duracion_s": 5
     },
     {
       "id": "sim-todo",
@@ -119,7 +129,9 @@
       "cubre": [
         "Contador de monedas, módulo de transporte y embalaje en vasos, y recolección de los vasos",
         "Vehículo que sigue una trayectoria con tres obstáculos hasta la meta"
-      ]
+      ],
+      "duracion": "~5 s en abrir las ventanas",
+      "duracion_s": 6
     },
     {
       "id": "video-filtro",
@@ -141,7 +153,10 @@
       "args": ["-q"],
       "cwd": ".",
       "descripcion": "Corre las 936 pruebas de tests/ (control, simulación, visor, dashboard, asistente y firmware contra una estación emulada). Tarda unos 4 minutos; al final dice cuántas pasaron (probado el 2026-10-05 con el entorno del proyecto: 936 pasan).",
-      "cubre": ["Grupo 7 (elemento diferencial): detector de elementos de monedas y vasos, cada filtro demostrable por separado"]
+      "cubre": ["Grupo 7 (elemento diferencial): detector de elementos de monedas y vasos, cada filtro demostrable por separado"],
+      "duracion": "~4-5 min",
+      "duracion_s": 270,
+      "progreso_regex": "\\[\\s*(\\d+)%\\]"
     },
     {
       "id": "chequeo",
@@ -150,7 +165,10 @@
       "modulo": "app.chequeo",
       "args": ["--rapido"],
       "cwd": ".",
-      "descripcion": "Revisa sin cambiar nada: Python y paquetes, puertos (y cuál se va a usar si el 8765 está ocupado), Ollama, Whisper, voz de Windows, internet, clave de DeepSeek, ESP32 conectados, driver del firmware, base de datos y visor portable. Cada línea dice cómo arreglarlo. Con la instalación mínima es normal que marque fallas en la voz, Ollama o el firmware: no hacen falta para verlo."
+      "descripcion": "Revisa sin cambiar nada: Python y paquetes, puertos (y cuál se va a usar si el 8765 está ocupado), Ollama, Whisper, voz de Windows, internet, clave de DeepSeek, ESP32 conectados, driver del firmware, base de datos y visor portable. Cada línea dice cómo arreglarlo. Con la instalación mínima es normal que marque fallas en la voz, Ollama o el firmware: no hacen falta para verlo.",
+      "duracion": "~10-20 s",
+      "duracion_s": 15,
+      "si_falla": "El chequeo termina con error si encontró al menos una falla (✗): lee la lista de arriba. Ollama, la voz sin internet o el firmware no hacen falta para ver el proyecto en simulación."
     },
     {
       "id": "enunciado",

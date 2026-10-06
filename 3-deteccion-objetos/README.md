@@ -2,13 +2,34 @@
 
 Basado en [Explicación de la arquitectura YOLO](https://github.com/dialejobv/U_Militar/blob/main/2%29%20Yolo/Explicaci%C3%B3n_Arq_YOLO.md) (U_Militar, carpeta `2) Yolo`).
 
+## ¿Quiere probarlo? Aquí está
+
+Doble clic en **`ABRIR.bat`** (en Linux/Mac, `abrir.sh`). Se abre la app de esta práctica en una ventana propia, con un menú a la izquierda (tipo Docker Desktop): Inicio, Cómo funciona, **Ver a YOLO**, Con tu cámara, Simulador, Montaje y ESP32, Resultados.
+
+- **Ver a YOLO** (no necesita cámara ni ESP32): un botón corre `deteccion_pc.py` de verdad sobre tres fotos de ejemplo, una cada 3 s, y la app muestra lo que ve YOLO: la foto con sus cajas, la confianza de cada objeto (y si cuenta o no, con el umbral de 0,4), el mensaje que recibiría el ESP32 (`10`, `01`, `11`) y los dos LEDs encendiéndose. Arrancar tarda 10-30 s (carga PyTorch) y la app lo muestra con una barra y las fases reales del arranque; la primera vez instala PyTorch (unos minutos) y descarga el modelo `yolov8n.pt` (6 MB). El selector cambia a la directiva carro/moto.
+- **Con tu cámara**: lo mismo en vivo, con la ventana de OpenCV y su resumen dentro de la app.
+- **Simulador**: el `preview.html` sin instalar nada, para ver el protocolo y el apagado de seguridad.
+
+![La app del tema 3: YOLO mirando la foto de ejemplo del celular, con la confianza de cada caja, el mensaje '01' y el LED del celular encendido](img/app-ver-yolo.jpg)
+
+## ¿Quiere saber cómo funciona? Aquí está todo
+
+1. [Qué pedía la actividad y qué quedó](#qué-pedía-la-actividad-y-qué-quedó)
+2. Conceptos: [qué es la detección de objetos](#qué-es-la-detección-de-objetos), [qué es YOLO](#qué-es-yolo), [qué es COCO](#qué-es-coco-y-por-qué-no-tuvimos-que-entrenar-nada) y [la comunicación serial](#qué-es-la-comunicación-serial-y-cómo-la-usa-el-esp32)
+3. [La idea general](#la-idea-general) (diagramas PC ↔ ESP32) y [conexiones](#conexiones)
+4. [Qué hace cada archivo](#qué-hace-cada-archivo) y [el protocolo por serial](#el-protocolo-por-serial-con-los-mensajes-reales)
+5. [La lógica del código, paso a paso](#la-lógica-del-código-paso-a-paso) y [datos clave](#datos-clave)
+6. [Qué se modificó frente al código original de YOLO](#qué-se-modificó-frente-al-código-original-de-yolo) y [la directiva del carro y la moto](#sobre-la-directiva-de-detectar-un-carro-y-una-moto-de-juguete)
+7. [Preparar el entorno](#preparar-el-entorno-en-la-computadora), [cómo probarlo](#cómo-probarlo) (sin ESP32 / con ESP32) y [problemas de compatibilidad](#problemas-de-compatibilidad)
+8. [Demostración en funcionamiento](#demostración-en-funcionamiento), [pendiente](#pendiente) y [créditos de las fotos](#créditos-de-las-fotos-de-ejemplo)
+
 ## Qué pedía la actividad y qué quedó
 
 El material del profesor explica cómo funciona YOLO y deja un script corto que abre la cámara, corre YOLOv8 sobre cada fotograma y muestra la ventana con las cajas de lo que reconoce. Ahí termina: todo se queda en la pantalla. La actividad era llevar eso al mundo físico, es decir, que lo que la cámara detecta haga algo en un circuito real con el ESP32.
 
 Lo que armamos: la computadora corre YOLO sobre la cámara web, y cuando ve una **silla** o un **celular** le avisa al ESP32 por el mismo cable USB con el que se programa, y el ESP32 prende el LED de ese objeto en la protoboard. Cuando el objeto sale del cuadro, el LED se apaga. Si el script de la computadora se cierra o el cable se desconecta, el ESP32 apaga todo por su cuenta a los dos segundos. Además, con la opción `--carro-moto` el mismo programa detecta un carro y una moto de juguete, que era una directiva alternativa de la misma actividad (más abajo explicamos por qué la demo quedó con silla y celular).
 
-![Vista general del montaje con la detección corriendo en pantalla](demo-montaje-1.gif)
+![Vista general del montaje con la detección corriendo en pantalla](img/demo-montaje-1.gif)
 
 ## Qué es la detección de objetos
 
@@ -118,11 +139,13 @@ flowchart TD
 
 - **`deteccion_pc.py`**: el programa de la computadora. Abre la cámara, corre YOLO en cada fotograma, decide si se ve cada uno de los dos objetos, le manda el estado al ESP32 por serial y muestra la ventana con las cajas y una franja de texto con el estado, el modo (con o sin ESP32) y la última respuesta del ESP32. Se corre cada vez que se quiere usar el proyecto, con o sin la opción `--carro-moto`.
 - **`esp32_leds.py`**: el firmware del ESP32, en MicroPython. Se guarda **una sola vez** en el ESP32 con el nombre `main.py` (desde Thonny) y desde ahí arranca solo cada vez que la placa recibe energía. Escucha el puerto serial, prende o apaga los LEDs de GPIO25 y GPIO26, contesta lo que hizo y aplica el apagado de seguridad.
-- **`yolov8n.pt`**: los pesos del modelo YOLOv8 nano ya entrenado con COCO. `deteccion_pc.py` lo carga al arrancar; si faltara, `ultralytics` lo descarga solo la primera vez (eso sí necesita internet).
+- **`yolov8n.pt`**: los pesos del modelo YOLOv8 nano ya entrenado con COCO (6 MB). **No se sube al repositorio** (está en el `.gitignore` del tema): la primera vez que se corre, `deteccion_pc.py` lo pide con `YOLO(".../yolov8n.pt")` y `ultralytics` lo descarga solo desde sus *releases* de GitHub a esta misma carpeta (eso sí necesita internet); desde ahí se usa el archivo ya descargado.
 - **`preview.html`**: una página que se abre con doble clic en el navegador (sin instalar nada) y simula el sistema completo: botones que hacen de "YOLO vio la silla / el celular", un ESP32 simulado con la misma lógica que `esp32_leds.py` (LEDs, respuesta `LEDS xy` y apagado de seguridad) y un monitor serial. Con el ESP32 de verdad, el botón **Conectar ESP32 (Web Serial)** le habla al puerto con el mismo protocolo (Chrome o Edge).
 - **`img/ejemplos/`**: seis fotos pequeñas para probar la detección sin cámara web (`--imagen`): silla, celular, silla y celular, carro, moto, carro y moto. Los créditos están al final de este README.
-- **`diagrama-circuito-carro-moto.png`**: el esquema de referencia de la directiva del carro y la moto (Wokwi), que se explica más abajo.
-- **`demo-*.gif`**: las grabaciones de la demostración.
+- **`img/diagrama-circuito-carro-moto.png`**: el esquema de referencia de la directiva del carro y la moto (Wokwi), que se explica más abajo.
+- **`img/demo-*.gif`**: las grabaciones de la demostración (re-codificadas a menos colores y fotogramas para que pesen menos de la mitad, sin perder lo que se ve).
+- **`app/`, `probar.json`, `ABRIR.bat`/`abrir.sh`**: la app de la práctica (ver «¿Quiere probarlo?» arriba). `probar.json` dice qué acciones tiene (fotos, cámara, simulador...) y con qué argumentos se corre `deteccion_pc.py`.
+- **`salida-app/`** (no se sube): ahí deja `deteccion_pc.py --vista salida-app` el último cuadro procesado (`ultimo.jpg`) y un `estado.json` con lo que vio YOLO; la app los lee para mostrar la detección dentro de la página.
 - **`entorno/`**: el entorno virtual de Python de este tema, con `ultralytics`, `opencv-python` y `pyserial`. No se sube al repositorio (tiene su propio `.gitignore` con `*`).
 
 ## El protocolo por serial, con los mensajes reales
@@ -158,7 +181,7 @@ else:
 
 Son los nombres exactos de COCO, y el **orden importa**: el primer elemento de la lista es el primer carácter del mensaje (LED de GPIO25) y el segundo es el segundo carácter (GPIO26). `CONFIANZA_MINIMA = 0.4` descarta las cajas de las que YOLO no está seguro, que son las que harían parpadear un LED por una sombra o un reflejo.
 
-**2. Carga del modelo.** `model = YOLO("yolov8n.pt")` carga la versión nano. Elegimos esta y no una más grande porque el proyecto corre en tiempo real sobre una laptop común, sin GPU, y la ganancia de precisión de un modelo más pesado no compensa la pérdida de velocidad para reconocer solo dos clases.
+**2. Carga del modelo.** `model = YOLO(str(MODELO))`, con `MODELO` = `yolov8n.pt` en la carpeta del script, carga la versión nano (si el archivo no está, `ultralytics` lo descarga ahí mismo la primera vez). Antes de esto el script ya leyó los argumentos e imprimió `Arranque 1/3...`: las librerías pesadas (`cv2`, `ultralytics`, que trae PyTorch) se importan **después** de leer los argumentos, para que un error de argumentos responda al instante y la app pueda mostrar en qué fase va el arranque (importar PyTorch, cargar o descargar el modelo, listo). Elegimos esta y no una más grande porque el proyecto corre en tiempo real sobre una laptop común, sin GPU, y la ganancia de precisión de un modelo más pesado no compensa la pérdida de velocidad para reconocer solo dos clases.
 
 **3. Puerto serial, con respaldo si no hay ESP32.** Este es el patrón que usamos en todos los temas para poder probar sin el hardware:
 
@@ -199,7 +222,9 @@ Si el ESP32 no está conectado, o Thonny tiene el puerto tomado, `serial.Serial`
 - Se lee lo que haya contestado el ESP32, vaciando **todo** el buffer pero solo si hay algo esperando (`while ser.in_waiting > 0: ...`). Un `readline()` a secas se quedaría esperando datos y congelaría la cámara. La última línea cruda se guarda para mostrarla.
 - Se escriben en la ventana, sobre una franja negra para que se lean siempre, tres líneas: el estado de cada objetivo con el mensaje (`chair: 1   cell phone: 0   -> '10'`), el modo (`ESP32 en COM7` o `SIN ESP32 (solo vision)`) junto con la fuente de las imágenes (`CAMARA`, `FOTOS` o `VIDEO`) y `ESP32 dice: ...` con la última respuesta. Esa última línea es la herramienta de diagnóstico: si se queda en `(nada todavia)`, el ESP32 no está recibiendo o no tiene `main.py` corriendo; si cambia pero no es lo esperado, el problema es de formato y no de cable.
 
-**6. Al salir con `q`.** Manda `00` para apagar los LEDs de una vez en vez de esperar los 2 s del apagado de seguridad, y libera cámara, ventana y puerto.
+**6. Para la app (`--vista` y `--sin-ventana`).** Si se corre con `--vista CARPETA`, cada cierto tiempo (4 veces por segundo con la cámara; con fotos, al cambiar de foto) guarda el cuadro con las cajas en `ultimo.jpg` y un `estado.json` con la fase, las detecciones con su confianza, el mensaje y lo que contestó el ESP32. Los escribe con otro nombre y los reemplaza de golpe (`os.replace`) para que la app nunca lea un archivo a medias. Con `--sin-ventana` no abre la ventana de OpenCV (todo se ve en la app) y se sale con Ctrl+C o con el botón Detener. Sin esas dos opciones el programa se comporta exactamente igual que antes.
+
+**7. Al salir con `q`** (o Ctrl+C). Manda `00` para apagar los LEDs de una vez en vez de esperar los 2 s del apagado de seguridad, y libera cámara, ventana y puerto.
 
 ### `esp32_leds.py`, guardado como `main.py` en el ESP32
 
@@ -262,7 +287,7 @@ En resumen, el original se queda en "ver y mostrar en pantalla"; este proyecto l
 
 Además de la explicación de YOLO usada como base, existe otra guía del mismo estilo, la [explicación de arquitectura YOLO del repositorio aplicacion_sistemas_embebidos](https://github.com/dialejobv/aplicacion_sistemas_embebidos/blob/main/2%29%20LABORATORIO/Explicaci%C3%B3n_Arq_YOLO.md), acompañada de esta directiva puntual: integrar YOLO con la detección de un carro de juguete y una moto de juguete, de modo que al detectar el carro se encienda un LED rojo y al detectar la moto se encienda un LED verde.
 
-![Circuito de referencia de la directiva: dos botones y LED rojo/verde sobre el ESP32](diagrama-circuito-carro-moto.png)
+![Circuito de referencia de la directiva: dos botones y LED rojo/verde sobre el ESP32](img/diagrama-circuito-carro-moto.png)
 
 El circuito de arriba es el esquema de referencia que acompaña esa directiva, pensado para simular en Wokwi la salida de cada detección con un LED rojo y uno verde (cada uno con su resistencia de 220 Ω, bandas rojo-rojo-marrón), apoyado en dos pulsadores para probar cada estado manualmente sin depender de la cámara. Como COCO ya trae las clases `"car"` y `"motorcycle"`, la directiva no necesita entrenar nada: basta con cambiar `OBJETIVOS`. Por eso `deteccion_pc.py` acepta la opción `--carro-moto`, que detecta carro (primer carácter, GPIO25: ahí va el LED rojo) y moto (segundo carácter, GPIO26: el LED verde) con el mismo protocolo y el mismo `esp32_leds.py`, sin tocar el circuito más allá de poner LEDs de esos colores en las mismas posiciones:
 
@@ -281,7 +306,7 @@ python -m venv entorno
 entorno\Scripts\python -m pip install ultralytics opencv-python pyserial
 ```
 
-Nosotros lo creamos con Python 3.14 y las tres librerías se instalaron sin problema; también se probó desde cero con Python 3.13 y estas versiones: `ultralytics==8.4.121` (con `torch==2.14.1` y `torchvision==0.29.1`), `opencv-python==5.0.0.93` y `pyserial==3.5`. La descarga de PyTorch pesa varios cientos de MB y el script tarda unos 10-15 s en arrancar (lo que más demora es cargar PyTorch), así que no es que se haya colgado. `ultralytics` trae el modelo de YOLO listo para usarse (e instala PyTorch como dependencia), `opencv-python` maneja la cámara y la ventana, y `pyserial` es la que permite que el script de Python hable con el ESP32 por el puerto serial. Usamos siempre `entorno\Scripts\python -m ...` en vez de activar el entorno o llamar a `pip.exe` directamente, porque así funciona aunque la carpeta se haya movido de lugar.
+Nosotros lo creamos con Python 3.14 y las tres librerías se instalaron sin problema; también se probó desde cero con Python 3.13 y estas versiones: `ultralytics==8.4.121` (con `torch==2.14.1` y `torchvision==0.29.1`), `opencv-python==5.0.0.93` y `pyserial==3.5`. La descarga de PyTorch pesa varios cientos de MB y el script tarda unos 10-30 s en arrancar (lo que más demora es cargar PyTorch), así que no es que se haya colgado. `ultralytics` trae el modelo de YOLO listo para usarse (e instala PyTorch como dependencia), `opencv-python` maneja la cámara y la ventana, y `pyserial` es la que permite que el script de Python hable con el ESP32 por el puerto serial. Usamos siempre `entorno\Scripts\python -m ...` en vez de activar el entorno o llamar a `pip.exe` directamente, porque así funciona aunque la carpeta se haya movido de lugar.
 
 ## Cómo probarlo
 
@@ -302,7 +327,10 @@ entorno\Scripts\python deteccion_pc.py --imagen
 entorno\Scripts\python deteccion_pc.py --carro-moto --imagen
 entorno\Scripts\python deteccion_pc.py --imagen foto1.jpg foto2.jpg
 entorno\Scripts\python deteccion_pc.py --video grabacion.mp4
+entorno\Scripts\python deteccion_pc.py --imagen --vista salida-app --sin-ventana
 ```
+
+La última línea es la que usa la app («Ver a YOLO»): sin ventana, y con el último cuadro y el estado guardados en `salida-app/` para mostrarlos en la página.
 
 `--imagen` sin archivos usa las fotos de `img/ejemplos/`, que van en un orden pensado para ver el mensaje cambiar cada 3 s: solo el primer objetivo (`'10'`), solo el segundo (`'01'`) y los dos (`'11'`). Así se ve con `--carro-moto`, en la foto que tiene los dos objetivos:
 
@@ -335,7 +363,7 @@ La consola dice `ESP32 conectado en COM7.` y se abre la ventana con la cámara. 
 Estas son las trabas más probables al repetir este proyecto en Windows:
 
 - **Ultralytics instala PyTorch como dependencia**, y ese paquete pesa varios cientos de megabytes, así que la primera instalación tarda bastante y puede fallar a mitad de camino con una conexión lenta o inestable; si eso pasa, basta con volver a correr el mismo `pip install` para que retome la descarga.
-- **`yolov8n.pt` se descarga solo la primera vez** que se corre el script si el archivo no está en la carpeta, así que esa primera ejecución necesita internet aunque las detecciones posteriores no. En este repositorio el archivo ya viene incluido.
+- **`yolov8n.pt` se descarga solo la primera vez** que se corre el script si el archivo no está en la carpeta, así que esa primera ejecución necesita internet aunque las detecciones posteriores no. El archivo no se sube al repositorio (pesa 6 MB y `ultralytics` lo baja solo, idéntico): queda en la carpeta tras la primera ejecución y el `.gitignore` del tema lo excluye.
 - **Versiones muy nuevas de Python** pueden no tener todavía wheels precompilados de alguna librería, igual que le pasó a pyaudio en el tema del chatbot con Python 3.14. A nosotros PyTorch sí se nos instaló con 3.14, pero si `pip install ultralytics` intenta compilar algo desde código fuente en vez de bajar un wheel ya armado, es señal de que conviene crear el entorno con una versión un poco más antigua y probada, como 3.12 (`py -3.12 -m venv entorno`).
 - **`cv2.VideoCapture(0)` puede abrir la cámara equivocada** en computadoras con más de una cámara (por ejemplo una integrada y una USB), o puede tardar varios segundos en inicializar en Windows; si la ventana no aparece o aparece en negro, vale la pena probar con otro índice (`1`) o con `cv2.VideoCapture(0, cv2.CAP_DSHOW)` para forzar el backend DirectShow.
 - **El puerto serial solo lo puede tener abierto un programa a la vez**: si Thonny se queda con la conexión activa al ESP32, `serial.Serial(...)` falla con un error de acceso denegado aunque el puerto elegido sea el correcto (el script entonces sigue en modo sin ESP32 y lo avisa).
@@ -345,19 +373,19 @@ Estas son las trabas más probables al repetir este proyecto en Windows:
 
 Además del gif del principio, así se ve el montaje desde otro ángulo, con la computadora reconociendo el teléfono y los LEDs encendiéndose en la protoboard:
 
-![Vista general del montaje desde otro ángulo](demo-montaje-2.gif)
+![Vista general del montaje desde otro ángulo](img/demo-montaje-2.gif)
 
 La ventana de detección marcando los objetos que YOLO reconoce frente a la cámara, junto con la puntuación de confianza de cada uno, reconociendo la silla y el teléfono:
 
-![Ventana de detección reconociendo persona, silla, mesa y celular](demo-deteccion.gif)
+![Ventana de detección reconociendo persona, silla, mesa y celular](img/demo-deteccion.gif)
 
 La protoboard en reposo, reconociendo la silla con una sensibilidad muy alta:
 
-![Protoboard con los LEDs apagados en reposo](demo-protoboard-reposo.gif)
+![Protoboard con los LEDs apagados en reposo](img/demo-protoboard-reposo.gif)
 
 Y la protoboard con los LEDs encendidos en el momento en que la cámara reconoce alguno de los objetos configurados:
 
-![Protoboard con los LEDs encendidos al detectar un objeto](demo-protoboard-encendida.gif)
+![Protoboard con los LEDs encendidos al detectar un objeto](img/demo-protoboard-encendida.gif)
 
 ## Pendiente
 

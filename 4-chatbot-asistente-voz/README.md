@@ -2,13 +2,43 @@
 
 Basado en [chatbot.py](https://github.com/dialejobv/U_Militar/blob/main/3%29%20chatbot/chatbot.py), un cliente básico de línea de comandos para la API de DeepSeek.
 
+## ¿Quiere probarlo? → aquí está
+
+Doble clic en **[`ABRIR.bat`](ABRIR.bat)** (en Linux/Mac, `abrir.sh`). Se abre la app de la práctica en una ventana propia
+(tarda unos segundos; la primera vez prepara sola el entorno de Python, 1-3 min). No hace falta el ESP32, ni micrófono, ni
+clave de DeepSeek.
+
+En la app, el paso **Pruébalo** arranca el programa real (`comando_voz.py --texto --sin-clave`, ~3 s; una barra muestra
+el arranque) y, al tocar una frase de ejemplo ("enciende el rojo", "haz un show de luces", "¿qué hora es?"), dibuja el
+recorrido completo de esa frase en cinco etapas, una tras otra: **voz o teclado → texto → intención (JSON) → orden al ESP32
+(`10`, `01`, `11`, `00` o `SHOW`) → LEDs**. Los dos LEDs dibujados se prenden según lo que decidió el programa. La app
+trae también el circuito, el simulador `preview.html`, el modo con micrófono y DeepSeek, los pasos con el ESP32 real y
+los videos de la demostración.
+
+![La app de la práctica: el recorrido de "haz un show de luces" hasta los LEDs, las frases de ejemplo y el historial](img/app-pruebalo.png)
+
+## ¿Quiere saber cómo funciona? → aquí está todo
+
+1. [Qué pedía la actividad y qué quedó](#qué-pedía-la-actividad-y-qué-quedó)
+2. Conceptos: [reconocimiento de voz](#qué-es-el-reconocimiento-de-voz) · [LLM y DeepSeek](#qué-es-un-llm-y-qué-es-deepseek) · [API, clave y `.env`](#qué-es-una-api-una-clave-de-api-y-el-archivo-env) · [JSON y prompt de sistema](#qué-es-json-y-el-prompt-de-sistema)
+3. [La idea general](#la-idea-general) (diagramas del recorrido PC ↔ ESP32)
+4. [Conexiones](#conexiones) y [alimentación](#alimentación)
+5. [Qué hace cada archivo](#qué-hace-cada-archivo)
+6. [El protocolo por serial, con los mensajes reales](#el-protocolo-por-serial-con-los-mensajes-reales)
+7. [Por qué un modelo de lenguaje y no solo palabras clave](#por-qué-usar-un-modelo-de-lenguaje-en-vez-de-simplemente-buscar-palabras-clave)
+8. [La lógica del código, paso a paso](#la-lógica-del-código-paso-a-paso) (`comando_voz.py` y `esp32_voz.py`)
+9. [El show de luces](#el-show-de-luces)
+10. [Qué se modificó frente al material original](#qué-se-modificó-frente-al-material-original)
+11. [Preparar el entorno](#preparar-el-entorno) y [cómo probarlo a mano](#cómo-probarlo) (sin y con ESP32)
+12. [Problemas encontrados](#problemas-encontrados) · [Demostración](#demostración-en-funcionamiento) · [Dónde se reutilizó](#dónde-se-reutilizó) · [Pendiente](#pendiente)
+
 ## Qué pedía la actividad y qué quedó
 
 El `chatbot.py` del profesor es un chat de consola: uno escribe una pregunta, el script se la manda a la API de DeepSeek y muestra la respuesta en texto. La instrucción sobre esa base fue: teniendo presente ese repositorio, generar un chatbot domótico orientado a encender y apagar un LED por medio de comandos de voz.
 
 Lo que armamos controla **dos LEDs** (uno rojo y uno azul) conectados a un ESP32. Uno le habla al micrófono de la computadora ("enciende el rojo", "prende los dos", "apaga el azul"), la frase se transcribe a texto, un modelo de lenguaje de DeepSeek entiende qué se pidió y lo devuelve como datos estructurados, y la computadora le manda la orden al ESP32 por el cable USB. El ESP32 prende o apaga los LEDs y contesta `OK` para confirmar. Agregamos además un comando extra, **el show de luces**, que hace parpadear los dos LEDs alternados y después los deja como estaban.
 
-![Protoboard con el LED rojo encendido tras pedirlo por voz](demo-led-rojo.gif)
+![Protoboard con el LED rojo encendido tras pedirlo por voz](img/demo-led-rojo.gif)
 
 El asistente responde con acciones (los LEDs) y con texto en la consola; no habla de vuelta, es decir, no hay síntesis de voz: la voz solo se usa como entrada.
 
@@ -115,7 +145,7 @@ Se necesitan el ESP32, dos LEDs (rojo y azul), dos resistencias de 220 Ω, una p
 | LED azul | Cátodo (pata corta) | GND del ESP32 (el mismo GND compartido) | 0 V | — |
 | ESP32 | Conector micro-USB | Puerto USB de la computadora | 5 V de entrada (el regulador de la placa baja a 3,3 V) | — |
 
-![Diagrama de referencia del circuito: dos LEDs con resistencia hacia el ESP32](diagrama-circuito.png)
+![Diagrama de referencia del circuito: dos LEDs con resistencia hacia el ESP32](img/diagrama-circuito.png)
 
 El diagrama de arriba es el esquema de referencia en Wokwi del mismo tipo de circuito: dos LEDs, cada uno con su resistencia en serie hacia un pin del ESP32, y los cátodos a un GND compartido. No es idéntico a lo que montamos, y las tres diferencias tienen su razón:
 
@@ -154,10 +184,13 @@ flowchart TD
 - **`.env.example`**: plantilla del archivo de la clave. Se copia como `.env` y se reemplaza `tu_api_key_aqui` por la clave real de DeepSeek.
 - **`.env`**: el archivo real con la clave. Existe solo en la computadora de cada uno y nunca se sube (está en el `.gitignore` de la raíz).
 - **`preview.html`**: una página suelta (HTML + JavaScript, sin instalar nada) para probar el asistente en el navegador: el mismo intérprete por palabras clave, el ESP32 simulado con los dos LEDs y un modo conectado por Web Serial. Ver "Cómo probarlo".
-- **`probar.json`**: la receta que usa el lanzador `probar.py` de la raíz del repositorio para abrir este tema con un clic (qué entorno crear y qué se puede probar).
-- **`diagrama-circuito.png`**: el esquema de referencia del circuito en Wokwi.
+- **`probar.json`**: la receta que usa el lanzador de la raíz del repositorio (`_lanzador/lanzador.py`) para abrir este tema con un clic (qué entorno crear, qué se puede probar y cuánto tarda en arrancar).
+- **`ABRIR.bat`** / **`abrir.sh`**: abren la app de la práctica (doble clic).
+- **`app/`**: la app de la práctica (`index.html`, `asistente.js`, `asistente.css`): explicación paso a paso, el recorrido animado voz → texto → intención → orden → LED de cada frase, los LEDs dibujados y los paneles que arrancan `comando_voz.py`.
+- **`img/app-pruebalo.png`**: captura de la app en el paso Pruébalo.
+- **`img/diagrama-circuito.png`**: el esquema de referencia del circuito en Wokwi.
 - **`img/preview-modo-prueba.png`**: captura de `preview.html` en modo prueba.
-- **`demo-*.gif`**: las grabaciones de la demostración.
+- **`img/demo-*.gif`**: las grabaciones de la demostración.
 - **`entorno/`**: el entorno virtual de Python 3.12 de este tema, con `openai`, `pyserial`, `SpeechRecognition`, `pyaudio` y `python-dotenv`. No se sube (tiene su propio `.gitignore` con `*`).
 
 ## El protocolo por serial, con los mensajes reales
@@ -316,9 +349,9 @@ Primero se revisa si es exactamente `SHOW`; si no, si tiene el formato de dos ca
 
 Si el comando de voz incluye algo como "haz un show de luces" o "pon un espectáculo", el modelo devuelve la clave `show` en vez de las claves de los LEDs individuales, y el script le manda al ESP32 la palabra `SHOW` en vez de las dos cifras que normalmente indican el estado de cada LED. Del lado del ESP32, antes de arrancar la secuencia de parpadeo, el programa guarda en qué estado estaba cada LED, hace alternar el rojo y el azul seis veces seguidas, y al terminar devuelve ambos LEDs exactamente al estado en el que estaban antes del show, en vez de dejarlos apagados.
 
-![Protoboard durante el show de luces, con el LED azul encendido en ese instante de la secuencia](demo-show-luces-azul.gif)
+![Protoboard durante el show de luces, con el LED azul encendido en ese instante de la secuencia](img/demo-show-luces-azul.gif)
 
-![Protoboard durante el show de luces, con el LED rojo encendido en ese instante de la secuencia](demo-show-luces-rojo.gif)
+![Protoboard durante el show de luces, con el LED rojo encendido en ese instante de la secuencia](img/demo-show-luces-rojo.gif)
 
 ## Qué se modificó frente al material original
 
@@ -411,7 +444,7 @@ La sexta fue un `ModuleNotFoundError` sobre `pydantic_core`, la parte binaria co
 
 Con todo lo anterior resuelto, esta es una corrida real dando los comandos por voz uno detrás de otro: prender el rojo (el gif del principio), prender también el azul, pedir el show de luces (los dos gifs de la sección del show) y apagar los dos al final.
 
-![Protoboard con los dos LEDs encendidos tras pedir que se prenda también el azul](demo-dos-leds.gif)
+![Protoboard con los dos LEDs encendidos tras pedir que se prenda también el azul](img/demo-dos-leds.gif)
 
 ## Dónde se reutilizó
 

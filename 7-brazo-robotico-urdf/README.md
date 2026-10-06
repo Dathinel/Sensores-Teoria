@@ -1,8 +1,25 @@
 # Brazo robótico: control por teclado (jog) + simulación URDF
 
+## ¿Quiere probarlo? → aquí está
+
+Doble clic en [`ABRIR.bat`](ABRIR.bat) (en Linux o Mac, `sh abrir.sh`). Se abre la app de la práctica en una ventana propia, con una barra lateral por secciones:
+
+- **Pruébalo**: un botón que abre la simulación real en PyBullet (`brazo_pybullet.py`), con sus 7 botones de jog si no hay ESP32. La primera vez la app prepara el entorno sola y **compila PyBullet (~10 min**, con las Build Tools de C++ de Visual Studio; la barra muestra el avance); después abre en segundos.
+- **El teclado**: el mismo teclado 4x4 del ESP32, clicable, con el brazo dibujado de lado y desde arriba y la línea `J1:..,J2:..,G:..` que mandaría por el USB. Funciona al instante, sin instalar nada.
+- **En el navegador**: `preview.html` (vista 3D sin física, modo prueba o conectado al ESP32 real por Web Serial).
+- **Cómo funciona**, **Conexiones**, **Con el ESP32** y **Resultados**: lo mismo de este README, resumido y con las fotos.
+
+![La app del tema 7: el teclado 4x4 clicable, el brazo de lado y desde arriba, y la línea serial](img/app.png)
+
+## ¿Quiere saber cómo funciona? → aquí está todo
+
+[Qué es un URDF](#qué-es-un-urdf) (y [el árbol de este brazo](#el-árbol-de-este-brazo)) · [Qué es PyBullet](#qué-es-pybullet) · [El teclado matricial y su barrido](#qué-es-un-teclado-matricial-y-cómo-se-barre) · [UART](#qué-es-uart-y-cómo-llega-el-dato-al-pc) · [La idea general](#la-idea-general) · [Conexiones](#conexiones) · [Qué hace cada archivo](#qué-hace-cada-archivo) · [La lógica del código](#la-lógica-del-código) ([ESP32](#en-el-esp32-esp32_brazopy), [PC](#en-el-pc-brazo_pybulletpy)) · [Cómo probarlo a mano](#cómo-probarlo) · [El montaje y la demo](#el-montaje-y-la-demo)
+
+---
+
 Basado en el archivo compartido por la cátedra [brazo.urdf](https://github.com/dialejobv/U_Militar/blob/main/8%29%20Brazo_URDF/brazo.urdf) (y su `main.py`, que solo carga el brazo en PyBullet y lista sus articulaciones). El URDF define un brazo con giro de base, codo y una pinza de dos dedos.
 
-![Enunciado de la actividad](enunciado-actividad.png)
+![Enunciado de la actividad](img/enunciado-actividad.png)
 
 La actividad pedía cinco cosas: programar el ESP32 para leer sensores y enviar datos, hacer un script de Python que reciba esos datos por UART y controle el robot, probar el movimiento de las articulaciones y la apertura/cierre de la pinza, validar la comunicación en tiempo real, y documentarlo. Lo que quedó:
 
@@ -180,11 +197,12 @@ Si al apretar una tecla sale otra distinta, el teclado tiene sus pines en otro o
 - **`brazo.urdf`**: el brazo del profesor, tal cual viene en U_Militar (5 links y 5 joints, ver el árbol de arriba). No lo modificamos; `brazo_pybullet.py` lee de él los nombres, índices y límites de cada articulación.
 - **`esp32_brazo.py`**: el firmware del ESP32 en MicroPython. Se guarda en la placa como `main.py`. Barre el teclado (8 GPIO), actualiza las tres posiciones con los pasos de jog y las imprime cada 100 ms.
 - **`brazo_pybullet.py`**: el programa del PC. Abre el puerto serial si puede, carga el URDF en PyBullet, crea los botones de jog y en un bucle lee el serial, aplica los botones, mueve los motores y avanza la simulación.
-- **`enunciado-actividad.png`**: la captura del enunciado de la actividad.
+- **`img/enunciado-actividad.png`**: la captura del enunciado de la actividad.
 - **`img/`**: las fotos del montaje real, el montaje en 3D y las animaciones de la sección "El montaje y la demo".
 - **`entorno/`**: el entorno virtual de Python del tema, con `pybullet` y `pyserial` ya instalados. No se sube a GitHub (tiene su propio `.gitignore` con `*`).
   Para crearlo en otro PC (Python 3.14), dentro de esta carpeta: `py -3.14 -m venv entorno` y `entorno\Scripts\python -m pip install pybullet==3.2.7 pyserial==3.5`. PyBullet no publica paquetes ya compilados para Windows, así que pip lo compila desde el código fuente: hace falta tener instalado Visual Studio 2022 (o las *Build Tools*) con la carga de trabajo de C++, y la primera instalación tarda unos 10 minutos (probado con Python 3.14 y 3.13). Si falla con `Unable to find a compatible Visual Studio installation` teniendo las Build Tools instaladas, es que `vswhere.exe` no está en el PATH: antes de instalar, `set PATH=C:\Program Files (x86)\Microsoft Visual Studio\Installer;%PATH%` en la misma consola.
-- **`probar.json`**: la receta que usa el lanzador de la raíz del repo para probar este tema sin hardware (la simulación, `preview.html` y las imágenes).
+- **`probar.json`**: la receta que usa la app (el lanzador `_lanzador/` de la raíz del repo) para probar este tema sin hardware: la simulación, `preview.html` y las imágenes.
+- **`ABRIR.bat`** / **`abrir.sh`** y **`app/`**: abren la app de la práctica (ver arriba, "¿Quiere probarlo?"). `app/` es la página: `index.html`, `brazo.js` (el teclado con la misma lógica de `esp32_brazo.py` y el brazo de lado y desde arriba con la cinemática de `brazo.urdf`) y `brazo.css`.
 
 ## La lógica del código
 
@@ -267,7 +285,7 @@ Todos los comandos se corren desde la carpeta `7-brazo-robotico-urdf`, con el en
 
 **El mismo montaje en 3D**, con el nombre de cada conexión (las filas R1-R4 a `GPIO14/27/26/25` y las columnas C1-C4 a `GPIO33/32/18/19`):
 
-![Montaje 3D del teclado conectado directo al ESP32, con cada cable rotulado](img/montaje-3d.png)
+![Montaje 3D del teclado conectado directo al ESP32, con cada cable rotulado](img/montaje-3d.jpg)
 
 **La demo.** El jog con el teclado, sobre la simulación real (`brazo.urdf` en PyBullet, los mismos motores y pasos de física que `brazo_pybullet.py`): se sostiene `8` (base), `6` (codo), `9` (abre la pinza), `4`, `2` y `7`, y el `5` lo vuelve a home. A la izquierda se resalta la tecla sostenida y abajo va la línea que el ESP32 manda por serial cada 100 ms:
 

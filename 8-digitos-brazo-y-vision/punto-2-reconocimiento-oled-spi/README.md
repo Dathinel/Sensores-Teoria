@@ -1,9 +1,11 @@
 # Punto 2: Reconocimiento de dígitos con OpenCV + CNN + OLED
 
+> **¿Quiere probarlo?** → doble clic en [`../ABRIR.bat`](../ABRIR.bat) (app del tema 8, *Punto 2 · La red en vivo*: se dibuja un dígito y se ve la entrada 28×28, los filtros de la CNN, las probabilidades, los votos y la OLED, al instante en el navegador o en vivo desde `reconocer_digito.py --estado`). **¿Quiere saber cómo funciona?** → [CNN y MNIST](#qué-es-una-cnn-y-qué-es-mnist) · [OpenCV](#qué-es-opencv) · [SPI](#qué-es-spi-maestro-y-esclavo) · [UART2](#qué-es-uart2) · [OLED](#qué-es-una-oled-ssd1306) · [idea general](#la-idea-general) · [conexiones](#conexiones) · [archivos](#qué-hace-cada-archivo) · [entrenamiento](#cómo-se-entrenó-la-red-entrenar_modelopy) · [reconocimiento](#la-lógica-del-reconocimiento-reconocer_digitopy) · [los dos ESP32](#la-lógica-de-los-dos-esp32) · [cómo probarlo](#cómo-probarlo) · [montaje y demo](#el-montaje-y-la-demo)
+
 Basado en el ejemplo de visión computacional con OpenCV compartido en el repositorio [U_Militar](https://github.com/dialejobv/U_Militar/blob/main/10%29%20Open_Cv) (`entrenar_modelo.py` y `reconocer_digito.py`), como recomienda el enunciado.
 
-![Enunciado de la actividad, parte 1](enunciado-actividad.png)
-![Enunciado de la actividad, parte 2](enunciado-actividad-2.png)
+![Enunciado de la actividad, parte 1](img/enunciado-actividad.png)
+![Enunciado de la actividad, parte 2](img/enunciado-actividad-2.png)
 
 El enunciado pide seguir un esquema fijo: cámara del PC → preprocesamiento OpenCV → reconocimiento con una CNN → envío por puerto serie → ESP-A (maestro SPI) → envío por SPI → ESP-B (esclavo SPI) → mostrar en una OLED I2C. Lo que quedó:
 
@@ -139,12 +141,12 @@ Un cuidado con los pines del ESP-B: `GPIO12` (MISO) y `GPIO15` (SS) son pines de
 ## Qué hace cada archivo
 
 - **`entrenar_modelo.py`**: entrena la CNN sobre MNIST y la guarda en `modelo_mnist_cnn.h5`. Se corre **una sola vez** (tarda varios minutos), no en cada uso.
-- **`modelo_mnist_cnn.h5`**: la red ya entrenada (arquitectura + pesos, unos 2.7 MB). Es lo que carga `reconocer_digito.py`.
-- **`reconocer_digito.py`**: el programa del día a día. Cámara, preprocesamiento, CNN, votación, envío al ESP-A y lectura de su confirmación, todo en una ventana. Con `--mouse` (o solo, si la cámara no abre) cambia la cámara por un lienzo para dibujar el dígito con el mouse; el resto del código es el mismo.
+- **`modelo_mnist_cnn.h5`**: la red ya entrenada (arquitectura + pesos, unos 0.9 MB: se guarda sin el estado interno del optimizador, que solo sirve para seguir entrenando y triplicaba el tamaño). Es lo que carga `reconocer_digito.py`.
+- **`reconocer_digito.py`**: el programa del día a día. Cámara, preprocesamiento, CNN, votación, envío al ESP-A y lectura de su confirmación, todo en una ventana. Con `--mouse` (o solo, si la cámara no abre) cambia la cámara por un lienzo para dibujar el dígito con el mouse; el resto del código es el mismo. Con `--estado archivo.json` además escribe, unas 5 veces por segundo, lo mismo que dibuja en su ventana (el recorte, la entrada de 28×28, las 10 probabilidades, la ventana de votos y el dígito confirmado) para que la app del tema lo muestre paso a paso; sin esa opción no escribe nada y funciona igual que siempre. Ese archivo (`estado_en_vivo.json`) lo ignora git.
 - **`esp-a-maestro/esp_a_maestro.py`**: firmware del ESP-A en MicroPython. Se guarda en la placa como `main.py` con Thonny. Recibe `DIGIT:n` por USB, lo valida, lo reenvía por SPI y por UART2, y contesta `REENVIADO:n`.
 - **`esp-b-esclavo/esp_b_esclavo.ino`**: sketch de Arduino del ESP-B. Se compila y sube con el Arduino IDE (es el único ESP32 del repositorio que no se programa con Thonny). Escucha SPI esclavo y UART2 sin bloquear y dibuja el dígito en la OLED.
 - **`probar_esp_a.py`**: prueba aislada del ESP-A desde el PC, sin cámara ni CNN. Abre el puerto, le manda `DIGIT:5` y muestra todo lo que responda.
-- **`enunciado-actividad.png`** y **`enunciado-actividad-2.png`**: las capturas del enunciado.
+- **`img/enunciado-actividad.png`** y **`img/enunciado-actividad-2.png`**: las capturas del enunciado.
 - **`img/`**: las fotos del montaje real, el montaje en 3D y las animaciones de la sección "El montaje y la demo".
 - **`entorno/`**: entorno virtual de Python **3.12** con `tensorflow`, `opencv-python`, `numpy`, `scipy` y `pyserial` (`scipy` solo lo pide `entrenar_modelo.py`, para rotar las imágenes del *data augmentation*). TensorFlow 2.21 tiene versión para Windows de Python 3.10 a 3.13, pero no para 3.14. No se sube a GitHub (su `.gitignore` tiene `*`). Para crearlo en otro PC, dentro de esta carpeta (son las versiones con las que se probó):
 
@@ -314,7 +316,7 @@ Todos los comandos se corren desde la carpeta `punto-2-reconocimiento-oled-spi`.
 
 **El mismo montaje en 3D**, con el nombre de cada conexión (SPI sin cruzar, UART2 cruzado, GND común, y la OLED por I2C en el ESP-B):
 
-![Montaje 3D de los dos ESP32 con la OLED, con las conexiones rotuladas](img/montaje-3d.png)
+![Montaje 3D de los dos ESP32 con la OLED, con las conexiones rotuladas](img/montaje-3d.jpg)
 
 **El preprocesamiento, paso a paso.** Cada paso de `preprocesar_digito()` sobre un dígito, desde la foto de la hoja hasta la imagen de 28×28 centrada por centro de masa que recibe la CNN (el último cuadro es idéntico a la salida de la función real):
 

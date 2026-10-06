@@ -2,19 +2,20 @@
 rem ---------------------------------------------------------------------------------
 rem  Abre la app de ESTA practica (doble clic aqui).
 rem
-rem  Usa el lanzador probar.py de la raiz del repo: levanta un servidor solo en este PC
-rem  (127.0.0.1) y abre la app en una ventana tipo programa. Si el lanzador ya estaba
-rem  abierto (por PROBAR.bat u otro ABRIR.bat), lo reutiliza. Solo hace falta Python 3.9
-rem  o mas nuevo; lo que la practica necesite (PyBullet, OpenCV...) lo instala la propia
-rem  app la primera vez, mostrando el progreso.
+rem  Usa el lanzador de la raiz del repo (_lanzador\lanzador.py): levanta un servidor solo
+rem  en este PC (127.0.0.1) y abre la app en una ventana tipo programa, maximizada. Si el
+rem  lanzador ya estaba abierto (por el ABRIR.bat de otra practica), lo reutiliza. Solo hace
+rem  falta Python 3.9 o mas nuevo; lo que la practica necesite (PyBullet, OpenCV...) lo
+rem  instala la propia app la primera vez, mostrando el progreso.
 rem ---------------------------------------------------------------------------------
 setlocal
 chcp 65001 >nul
 rem El nombre de esta carpeta es el nombre de la practica.
 for %%I in ("%~dp0.") do set "PRACTICA=%%~nxI"
+set "LANZADOR=%~dp0..\_lanzador\lanzador.py"
 title Sensores-Teoria - %PRACTICA%
 
-if not exist "%~dp0..\probar.py" goto sin_lanzador
+if not exist "%LANZADOR%" goto sin_lanzador
 
 rem 1) "py" es el lanzador que instala el instalador oficial de python.org: el mas fiable.
 set "PY="
@@ -27,8 +28,11 @@ if not defined PY (
 )
 if not defined PY goto sin_python
 
-echo Abriendo la app de la practica %PRACTICA%...
-%PY% "%~dp0..\probar.py" --practica "%PRACTICA%"
+echo.
+echo  Abriendo la app de %PRACTICA%... (la primera vez tarda unos segundos)
+echo  Esta ventana mantiene la app funcionando: se minimiza sola; no la cierres mientras la usas.
+echo.
+%PY% "%LANZADOR%" --practica "%PRACTICA%" %*
 rem Si algo fallo, la ventana queda abierta para leer el mensaje.
 if errorlevel 1 pause
 exit /b
@@ -48,7 +52,7 @@ exit /b 1
 
 :sin_lanzador
 echo.
-echo  No encuentro probar.py en la carpeta de arriba (%~dp0..).
+echo  No encuentro el lanzador en %LANZADOR%
 echo  Este ABRIR.bat tiene que estar dentro de la carpeta de la practica, en el repo completo
 echo  Sensores-Teoria (descargalo entero desde GitHub: boton "Code" y "Download ZIP").
 echo.

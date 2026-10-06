@@ -1,8 +1,32 @@
 # Taller segundo corte: consolas de mando con ESP32 para simulaciones en PyBullet
 
+## ¿Quiere probarlo? → aquí está
+
+**Doble clic en [`ABRIR.bat`](ABRIR.bat)** (en Linux o Mac, `sh abrir.sh`). Se abre la **consola de mando**: una app en una ventana propia, con un menú a la izquierda y una barra de estado arriba (si el entorno de Python ya está listo, si los modelos de Baxter y Atlas están descargados y qué programa está corriendo). Desde ahí se lanza todo con un botón, sin consola y sin ESP32:
+
+- **a) Drones, prueba rápida** (unos segundos): vuela la misión A → B → C sin ventana y **dibuja la ruta del líder** vista desde arriba, con su altura y la hora de llegada a cada punto.
+- **b) Baxter, prueba sin ventana** (~40 s): un tablero con cada comprobación y **lo medido contra el límite** (la pinza llega a 0,1 cm de un máximo de 2 cm).
+- **c) Atlas, prueba de estrés** (~3-4 min): una **gráfica con y sin asistente** que se dibuja prueba por prueba (cuántos segundos aguanta de pie en cada una).
+- Las tres **ventanas de PyBullet** (drones, Baxter, Atlas) con sus botones, el **teclado 4x4 interactivo** (qué hace cada tecla en cada simulación), el preview sin Python, los videos y el checklist de la actividad.
+
+La primera vez, la app crea el entorno de Python e instala PyBullet (si no está en la caché de pip se **compila, unos 10 minutos**, con barra de progreso) y, para Baxter y Atlas, baja sus modelos (37 MB, con barra de MB). Solo hace falta Python 3.9 o más nuevo.
+
+![La consola de mando: la prueba rápida de los drones dibuja la ruta A → B → C](img/app-consola.png)
+
+![La prueba de estrés de Atlas en la app: segundos de pie con y sin asistente](img/app-atlas-grafica.png)
+
+## ¿Quiere saber cómo funciona? → aquí está todo
+
+- [Introducción y enunciado](#introducción) · [El montaje real](#el-montaje-real) · [Lo que se hizo en cada punto](#lo-que-se-hizo-en-cada-punto) · [Cómo se maneja cada punto: comportamientos y modos](#cómo-se-maneja-cada-punto-comportamientos-y-modos)
+- Conceptos: [Qué es PyBullet](#qué-es-pybullet) · [Qué es una consola de mandos](#qué-es-una-consola-de-mandos-y-por-qué-un-solo-teclado-para-todo) · [Qué es un teclado matricial](#qué-es-un-teclado-matricial-y-cómo-se-barre) · [Qué es un jog](#qué-es-un-jog-y-por-qué-no-un-dial) · [Los modelos 3D reales](#los-modelos-3d-reales-de-baxter-y-atlas)
+- Arquitectura y código: [La idea general](#la-idea-general) · [El firmware del ESP32 paso a paso](#el-firmware-del-esp32-paso-a-paso-esp32_tecladopy) · [El protocolo `TECLA:x`](#el-protocolo-teclax-y-cómo-lo-lee-el-pc) · [Conexiones](#conexiones) · [Qué hace cada archivo](#qué-hace-cada-archivo) · [Cómo probarlo a mano (comandos)](#cómo-probarlo)
+- Cada punto, con su análisis, su lógica paso a paso y sus resultados: [a) Drones](punto-a-drones-waypoints/README.md) · [b) Baxter](punto-b-brazo-tipo-baxter/README.md) · [c) Atlas](punto-c-atlas/README.md)
+
+## Introducción
+
 Taller de tres puntos que dejó el profesor para cerrar el segundo corte, en la línea de lo que en clase llamamos *real-to-sim*: algo físico (un ESP32 con un teclado en la mano) manejando algo simulado (robots en PyBullet). El profesor compartió dos repositorios como base: [gym-pybullet-drones](https://github.com/utiasDSL/gym-pybullet-drones) para el punto a) y [pybullet_robots](https://github.com/erwincoumans/pybullet_robots) (`baxter_ik_demo.py` y `atlas.py`) para los puntos b) y c). El enunciado de cada punto está dentro de su carpeta; este es el de la entrega en general:
 
-![Enunciado de la entrega](enunciado-entrega.png)
+![Enunciado de la entrega](img/enunciado-entrega.png)
 
 La entrega pide "mostrar la arquitectura, el análisis desarrollado del proyecto y el paso a paso a seguir", con los códigos y su explicación. Por eso este README explica lo que tienen en común los tres puntos (el teclado, el firmware del ESP32, cómo se leen las teclas en el PC y cómo se conecta todo) y, sobre todo, **cómo se maneja cada punto**; cada punto tiene además su propio README con la parte de control y la lógica de su simulación.
 
@@ -28,14 +52,14 @@ Cinco drones en formación en V vuelan con física real (gravedad más la fuerza
 
 ![Los cinco drones volando la misión A → B → C en PyBullet](punto-a-drones-waypoints/video/drones-mision.gif)
 
-Video completo: [drones-mision.mp4](punto-a-drones-waypoints/video/drones-mision.mp4)
+El GIF es la grabación completa (15 s, la misión entera).
 
 ### [Punto b) Baxter: mover los dos brazos, posicionar y coger un objeto](./punto-b-brazo-tipo-baxter)
 El robot **Baxter real** (el mismo `toms_baxter.urdf` de `baxter_ik_demo.py`) mueve cualquiera de sus dos brazos con el teclado en X, Y y Z usando cinemática inversa; la tecla `*` cambia de brazo y el otro se queda quieto, sostenido por sus motores. Puede coger un cubo de la mesa y llevarlo a otro punto, a mano (abrir y cerrar la pinza) o con una demo de un solo botón; otra demo recorre los tres ejes. La prueba sin ventana (`probar_baxter.py`) mide que cada pinza llega a menos de 0,2 cm de sus objetivos y que la demo deja el cubo a menos de 0,6 cm del destino con los dos brazos.
 
 ![Baxter cogiendo el cubo y llevándolo al destino en PyBullet](punto-b-brazo-tipo-baxter/video/baxter-demo.gif)
 
-Video completo: [baxter-demo.mp4](punto-b-brazo-tipo-baxter/video/baxter-demo.mp4)
+El GIF es la grabación completa (24 s: la demo con los dos brazos y el jog).
 
 <table>
 <tr>
@@ -57,8 +81,8 @@ El enunciado del punto c) dice "Baxter" pero su imagen es el humanoide **Atlas**
 <td><img src="punto-c-atlas/video/atlas-sin-asistente.gif" alt="Atlas manejado desde el teclado con el asistente de equilibrio apagado" width="100%"></td>
 </tr>
 <tr>
-<td>Con asistente. Video completo: <a href="punto-c-atlas/video/atlas-con-asistente.mp4">atlas-con-asistente.mp4</a></td>
-<td>Sin asistente. Video completo: <a href="punto-c-atlas/video/atlas-sin-asistente.mp4">atlas-sin-asistente.mp4</a></td>
+<td>Con asistente (grabación completa, 25 s).</td>
+<td>Sin asistente (grabación completa, 16 s).</td>
 </tr>
 </table>
 
@@ -323,36 +347,35 @@ No hacen falta resistencias externas (las columnas usan la pull-up interna del E
 ```
 9-taller-segundo-corte/
 ├─ README.md                    este archivo: lo común a los tres puntos
-├─ enunciado-entrega.png        captura del enunciado general de la entrega
+├─ ABRIR.bat / abrir.sh         doble clic: abre la app de esta práctica (consola de mando)
+├─ app/                         la app: index.html, consola.css y consola.js (teclado, pruebas visuales)
+├─ probar.json                  receta de la app: qué se puede correr, cuánto tarda y qué cubre
 ├─ esp32_teclado.py             firmware único del ESP32 (se guarda como main.py)
 ├─ descargar_modelos.py         baja las mallas reales de Baxter y Atlas a modelos/
 ├─ capturar_modelos.py          genera las imágenes de los README (PyBullet sin ventana)
-├─ grabar_videos.py             graba los GIF y MP4 de video/ (PyBullet sin ventana + ffmpeg)
-├─ probar.json                  receta del lanzador del repo (PROBAR.bat en la raíz)
+├─ grabar_videos.py             graba los GIF de video/ (PyBullet sin ventana + ffmpeg)
 ├─ preview.html                 simulador web de las tres consolas (modo prueba y Web Serial)
-├─ img/                         fotos del montaje real (ESP32 + teclado) y capturas del preview
+├─ img/                         enunciado de la entrega, fotos del montaje, capturas del preview y de la app
 ├─ modelos/                     mallas de Baxter y Atlas (no se sube: la crea descargar_modelos.py)
 ├─ entorno/                     entorno de Python compartido (no se sube: su .gitignore tiene "*")
 ├─ punto-a-drones-waypoints/
 │  ├─ README.md
-│  ├─ enunciado-actividad.png
 │  ├─ drones_pybullet.py        simulación y control de los 5 drones
 │  ├─ dron.urdf                 el dron: un solo cuerpo con masa, inercia y 4 brazos
-│  └─ video/                    la misión A → B → C (GIF y MP4)
+│  ├─ img/                      enunciado del punto
+│  └─ video/                    la misión A → B → C (GIF)
 ├─ punto-b-brazo-tipo-baxter/
 │  ├─ README.md
-│  ├─ enunciado-actividad.png
 │  ├─ brazo_pybullet.py         Baxter real: dos brazos por IK, pinza, cubo y demos
 │  ├─ probar_baxter.py          prueba sin ventana (IK, demo, flanco, choques)
-│  ├─ img/                      capturas del modelo
-│  └─ video/                    Baxter en acción (GIF y MP4)
+│  ├─ img/                      enunciado del punto y capturas del modelo
+│  └─ video/                    Baxter en acción (GIF)
 └─ punto-c-atlas/
    ├─ README.md
-   ├─ enunciado-actividad.png
    ├─ atlas_pybullet.py         Atlas real: asistente, ponerlo de pie, juntas, poses y caminata
    ├─ probar_atlas.py           prueba de estrés con y sin asistente
-   ├─ img/                      capturas del modelo
-   └─ video/                    Atlas con y sin asistente (GIF y MP4)
+   ├─ img/                      enunciado del punto y capturas del modelo
+   └─ video/                    Atlas con y sin asistente (GIF)
 ```
 
 - **`esp32_teclado.py`**: se usa en los tres puntos, sin cambios. Barre el teclado por GPIO directo y manda `TECLA:x` cada 50 ms. Es lo único que se carga en el ESP32.
@@ -367,11 +390,13 @@ No hacen falta resistencias externas (las columnas usan la pull-up interna del E
 ![Preview: consola de Atlas](img/preview-atlas.png)
 
 - **`dron.urdf`**: la descripción del dron del punto a).
-- **`img/`** y la carpeta **`video/`** de cada punto: las fotos del montaje real, las capturas del preview y los videos de cada simulación (un GIF corto para verlo en GitHub y el MP4 completo).
+- **`img/`** y la carpeta **`video/`** de cada punto: el enunciado, las fotos del montaje real, las capturas del preview y de la app, y los videos de cada simulación. Cada video está una sola vez, en GIF (se ve directo en GitHub y en la app); antes había además un MP4 con lo mismo y se quitó para que la práctica pese menos.
 
 La tabla de qué hace cada tecla en cada punto está arriba, en "Cómo se maneja cada punto".
 
 ## Cómo probarlo
+
+**La forma fácil es la app:** doble clic en `ABRIR.bat` (ver [¿Quiere probarlo?](#quiere-probarlo--aquí-está) al principio). Lo de abajo es lo mismo a mano, con comandos.
 
 Los tres scripts comparten el entorno que está en esta carpeta. Los comandos van desde `9-taller-segundo-corte\` y llaman al Python del entorno directamente (`entorno\Scripts\python ...`), que sigue funcionando aunque la carpeta se haya movido de lugar; el script `activate` guarda la ruta absoluta de cuando se creó y puede fallar.
 

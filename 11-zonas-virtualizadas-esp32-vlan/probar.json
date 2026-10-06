@@ -35,7 +35,7 @@
         "-d",
         "--build"
       ],
-      "abrir": "http://localhost:8080",
+      "abrir": "http://127.0.0.1:8180",
       "detener": [
         "--profile",
         "emulado",
@@ -47,7 +47,9 @@
         "Zona Robótica (VLAN 2)",
         "Plano de administración (VLAN 3)",
         "Router inter-VLAN"
-      ]
+      ],
+      "duracion": "~30 s si ya están las imágenes; construir la primera vez 10-20 min",
+      "duracion_s": 40
     },
     {
       "id": "stack_hub",
@@ -60,7 +62,7 @@
         "up",
         "-d"
       ],
-      "abrir": "http://localhost:8080",
+      "abrir": "http://127.0.0.1:8180",
       "detener": [
         "--profile",
         "emulado",
@@ -72,13 +74,15 @@
         "Zona Robótica (VLAN 2)",
         "Plano de administración (VLAN 3)",
         "Router inter-VLAN"
-      ]
+      ],
+      "duracion": "~30 s si ya están las imágenes; la primera vez 2-6 min (baja ~415 MB)",
+      "duracion_s": 40
     },
     {
       "id": "dashboard",
       "nombre": "Dashboard del plano de administración",
       "tipo": "url",
-      "url": "http://localhost:8080",
+      "url": "http://127.0.0.1:8180",
       "descripcion": "Con el laboratorio arriba: cada contenedor de las tres VLAN con su estado (OK/LENTO/CAIDO), RTT, jitter y disponibilidad medidos a través del router, los 6 'LED' de la ESP32 esclava y los latidos de los ESP32. Arriba hay enlaces a los cuatro visores.",
       "cubre": [
         "Plano de administración (VLAN 3)",
@@ -89,7 +93,7 @@
       "id": "pista",
       "nombre": "Visor de la pista (Zona Gamer)",
       "tipo": "url",
-      "url": "http://localhost:8010",
+      "url": "http://127.0.0.1:8010",
       "descripcion": "La carrera en vivo: 3 carros de jugadores manejados por sus ESP32 emulados (con piloto automático) y 3 autónomos, con la tabla de posiciones y una cámara de persecución.",
       "cubre": [
         "Zona Gamer (VLAN 1)"
@@ -99,7 +103,7 @@
       "id": "spot",
       "nombre": "Visor del Spot (Zona Robótica)",
       "tipo": "url",
-      "url": "http://localhost:8011",
+      "url": "http://127.0.0.1:8011",
       "descripcion": "El Rex (pequeño Spot) moviendo la pose del cuerpo según los 3 ángulos de su ESP32 emulado, con el error real-to-sim.",
       "cubre": [
         "Zona Robótica (VLAN 2)"
@@ -109,7 +113,7 @@
       "id": "pepper",
       "nombre": "Visor del Pepper (Zona Robótica)",
       "tipo": "url",
-      "url": "http://localhost:8012",
+      "url": "http://127.0.0.1:8012",
       "descripcion": "Pepper copiando hombro, codo y cabeza de su ESP32 emulado (sin las mallas de SoftBank se dibuja como esqueleto).",
       "cubre": [
         "Zona Robótica (VLAN 2)"
@@ -119,7 +123,7 @@
       "id": "nao",
       "nombre": "Visor del NAO (Zona Robótica)",
       "tipo": "url",
-      "url": "http://localhost:8013",
+      "url": "http://127.0.0.1:8013",
       "descripcion": "NAO copiando hombro, codo y cabeza de su ESP32 emulado; el botón hace un saludo.",
       "cubre": [
         "Zona Robótica (VLAN 2)"
@@ -143,7 +147,7 @@
       "nombre": "Video de la demo",
       "tipo": "archivo",
       "archivo": "video/demo-stack.mp4",
-      "descripcion": "El stack completo: la pista, los tres robots y los LED de la esclava; a mitad del video se detiene sim-pepper, el admin lo marca CAIDO y luego vuelve a OK.",
+      "descripcion": "El stack completo en 60 s: la pista, los tres robots y los LED de la esclava; a mitad se detiene sim-pepper, el admin lo marca CAIDO y luego vuelve a OK. (En el README va un trozo de 36 s en GIF.)",
       "cubre": [
         "Repositorio con el paso a paso, imágenes en Docker Hub y video funcionando"
       ]
@@ -160,7 +164,9 @@
       "descripcion": "40 pruebas unitarias de los mensajes CTRL, JOINTS, HB y PING/PONG, del conteo de perdidos por secuencia y del jitter RFC 3550. No necesitan el laboratorio.",
       "cubre": [
         "Validación experimental: latencia, jitter y disponibilidad"
-      ]
+      ],
+      "duracion": "~2 s",
+      "duracion_s": 3
     },
     {
       "id": "aislamiento",
@@ -172,7 +178,9 @@
       "descripcion": "Con el laboratorio arriba (unos 30 s): pings y conexiones TCP de la zona gamer a la robótica y al revés (sin ruta y con ruta forzada por el router), contadores DROP del router, ping del admin a todas las zonas con ttl=63 y traceroute. Deben aprobarse los 45 casos. Reescribe pruebas/resultados/aislamiento.json.",
       "cubre": [
         "Router inter-VLAN"
-      ]
+      ],
+      "duracion": "~30 s",
+      "duracion_s": 35
     },
     {
       "id": "disponibilidad",
@@ -185,7 +193,9 @@
       "cubre": [
         "Validación experimental: latencia, jitter y disponibilidad",
         "Plano de administración (VLAN 3)"
-      ]
+      ],
+      "duracion": "~3 min",
+      "duracion_s": 190
     },
     {
       "id": "red_base",
@@ -202,14 +212,16 @@
       "descripcion": "Con el laboratorio arriba: 5 minutos de ping desde el admin a cada servicio a través del router, más lo que publica el admin por MQTT. Saca RTT promedio, p95, máximo, jitter, pérdida y disponibilidad, con gráficas en pruebas/resultados/red_base_*.png (reescribe esos archivos).",
       "cubre": [
         "Validación experimental: latencia, jitter y disponibilidad"
-      ]
+      ],
+      "duracion": "5 min",
+      "duracion_s": 310
     },
     {
       "id": "montaje",
       "nombre": "Montaje 3D de las placas",
       "tipo": "archivo",
-      "archivo": "img/montaje-3d-gamer.png",
-      "descripcion": "El tema se entrega en simulación. Renders del montaje con los pines exactos del firmware: img/montaje-3d-gamer.png (joystick KY-023), img/montaje-3d-robot.png (3 potenciómetros y pulsador) e img/montaje-3d-esclava.png (6 LED con resistencias)."
+      "archivo": "img/montaje-3d-gamer.jpg",
+      "descripcion": "El tema se entrega en simulación. Renders del montaje con los pines exactos del firmware: img/montaje-3d-gamer.jpg (joystick KY-023), img/montaje-3d-robot.jpg (3 potenciómetros y pulsador) e img/montaje-3d-esclava.jpg (6 LED con resistencias)."
     },
     {
       "id": "parar",
@@ -226,7 +238,9 @@
         "emulado",
         "stop"
       ],
-      "descripcion": "Para los 16 contenedores (docker compose --profile emulado stop). No borra nada: las imágenes, los contenedores y las redes quedan, y la próxima vez el laboratorio arranca en segundos."
+      "descripcion": "Para los 16 contenedores (docker compose --profile emulado stop). No borra nada: las imágenes, los contenedores y las redes quedan, y la próxima vez el laboratorio arranca en segundos.",
+      "duracion": "~15 s",
+      "duracion_s": 15
     },
     {
       "id": "vivo",
@@ -238,7 +252,9 @@
         "20"
       ],
       "cwd": ".",
-      "descripcion": "Lee cada segundo el resumen del dashboard del admin (http://localhost:8080/api/resumen.json) y se lo pasa a la app, que dibuja los 6 LED y la latencia de cada servicio. Solo lee: no se conecta al broker ni toca contenedores. Se cierra solo a los 30 minutos."
+      "descripcion": "Lee cada segundo el resumen del dashboard del admin (http://127.0.0.1:8180/api/resumen.json) y cada 3 s le pregunta a Docker qué contenedores, imágenes y redes del laboratorio hay (docker ps / images / network: solo lectura), y se lo pasa a la app, que dibuja el mapa, los 6 LED, la latencia y la lista de contenedores. No se conecta al broker ni toca contenedores. Se cierra solo a los 30 minutos.",
+      "vida": "app",
+      "oculta": true
     },
     {
       "id": "fw",
@@ -248,5 +264,5 @@
       "descripcion": "Dos sketches de Arduino: firmware/esp32_maestra (los seis mandos; el rol se elige en config.h o con compilar.ps1 -Roles) y firmware/esp32_esclava_leds (la esclava con 6 LED). Se compilan y suben con firmware/compilar.ps1 (arduino-cli, núcleo esp32 3.x). No hacen falta para probar: el laboratorio usa los emuladores."
     }
   ],
-  "notas": "Requiere Docker Desktop abierto ('Engine running') y libres los puertos 8080, 8010-8013, 8765, 1883 y 5001-5300 UDP. Las pruebas de aislamiento, disponibilidad y red necesitan el laboratorio levantado y el comando docker en el PATH. Las subredes 192.168.10/20/30.0/24 no deben estar usadas por otro proyecto de Docker. preview.html, el video y las pruebas del protocolo funcionan sin Docker."
+  "notas": "Requiere Docker Desktop abierto ('Engine running') y libres los puertos 8180, 8010-8013, 8765, 1883 y 5001-5300 UDP. Las pruebas de aislamiento, disponibilidad y red necesitan el laboratorio levantado y el comando docker en el PATH. Las subredes 192.168.10/20/30.0/24 no deben estar usadas por otro proyecto de Docker. preview.html, el video y las pruebas del protocolo funcionan sin Docker."
 }

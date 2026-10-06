@@ -47,5 +47,5 @@ Con su propio comando:
 
 - `enunciado/` — la guía del parcial (`segundo-parcial-umng.pdf`) y sus figuras numeradas, con su
   propio `README.md`.
-- `videos/` — las simulaciones de PyBullet grabadas (mp4 y gif), con `python -m sim.ver.grabar`.
+- `videos/` — las simulaciones de PyBullet grabadas, con `python -m sim.ver.grabar`: un mp4 por escena y un GIF liviano de las tres que el README muestra en línea (`todo_junto` va solo en mp4).
 - `capturas/` — capturas del visor y del dashboard que usa el `README.md` del proyecto.

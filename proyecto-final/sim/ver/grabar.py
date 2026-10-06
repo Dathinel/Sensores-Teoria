@@ -12,7 +12,8 @@ ventana no salen en getCameraImage). Resultado, en docs/videos/:
 - `<escena>.mp4`: el video completo en H.264 (se ve en GitHub y en cualquier
   navegador), a 10 cuadros por segundo;
 - `<escena>.gif`: la misma corrida comprimida a ~14 s, 640 px de ancho y pocos
-  colores (menos de 5 MB), para embeberla en el README.
+  colores (menos de 3 MB), para embeberla en el README. `todo_junto` no lleva GIF
+  (2026-10-05: el README no lo muestra y la app usa el mp4; pesaba 4,4 MB).
 """
 
 from __future__ import annotations
@@ -33,7 +34,9 @@ ESCENAS = {
 }
 FPS = 10
 GIF_SEGUNDOS = 14
-GIF_MAX_MB = 5.0
+GIF_MAX_MB = 3.0
+# 2026-10-05: escenas sin GIF (solo mp4) y sin tramado (dither=none pesa ~15 % menos).
+SIN_GIF = {"todo_junto"}
 # 2026-09-29: 640 px (antes 480: con la letra reducida, los rotulos no se leian).
 GIF_ANCHO = 640
 
@@ -47,10 +50,10 @@ def hacer_gif(mp4, gif, duracion_video: float) -> float:
         print("  (sin ffmpeg: no se hace el GIF)")
         return 0.0
     factor = max(1.0, duracion_video / GIF_SEGUNDOS)
-    for fps, colores in ((8, 96), (6, 64), (5, 48), (4, 32)):
+    for fps, colores in ((6, 64), (5, 48), (4, 32)):
         filtro = (f"setpts=PTS/{factor:.3f},fps={fps},scale={GIF_ANCHO}:-1:flags=lanczos,split[a][b];"
                   f"[a]palettegen=max_colors={colores}:stats_mode=diff[p];"
-                  f"[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle")
+                  f"[b][p]paletteuse=dither=none:diff_mode=rectangle")
         subprocess.run([ffmpeg, "-y", "-loglevel", "error", "-i", str(mp4), "-vf", filtro, "-loop", "0", str(gif)],
                        check=True)
         mb = gif.stat().st_size / 1e6
@@ -71,7 +74,7 @@ def grabar(nombre: str) -> dict:
         pass
     info = vista.cerrar_video()
     gif = CARPETA_VIDEOS / f"{nombre}.gif"
-    mb_gif = hacer_gif(mp4, gif, info["segundos_video"])
+    mb_gif = 0.0 if nombre in SIN_GIF else hacer_gif(mp4, gif, info["segundos_video"])
     info.update(gif=gif, mb_mp4=mp4.stat().st_size / 1e6, mb_gif=mb_gif, simulados=vista.t,
                 reloj=time.perf_counter() - t0, fin=vista.mensaje_fin)
     print(f"{nombre}: {vista.t:.0f} s simulados -> {mp4.name} {info['segundos_video']:.0f} s "

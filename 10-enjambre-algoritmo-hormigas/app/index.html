@@ -12,41 +12,69 @@
 </head>
 <body>
 
-<!-- ================= PORTADA ================= -->
-<header class="t10-portada">
-  <div>
-    <div class="t10-etiqueta">Tema 10 · enjambre de robots</div>
-    <h1>Tres carritos ESP32 buscan la salida del laberinto <em>como lo harían las hormigas</em></h1>
-    <p class="t10-frase">
-      Cada carrito suelta "hormigas virtuales" que prueban caminos al azar y dejan un rastro (la <b>feromona</b>)
-      donde el camino fue corto. Los tres se pasan ese rastro por WiFi, y en pocas vueltas todos marcan la misma
-      ruta más corta. Un <b>gemelo digital</b> en el PC (PyBullet, dentro de Docker) repite todo con tres robots
-      virtuales y lo graba en video.
-    </p>
-    <div class="t10-chips">
-      <span><b>3</b> ESP32</span><span>laberinto <b>5 × 5</b> (1 m)</span><span>ruta óptima <b>2,40 m</b></span>
-      <span>WiFi <b>ENJAMBRE_ACO</b></span><span>UDP <b>4210 / 4211</b></span><span>se prueba <b>sin hardware</b></span>
-    </div>
-    <div class="t10-caja-pide">
-      <div id="checklist-portada"></div>
-      <p class="t10-nota" style="margin:0.5rem 0 0">Cada punto se marca solo cuando corres con éxito la prueba que lo demuestra (más abajo, en "Pruébalo").</p>
-    </div>
-    <div class="t10-botones-portada">
-      <button class="t10-boton primario" data-ir="Pruébalo: el algoritmo">Probarlo ya, sin hardware</button>
-      <button class="t10-boton" data-ir="Simulador en el navegador">Abrir el simulador del navegador</button>
-    </div>
+<!-- ================= BARRA SUPERIOR (tipo Docker Desktop) ================= -->
+<header class="t10-barra">
+  <div class="t10-logo">10</div>
+  <div class="t10-barra-titulo">
+    <b>Enjambre de hormigas</b>
+    <span>3 ESP32 · ACO · gemelo digital PyBullet en Docker</span>
   </div>
-  <figure class="t10-figura">
-    <img class="t10-gif" src="/repo/10-enjambre-algoritmo-hormigas/video/gemelo-sin-hardware.gif"
-         alt="El gemelo digital: la feromona violeta se concentra en la ruta corta y los tres carritos la recorren">
-    <figcaption>El gemelo digital: primero la búsqueda (la franja violeta es la feromona, que se concentra en la
-      ruta corta) y después los tres carritos (rojo, azul, amarillo) recorriendo su ruta, uno cada 8 s.</figcaption>
-  </figure>
+  <div class="t10-tareas" id="t10-tareas" aria-live="polite">
+    <span class="t10-tareas-vacio">Nada en marcha</span>
+  </div>
+  <div class="t10-barra-botones" data-app-herramientas>
+    <button class="t10-boton" id="abrir-readme" title="El README completo, con toda la parte técnica">README</button>
+    <button class="t10-boton" id="pantalla-completa" title="Pantalla completa (Esc para salir)">⛶ Pantalla completa</button>
+  </div>
 </header>
 
-<main class="app-contenedor t10-principal"><div id="pasos">
+<main class="t10-shell"><div id="pasos">
 
-<!-- ================= 1. QUÉ ES EL ACO ================= -->
+<!-- ================= 1. INICIO ================= -->
+<section class="paso" data-titulo="Inicio">
+  <div class="t10-inicio">
+    <div>
+      <div class="t10-etiqueta">Tema 10 · enjambre de robots</div>
+      <h1 class="t10-titular">Tres carritos ESP32 buscan la salida del laberinto <em>como lo harían las hormigas</em></h1>
+      <p class="t10-frase">
+        Cada carrito suelta "hormigas virtuales" que prueban caminos al azar y dejan un rastro (la <b>feromona</b>)
+        donde el camino fue corto. Los tres se pasan ese rastro por WiFi, y en pocas vueltas todos marcan la misma
+        ruta más corta. Un <b>gemelo digital</b> en el PC (PyBullet, dentro de Docker) repite todo con tres robots
+        virtuales y lo graba en video.
+      </p>
+      <div class="t10-chips">
+        <span><b>3</b> ESP32</span><span>laberinto <b>5 × 5</b> (1 m)</span><span>ruta óptima <b>2,40 m</b></span>
+        <span>WiFi <b>ENJAMBRE_ACO</b></span><span>UDP <b>4210 / 4211</b></span><span>se prueba <b>sin hardware</b></span>
+      </div>
+      <div class="t10-botones-portada">
+        <button class="t10-boton primario grande" data-ir="Pruébalo: el gemelo digital">▶ Ver el gemelo en vivo (sin hardware)</button>
+        <button class="t10-boton" data-ir="Pruébalo: el algoritmo">El algoritmo en 1 segundo</button>
+        <button class="t10-boton" data-ir="Qué es el algoritmo de hormigas">Primero, entender la idea</button>
+      </div>
+    </div>
+    <figure class="t10-figura">
+      <img class="t10-gif" src="/repo/10-enjambre-algoritmo-hormigas/video/gemelo-sin-hardware.gif"
+           alt="El gemelo digital: la feromona violeta se concentra en la ruta corta y los tres carritos la recorren">
+      <figcaption>El gemelo digital: primero la búsqueda (la franja violeta es la feromona, que se concentra en la
+        ruta corta) y después los tres carritos (rojo, azul, amarillo) recorriendo su ruta, uno cada 8 s.</figcaption>
+    </figure>
+  </div>
+
+  <h3 class="t10-subtitulo">El recorrido de esta app</h3>
+  <div class="t10-mapa-app">
+    <button data-ir="Qué es el algoritmo de hormigas"><span>1</span><b>Entender</b>qué es el ACO, el laberinto y cómo se hablan los carritos</button>
+    <button data-ir="Pruébalo: el algoritmo"><span>2</span><b>Probar</b>el algoritmo, el gemelo en vivo, el emulador de los ESP32 y Docker</button>
+    <button data-ir="Con los carritos reales"><span>3</span><b>Montar</b>los tres carritos de verdad, paso a paso</button>
+    <button data-ir="Resultados"><span>4</span><b>Resultados</b>videos, las 15 pruebas y lo que pide la actividad</button>
+  </div>
+
+  <div class="t10-caja-pide">
+    <div id="checklist-portada"></div>
+    <p class="t10-nota" style="margin:0.5rem 0 0">Cada punto se marca solo cuando corres con éxito la prueba que lo demuestra (en los pasos "Pruébalo").</p>
+  </div>
+</section>
+
+<!-- ================= 2. QUÉ ES EL ACO ================= -->
 <section class="paso" data-titulo="Qué es el algoritmo de hormigas">
   <h2>Cómo encuentran las hormigas el camino más corto</h2>
   <div class="t10-rejilla2">
@@ -68,7 +96,7 @@
         <li><b>Repite</b> 30 veces. La ruta que sigue siempre el tramo con más feromona es la respuesta.</li>
       </ol>
     </div>
-    <div>
+    <div class="t10-pegajoso">
       <canvas id="puente" class="t10-puente" width="640" height="330" aria-label="Animación: hormigas en dos caminos"></canvas>
       <div class="t10-controles">
         <button class="t10-boton" id="puente-reiniciar">Reiniciar</button>
@@ -99,7 +127,7 @@
   </details>
 </section>
 
-<!-- ================= 2. EL LABERINTO ================= -->
+<!-- ================= 3. EL LABERINTO ================= -->
 <section class="paso" data-titulo="El laberinto">
   <h2>El laberinto: un almacén de 5 × 5</h2>
   <div class="t10-rejilla2">
@@ -128,7 +156,7 @@
   </div>
 </section>
 
-<!-- ================= 3. CÓMO SE CONECTAN ================= -->
+<!-- ================= 4. CÓMO SE CONECTAN ================= -->
 <section class="paso" data-titulo="Cómo se conectan los carritos">
   <h2>Cómo se hablan los tres carritos y el PC</h2>
   <div class="t10-aviso info">Para probar la práctica <b>no hace falta nada de esto</b>: el emulador hace de los tres ESP32 dentro del PC. Esta parte explica el montaje real.</div>
@@ -198,95 +226,113 @@ ESTADO;1;BUSQUEDA;5;2.400;0;-48;1,2,3;12345</div>
   </div>
 </section>
 
-<!-- ================= 4. PRUÉBALO: EL ALGORITMO ================= -->
+<!-- ================= 5. PRUÉBALO: EL ALGORITMO ================= -->
 <section class="paso" data-titulo="Pruébalo: el algoritmo">
   <h2>Pruébalo: el algoritmo de los tres carritos (en un segundo)</h2>
   <p>Esto corre en el PC <b>exactamente el mismo cálculo</b> que hacen los tres ESP32 (mismo azar, mismas sumas, bit a bit):
     3 carritos × 4 hormigas × 30 vueltas sobre el laberinto. No necesita PyBullet ni hardware.</p>
-  <div class="t10-columna">
-    <div>
-      <h3 class="t10-titulo-num"><span class="t10-num">A</span>El enjambre completo</h3>
+  <div class="t10-pestanas" data-pestanas>
+    <button class="activo" data-pestana="p-aco"><span class="t10-num">A</span>El enjambre completo <small>&lt; 1 s</small></button>
+    <button data-pestana="p-pruebas"><span class="t10-num">B</span>Las pruebas 6 a 11 <small>~3 s</small></button>
+  </div>
+  <div class="t10-pestana" id="p-aco">
+    <div class="t10-rejilla-panel">
       <div id="panel-aco"></div>
-      <div id="bonito-aco" class="t10-bonito"></div>
+      <div><div id="bonito-aco" class="t10-bonito"></div><div class="t10-vacio" id="vacio-aco">Pulsa <b>Iniciar</b>: aquí aparece el laberinto con la ruta que encontró cada carrito.</div></div>
     </div>
-    <div>
-      <h3 class="t10-titulo-num"><span class="t10-num">B</span>Las pruebas del algoritmo (6 a 11)</h3>
+  </div>
+  <div class="t10-pestana" id="p-pruebas" hidden>
+    <div class="t10-rejilla-panel">
       <div id="panel-pruebas"></div>
-      <div id="bonito-pruebas" class="t10-bonito t10-md"></div>
+      <div><div id="bonito-pruebas" class="t10-bonito t10-md"></div><div class="t10-vacio" id="vacio-pruebas">Pulsa <b>Iniciar</b>: aquí aparecen las tablas de las pruebas, con "cumple" o "no cumple".</div></div>
     </div>
   </div>
 </section>
 
-<!-- ================= 5. PRUÉBALO: EL GEMELO ================= -->
+<!-- ================= 6. PRUÉBALO: EL GEMELO ================= -->
 <section class="paso" data-titulo="Pruébalo: el gemelo digital">
-  <h2>Pruébalo: el gemelo digital en PyBullet (sin hardware)</h2>
+  <h2>Pruébalo: el gemelo digital en PyBullet, en vivo</h2>
   <p>El gemelo arma el laberinto en 3D, corre el mismo algoritmo, mueve tres robots virtuales y <b>graba un video</b>
-    con una cámara desde arriba. No abre ninguna ventana: trabaja por dentro y al final te ofrece el video aquí mismo.</p>
-  <div class="t10-aviso"><b>Tarda unos 4 a 5 minutos</b> (dibuja cada cuadro del video por software). Puedes seguir leyendo la app mientras tanto;
-    la barra de abajo muestra el avance. Si lo detienes antes, el video puede quedar incompleto.</div>
-  <div class="t10-columna">
-    <div>
-      <h3 class="t10-titulo-num"><span class="t10-num">A</span>Los tres carritos</h3>
-      <div id="panel-gemelo"></div>
-      <div id="bonito-gemelo" class="t10-bonito"></div>
-    </div>
-    <div>
-      <h3 class="t10-titulo-num"><span class="t10-num">B</span>Con el carrito 3 apagado a mitad de camino</h3>
-      <div id="panel-gemelo-apagado"></div>
-      <div id="bonito-gemelo-apagado" class="t10-bonito"></div>
-    </div>
+    con una cámara desde arriba. No abre ninguna ventana: mientras trabaja, <b>a la derecha ves lo que va pasando</b>
+    (la feromona de cada tramo y dónde está cada carrito), y al final el video aparece aquí mismo.</p>
+  <div class="t10-pestanas" data-pestanas id="pestanas-gemelo">
+    <button class="activo" data-pestana="p-gemelo"><span class="t10-num">A</span>Los tres carritos <small>~4-5 min</small></button>
+    <button data-pestana="p-gemelo-apagado"><span class="t10-num">B</span>Con el carrito 3 apagado a mitad <small>~4-5 min</small></button>
   </div>
-  <p class="t10-nota">La primera vez la app prepara el entorno de Python con PyBullet. En Windows PyBullet se compila (hacen falta las Build Tools de Visual Studio, unos 13 minutos); si no las tienes, usa el paso <b>Docker</b>, que no compila nada.</p>
+  <div class="t10-rejilla-vivo">
+    <div>
+      <div class="t10-pestana" id="p-gemelo">
+        <div id="panel-gemelo"></div>
+        <div id="bonito-gemelo" class="t10-bonito"></div>
+      </div>
+      <div class="t10-pestana" id="p-gemelo-apagado" hidden>
+        <div id="panel-gemelo-apagado"></div>
+        <div id="bonito-gemelo-apagado" class="t10-bonito"></div>
+      </div>
+      <p class="t10-nota">La primera vez la app prepara el entorno de Python con PyBullet. En Windows PyBullet se compila (hacen falta las Build Tools de Visual Studio, unos 13 minutos); si no las tienes, usa el paso <b>Docker</b>, que no compila nada.</p>
+    </div>
+    <div class="t10-pegajoso"><div id="vivo-gemelo"></div></div>
+  </div>
 </section>
 
-<!-- ================= 6. GEMELO + EMULADOR ================= -->
+<!-- ================= 7. GEMELO + EMULADOR ================= -->
 <section class="paso" data-titulo="Pruébalo: gemelo + emulador de los ESP32">
   <h2>Pruébalo: el gemelo escuchando a tres ESP32 emulados</h2>
   <p>Así se usa con los carritos de verdad, pero sin ellos: el gemelo se queda <b>escuchando la red</b> (UDP 4211) y un
     <b>emulador</b> hace de los tres ESP32 dentro del PC, con el mismo protocolo del firmware y paquetes UDP reales.
-    El orden importa: primero el que escucha, después el que habla.</p>
-  <div class="t10-aviso info">
-    <button class="t10-boton primario" id="lanzar-ambos">Lanzar los dos en orden</button>
-    <span style="margin-left:0.6rem">o hazlo a mano con los pasos 1 y 2. Todo tarda alrededor de 1 minuto y medio y deja un video.</span>
-    <div id="estado-ambos" class="t10-nota" style="margin-top:0.4rem"></div>
+    El orden importa: primero el que escucha, después el que habla. Esta vez el gemelo va en <b>tiempo real</b>:
+    a la derecha ves llegar los mensajes de cada nodo.</p>
+  <div class="t10-aviso info t10-fila">
+    <button class="t10-boton primario grande" id="lanzar-ambos">▶ Lanzar los dos en orden</button>
+    <span>o hazlo a mano con los pasos 1 y 2. Todo tarda alrededor de 1 minuto y deja un video.</span>
+    <div id="estado-ambos" class="t10-nota t10-ancho"></div>
   </div>
-  <div class="t10-rejilla2">
-    <div class="t10-paso-bloque">
-      <h3 class="t10-titulo-num"><span class="t10-num">1</span>Primero: el gemelo, esperando a los carritos</h3>
-      <div id="panel-gemelo-hw"></div>
-      <div class="t10-vivos" id="vivos-hw">
-        <span style="--c:var(--nodo1)">nodo 1</span><span style="--c:var(--nodo2)">nodo 2</span><span style="--c:var(--nodo3)">nodo 3</span>
+  <div class="t10-rejilla-vivo">
+    <div>
+      <div class="t10-paso-bloque">
+        <h3 class="t10-titulo-num"><span class="t10-num">1</span>Primero: el gemelo, esperando a los carritos</h3>
+        <div class="t10-vivos" id="vivos-hw">
+          <span style="--c:var(--nodo1)">nodo 1</span><span style="--c:var(--nodo2)">nodo 2</span><span style="--c:var(--nodo3)">nodo 3</span>
+        </div>
+        <div id="panel-gemelo-hw"></div>
+        <div id="bonito-gemelo-hw" class="t10-bonito"></div>
       </div>
-      <div id="bonito-gemelo-hw" class="t10-bonito"></div>
+      <div class="t10-paso-bloque" id="bloque-emulador">
+        <div class="t10-bloqueado" id="candado-emulador">Primero inicia el paso 1 (el gemelo).<br>Cuando diga que está escuchando, este se habilita.</div>
+        <h3 class="t10-titulo-num"><span class="t10-num">2</span>Después: los tres ESP32 emulados</h3>
+        <div id="panel-emulador"></div>
+        <div id="bonito-emulador" class="t10-bonito"></div>
+      </div>
     </div>
-    <div class="t10-paso-bloque" id="bloque-emulador">
-      <div class="t10-bloqueado" id="candado-emulador">Primero inicia el paso 1 (el gemelo).<br>Cuando diga que está escuchando, este se habilita.</div>
-      <h3 class="t10-titulo-num"><span class="t10-num">2</span>Después: los tres ESP32 emulados</h3>
-      <div id="panel-emulador"></div>
-      <div id="bonito-emulador" class="t10-bonito"></div>
-    </div>
+    <div class="t10-pegajoso"><div id="vivo-hw"></div></div>
   </div>
 </section>
 
-<!-- ================= 7. DOCKER ================= -->
+<!-- ================= 8. DOCKER ================= -->
 <section class="paso" data-titulo="Docker: el gemelo sin compilar nada">
   <h2>Docker: el gemelo sin instalar Python ni compilar PyBullet</h2>
   <p>La actividad pide que la parte virtual corra en <b>Docker</b>. Docker empaqueta el programa con todo lo que necesita
     (Python 3.11 de Linux, PyBullet ya compilado, las librerías exactas) en una "caja" que corre igual en cualquier PC.
-    El video queda en la misma carpeta de resultados del tema.</p>
+    El video queda en la misma carpeta de resultados del tema, y como esa carpeta está compartida con el contenedor,
+    <b>la vista en vivo también funciona</b> con el gemelo de Docker.</p>
   <div class="t10-aviso">Necesita <b>Docker Desktop abierto</b> (que diga "Engine running"). La primera vez descarga y construye la imagen (alrededor de 1 minuto, con internet).</div>
-  <div class="t10-rejilla2">
+  <div class="t10-pestanas" data-pestanas>
+    <button class="activo" data-pestana="p-docker"><span class="t10-num">A</span>Gemelo sin hardware, en el contenedor <small>~2-3 min</small></button>
+    <button data-pestana="p-docker-hw"><span class="t10-num">B</span>Gemelo del contenedor escuchando la red</button>
+  </div>
+  <div class="t10-rejilla-vivo">
     <div>
-      <h3 class="t10-titulo-num"><span class="t10-num">A</span>Gemelo sin hardware, en el contenedor</h3>
-      <p class="t10-nota">Unos 2 minutos. Lo mismo que el paso "el gemelo digital", pero dentro de Docker.</p>
-      <div id="panel-docker"></div>
-      <div id="bonito-docker" class="t10-bonito"></div>
+      <div class="t10-pestana" id="p-docker">
+        <p class="t10-nota">Lo mismo que el paso "el gemelo digital", pero dentro de Docker.</p>
+        <div id="panel-docker"></div>
+        <div id="bonito-docker" class="t10-bonito"></div>
+      </div>
+      <div class="t10-pestana" id="p-docker-hw" hidden>
+        <p class="t10-nota">Deja el gemelo del contenedor escuchando el puerto 4211. Después lanza el <b>paso 2 del emulador</b> (paso anterior de la app) o enciende los carritos. No lo uses a la vez que el gemelo del paso anterior: comparten el puerto.</p>
+        <div id="panel-docker-hw"></div>
+      </div>
     </div>
-    <div>
-      <h3 class="t10-titulo-num"><span class="t10-num">B</span>Gemelo del contenedor escuchando la red</h3>
-      <p class="t10-nota">Deja el gemelo del contenedor escuchando el puerto 4211. Después lanza el <b>paso 2 del emulador</b> (paso anterior de la app) o enciende los carritos. No lo uses a la vez que el gemelo del paso anterior: comparten el puerto.</p>
-      <div id="panel-docker-hw"></div>
-    </div>
+    <div class="t10-pegajoso"><div id="vivo-docker"></div></div>
   </div>
   <details class="t10-tecnico">
     <summary>Qué hace Docker por dentro y problemas típicos</summary>
@@ -294,7 +340,7 @@ ESTADO;1;BUSQUEDA;5;2.400;0;-48;1,2,3;12345</div>
   </details>
 </section>
 
-<!-- ================= 8. PREVIEW ================= -->
+<!-- ================= 9. PREVIEW ================= -->
 <section class="paso" data-titulo="Simulador en el navegador">
   <h2>El simulador del enjambre, aquí mismo</h2>
   <p>El mismo algoritmo pasado a JavaScript: elige laberinto y parámetros y pulsa <b>Iniciar</b> (seguido) o <b>Paso</b> (una vuelta).
@@ -306,7 +352,7 @@ ESTADO;1;BUSQUEDA;5;2.400;0;-48;1,2,3;12345</div>
           src="/repo/10-enjambre-algoritmo-hormigas/preview.html"></iframe>
 </section>
 
-<!-- ================= 9. CON LOS CARRITOS REALES ================= -->
+<!-- ================= 10. CON LOS CARRITOS REALES ================= -->
 <section class="paso" data-titulo="Con los carritos reales">
   <h2>Con los tres carritos de verdad, paso a paso</h2>
   <div class="t10-aviso info">Opcional: todo lo anterior ya demuestra la práctica sin hardware.</div>
@@ -329,7 +375,7 @@ ESTADO;1;BUSQUEDA;5;2.400;0;-48;1,2,3;12345</div>
       Laberinto de 1 m × 1 m igual al del paso "El laberinto". Carrito 1 en A mirando a la derecha; los otros dos esperan fuera, junto a la entrada.
       Encender primero el 1 (crea la red) y después el 2 y el 3.</div></li>
     <li><span class="t10-num">6</span><div><h4>Conectar el PC a la red <code>ENJAMBRE_ACO</code> y arrancar el gemelo</h4>
-      Clave <code>hormigas123</code>. Luego, en esta app, el <b>paso 1 de "gemelo + emulador"</b> (sin lanzar el emulador) o el gemelo en Docker que escucha la red.</div></li>
+      Clave <code>hormigas123</code>. Luego, en esta app, el <b>paso 1 de "gemelo + emulador"</b> (sin lanzar el emulador) o el gemelo en Docker que escucha la red. La vista en vivo muestra los carritos reales igual que los emulados.</div></li>
     <li><span class="t10-num">7</span><div><h4>Mirar</h4>
       Cuando los tres se ven 2 s, empiezan solos las 30 vueltas (unos 15 s). Después cada uno recorre su ruta, uno cada 8 s
       (poner el 2 en A cuando el 1 la deja, y luego el 3). El gemelo graba el video y guarda la ruta de cada carrito para compararla.</div></li>
@@ -344,7 +390,7 @@ python herramientas_red.py rtt --origen 1 --destino 2 --n 100   (latencia, prueb
   </details>
 </section>
 
-<!-- ================= 10. RESULTADOS ================= -->
+<!-- ================= 11. RESULTADOS ================= -->
 <section class="paso" data-titulo="Resultados">
   <h2>Resultados</h2>
   <div class="t10-rejilla3">
@@ -379,21 +425,22 @@ python herramientas_red.py rtt --origen 1 --destino 2 --n 100   (latencia, prueb
     <figure class="t10-figura"><img class="t10-img" data-ampliar src="/repo/10-enjambre-algoritmo-hormigas/img/preview-final.png" alt="El simulador del navegador al terminar">
       <figcaption>El simulador del navegador al terminar, con las tres rutas.</figcaption></figure>
   </div>
+
+  <h3 style="margin-top:1.6rem">¿Está todo lo que pide la actividad?</h3>
+  <div class="t10-rejilla2">
+    <div>
+      <p>Cada punto se marca solo cuando la prueba que lo demuestra terminó bien en esta app. También puedes marcarlo a mano.</p>
+      <div id="checklist-final"></div>
+    </div>
+    <figure class="t10-figura">
+      <img class="t10-img" data-ampliar src="/repo/10-enjambre-algoritmo-hormigas/img/enunciado-actividad.png" alt="Enunciado de la actividad">
+      <figcaption>El enunciado de la actividad.</figcaption>
+    </figure>
+  </div>
   <p style="margin-top:1rem">
     <button class="t10-boton" id="abrir-resultados">Abrir la carpeta de resultados</button>
     <button class="t10-boton" id="abrir-repo">Ver el README completo en GitHub</button>
   </p>
-</section>
-
-<!-- ================= 11. CHECKLIST ================= -->
-<section class="paso" data-titulo="Lo que pide la actividad">
-  <h2>¿Está todo lo que pide la actividad?</h2>
-  <p>Cada punto se marca solo cuando la prueba que lo demuestra terminó bien en esta app. También puedes marcarlo a mano.</p>
-  <div id="checklist-final"></div>
-  <figure class="t10-figura" style="margin-top:1rem; max-width:760px">
-    <img class="t10-img" data-ampliar src="/repo/10-enjambre-algoritmo-hormigas/enunciado-actividad.png" alt="Enunciado de la actividad">
-    <figcaption>El enunciado de la actividad.</figcaption>
-  </figure>
 </section>
 
 </div></main>

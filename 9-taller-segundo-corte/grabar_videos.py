@@ -1,4 +1,4 @@
-"""Videos (MP4 + GIF) de los tres puntos del taller, sin ventana.
+"""Videos (GIF) de los tres puntos del taller, sin ventana.
 
 PyBullet en modo DIRECT + getCameraImage con el renderizador por software
 (ER_TINY_RENDERER, el mismo de capturar_modelos.py): funciona aunque no haya
@@ -18,11 +18,12 @@ Uso (desde la carpeta del taller):
     entorno\\Scripts\\python grabar_videos.py atlas-con       #   atlas-con,
     entorno\\Scripts\\python grabar_videos.py atlas-sin       #   atlas-sin
 
-Genera:
-    punto-a-drones-waypoints/video/drones-mision.mp4 (+ .gif)
-    punto-b-brazo-tipo-baxter/video/baxter-demo.mp4 (+ .gif)
-    punto-c-atlas/video/atlas-con-asistente.mp4 (+ .gif)
-    punto-c-atlas/video/atlas-sin-asistente.mp4 (+ .gif)
+Genera (solo GIF: el MP4 es un paso intermedio en una carpeta temporal, para
+no tener el mismo video dos veces en el repo):
+    punto-a-drones-waypoints/video/drones-mision.gif
+    punto-b-brazo-tipo-baxter/video/baxter-demo.gif
+    punto-c-atlas/video/atlas-con-asistente.gif
+    punto-c-atlas/video/atlas-sin-asistente.gif
 
 Por que un proceso por video: los modulos del taller usan la conexion POR
 DEFECTO de PyBullet y solo puede haber una por proceso. Sin argumentos, el
@@ -32,9 +33,15 @@ Rotulos: los textos de depuracion (addUserDebugText) no salen en
 getCameraImage. Por eso se graban en dos pasadas: 1) la simulacion manda los
 cuadros a un MP4 intermedio y anota en que segundo cambia cada rotulo
 ("TECLA 8: caminar adelante", "ASISTENTE OFF"...); 2) ffmpeg quema esos
-rotulos con drawtext (uno por tramo, con enable entre el segundo a y el b) y saca el
-MP4 final (H.264, yuv420p) y el GIF (paleta propia; si pasa de ~3,5 MB se
-repite con menos cuadros por segundo y menos resolucion).
+rotulos con drawtext (uno por tramo, con enable entre el segundo a y el b) en un
+MP4 temporal y de ahi sale el GIF (paleta propia, sin tramado; si pasa de
+GIF_MAX_MB se repite con menos cuadros por segundo, menos resolucion y el piso
+suavizado).
+
+Por que el piso suavizado: el damero del piso, visto de lejos, hace un muare que
+cambia en CADA cuadro cuando la camara se mueve, y eso es casi todo el peso del
+GIF. Un desenfoque leve SOLO en la franja del medio (no en los rotulos de arriba
+y de abajo, que quedan nitidos) lo baja a la mitad sin que se note.
 """
 
 import glob
@@ -57,9 +64,9 @@ CARPETA_BAXTER = TALLER / "punto-b-brazo-tipo-baxter"
 CARPETA_ATLAS = TALLER / "punto-c-atlas"
 
 ANCHO, ALTO, FPS = 800, 500, 25
-GIF_MAX_MB = 3.5
-# (cuadros por segundo, ancho en px, colores) del GIF, de mejor a mas liviano
-GIF_INTENTOS = [(12, 560, 128), (10, 520, 96), (8, 480, 96), (8, 420, 64), (6, 400, 64), (5, 360, 48)]
+GIF_MAX_MB = 2.2
+# (cuadros por segundo, ancho en px, colores, desenfoque del piso) del GIF, de mejor a mas liviano
+GIF_INTENTOS = [(8, 640, 64, 0.6), (6, 512, 40, 0.9), (5, 480, 32, 1.0), (5, 420, 32, 1.2)]
 FUENTE = "C\\:/Windows/Fonts/arialbd.ttf"      # ':' escapado para el filtro de ffmpeg
 INTERVALO_TECLA = 0.05                         # el ESP32 manda una linea cada 50 ms
 
@@ -180,8 +187,8 @@ class Grabadora:
                "estado": ("14", "50", 22, "white"),
                "titulo": ("14", "h-th-12", 17, "white")}
 
-    def __init__(self, mp4, componer):
-        self.mp4 = Path(mp4)
+    def __init__(self, gif, componer):
+        self.gif = Path(gif)
         self.componer = componer
         self.ffmpeg = buscar_ffmpeg()
         if self.ffmpeg is None:
@@ -225,7 +232,7 @@ class Grabadora:
             self.tramos.append([lugar, self.t, None, texto, color or self.LUGARES[lugar][3]])
 
     def cerrar(self):
-        """Cierra la tuberia, quema los rotulos y hace el MP4 final y el GIF."""
+        """Cierra la tuberia, quema los rotulos (MP4 temporal) y hace el GIF."""
         self.proc.stdin.close()
         self.proc.wait()
         fin = self.t
@@ -241,24 +248,32 @@ class Grabadora:
                 f"drawtext=fontfile='{FUENTE}':textfile='r{k}.txt':expansion=none:x={x}:y={y}:"
                 f"fontsize={tam}:fontcolor={color}:box=1:boxcolor=black@0.55:boxborderw=7:"
                 f"enable='gte(t,{t0:.3f})*lt(t,{t1:.3f})'")
-        self.mp4.parent.mkdir(parents=True, exist_ok=True)
+        self.gif.parent.mkdir(parents=True, exist_ok=True)
+        mp4 = self.tmp / "con_rotulos.mp4"
         vf = ",".join(filtros) or "null"
         # cwd = carpeta temporal: los textfile van con ruta relativa (sin 'C:')
         subprocess.run([self.ffmpeg, "-y", "-loglevel", "error", "-i", str(self.crudo), "-vf", vf,
                         "-c:v", "libx264", "-preset", "slow", "-crf", "23", "-pix_fmt", "yuv420p",
-                        "-movflags", "+faststart", str(self.mp4)], check=True, cwd=self.tmp)
-        gif = self.mp4.with_suffix(".gif")
-        for fps, ancho, colores in GIF_INTENTOS:
-            filtro = (f"fps={fps},scale={ancho}:-1:flags=lanczos,split[a][b];"
-                      f"[a]palettegen=max_colors={colores}:stats_mode=diff[pal];"
-                      f"[b][pal]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle")
-            subprocess.run([self.ffmpeg, "-y", "-loglevel", "error", "-i", str(self.mp4), "-vf", filtro,
+                        "-movflags", "+faststart", str(mp4)], check=True, cwd=self.tmp)
+        gif = self.gif
+        for fps, ancho, colores, sigma in GIF_INTENTOS:
+            # Tres franjas: rotulos de arriba (14 % del alto) y de abajo (8 %) nitidos, el
+            # medio (piso y robot) con un desenfoque leve; despues paleta COMPLETA (stats_mode=full:
+            # con 'diff' se perdia el rojo de "ASISTENTE OFF", que sale en pocos pixeles).
+            filtro = (f"fps={fps},scale={ancho}:-2:flags=lanczos,split=3[t][m][b];"
+                      f"[t]crop=iw:trunc(ih*0.144):0:0[t2];"
+                      f"[m]crop=iw:ih-trunc(ih*0.144)-trunc(ih*0.081):0:trunc(ih*0.144),"
+                      f"gblur=sigma={sigma}:steps=1[m2];"
+                      f"[b]crop=iw:trunc(ih*0.081):0:ih-trunc(ih*0.081)[b2];"
+                      f"[t2][m2][b2]vstack=3,split[a][c];"
+                      f"[a]palettegen=max_colors={colores}:stats_mode=full[pal];"
+                      f"[c][pal]paletteuse=dither=none:diff_mode=rectangle")
+            subprocess.run([self.ffmpeg, "-y", "-loglevel", "error", "-i", str(mp4), "-filter_complex", filtro,
                             "-loop", "0", str(gif)], check=True)
             if gif.stat().st_size / 1e6 <= GIF_MAX_MB:
                 break
         shutil.rmtree(self.tmp, ignore_errors=True)
-        print(f"  listo: {self.mp4.name} ({self.mp4.stat().st_size / 1e6:.2f} MB, {fin:.1f} s), "
-              f"{gif.name} ({gif.stat().st_size / 1e6:.2f} MB, {fps} fps, {ancho} px)")
+        print(f"  listo: {gif.name} ({gif.stat().st_size / 1e6:.2f} MB, {fin:.1f} s, {fps} fps, {ancho} px)")
 
 
 # ======================================================================
@@ -289,7 +304,7 @@ def video_drones():
                 letra(img, nombre, px)
         return img
 
-    g = Grabadora(CARPETA_DRONES / "video" / "drones-mision.mp4", componer)
+    g = Grabadora(CARPETA_DRONES / "video" / "drones-mision.gif", componer)
     g.rotulo("titulo", "Punto a - 5 drones en V (lider rojo). Teclas del ESP32 simuladas: TECLA:x cada 50 ms")
     estado = {"paso": 0, "llegadas": []}
 
@@ -368,7 +383,7 @@ def video_baxter():
     def componer():
         return foto(vista, proy, (-0.6, -0.4, 1.0))
 
-    g = Grabadora(CARPETA_BAXTER / "video" / "baxter-demo.mp4", componer)
+    g = Grabadora(CARPETA_BAXTER / "video" / "baxter-demo.gif", componer)
     g.rotulo("titulo", "Punto b - Baxter (toms_baxter.urdf). Teclas del ESP32 simuladas: TECLA:x cada 50 ms")
 
     # Todo lo que simula el modulo pasa por avanzar(): se reemplaza por una
@@ -406,7 +421,7 @@ def video_baxter():
 # ======================================================================
 # c) Atlas con y sin asistente
 # ======================================================================
-def preparar_atlas(nombre_mp4, titulo):
+def preparar_atlas(nombre_gif, titulo):
     sys.path.insert(0, str(CARPETA_ATLAS))
     import atlas_pybullet as A
 
@@ -419,7 +434,7 @@ def preparar_atlas(nombre_mp4, titulo):
         vista, proy = matrices(objetivo, 3.6, 50, -10)
         return foto(vista, proy, (0.6, 0.5, 1.0))
 
-    g = Grabadora(CARPETA_ATLAS / "video" / nombre_mp4, componer)
+    g = Grabadora(CARPETA_ATLAS / "video" / nombre_gif, componer)
     g.rotulo("titulo", titulo)
     original = A.paso
 
@@ -448,7 +463,7 @@ def preparar_atlas(nombre_mp4, titulo):
 
 
 def video_atlas_con():
-    A, e, g, tecla = preparar_atlas("atlas-con-asistente.mp4",
+    A, e, g, tecla = preparar_atlas("atlas-con-asistente.gif",
                                     "Punto c - Atlas CON asistente de equilibrio. Teclas del ESP32 simuladas")
     tecla("-", 1.5, "Atlas de pie, asistente ON")
     tecla("8", 5.0, "TECLA 8 (sostenida) : caminar adelante", sostener=5.0)
@@ -465,7 +480,7 @@ def video_atlas_con():
 
 
 def video_atlas_sin():
-    A, e, g, tecla = preparar_atlas("atlas-sin-asistente.mp4",
+    A, e, g, tecla = preparar_atlas("atlas-sin-asistente.gif",
                                     "Punto c - Atlas SIN asistente: misma fisica, sin arnes virtual")
     tecla("-", 1.0, "Atlas de pie, asistente ON")
     tecla("A", 1.5, "TECLA A : asistente OFF")
@@ -495,10 +510,10 @@ def video_atlas_sin():
 
 # ======================================================================
 VIDEOS = {
-    "drones": (video_drones, CARPETA_DRONES / "video" / "drones-mision.mp4"),
-    "baxter": (video_baxter, CARPETA_BAXTER / "video" / "baxter-demo.mp4"),
-    "atlas-con": (video_atlas_con, CARPETA_ATLAS / "video" / "atlas-con-asistente.mp4"),
-    "atlas-sin": (video_atlas_sin, CARPETA_ATLAS / "video" / "atlas-sin-asistente.mp4"),
+    "drones": (video_drones, CARPETA_DRONES / "video" / "drones-mision.gif"),
+    "baxter": (video_baxter, CARPETA_BAXTER / "video" / "baxter-demo.gif"),
+    "atlas-con": (video_atlas_con, CARPETA_ATLAS / "video" / "atlas-con-asistente.gif"),
+    "atlas-sin": (video_atlas_sin, CARPETA_ATLAS / "video" / "atlas-sin-asistente.gif"),
 }
 
 if __name__ == "__main__":
@@ -514,8 +529,7 @@ if __name__ == "__main__":
         subprocess.run([sys.executable, "-B", str(Path(__file__).resolve()), nombre, "--hijo"], check=True)
     print("\nResumen:")
     for nombre in pedidos or list(VIDEOS):
-        mp4 = VIDEOS[nombre][1]
-        for archivo in (mp4, mp4.with_suffix(".gif")):
-            if archivo.exists():
-                print(f"  {archivo.relative_to(TALLER)}  {archivo.stat().st_size / 1e6:6.2f} MB  "
-                      f"{duracion(archivo):5.1f} s")
+        archivo = VIDEOS[nombre][1]
+        if archivo.exists():
+            print(f"  {archivo.relative_to(TALLER)}  {archivo.stat().st_size / 1e6:6.2f} MB  "
+                  f"{duracion(archivo):5.1f} s")

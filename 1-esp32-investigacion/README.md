@@ -2,6 +2,43 @@
 
 Actividad 1 del curso: investigación sobre el microcontrolador que se usa en todos los laboratorios. No sale de una carpeta de U_Militar; el material de instalación que la sigue es el del [tema 2](../2-lenguajes-thonny).
 
+## ¿Quiere probarlo? Aquí está
+
+Doble clic en [`ABRIR.bat`](ABRIR.bat) (en Linux o Mac, `./abrir.sh`). Solo hace falta Python 3.9 o
+más nuevo; no se instala nada más y abre en unos segundos. Se abre la app del tema en una ventana
+propia: toda esta investigación como un **lector por capítulos** (índice a la izquierda, barra de
+progreso de lectura y la lista de lo que pedía la actividad, que se va marcando sola al leer cada
+capítulo), más un capítulo extra, **"Córrelo en tu ESP32"**, con el script de la placa listo para
+copiar a Thonny, qué se conecta y qué debe salir en la Shell. Los diagramas se dibujan con internet;
+sin internet se ve el mismo texto.
+
+![La app del tema 1: la investigación del ESP32 como lector por capítulos](img/app.png)
+
+## ¿Quiere saber cómo funciona? Aquí está todo
+
+**La investigación**
+
+- [Qué pedía la actividad y qué hicimos](#qué-pedía-la-actividad-y-qué-hicimos)
+- [Qué es un microcontrolador](#qué-es-un-microcontrolador) (GPIO, periférico, firmware)
+- [Ficha técnica del DevKit V1 con ESP32-WROOM-32](#ficha-técnica-devkit-v1-con-esp32-wroom-32-la-placa-de-los-labs)
+- [De dónde viene](#de-dónde-viene) (el microcontrolador y las revoluciones industriales)
+- [La familia y quién la fabrica](#la-familia-y-quién-la-fabrica)
+- [Arquitectura](#arquitectura)
+- [Pines: lo que no se puede hacer con cada uno](#pines-lo-que-no-se-puede-hacer-con-cada-uno)
+- [Qué es un ADC, un DAC y el PWM](#qué-es-un-adc-un-dac-y-el-pwm)
+- [Cómo se programa](#cómo-se-programa)
+- [El costo ambiental de un chip barato](#el-costo-ambiental-de-un-chip-barato)
+- [Para qué se usa](#para-qué-se-usa)
+
+**El script que se lo pregunta a la placa (`ficha_placa.py`)**
+
+- [La idea general](#la-idea-general) (diagramas del flujo PC ↔ ESP32)
+- [Conexiones](#conexiones)
+- [Qué hace cada archivo](#qué-hace-cada-archivo)
+- [Cómo funciona `ficha_placa.py` paso a paso](#cómo-funciona-ficha_placapy-paso-a-paso)
+- [Qué se usó de todo esto en este repositorio](#qué-se-usó-de-todo-esto-en-este-repositorio)
+- [Cómo probarlo](#cómo-probarlo) (sin ESP32 y con ESP32) y [Pendiente](#pendiente)
+
 ## Qué pedía la actividad y qué hicimos
 
 La actividad era investigar a fondo el ESP32 antes de empezar a programarlo: de dónde sale la idea
@@ -216,6 +253,11 @@ Por qué esos pines y no otros:
   Se abre en Thonny y se corre con F5, sin grabarlo como `main.py`: es una prueba de una sola vez,
   no un programa que tenga que arrancar solo al encender la placa. Imprime por la Shell de Thonny
   cinco bloques (chip y firmware, memoria, sensores internos, ADC/DAC y táctil) y termina.
+- **`ABRIR.bat`** / **`abrir.sh`**, **`probar.json`** y **`app/`**: la app del tema (el lector por
+  capítulos de arriba). `probar.json` le dice al lanzador del repo qué pedía la actividad y qué enlaces
+  ofrecer; `app/` es la página (HTML, CSS y JS sin librerías que instalar), que arma sus capítulos
+  leyendo los títulos de este mismo README.
+- **`img/`**: la captura de la app.
 
 No hay entorno de Python (`entorno/`) en este tema porque no hay código que corra en el PC: el
 único script vive en la placa y lo ejecuta MicroPython.

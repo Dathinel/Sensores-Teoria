@@ -848,6 +848,61 @@ class Salidas:
             json.dump(resumen, f, indent=2, ensure_ascii=False)
 
 
+class EstadoEnVivo:
+    """Foto del gemelo para la app del tema (app/): resultados/vivo_<modo>.json.
+
+    El video mp4 recien se puede ver al final; mientras tanto la app lee este json chiquito
+    (unas 2 veces por segundo) y dibuja el laberinto con la feromona de cada arista y la posicion
+    de los 3 carritos. Es solo una ventana para mirar: el gemelo no lo vuelve a leer.
+
+    Se escribe a un .tmp y despues se renombra (os.replace) para que la app nunca lea un json a
+    medio escribir. En Windows el renombrado falla si justo en ese instante el servidor de la app
+    tiene el archivo abierto: en ese caso se salta esa foto (llega otra enseguida)."""
+
+    CADA_S = 0.4   # segundos de reloj entre una foto y la siguiente
+
+    def __init__(self, carpeta: str, modo: str, t_total):
+        self.ruta = os.path.join(carpeta, f"vivo_{modo}.json")
+        self.modo = modo
+        self.t_total = t_total        # tiempo virtual total (sin hardware) o None (hardware)
+        self.inicio = time.time()     # la app descarta fotos de una corrida anterior con esto
+        self.proxima = 0.0
+
+    def escribir(self, g: EstadoGemelo, t: float, cuadros: int, terminado: bool = False,
+                 forzar: bool = False) -> None:
+        ahora = time.monotonic()
+        if not (forzar or terminado) and ahora < self.proxima:
+            return
+        self.proxima = ahora + self.CADA_S
+        lab = g.lab
+        nodos = {}
+        for n in sorted(g.nodos):
+            d = g.nodos[n]
+            pose = g.pose_carrito(n, t)
+            nodos[str(n)] = {
+                "fase": d["fase"], "iter": d["iter"], "ruta": d["ruta"], "longitud": d["longitud"],
+                "celda": d["celda"], "apagado": g.apagado(n, t),
+                "pose": [round(v, 4) for v in pose] if pose else None,
+            }
+        conv, cod = g.convergio()
+        foto = {
+            "modo": self.modo, "inicio": self.inicio, "reloj_s": round(time.time() - self.inicio, 1),
+            "t": round(t, 2), "t_total": self.t_total, "iter": g.iter_aplicada,
+            "iteraciones": g.params.iteraciones, "columnas": lab.columnas, "filas": lab.filas,
+            "tam_celda": lab.tam_celda, "inicio_celda": lab.inicio, "meta_celda": lab.meta,
+            "aristas": [list(a) for a in lab.aristas], "tau": [round(x, 4) for x in g.ref.tau],
+            "camino_feromona": cod, "convergio": conv, "nodos": nodos, "vivos": g.vivos(t),
+            "ultima_linea": g.ultima_linea[:120], "cuadros": cuadros, "terminado": terminado,
+        }
+        tmp = self.ruta + ".tmp"
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(foto, f, ensure_ascii=False)
+            os.replace(tmp, self.ruta)
+        except OSError:
+            pass  # el archivo estaba abierto por la app justo ahora: se escribe en la proxima
+
+
 def armar_resumen(g: EstadoGemelo, t_final: float, sal: Salidas, extra: dict) -> dict:
     lab = g.lab
     opt = aco.camino_optimo(lab)
@@ -914,11 +969,13 @@ def correr_sin_hardware(args, lab, params) -> int:
     comp = Compositor(escena, g, modo_txt)
     # Con un nodo apagado los archivos llevan un sufijo, para no pisar la corrida normal.
     sal = Salidas(args.salida, "sin-hardware" + (f"_apagado{args.apagar_nodo}" if caidas else ""), args.fps)
+    vivo = EstadoEnVivo(args.salida, sal.modo, round(t_fin, 2))
+    vivo.escribir(g, 0.0, 0, forzar=True)
 
     dt = 1.0 / args.fps
     i, cuadro, t = 0, 0, 0.0
     reloj = time.monotonic()
-    proximo_aviso = 5.0
+    proximo_aviso = 2.5
     while True:
         # Tiempo virtual: el cuadro numero 'cuadro' corresponde a t = cuadro / fps. No se duerme:
         # se procesan todos los mensajes con instante <= t y se renderiza.
@@ -932,9 +989,12 @@ def correr_sin_hardware(args, lab, params) -> int:
         g.actualizar(t)
         escena.actualizar(g, t)
         sal.agregar_cuadro(comp.cuadro(t, params.iteraciones))
+        vivo.escribir(g, t, sal.cuadros)
         if t >= proximo_aviso:
-            print(f"  t = {t:5.1f} s  iteracion {g.iter_aplicada:2d}  cuadros {sal.cuadros}")
-            proximo_aviso += 5.0
+            # "t = X s de Y s": la app (y el campo progreso_regex de probar.json) saca de aqui la
+            # barra de avance; Y es el tiempo virtual total, conocido desde el principio.
+            print(f"  t = {t:5.1f} s de {t_fin:.1f} s  iteracion {g.iter_aplicada:2d}  cuadros {sal.cuadros}")
+            proximo_aviso += 2.5
         terminado = i >= len(eventos) and t >= t_fin and \
             all(g.carrito_termino(n, t) or g.apagado(n, t) for n in g.nodos)
         if terminado:
@@ -952,6 +1012,7 @@ def correr_sin_hardware(args, lab, params) -> int:
         "feromona_identica_a_los_nodos": identica,
         "segundos_de_computo": round(time.monotonic() - reloj, 1)})
     sal.cerrar(resumen)
+    vivo.escribir(g, t, sal.cuadros, terminado=True)
     imprimir_final(resumen, sal)
     return 0 if identica else 1
 
@@ -974,6 +1035,8 @@ def correr_hardware(args, lab, params) -> int:
     escena = Escena(lab)
     comp = Compositor(escena, g, f"hardware (UDP {args.puerto})")
     sal = Salidas(args.salida, "hardware", args.fps)
+    vivo = EstadoEnVivo(args.salida, "hardware", None)
+    vivo.escribir(g, 0.0, 0, forzar=True)
 
     t0 = time.monotonic()
     t = 0.0
@@ -1003,11 +1066,12 @@ def correr_hardware(args, lab, params) -> int:
                     for m in msgs:
                         g.recibir(m, t, ln)
             g.actualizar(t)
+            vivo.escribir(g, t, sal.cuadros)
 
-            # Diagnostico en consola.
+            # Diagnostico en consola ("it k/N": la app saca de aqui la barra de la busqueda).
             if t >= proximo_cruda:
                 if g.ultima_linea:
-                    print(f"  t = {t:5.1f} s  it {g.iter_aplicada:2d}  vivos {g.vivos(t)}  ultima linea: {g.ultima_linea[:90]}")
+                    print(f"  t = {t:5.1f} s  it {g.iter_aplicada:2d}/{params.iteraciones}  vivos {g.vivos(t)}  ultima linea: {g.ultima_linea[:90]}")
                 proximo_cruda += 5.0
             silencio = t if g.t_ultimo_mensaje is None else t - g.t_ultimo_mensaje
             if silencio >= proximo_aviso_silencio - 1e-6 and silencio >= 10.0:
@@ -1053,6 +1117,7 @@ def correr_hardware(args, lab, params) -> int:
                                         "nota_parametros": "rho se toma de --rho; debe ser el mismo "
                                                            "del firmware para reconstruir bien la feromona"})
     sal.cerrar(resumen)
+    vivo.escribir(g, t, sal.cuadros, terminado=True)
     imprimir_final(resumen, sal)
     return 0
 

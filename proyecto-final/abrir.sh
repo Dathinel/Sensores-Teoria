@@ -1,11 +1,12 @@
 #!/usr/bin/env sh
 # Abre la app de esta práctica en Linux/Mac: `sh abrir.sh` (en Windows: doble clic en ABRIR.bat).
-# Usa el lanzador probar.py de la raíz del repo (solo biblioteca estándar, Python >= 3.9).
+# Usa el lanzador de la raíz del repo, _lanzador/lanzador.py (solo biblioteca estándar, Python >= 3.9).
 cd "$(dirname "$0")" || exit 1
 PRACTICA="$(basename "$(pwd)")"
 for py in python3 python; do
     if command -v "$py" >/dev/null 2>&1 && "$py" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)'; then
-        exec "$py" ../probar.py --practica "$PRACTICA" "$@"
+        echo "Abriendo la app de $PRACTICA... (la primera vez tarda unos segundos)"
+        exec "$py" ../_lanzador/lanzador.py --practica "$PRACTICA" "$@"
     fi
 done
 echo "No encontré Python 3.9 o más nuevo."

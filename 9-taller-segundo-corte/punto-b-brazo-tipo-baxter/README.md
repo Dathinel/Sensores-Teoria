@@ -1,10 +1,12 @@
 # Punto b) Baxter: mover los dos brazos, posicionar y coger un objeto
 
+> **¿Quiere probarlo?** Doble clic en [`ABRIR.bat`](../ABRIR.bat) (carpeta del tema 9) → paso **b) Baxter** de la app (abre la ventana con sus 13 botones, o la prueba sin ventana con la lista de OK). **¿Quiere saber cómo funciona?** Aquí está todo: [cómo se maneja](#cómo-se-maneja-comportamientos-y-modos) · [qué es Baxter](#qué-es-baxter) · [modelos 3D](#los-modelos-3d-reales) · [cinemática inversa](#qué-es-la-cinemática-inversa) · [constraint](#qué-es-un-constraint) · [idea general](#la-idea-general) · [la escena](#la-escena) · [lógica paso a paso](#lógica-paso-a-paso) · [cómo probarlo a mano](#cómo-probarlo) · [resultados](#resultados-de-la-prueba).
+
 Basado en [baxter_ik_demo.py](https://github.com/erwincoumans/pybullet_robots/blob/master/baxter_ik_demo.py), del repositorio [pybullet_robots](https://github.com/erwincoumans/pybullet_robots) que compartió el profesor. De ese script tomamos el robot (el mismo `toms_baxter.urdf`, con la base fija) y la técnica: mover la pinza con `p.calculateInverseKinematics` y repartir la respuesta entre las articulaciones según su `qIndex`.
 
 ## Qué pedía el enunciado
 
-![Enunciado](enunciado-actividad.png)
+![Enunciado](img/enunciado-actividad.png)
 
 Una consola de mandos con el ESP32 para mover a Baxter con fluidez, con movilidad real de los brazos y posicionamiento, y que pueda coger y mover un objeto. Lo que hicimos, con el teclado 4x4 del ESP32:
 
@@ -20,7 +22,7 @@ La demo `D` con el brazo izquierdo, después `*` para pasar al derecho, el derec
 
 ![Demo de Baxter: coger y mover el cubo, cambiar de brazo y jog](video/baxter-demo.gif)
 
-Video completo: [baxter-demo.mp4](video/baxter-demo.mp4)
+El GIF es la grabación completa (24 s).
 
 El modelo 3D real de Baxter, en su pose inicial y en el momento en que agarra el cubo (capturas de la simulación con `getCameraImage`):
 
@@ -299,7 +301,7 @@ En la simulación, la secuencia del video es la demo `D` con el brazo izquierdo 
 
 ![Demo de Baxter](video/baxter-demo.gif)
 
-Video completo: [baxter-demo.mp4](video/baxter-demo.mp4)
+El GIF es la grabación completa (24 s).
 
 ## Resultados de la prueba
 

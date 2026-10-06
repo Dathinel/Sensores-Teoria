@@ -2,6 +2,8 @@
 
 Basado en [atlas.py](https://github.com/erwincoumans/pybullet_robots/blob/master/atlas.py), del repositorio [pybullet_robots](https://github.com/erwincoumans/pybullet_robots) que compartió el profesor.
 
+> **¿Quiere probarlo?** Doble clic en [`ABRIR.bat`](../ABRIR.bat) (carpeta del tema 9) → paso **c) Atlas** de la app: la prueba de estrés dibuja en la app, prueba por prueba, cuántos segundos aguanta de pie con y sin asistente. **¿Quiere saber cómo funciona?** Aquí está todo: [qué es Atlas](#qué-es-atlas) · [modelos 3D](#los-modelos-3d-reales) · [cómo se maneja](#cómo-se-maneja-comportamientos-y-modos) · [por qué caminar es difícil](#por-qué-caminar-es-difícil-para-un-bípedo) · [idea general](#la-idea-general) · [lógica paso a paso](#lógica-paso-a-paso) · [prueba de estrés](#la-prueba-de-estrés) · [cómo probarlo a mano](#cómo-probarlo).
+
 Atlas, el humanoide de Boston Dynamics, manejado entero desde el teclado 4x4 del ESP32: se le mueven brazos, torso, cabeza y piernas junta por junta, se lo manda a poses (saludar, agacharse, brazos arriba), camina hacia adelante y hacia atrás y gira dando pasos, todo con física real. La gracia está en una tecla, la `A`: prende y apaga un **asistente de equilibrio** (un arnés virtual), así que la misma caminata se puede probar con ayuda y sin ella, y ver dónde la física sola aguanta y dónde no. Si se cae, la `B` lo pone de pie. En el montaje real funcionó con el teclado respondiendo en todas las teclas.
 
 <table>
@@ -14,8 +16,8 @@ Atlas, el humanoide de Boston Dynamics, manejado entero desde el teclado 4x4 del
     <td><img src="video/atlas-sin-asistente.gif" width="100%" alt="Atlas sin el asistente de equilibrio"></td>
   </tr>
   <tr>
-    <td>Video completo: <a href="video/atlas-con-asistente.mp4">atlas-con-asistente.mp4</a></td>
-    <td>Video completo: <a href="video/atlas-sin-asistente.mp4">atlas-sin-asistente.mp4</a></td>
+    <td>Grabación completa (25 s).</td>
+    <td>Grabación completa (16 s).</td>
   </tr>
 </table>
 
@@ -23,7 +25,7 @@ Atlas, el humanoide de Boston Dynamics, manejado entero desde el teclado 4x4 del
 
 ## Qué pedía el enunciado
 
-![Enunciado](enunciado-actividad.png)
+![Enunciado](img/enunciado-actividad.png)
 
 El texto del punto c) dice: "Desarrollar una consola de mandos con la esp32 para un movimiento fluido del robot Baxter que permita una movilidad real". Pero la imagen no es Baxter: es el humanoide **Atlas** de Boston Dynamics parado sobre una plataforma azul, que es justamente lo que carga `atlas.py` del repositorio enlazado. El texto parece copiado del punto b) (que sí es Baxter), así que este punto se hizo con Atlas. (Una primera versión de este punto usó un robot de reemplazo; quedó en el historial de git.)
 
@@ -265,7 +267,7 @@ El módulo se puede importar sin abrir ventana (todo vive en un objeto `Estado`,
 
 ## La prueba de estrés
 
-`probar_atlas.py` corre todo en modo `DIRECT` (sin ventana, alrededor de un minuto) pasando por las mismas funciones que la ventana y simulando el protocolo del ESP32 (una línea `TECLA:x` cada 50 ms). Hace, con y sin asistente, las pruebas de la tabla de [Qué esperar con y sin asistente](#qué-esperar-con-y-sin-asistente), y además:
+`probar_atlas.py` corre todo en modo `DIRECT` (sin ventana, unos 3 a 4 minutos) pasando por las mismas funciones que la ventana y simulando el protocolo del ESP32 (una línea `TECLA:x` cada 50 ms). Hace, con y sin asistente, las pruebas de la tabla de [Qué esperar con y sin asistente](#qué-esperar-con-y-sin-asistente), y además:
 
 - **Ponerlo de pie:** lo tira 3 veces con un empujón de costado (1500 N durante 0,2 s, asistente apagado) y las 3 veces `B` lo dejó de pie. Después el asistente volvió a OFF y se sostuvo solo los 5 s siguientes.
 - **Flanco:** 10 líneas `TECLA:A` seguidas (sostener `A` medio segundo) conmutaron el asistente **una sola vez**.
@@ -291,8 +293,7 @@ Y así se ve Atlas manejado desde el teclado. A la izquierda con el asistente: c
   </tr>
 </table>
 
-- Video completo con asistente: [atlas-con-asistente.mp4](video/atlas-con-asistente.mp4)
-- Video completo sin asistente: [atlas-sin-asistente.mp4](video/atlas-sin-asistente.mp4)
+Los dos GIF son las grabaciones completas (25 s con asistente, 16 s sin asistente).
 
 ## Cómo probarlo
 
@@ -310,7 +311,7 @@ Los comandos van desde la carpeta del taller (`9-taller-segundo-corte\`), usando
 3. Cambiar `PUERTO_SERIAL = "COM7"` al principio de `atlas_pybullet.py` por el COM que muestre el Administrador de dispositivos.
 4. `entorno\Scripts\python punto-c-atlas\atlas_pybullet.py`. Sostener `8` lo hace caminar y al soltarla frena. Los botones de la ventana siguen funcionando a la par.
 
-**La prueba de estrés:** `entorno\Scripts\python punto-c-atlas\probar_atlas.py` (sin ventana, alrededor de un minuto) imprime las tablas de arriba.
+**La prueba de estrés:** `entorno\Scripts\python punto-c-atlas\probar_atlas.py` (sin ventana, unos 3 a 4 minutos) imprime las tablas de arriba.
 
 | Tecla | Efecto | Cómo reacciona |
 |---|---|---|
@@ -332,9 +333,8 @@ Los comandos van desde la carpeta del taller (`9-taller-segundo-corte\`), usando
 
 - **`atlas_pybullet.py`**: todo el punto c): serial, mundo, asistente, poses, jog, marcha, teclas y ventana. Se corre con `python atlas_pybullet.py` o se importa (ver su docstring).
 - **`probar_atlas.py`**: la prueba de estrés en `DIRECT`.
-- **`img/`**: capturas del modelo 3D (de pie con asistente, caminando y sin asistente).
-- **`video/`**: los GIF y MP4 de la demo con y sin asistente.
+- **`img/`**: el enunciado del punto y las capturas del modelo 3D (de pie con asistente, caminando y sin asistente).
+- **`video/`**: los GIF de la demo con y sin asistente.
 - **`../descargar_modelos.py`**: baja las mallas de Atlas a `../modelos/`.
 - **`../esp32_teclado.py`**: el firmware común del ESP32 (ver el README del taller).
 - **`../preview.html`**: la consola en el navegador (modo prueba y Web Serial), con la configuración de Atlas.
-- **`enunciado-actividad.png`**: la captura del enunciado de este punto.

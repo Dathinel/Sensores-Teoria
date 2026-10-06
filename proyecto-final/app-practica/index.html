@@ -5,48 +5,197 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Logística de monedas</title>
 <!-- App del proyecto final (grupo 7). Va en app-practica/ porque proyecto-final/app/ es el
-     paquete de Python del proyecto; el probar.json lo declara con "app": "app-practica/index.html". -->
+     paquete de Python del proyecto; el probar.json lo declara con "app": "app-practica/index.html".
+     Organizada como Docker Desktop (pedido del usuario, 2026-10-05): barra lateral con las secciones,
+     una vista "Programas" con la lista de lo que se puede arrancar (estado y botón en cada fila) y su
+     detalle al lado, y la prueba visual con el recorrido animado JUNTO al estado real de la simulación. -->
 <link rel="stylesheet" href="/comun/app.css">
 <link rel="stylesheet" href="./monedas.css">
 </head>
-<body>
-<header class="app-encabezado">
+<body class="pf">
+<header class="app-encabezado pf-cab">
   <span class="app-num">★</span>
-  <h1>Proyecto final · logística de monedas inteligentes <span class="app-tenue">(grupo 7)</span></h1>
-  <nav class="app-botones">
-    <button class="app-btn app-btn-mini" data-ir="3">Verlo en vivo</button>
-    <button class="app-btn app-btn-mini" data-ir="8">Estado honesto</button>
-  </nav>
+  <h1>Logística de monedas <span class="app-tenue">· proyecto final, grupo 7</span></h1>
+  <button class="pf-sim" id="chipSim" type="button" title="Estado de la simulación en vivo (visor 3D)">
+    <span class="pf-punto"></span><span id="chipSimTxt">Simulación: buscando…</span></button>
+  <div data-app-herramientas></div>
 </header>
 
-<main class="app-contenedor">
-  <div class="app-portada">
-    <div>
-      <p class="app-etiqueta">Micros y Laboratorio · UMNG · 2026-2</p>
-      <h2>Una línea que separa monedas colombianas de todo lo demás, las empaca en vasos y las manda en un carro</h2>
-      <p class="app-lema">Se pone una pieza a mano; cuatro estaciones deciden si es una moneda colombiana buena.
-        Las buenas se guardan por denominación, se empacan en vasos tapados y un carro las lleva por una pista con
-        tres muros hasta la meta. Todo corre en <b>simulación con física real</b> (PyBullet): no hace falta el montaje.</p>
-      <div class="m-chips">
-        <span class="app-chip">13 sensores baratos</span>
-        <span class="app-chip">2 ESP32 (USB + ESP-NOW)</span>
-        <span class="app-chip">visor 3D + Streamlit</span>
-        <span class="app-chip">asistente sin internet</span>
+<div class="pf-cuerpo">
+  <nav class="pf-lateral" aria-label="Secciones">
+    <button class="pf-nav activa" data-vista="inicio"><span class="pf-ico">⌂</span><span>Inicio</span></button>
+    <button class="pf-nav" data-vista="prueba"><span class="pf-ico">◎</span><span>Prueba visual</span></button>
+    <button class="pf-nav" data-vista="programas"><span class="pf-ico">▶</span><span>Programas</span><span class="pf-cuenta" id="cuentaMarcha" hidden></span></button>
+    <button class="pf-nav" data-vista="como"><span class="pf-ico">⇄</span><span>Cómo funciona</span></button>
+    <button class="pf-nav" data-vista="portable"><span class="pf-ico">◇</span><span>Visor sin instalar</span></button>
+    <button class="pf-nav" data-vista="resultados"><span class="pf-ico">▤</span><span>Resultados</span></button>
+    <button class="pf-nav" data-vista="pide"><span class="pf-ico">✓</span><span>Qué pide el parcial</span></button>
+    <button class="pf-nav" data-vista="estado"><span class="pf-ico">!</span><span>Estado y documentos</span></button>
+    <p class="pf-lateral-pie app-tenue">Todo corre en simulación: no hace falta montar ni conectar nada.</p>
+  </nav>
+
+  <main class="pf-main" id="principal">
+
+    <!-- INICIO ================================================================================ -->
+    <section class="pf-vista activa" data-vista="inicio">
+      <div class="pf-inicio">
+        <div>
+          <p class="app-etiqueta">Micros y Laboratorio · UMNG · 2026-2</p>
+          <h2 class="pf-titular">Una línea que separa monedas colombianas de todo lo demás, las empaca en vasos y las manda en un carro</h2>
+          <p class="app-lema">Se pone una pieza a mano; cuatro estaciones deciden si es una moneda colombiana buena.
+            Las buenas se guardan por denominación, se empacan en vasos tapados y un carro las lleva por una pista con
+            tres muros hasta la meta. Todo corre en <b>simulación con física real</b> (PyBullet).</p>
+          <div class="m-chips">
+            <span class="app-chip">13 sensores baratos</span>
+            <span class="app-chip">2 ESP32 (USB + ESP-NOW)</span>
+            <span class="app-chip">visor 3D + Streamlit</span>
+            <span class="app-chip">asistente sin internet</span>
+          </div>
+        </div>
+        <video src="/repo/proyecto-final/docs/videos/filtro_monedas.mp4" poster="/repo/proyecto-final/docs/capturas/visor-planta-y-pista.png"
+               autoplay muted loop playsinline aria-label="Simulación del filtro de monedas en PyBullet"></video>
       </div>
-    </div>
-    <video src="/repo/proyecto-final/docs/videos/filtro_monedas.mp4" poster="/repo/proyecto-final/docs/capturas/visor-planta-y-pista.png"
-           autoplay muted loop playsinline controls aria-label="Simulación del filtro de monedas en PyBullet"></video>
-  </div>
 
-  <section class="app-seccion">
-    <div id="pide"></div>
-  </section>
+      <h3 class="pf-sub">Empieza por aquí</h3>
+      <div class="pf-atajos">
+        <button class="pf-atajo" data-ir="prueba"><b>1 · Mira la prueba visual</b>
+          <span>Una pieza recorre las 4 estaciones, animada y explicada, al lado de lo que pasa de verdad en la simulación.</span>
+          <em>al instante</em></button>
+        <button class="pf-atajo" data-ir="programas" data-programa="vivo"><b>2 · Arranca la línea en vivo</b>
+          <span>Visor 3D + dashboard de Streamlit, con la corrida completa: planta, vasos y carro.</span>
+          <em>el visor tarda ~8-10 s en responder</em></button>
+        <button class="pf-atajo" data-ir="programas" data-programa="sim-filtro"><b>3 · La física en PyBullet</b>
+          <span>Las 4 escenas en su ventana real: filtro, vasos, carro y todo junto.</span>
+          <em>~5 s en abrir la ventana</em></button>
+        <button class="pf-atajo" data-ir="programas" data-programa="asistente"><b>4 · Pregúntale al asistente</b>
+          <span>Responde con las cifras de la corrida y la documentación, sin clave ni internet.</span>
+          <em>~5 s en arrancar</em></button>
+      </div>
 
-  <div id="pasos">
-    <!-- 1 ------------------------------------------------------------------------------------ -->
-    <section class="paso" data-titulo="Qué hace">
-      <h2>Qué hace, de punta a punta</h2>
-      <p>El sistema tiene cuatro partes que se pasan el trabajo como en una fábrica:</p>
+      <div class="app-aviso pf-primera"><b>La primera vez</b> que pulses Iniciar en algo de Python, la app prepara sola
+        la <b>instalación mínima</b> (13 paquetes, ~0,7 GB): unos <b>3 min</b> si las descargas ya están en caché; en un PC
+        nuevo PyBullet se compila (~10 min, necesita las Microsoft C++ Build Tools: el panel avisa si faltan). Se ve con
+        una barra de progreso. Si ya corriste <code>instalar.bat</code> del proyecto, se usa ese entorno y arranca enseguida.</div>
+    </section>
+
+    <!-- PRUEBA VISUAL ========================================================================= -->
+    <section class="pf-vista" data-vista="prueba">
+      <h2>Prueba visual: el recorrido de una pieza</h2>
+      <p class="pf-intro">A la izquierda, <b>cómo debería funcionar</b>: eliges una pieza y la ves pasar por las cuatro
+        estaciones, con lo que decide cada una. A la derecha, <b>lo que está pasando de verdad</b> en la simulación (si está
+        corriendo): las mismas cuatro casillas, con las piezas reales, el almacén y los rechazos.</p>
+      <div class="pf-dos">
+        <div class="pf-tarjeta">
+          <div class="pf-tarjeta-cab"><h3>Así funciona</h3><span class="app-chip">animación</span></div>
+          <div class="m-piezas" role="radiogroup" aria-label="Pieza a poner">
+            <button class="app-btn app-btn-mini m-pieza activa" data-pieza="moneda">Moneda $500</button>
+            <button class="app-btn app-btn-mini m-pieza" data-pieza="boton">Botón plástico</button>
+            <button class="app-btn app-btn-mini m-pieza" data-pieza="arandela">Arandela</button>
+            <button class="app-btn app-btn-mini m-pieza" data-pieza="bloque">Bloque metálico</button>
+            <button class="app-btn app-btn-mini m-pieza" data-pieza="euro">1 euro</button>
+          </div>
+          <div class="m-cinta" id="cinta" aria-live="polite">
+            <div class="m-casilla" data-i="0"><b>Carga</b><small>a mano</small></div>
+            <div class="m-casilla" data-i="1"><b>E1</b><small>presencia</small></div>
+            <div class="m-casilla" data-i="2"><b>E2</b><small>material</small></div>
+            <div class="m-casilla" data-i="3"><b>E3</b><small>cámara</small></div>
+            <div class="m-casilla" data-i="4"><b>E4</b><small>descarga</small></div>
+            <div class="m-casilla m-final" data-i="5"><b id="destino">Destino</b><small id="destinoSub">almacén o rechazo</small></div>
+            <div class="m-ficha" id="ficha" aria-hidden="true"></div>
+          </div>
+          <div class="pf-reloj"><div class="app-barra fija"><div id="cicloBarra"></div></div><span id="cicloTxt" class="app-tenue">Ciclo real: 600 ms avanzando + 1000 ms de pausa</span></div>
+          <div class="app-botones">
+            <button class="app-btn primario" id="todo">▶ Reproducir el recorrido</button>
+            <button class="app-btn" id="avanzar">Avanzar una casilla</button>
+            <button class="app-btn" id="reiniciar">Poner otra pieza</button>
+          </div>
+          <div class="m-explica" id="explica"></div>
+        </div>
+
+        <div class="pf-tarjeta">
+          <div class="pf-tarjeta-cab"><h3>En la simulación, ahora</h3><span class="app-chip" id="realChip">buscando…</span></div>
+          <div id="realApagado" class="pf-apagado">
+            <p>La simulación en vivo no está respondiendo en este PC.</p>
+            <p class="app-tenue">Al arrancarla, aquí se ven las piezas reales pasando por E1-E4, el almacén y los rechazos,
+              actualizados cada segundo (los mismos datos que usa el visor 3D).</p>
+            <button class="app-btn primario" id="arrancarDesdePrueba">▶ Arrancar la línea en vivo</button>
+            <p class="app-tenue pf-chico">Tarda ~8-10 s en responder; si es la primera vez, antes se prepara el entorno (~3 min).</p>
+          </div>
+          <div id="realVivo" hidden>
+            <div class="pf-real-cinta" id="realCinta"></div>
+            <p class="pf-real-linea" id="realLinea"></p>
+            <div class="pf-real-grid">
+              <div><h4>Almacén (monedas aceptadas)</h4><div id="realAlmacen" class="pf-barras"></div></div>
+              <div><h4>Rechazos por causa</h4><div id="realRechazos" class="pf-barras rojo"></div></div>
+            </div>
+            <div class="pf-real-pie">
+              <span id="realCarro"></span>
+              <span id="realVasos"></span>
+            </div>
+            <div class="app-botones">
+              <a class="app-btn" id="realAbrirVisor" target="_blank" rel="noopener">Abrir el visor 3D</a>
+              <button class="app-btn" id="realVerAqui">Ver el visor 3D aquí</button>
+            </div>
+            <div class="m-marco pf-marco-chico" id="realMarco" hidden></div>
+          </div>
+        </div>
+      </div>
+      <details class="app-plegado"><summary>El texto completo del README (con los tiempos reales)</summary>
+        <div id="recorridoMd"></div></details>
+    </section>
+
+    <!-- PROGRAMAS (tipo Docker Desktop: lista + detalle) ====================================== -->
+    <section class="pf-vista" data-vista="programas">
+      <h2>Programas</h2>
+      <p class="pf-intro">Todo lo que se puede arrancar, como en Docker Desktop: cada fila dice qué es, cuánto tarda y
+        cómo está. Elige una fila para ver su detalle, iniciarla y leer lo que dice el programa.</p>
+      <div class="pf-programas">
+        <div class="pf-lista" role="listbox" aria-label="Programas" id="listaProgramas"></div>
+        <div class="pf-detalle" id="detallePrograma">
+          <div class="pf-detalle-cab">
+            <span class="pf-punto" id="detPunto"></span>
+            <div class="pf-detalle-nombre"><h3 id="detNombre"></h3><small id="detSub"></small></div>
+            <span class="pf-item-estado" id="detEstado"></span>
+            <button class="app-btn primario" id="detIniciar" type="button">▶ Iniciar</button>
+            <button class="app-btn peligro" id="detDetener" type="button" hidden>■ Detener</button>
+          </div>
+          <!-- un panel por programa; solo se ve el elegido (así ninguno pierde su salida al cambiar) -->
+          <div class="pf-panel" data-programa="vivo">
+            <div id="vivo"></div>
+            <div class="m-enlaces" id="enlacesVivo" hidden>
+              <a class="app-btn primario" id="linkVisor" target="_blank" rel="noopener">Abrir el visor 3D en vivo</a>
+              <a class="app-btn" id="linkDash" target="_blank" rel="noopener">Abrir el dashboard</a>
+              <span class="app-tenue" id="puertosReales"></span>
+            </div>
+          </div>
+          <div class="pf-panel" data-programa="sim-filtro" hidden>
+            <img class="pf-gif" src="/repo/proyecto-final/docs/videos/filtro_monedas.gif" alt="Filtro de monedas en PyBullet" loading="lazy">
+            <div id="simFiltro"></div></div>
+          <div class="pf-panel" data-programa="sim-vasos" hidden>
+            <img class="pf-gif" src="/repo/proyecto-final/docs/videos/embalaje_vasos.gif" alt="Embalaje de vasos en PyBullet" loading="lazy">
+            <div id="simVasos"></div></div>
+          <div class="pf-panel" data-programa="sim-carro" hidden>
+            <img class="pf-gif" src="/repo/proyecto-final/docs/videos/carro_pista.gif" alt="El carro en la pista" loading="lazy">
+            <div id="simCarro"></div></div>
+          <div class="pf-panel" data-programa="sim-todo" hidden>
+            <video class="pf-gif" src="/repo/proyecto-final/docs/videos/todo_junto.mp4" muted loop playsinline preload="none" controls aria-label="Todo junto: planta y carro"></video>
+            <div id="simTodo"></div></div>
+          <div class="pf-panel" data-programa="asistente" hidden>
+            <div id="asistente"></div>
+            <details class="app-plegado"><summary>Cómo se evaluó (60 de 60)</summary>
+              <p>Una batería de 60 casos reales (cifras, monedas, carro, técnicas, costos, preguntas sin dato, órdenes con
+                errores de ortografía, intentos de saltarse las reglas, una pregunta en inglés): 60 de 60 con el modelo local
+                (mediana 4,9 s) y 60 de 60 con las reglas. <a href="#" data-abrir="docs/pruebas-asistente.md">Ver cada respuesta</a>.</p>
+            </details></div>
+          <div class="pf-panel" data-programa="pruebas" hidden><div id="pruebas"></div></div>
+          <div class="pf-panel" data-programa="chequeo" hidden><div id="chequeo"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CÓMO FUNCIONA =========================================================================== -->
+    <section class="pf-vista" data-vista="como">
+      <h2>Cómo funciona, de punta a punta</h2>
       <div class="m-flujo">
         <div class="m-bloque"><span class="m-ico">●</span><h3>1. Filtro de monedas</h3>
           <p>Cinta con 4 estaciones: presencia, material, cámara y descarga. Rechaza botones, arandelas, bloques y
@@ -65,123 +214,28 @@
       </div>
       <div class="app-aviso">Cómo se conecta: el PC habla con el ESP32 fijo de la planta por USB y ese ESP32 habla
         con el del carro por <b>ESP-NOW</b> (radio directa, sin router). Los datos llegan al dashboard por una base
-        SQLite en el mismo PC. Hoy, en lugar de las placas, responde la simulación; para probar
-        <b>no hace falta conectar nada</b>.</div>
+        SQLite en el mismo PC. Hoy, en lugar de las placas, responde la simulación.</div>
       <div id="arquitectura" class="m-md"></div>
     </section>
 
-    <!-- 2 ------------------------------------------------------------------------------------ -->
-    <section class="paso" data-titulo="Recorrido de una moneda">
-      <h2>El recorrido de una pieza por las 4 estaciones</h2>
-      <p>Elige qué pieza poner en la carga y avanza la cinta casilla por casilla. La cinta avanza una casilla
-        (40 mm en 600 ms) y se detiene 1 s: en esa pausa cada estación mira y decide. <b>Un rechazo nunca se
-        revierte</b>: la primera estación que dice "no" decide la causa.</p>
-      <div class="m-piezas" role="radiogroup" aria-label="Pieza a poner">
-        <button class="app-btn m-pieza activa" data-pieza="moneda">Moneda de $500</button>
-        <button class="app-btn m-pieza" data-pieza="boton">Botón de plástico</button>
-        <button class="app-btn m-pieza" data-pieza="arandela">Arandela (con agujero)</button>
-        <button class="app-btn m-pieza" data-pieza="bloque">Bloque metálico (no es redondo)</button>
-        <button class="app-btn m-pieza" data-pieza="euro">Moneda de 1 euro</button>
-      </div>
-      <div class="m-cinta" id="cinta" aria-live="polite">
-        <div class="m-casilla" data-i="0"><b>Carga</b><small>a mano</small></div>
-        <div class="m-casilla" data-i="1"><b>E1</b><small>presencia</small></div>
-        <div class="m-casilla" data-i="2"><b>E2</b><small>material</small></div>
-        <div class="m-casilla" data-i="3"><b>E3</b><small>cámara</small></div>
-        <div class="m-casilla" data-i="4"><b>E4</b><small>descarga</small></div>
-        <div class="m-casilla m-final" data-i="5"><b id="destino">Destino</b><small id="destinoSub">almacén o rechazo</small></div>
-        <div class="m-ficha" id="ficha" aria-hidden="true"></div>
-      </div>
-      <div class="app-botones">
-        <button class="app-btn primario" id="avanzar">Avanzar una casilla</button>
-        <button class="app-btn" id="todo">Ver el recorrido completo</button>
-        <button class="app-btn" id="reiniciar">Poner otra pieza</button>
-      </div>
-      <div class="m-explica" id="explica"></div>
-      <details class="app-plegado"><summary>El texto completo del README (con los tiempos reales)</summary>
-        <div id="recorridoMd"></div></details>
-    </section>
-
-    <!-- 3 ------------------------------------------------------------------------------------ -->
-    <section class="paso" data-titulo="Antes de probar">
-      <h2>Antes de probar: instalación y puertos</h2>
-      <p>Desde esta app, la primera vez que pulses <b>Iniciar</b> en algo de Python se prepara solo el entorno con
-        lo <b>mínimo</b> (unos 0,7 GB). PyBullet no trae instalador para Windows: se compila (unos 10 minutos la
-        primera vez) y necesita las <b>Microsoft C++ Build Tools</b>; el panel te avisa si faltan. Si ya corriste
-        <code>instalar.bat</code> del proyecto, se usa ese entorno.</p>
-      <div class="app-tabla-scroll"><table class="app-pines">
-        <tr><th>Instalación</th><th>Qué trae</th><th>Para qué alcanza</th><th>Tamaño</th></tr>
-        <tr><td><b>Mínima</b> (esta app, o <code>instalar.bat</code> opción 1)</td><td>PyBullet, Streamlit, OpenCV, pandas, plotly, pytest… (13 paquetes)</td>
-          <td>visor en vivo, dashboard, las 4 escenas, asistente escrito, pruebas</td><td>~0,7 GB</td></tr>
-        <tr><td><b>Completa</b> (<code>instalar.bat</code> opción 2)</td><td>todo lo anterior + Whisper, torch/keras, herramientas del firmware, modelo de Ollama</td>
-          <td>además voz sin internet, entrenar la visión, subir el firmware</td><td>~1,8 GB</td></tr>
-      </table></div>
-      <div class="app-aviso atencion"><b>Puertos.</b> El visor en vivo usa el <b>8765</b> y el dashboard el
-        <b>8501</b>. Si otro programa del PC ya tiene alguno, se usa el siguiente libre (8766, 8502…) y se dice en
-        "Lo que dice el programa"; los enlaces de abajo salen con el puerto real.</div>
-      <p>¿Quieres saber qué está listo en este PC antes de empezar? El chequeo lo revisa todo sin cambiar nada:</p>
-      <div id="chequeo"></div>
-    </section>
-
-    <!-- 4 ------------------------------------------------------------------------------------ -->
-    <section class="paso" data-titulo="En vivo: visor y dashboard">
-      <h2>La línea en vivo: visor 3D + dashboard</h2>
-      <p>Arranca la simulación completa y abre dos pestañas: el <b>visor 3D</b> (la planta, el carro y la pista
-        moviéndose) y el <b>dashboard de Streamlit</b> (valor, peso y cantidad de monedas, la ruta del carro,
-        los filtros uno por uno y el asistente). Tarda unos 10 s en responder.</p>
-      <div id="vivo"></div>
-      <div class="m-enlaces" id="enlacesVivo" hidden>
-        <a class="app-btn primario" id="linkVisor" target="_blank" rel="noopener">Abrir el visor 3D en vivo</a>
-        <a class="app-btn" id="linkDash" target="_blank" rel="noopener">Abrir el dashboard</a>
-        <span class="app-tenue" id="puertosReales"></span>
-      </div>
-    </section>
-
-    <!-- 5 ------------------------------------------------------------------------------------ -->
-    <section class="paso" data-titulo="Las 4 escenas de PyBullet">
-      <h2>La física de verdad: las 4 escenas de PyBullet</h2>
-      <p>El visor 3D es para mirar; la física está en PyBullet. Cada escena abre su propia ventana a tiempo real.
-        En la ventana: <kbd>espacio</kbd> pausa, <kbd>r</kbd> reinicia, <kbd>q</kbd> sale.</p>
-      <div class="m-escenas">
-        <div class="m-escena"><img src="/repo/proyecto-final/docs/videos/filtro_monedas.gif" alt="Filtro de monedas en PyBullet"><div id="simFiltro"></div></div>
-        <div class="m-escena"><img src="/repo/proyecto-final/docs/videos/embalaje_vasos.gif" alt="Embalaje de vasos en PyBullet"><div id="simVasos"></div></div>
-        <div class="m-escena"><img src="/repo/proyecto-final/docs/videos/carro_pista.gif" alt="El carro en la pista"><div id="simCarro"></div></div>
-        <div class="m-escena"><img src="/repo/proyecto-final/docs/videos/todo_junto.gif" alt="Todo junto: planta y carro"><div id="simTodo"></div></div>
-      </div>
-    </section>
-
-    <!-- 6 ------------------------------------------------------------------------------------ -->
-    <section class="paso" data-titulo="El asistente">
-      <h2>Pregúntale al asistente (sin clave ni internet)</h2>
-      <p>Responde con las cifras de la última corrida y con la documentación del proyecto. Aquí contesta el
-        <b>intérprete de reglas</b>, que funciona siempre. Las órdenes ("avanza 20 cm") las entiende pero desde aquí
-        <b>no</b> mueven nada: para dar órdenes de verdad, con voz o con el modelo local, usa la pestaña
-        <b>Asistente</b> del dashboard con la línea en vivo.</p>
-      <div id="asistente"></div>
-      <details class="app-plegado"><summary>Cómo se evaluó (60 de 60)</summary>
-        <p>Una batería de 60 casos reales (cifras, monedas, carro, técnicas, costos, preguntas sin dato, órdenes con
-          errores de ortografía, intentos de saltarse las reglas, una pregunta en inglés): 60 de 60 con el modelo local
-          (mediana 4,9 s) y 60 de 60 con las reglas. <a href="#" data-abrir="docs/pruebas-asistente.md">Ver cada respuesta</a>.</p>
-      </details>
-    </section>
-
-    <!-- 7 ------------------------------------------------------------------------------------ -->
-    <section class="paso" data-titulo="Visor portable">
+    <!-- VISOR PORTABLE ========================================================================= -->
+    <section class="pf-vista" data-vista="portable">
       <h2>El visor 3D sin instalar nada</h2>
-      <p>Un solo archivo HTML con Three.js, el visor y una corrida grabada. Funciona en cualquier PC, sin Python y sin
-        internet. Arriba dice <b>DEMO GRABADA</b>: nunca se confunde con lo real. Usa el ratón para girar y las
-        pestañas del panel (Paso a paso, Sensores, Componentes) para recorrerlo.</p>
+      <p class="pf-intro">Un solo archivo HTML con Three.js, el visor y una corrida grabada. Funciona en cualquier PC, sin
+        Python y sin internet. Arriba dice <b>DEMO GRABADA</b>: nunca se confunde con lo real. Ratón para girar; pestañas
+        del panel (Paso a paso, Sensores, Componentes) para recorrerlo.</p>
       <div class="app-botones">
         <button class="app-btn primario" id="cargarPortable">Mostrar aquí el visor (demo grabada)</button>
         <button class="app-btn" id="abrirPortable">Abrirlo en una pestaña</button>
+        <span class="app-tenue" id="portableCarga"></span>
       </div>
       <div class="m-marco" id="marcoPortable" hidden></div>
     </section>
 
-    <!-- 8 ------------------------------------------------------------------------------------ -->
-    <section class="paso" data-titulo="Resultados">
+    <!-- RESULTADOS ============================================================================= -->
+    <section class="pf-vista" data-vista="resultados">
       <h2>Resultados</h2>
-      <div class="app-tarjetas">
+      <div class="pf-resultados">
         <div class="app-tarjeta acento"><h3>Filtro de monedas (grupo 7)</h3>
           <video src="/repo/proyecto-final/docs/videos/filtro_monedas.mp4" controls muted preload="metadata"></video>
           <p>18 piezas mezcladas: 7 al almacén, 11 a rechazo, ninguna falsa aceptación. Una moneda buena sale rechazada
@@ -197,38 +251,47 @@
           <p>La planta y el carro en la misma corrida.</p></div>
       </div>
       <div class="m-capturas">
-        <img src="/repo/proyecto-final/docs/capturas/dashboard-carro-y-ruta.png" alt="Dashboard: pestaña Carro y ruta">
-        <img src="/repo/proyecto-final/docs/capturas/visor-asistente.png" alt="Visor 3D con el asistente">
+        <img src="/repo/proyecto-final/docs/capturas/dashboard-carro-y-ruta.png" alt="Dashboard: pestaña Carro y ruta" loading="lazy">
+        <img src="/repo/proyecto-final/docs/capturas/visor-asistente.png" alt="Visor 3D con el asistente" loading="lazy">
       </div>
-      <h3>Pruebas automáticas</h3>
-      <p><b>936 pruebas</b> (control, simulación, visor, dashboard, asistente y firmware contra una estación emulada),
-        todas sin ventana. Córrelas tú: al final dicen cuántas pasaron.</p>
-      <div id="pruebas"></div>
+      <div class="app-aviso ok"><b>936 pruebas automáticas</b> (control, simulación, visor, dashboard, asistente y
+        firmware contra una estación emulada), todas sin ventana. Se corren desde
+        <a href="#" data-ir-programa="pruebas">Programas → Pruebas automáticas</a> (~4-5 min).</div>
     </section>
 
-    <!-- 9 ------------------------------------------------------------------------------------ -->
-    <section class="paso" data-titulo="Estado del proyecto">
+    <!-- QUÉ PIDE =============================================================================== -->
+    <section class="pf-vista" data-vista="pide">
+      <h2>Qué pide el parcial y con qué se prueba</h2>
+      <p class="pf-intro">Cada punto se marca solo cuando termina bien un programa que lo cubre (o a mano).</p>
+      <div id="pide"></div>
+    </section>
+
+    <!-- ESTADO ================================================================================= -->
+    <section class="pf-vista" data-vista="estado">
       <h2>Estado del proyecto, sin adornos</h2>
       <div class="app-aviso atencion">Todo lo de esta app es <b>simulación y software</b>. El montaje físico no
         existe todavía, la cámara aún no procesa imágenes reales (en la simulación las medidas las da PyBullet) y
         la clave de DeepSeek que tenemos fue rechazada (responden el modelo local y las reglas).</div>
+      <div class="pf-docs">
+        <a href="#" class="app-btn" data-abrir="README.md">README completo</a>
+        <a href="#" class="app-btn" data-abrir="docs/especificacion.md">Especificación</a>
+        <a href="#" class="app-btn" data-abrir="docs/paso-a-paso.md">Paso a paso</a>
+        <a href="#" class="app-btn" data-abrir="docs/conexiones.md">Conexiones</a>
+        <a href="#" class="app-btn" data-abrir="firmware/README.md">Firmware</a>
+        <a href="#" class="app-btn" data-abrir="docs/enunciado/segundo-parcial-umng.pdf">Enunciado (PDF)</a>
+      </div>
       <div id="estado"></div>
       <details class="app-plegado app-tecnico"><summary>Detalles técnicos</summary>
         <ul>
           <li>Desde la consola: <code>visor.bat</code> (lo mismo que "En vivo"), <code>simulaciones.bat</code> (las escenas),
             <code>instalar.bat</code> (mínima o completa), <code>entorno\Scripts\python -m app.chequeo</code>.</li>
-          <li>Puerto del visor: <code>PLANTA_PUERTO_VISOR</code> o <code>--puerto-visor N</code> (<code>app/puertos.py</code>).</li>
-          <li>Documentos: <a href="#" data-abrir="README.md">README</a> ·
-            <a href="#" data-abrir="docs/especificacion.md">especificación</a> ·
-            <a href="#" data-abrir="docs/paso-a-paso.md">paso a paso</a> ·
-            <a href="#" data-abrir="docs/conexiones.md">conexiones</a> ·
-            <a href="#" data-abrir="firmware/README.md">firmware</a> ·
-            <a href="#" data-abrir="docs/enunciado/segundo-parcial-umng.pdf">enunciado (PDF)</a></li>
+          <li>Puerto del visor: <code>PLANTA_PUERTO_VISOR</code> o <code>--puerto-visor N</code> (<code>app/puertos.py</code>);
+            el puerto real de la corrida en marcha queda en <code>datos/puertos.json</code> (de ahí lo lee la prueba visual).</li>
         </ul>
       </details>
     </section>
-  </div>
-</main>
+  </main>
+</div>
 
 <script src="/comun/app.js"></script>
 <script src="./monedas.js"></script>

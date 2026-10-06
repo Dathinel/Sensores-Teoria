@@ -15,7 +15,7 @@
   <span class="app-num">Tema 2</span>
   <h1>Thonny o Arduino: <span class="mp">MicroPython</span> frente a <span class="cc">C/C++</span></h1>
   <nav>
-    <a class="app-btn" href="https://github.com/Dathinel/Sensores-Teoria/tree/main/2-lenguajes-thonny" target="_blank" rel="noopener">Ver en GitHub ↗</a>
+    <a class="app-btn app-btn-mini" href="https://github.com/Dathinel/Sensores-Teoria/tree/main/2-lenguajes-thonny" target="_blank" rel="noopener">Ver en GitHub ↗</a>
   </nav>
 </header>
 
@@ -28,33 +28,45 @@
         o <b class="mp">interpretando</b> Python dentro del chip con Thonny. Aquí se ven las dos lado a lado, con dos
         ejemplos que puedes correr en el navegador (Wokwi) y la guía para instalar MicroPython en tu placa.</p>
       <div class="portada-botones">
-        <button class="app-btn app-btn-grande primario" data-ir="comparar">Ver la comparación →</button>
+        <button class="app-btn primario" data-ir="comparar">Ver la comparación →</button>
         <button class="app-btn" data-ir="ejemplo-7seg">Probar en Wokwi</button>
         <button class="app-btn" data-ir="instalar">Instalar MicroPython</button>
       </div>
       <div id="checklist"></div>
     </div>
-    <div class="duelo" aria-label="Los dos caminos">
-      <div class="lado lado-cc">
-        <div class="lado-cab">Arduino IDE · <b>C/C++</b></div>
-        <ol class="tubo">
-          <li>Escribes el <code>.ino</code></li>
-          <li>El <b>compilador</b> lo traduce entero</li>
-          <li>Se graba un <b>binario</b> en la flash</li>
-          <li>El chip ejecuta instrucciones de máquina</li>
-        </ol>
-        <div class="veredicto">Rápido · hay que recompilar cada cambio</div>
+    <div class="duelo-caja">
+      <div class="duelo" id="duelo" aria-label="Los dos caminos">
+        <div class="lado lado-cc">
+          <div class="lado-cab">Arduino IDE · <b>C/C++</b></div>
+          <ol class="tubo">
+            <li>Escribes el <code>.ino</code></li>
+            <li>El <b>compilador</b> lo traduce entero</li>
+            <li>Se graba un <b>binario</b> en la flash</li>
+            <li>El chip ejecuta instrucciones de máquina</li>
+          </ol>
+          <div class="carril" aria-live="polite">
+            <div class="carril-barra"><div></div></div>
+            <div class="carril-pie"><span class="led-mini" aria-hidden="true"></span><span class="carril-txt">Rápido · hay que recompilar cada cambio</span></div>
+          </div>
+        </div>
+        <div class="vs">vs</div>
+        <div class="lado lado-mp">
+          <div class="lado-cab">Thonny · <b>MicroPython</b></div>
+          <ol class="tubo">
+            <li>El ESP32 ya tiene el <b>intérprete</b> (firmware)</li>
+            <li>Thonny manda el <code>.py</code> por USB</li>
+            <li>El intérprete lo lee <b>línea por línea</b></li>
+            <li>Pruebas al instante en la Shell (<code>&gt;&gt;&gt;</code>)</li>
+          </ol>
+          <div class="carril" aria-live="polite">
+            <pre class="carril-cod" aria-hidden="true"><span>rojo = Pin(5, Pin.OUT)</span><span>rojo.value(1)</span><span>rojo.value(0)</span></pre>
+            <div class="carril-pie"><span class="led-mini" aria-hidden="true"></span><span class="carril-txt">Más lento · cambias y pruebas en segundos</span></div>
+          </div>
+        </div>
       </div>
-      <div class="vs">vs</div>
-      <div class="lado lado-mp">
-        <div class="lado-cab">Thonny · <b>MicroPython</b></div>
-        <ol class="tubo">
-          <li>El ESP32 ya tiene el <b>intérprete</b> (firmware)</li>
-          <li>Thonny manda el <code>.py</code> por USB</li>
-          <li>El intérprete lo lee <b>línea por línea</b></li>
-          <li>Pruebas al instante en la Shell (<code>&gt;&gt;&gt;</code>)</li>
-        </ol>
-        <div class="veredicto">Más lento · cambias y pruebas en segundos</div>
+      <div class="duelo-pie">
+        <button class="app-btn primario" id="bCorrer">▶ Ver cómo corre cada uno</button>
+        <span class="app-tenue">Animación ilustrativa: los tiempos no están a escala.</span>
       </div>
     </div>
   </section>
@@ -133,17 +145,17 @@ rojo.value(1)</pre><em>F5 manda el archivo a la placa y lo corre ahí.</em></div
       <div class="codigos">
         <div class="cod cod-cc">
           <div class="cod-cab"><span class="cc">C/C++ · siete_segmentos.ino</span></div>
-          <pre id="cod7c">Cargando…</pre>
+          <pre id="cod7c"><span class="cargando">Cargando el código…</span></pre>
         </div>
         <div class="cod cod-mp">
           <div class="cod-cab"><span class="mp">MicroPython · siete_segmentos.py</span></div>
-          <pre id="cod7p">Cargando…</pre>
+          <pre id="cod7p"><span class="cargando">Cargando el código…</span></pre>
         </div>
       </div>
       <h3 class="sub">Y así se ve en Wokwi</h3>
       <div class="capturas">
-        <figure><img src="/repo/2-lenguajes-thonny/wokwi-arduino-c.png" alt="Wokwi: el display mostrando el 2 con el código C/C++ de Arduino"><figcaption><span class="cc">C/C++</span>: <code>pinMode</code> en <code>setup()</code>, <code>digitalWrite</code>, y <code>loop()</code> lo repite el framework.</figcaption></figure>
-        <figure><img src="/repo/2-lenguajes-thonny/wokwi-micropython.png" alt="Wokwi: el mismo display con el código MicroPython"><figcaption><span class="mp">MicroPython</span>: <code>Pin(n, Pin.OUT)</code>, <code>.value(1)</code>, y el <code>while True</code> se escribe a mano.</figcaption></figure>
+        <figure><img src="/repo/2-lenguajes-thonny/img/wokwi-arduino-c.png" alt="Wokwi: el display mostrando el 2 con el código C/C++ de Arduino"><figcaption><span class="cc">C/C++</span>: <code>pinMode</code> en <code>setup()</code>, <code>digitalWrite</code>, y <code>loop()</code> lo repite el framework.</figcaption></figure>
+        <figure><img src="/repo/2-lenguajes-thonny/img/wokwi-micropython.png" alt="Wokwi: el mismo display con el código MicroPython"><figcaption><span class="mp">MicroPython</span>: <code>Pin(n, Pin.OUT)</code>, <code>.value(1)</code>, y el <code>while True</code> se escribe a mano.</figcaption></figure>
       </div>
     </section>
 
@@ -179,8 +191,11 @@ rojo.value(1)</pre><em>F5 manda el archivo a la placa y lo corre ahí.</em></div
             <g class="seg"><polygon points="40,28 50,38 47,105 37,112 31,104 34,40"/><text x="14" y="70">f·14</text></g>
             <g class="seg on"><polygon points="52,112 108,112 116,118 106,124 50,124 42,118"/><text x="80" y="140">g·12</text></g>
           </svg>
-          <table class="app-pines">
-            <thead><tr><th>Segmento</th><th>GPIO</th><th>Para el "2"</th></tr></thead>
+          <div class="digitos" id="digitos" role="group" aria-label="Elegir el número del display">
+            <span class="app-tenue">Prueba otro número:</span>
+          </div>
+          <table class="app-pines" id="tabla7">
+            <thead><tr><th>Segmento</th><th>GPIO</th><th id="thDig">Para el "2"</th></tr></thead>
             <tbody>
               <tr><td>a (arriba)</td><td>17</td><td class="on">encendido</td></tr>
               <tr><td>b (arriba der.)</td><td>16</td><td class="on">encendido</td></tr>
@@ -192,6 +207,10 @@ rojo.value(1)</pre><em>F5 manda el archivo a la placa y lo corre ahí.</em></div
               <tr><td>COM</td><td>GND</td><td>cátodo común</td></tr>
             </tbody>
           </table>
+          <div class="cod-digito">
+            <div class="cod-cab">Así quedaría el código para el <b id="digTxt">2</b></div>
+            <pre id="codDigito"></pre>
+          </div>
         </div>
       </div>
     </section>
@@ -230,7 +249,7 @@ MicroPython (metodo local): Y us por cambio</pre>
             <div class="luz verde"><span>GPIO16</span></div>
           </div>
           <p class="app-tenue centrado">Así se ve la secuencia (en tiempo real).</p>
-          <figure class="cap-circuito"><img src="/repo/2-lenguajes-thonny/circuito-comparacion-leds.png" alt="Los tres LEDs del semáforo conectados al ESP32 en Wokwi"><figcaption>El circuito en Wokwi.</figcaption></figure>
+          <figure class="cap-circuito"><img src="/repo/2-lenguajes-thonny/img/circuito-comparacion-leds.png" alt="Los tres LEDs del semáforo conectados al ESP32 en Wokwi"><figcaption>El circuito en Wokwi.</figcaption></figure>
         </div>
       </div>
       <details class="app-plegado">

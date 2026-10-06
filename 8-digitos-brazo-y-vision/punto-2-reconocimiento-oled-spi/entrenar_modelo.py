@@ -127,6 +127,9 @@ modelo.fit(datagen.flow(x_train, y_train, batch_size=32),
 # 6. Guardar: el archivo .h5 guarda tanto la arquitectura de la red
 # como los pesos ya entrenados, listo para que
 # tf.keras.models.load_model() lo cargue en reconocer_digito.py sin
-# tener que entrenar de nuevo cada vez.
-modelo.save('modelo_mnist_cnn.h5')
+# tener que entrenar de nuevo cada vez. include_optimizer=False deja
+# afuera el estado interno de adam (dos copias extra de cada peso que
+# solo sirven para SEGUIR entrenando): el archivo pasa de ~2.7 MB a
+# ~0.9 MB y reconocer_digito.py predice exactamente lo mismo.
+modelo.save('modelo_mnist_cnn.h5', include_optimizer=False)
 print("Modelo guardado como modelo_mnist_cnn.h5")

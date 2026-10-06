@@ -10,64 +10,113 @@
 <link rel="stylesheet" href="/comun/app.css">
 <link rel="stylesheet" href="consola.css">
 </head>
-<body class="consola9">
-<div class="c9-envoltura">
+<!-- data-app-sin-herramientas: esta app trae su propia barra de estado y su botón de pantalla completa. -->
+<body class="consola9" data-app-sin-herramientas>
 
-  <!-- ================= PORTADA ================= -->
-  <header class="c9-portada">
-    <div>
-      <div class="c9-etiqueta">Tema 9 · Taller segundo corte · real-to-sim</div>
-      <h1>Un teclado en la mano, <em>tres robots</em> en la pantalla</h1>
-      <p class="c9-frase">Un ESP32 con un teclado 4x4 hace de control de videojuego: manda qué tecla está apretada y el PC
-        mueve tres simulaciones con física real en PyBullet. Cinco drones que vuelan en V de A a B y a C, el robot Baxter
-        que coge un cubo con cualquiera de sus dos brazos, y el humanoide Atlas que camina con un asistente de equilibrio.
-        Para probarlo <b>no hace falta el ESP32</b>: cada ventana trae botones que hacen lo mismo que las teclas.</p>
-      <div class="c9-botones-portada">
-        <button class="c9-btn principal" type="button" data-ir="1">Empezar paso a paso</button>
-        <button class="c9-btn" type="button" data-ir="2">Ver qué hace cada tecla</button>
-        <button class="c9-btn" type="button" data-ir="10">Ver los videos</button>
-      </div>
-      <div class="c9-flujo" aria-label="Cómo viaja una tecla">
-        <span class="caja">teclado 4x4</span><span class="flecha">→</span>
-        <span class="caja">ESP32</span><span class="flecha">→</span>
-        <span class="caja">USB · TECLA:8</span><span class="flecha">→</span>
-        <span class="caja">PC</span><span class="flecha">→</span>
-        <span class="caja">PyBullet</span>
-      </div>
-      <div class="c9-pide" id="checklist"><p class="c9-intro">Cargando la lista de lo que pide la actividad…</p></div>
+<div class="c9-app">
+
+  <!-- ================= BARRA SUPERIOR (tipo Docker Desktop: estado siempre a la vista) ================= -->
+  <header class="c9-barra">
+    <button class="c9-menu" type="button" id="btn-menu" aria-label="Mostrar u ocultar el menú">☰</button>
+    <span class="c9-logo">9</span>
+    <div class="c9-barra-titulo">
+      <b>Taller segundo corte</b>
+      <small>Un teclado 4x4 en un ESP32 maneja tres robots en PyBullet</small>
     </div>
-    <div>
-      <div class="c9-sims">
-        <button class="c9-sim drones" type="button" data-ir="5">
-          <video data-src="punto-a-drones-waypoints/video/drones-mision.mp4" autoplay muted loop playsinline poster=""></video>
-          <span class="txt"><b>a) Drones</b><small>Cinco drones en V vuelan A → B → C con gravedad y 4 motores cada uno.</small></span>
-        </button>
-        <button class="c9-sim baxter" type="button" data-ir="6">
-          <video data-src="punto-b-brazo-tipo-baxter/video/baxter-demo.mp4" autoplay muted loop playsinline></video>
-          <span class="txt"><b>b) Baxter</b><small>Dos brazos con cinemática inversa: posiciona la pinza, coge el cubo y lo lleva.</small></span>
-        </button>
-        <button class="c9-sim atlas" type="button" data-ir="7">
-          <video data-src="punto-c-atlas/video/atlas-con-asistente.mp4" autoplay muted loop playsinline></video>
-          <span class="txt"><b>c) Atlas</b><small>El humanoide camina, gira y posa; el asistente de equilibrio se prende y se apaga.</small></span>
-        </button>
-      </div>
-      <figure class="c9-foto c9-foto-portada" style="margin-top:12px">
-        <img data-src="img/montaje-teclado.jpg" alt="El teclado 4x4 en la mano, con el ESP32 encendido detrás conectado al portátil">
-        <figcaption>El montaje real: el mismo teclado y el mismo firmware para los tres puntos, sin reprogramar nada.</figcaption>
-      </figure>
+    <div class="c9-estados" aria-label="Estado">
+      <span class="c9-chip" id="chip-entorno" title="Entorno de Python con PyBullet"><i></i><span>Entorno: revisando…</span></span>
+      <span class="c9-chip" id="chip-modelos" title="Mallas de Baxter y Atlas (37 MB, se bajan una vez)"><i></i><span>Modelos: revisando…</span></span>
+      <span class="c9-chip" id="chip-marcha" title="Programas corriendo desde esta app"><i></i><span>Nada en marcha</span></span>
+    </div>
+    <div class="c9-barra-botones">
+      <button class="c9-btn chico" type="button" id="btn-readme">README</button>
+      <button class="c9-btn chico" type="button" id="btn-completa">⛶ Pantalla completa</button>
     </div>
   </header>
 
-  <div class="c9-sinapp" id="sinapp">
-    <b>Esta página se abre desde el lanzador.</b> Para que los botones "Iniciar" funcionen, ábrela con doble clic en
-    <code>ABRIR.bat</code> (dentro de la carpeta del tema 9). Mientras tanto se puede leer todo y ver los videos.
-  </div>
+  <!-- ================= MENÚ LATERAL ================= -->
+  <nav class="c9-lateral" id="lateral" aria-label="Secciones">
+    <div class="c9-grupo">Inicio</div>
+    <button type="button" data-vista="inicio"><span class="ic">⌂</span>Resumen</button>
+    <div class="c9-grupo">Entender</div>
+    <button type="button" data-vista="como"><span class="ic">1</span>Cómo funciona</button>
+    <button type="button" data-vista="mando"><span class="ic">2</span>El mando: cada tecla</button>
+    <button type="button" data-vista="conexion"><span class="ic">3</span>Cómo se conecta</button>
+    <div class="c9-grupo">Probar</div>
+    <button type="button" data-vista="preparar"><span class="ic">4</span>Antes de probar<span class="c9-marca" data-marca="modelos"></span></button>
+    <button type="button" data-vista="drones" class="sim-drones"><span class="ic">a</span>Drones A → B → C<span class="c9-marca" data-marca="drones"></span></button>
+    <button type="button" data-vista="baxter" class="sim-baxter"><span class="ic">b</span>Baxter: el cubo<span class="c9-marca" data-marca="baxter"></span></button>
+    <button type="button" data-vista="atlas" class="sim-atlas"><span class="ic">c</span>Atlas: asistente<span class="c9-marca" data-marca="atlas"></span></button>
+    <button type="button" data-vista="preview"><span class="ic">▢</span>Preview sin Python</button>
+    <div class="c9-grupo">Resultados</div>
+    <button type="button" data-vista="videos"><span class="ic">▶</span>Videos</button>
+    <button type="button" data-vista="checklist"><span class="ic">✓</span>Checklist y detalles</button>
+    <div class="c9-grupo">Opcional</div>
+    <button type="button" data-vista="esp32"><span class="ic">↯</span>Con el ESP32 real</button>
+  </nav>
 
-  <!-- ================= PASOS ================= -->
-  <main id="pasos">
+  <!-- ================= CONTENIDO ================= -->
+  <main class="c9-principal" id="principal">
 
-    <!-- 1 -->
-    <section class="paso" data-titulo="Cómo funciona">
+    <div class="c9-sinapp" id="sinapp">
+      <b>Esta página se abre desde el lanzador.</b> Para que los botones "Iniciar" funcionen, ábrela con doble clic en
+      <code>ABRIR.bat</code> (dentro de la carpeta del tema 9). Mientras tanto se puede leer todo y ver los videos.
+    </div>
+
+    <!-- ===== RESUMEN ===== -->
+    <section class="c9-vista" id="v-inicio" data-titulo="Resumen">
+      <div class="c9-hero">
+        <div>
+          <div class="c9-etiqueta">Tema 9 · Taller segundo corte · real-to-sim</div>
+          <h1>Un teclado en la mano, <em>tres robots</em> en la pantalla</h1>
+          <p class="c9-frase">Un ESP32 con un teclado 4x4 hace de control de videojuego: manda qué tecla está apretada y el PC
+            mueve tres simulaciones con física real en PyBullet. Para probarlo <b>no hace falta el ESP32</b>: cada ventana trae
+            botones que hacen lo mismo que las teclas.</p>
+          <div class="c9-flujo" aria-label="Cómo viaja una tecla">
+            <span class="caja">teclado 4x4</span><span class="flecha">→</span>
+            <span class="caja">ESP32</span><span class="flecha">→</span>
+            <span class="caja">USB · TECLA:8</span><span class="flecha">→</span>
+            <span class="caja">PC</span><span class="flecha">→</span>
+            <span class="caja">PyBullet</span>
+          </div>
+        </div>
+        <div class="c9-rapido">
+          <b>¿Primera vez? Lo más rápido:</b>
+          <ol>
+            <li><button class="c9-enlace" type="button" data-ir="drones">a) Drones → Prueba rápida</button>: unos segundos, dibuja la ruta A → B → C aquí mismo.</li>
+            <li><button class="c9-enlace" type="button" data-ir="atlas">c) Atlas → Prueba de estrés</button>: ~3-4 min, gráfica con y sin asistente.</li>
+            <li>Después, las ventanas de PyBullet para jugar con los botones.</li>
+          </ol>
+          <small>La primera vez que se pulsa un "Iniciar" se prepara Python: si PyBullet no está en la caché, <b>se compila (~10 min)</b>. La barra de arriba lo avisa.</small>
+        </div>
+      </div>
+
+      <div class="c9-sims">
+        <button class="c9-sim drones" type="button" data-ir="drones">
+          <img data-src="punto-a-drones-waypoints/video/drones-mision.gif" alt="Cinco drones en V volando la misión A → B → C">
+          <span class="txt"><b>a) Drones</b><small>Cinco drones en V vuelan A → B → C con gravedad y 4 motores cada uno.</small><span class="ir">Probar →</span></span>
+        </button>
+        <button class="c9-sim baxter" type="button" data-ir="baxter">
+          <img data-src="punto-b-brazo-tipo-baxter/video/baxter-demo.gif" alt="Baxter coge el cubo y lo lleva al destino">
+          <span class="txt"><b>b) Baxter</b><small>Dos brazos con cinemática inversa: posiciona la pinza, coge el cubo y lo lleva.</small><span class="ir">Probar →</span></span>
+        </button>
+        <button class="c9-sim atlas" type="button" data-ir="atlas">
+          <img data-src="punto-c-atlas/video/atlas-con-asistente.gif" alt="Atlas caminando con el asistente de equilibrio">
+          <span class="txt"><b>c) Atlas</b><small>El humanoide camina, gira y posa; el asistente de equilibrio se prende y se apaga.</small><span class="ir">Probar →</span></span>
+        </button>
+      </div>
+
+      <div class="c9-dos-ancho">
+        <div class="c9-pide" id="checklist"><p class="c9-intro">Cargando la lista de lo que pide la actividad…</p></div>
+        <figure class="c9-foto">
+          <img data-src="img/montaje-teclado.jpg" alt="El teclado 4x4 en la mano, con el ESP32 encendido detrás conectado al portátil">
+          <figcaption>El montaje real: el mismo teclado y el mismo firmware para los tres puntos.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ===== CÓMO FUNCIONA ===== -->
+    <section class="c9-vista" id="v-como" data-titulo="Cómo funciona" hidden>
       <h2>Cómo funciona: el ESP32 como control de videojuego</h2>
       <p class="c9-intro">El ESP32 no sabe nada de drones, de Baxter ni de Atlas. Solo mira el teclado 20 veces por segundo y
         le cuenta al PC qué tecla está apretada (<kbd>TECLA:8</kbd>, o <kbd>TECLA:-</kbd> si ninguna). Qué hace cada tecla lo
@@ -97,13 +146,17 @@
       </div>
       <p>En los drones casi todo fija un <b>objetivo</b> (ir a A, despegar): repetirlo cuatro veces da lo mismo que una, así que
         allí todas las teclas actúan en cada línea.</p>
+      <details class="c9-tecnico">
+        <summary>El protocolo <code>TECLA:x</code> y cómo lo lee el PC (del README)</summary>
+        <div id="md-protocolo"><p class="c9-intro">Se carga al abrir…</p></div>
+      </details>
     </section>
 
-    <!-- 2 -->
-    <section class="paso" data-titulo="El mando: cada tecla">
+    <!-- ===== EL MANDO ===== -->
+    <section class="c9-vista" id="v-mando" data-titulo="El mando: cada tecla" hidden>
       <h2>El mando: qué hace cada tecla</h2>
-      <p class="c9-intro">Elige una simulación y toca una tecla (o apriétala en tu teclado del PC). Abajo de cada tecla va su función
-        y el color dice cómo reacciona. En la ventana de PyBullet, sin ESP32, cada tecla es un botón del panel derecho.</p>
+      <p class="c9-intro">Elige una simulación y toca una tecla (o apriétala en el teclado del PC). El color de abajo de cada tecla
+        dice cómo reacciona. En la ventana de PyBullet, sin ESP32, cada tecla es un botón del panel derecho.</p>
       <div class="c9-pestanas" role="tablist" id="pestanas">
         <button type="button" role="tab" data-sim="drones" aria-selected="true">a) Drones</button>
         <button type="button" role="tab" data-sim="baxter" aria-selected="false">b) Baxter</button>
@@ -120,262 +173,292 @@
             <span><i style="background:var(--c9-nada)"></i>sin uso</span>
           </div>
         </div>
-        <div class="c9-detalle" id="detalle" aria-live="polite"></div>
+        <div>
+          <div class="c9-detalle" id="detalle" aria-live="polite"></div>
+          <p id="nota-sim" class="c9-nota info"></p>
+        </div>
       </div>
-      <p id="nota-sim" class="c9-nota info" style="margin-top:16px"></p>
     </section>
 
-    <!-- 3 -->
-    <section class="paso" data-titulo="Cómo se conecta">
+    <!-- ===== CÓMO SE CONECTA ===== -->
+    <section class="c9-vista" id="v-conexion" data-titulo="Cómo se conecta" hidden>
       <h2>Cómo se conecta</h2>
       <div class="c9-nota ok"><b>Para probar no hace falta armar nada.</b> Sin el ESP32 cada simulación abre igual y se maneja
         con los botones de su ventana. Esto es para cuando se quiera usar el teclado de verdad.</div>
-      <div class="c9-dos">
-        <figure class="c9-foto">
-          <img data-src="img/montaje-esp32-teclado.jpg" alt="ESP32 en su placa de expansión con el teclado 4x4 conectado por 8 cables de colores y el cable USB al portátil">
-          <figcaption>El ESP32 en su placa de expansión: 8 cables al teclado (4 filas y 4 columnas) y un USB al PC. No hay ningún otro componente.</figcaption>
-        </figure>
-        <figure class="c9-foto">
-          <img data-src="img/montaje-teclado.jpg" alt="El teclado 4x4 en la mano, con el ESP32 encendido detrás">
-          <figcaption>El teclado pasivo: solo interruptores, sin resistencias ni alimentación aparte (las columnas usan la pull-up interna del ESP32).</figcaption>
-        </figure>
+      <div class="c9-conexion">
+        <div>
+          <div class="c9-tabla-scroll">
+          <table class="c9-tabla">
+            <thead><tr><th>Teclado</th><th>Teclas de esa línea</th><th>ESP32</th><th>Qué hace</th></tr></thead>
+            <tbody>
+              <tr><td>Fila 1</td><td><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>A</kbd></td><td><code>GPIO14</code></td><td>salida: se pone en 0 al revisar esta fila</td></tr>
+              <tr><td>Fila 2</td><td><kbd>4</kbd> <kbd>5</kbd> <kbd>6</kbd> <kbd>B</kbd></td><td><code>GPIO27</code></td><td>salida</td></tr>
+              <tr><td>Fila 3</td><td><kbd>7</kbd> <kbd>8</kbd> <kbd>9</kbd> <kbd>C</kbd></td><td><code>GPIO26</code></td><td>salida</td></tr>
+              <tr><td>Fila 4</td><td><kbd>*</kbd> <kbd>0</kbd> <kbd>#</kbd> <kbd>D</kbd></td><td><code>GPIO25</code></td><td>salida</td></tr>
+              <tr><td>Columna 1</td><td><kbd>1</kbd> <kbd>4</kbd> <kbd>7</kbd> <kbd>*</kbd></td><td><code>GPIO33</code></td><td>entrada con pull-up: baja a 0 si su tecla une con la fila en 0</td></tr>
+              <tr><td>Columna 2</td><td><kbd>2</kbd> <kbd>5</kbd> <kbd>8</kbd> <kbd>0</kbd></td><td><code>GPIO32</code></td><td>entrada con pull-up</td></tr>
+              <tr><td>Columna 3</td><td><kbd>3</kbd> <kbd>6</kbd> <kbd>9</kbd> <kbd>#</kbd></td><td><code>GPIO18</code></td><td>entrada con pull-up</td></tr>
+              <tr><td>Columna 4</td><td><kbd>A</kbd> <kbd>B</kbd> <kbd>C</kbd> <kbd>D</kbd></td><td><code>GPIO19</code></td><td>entrada con pull-up</td></tr>
+            </tbody>
+          </table>
+          </div>
+          <p><b>Ejemplo:</b> al revisar la fila 2 (<code>GPIO27</code> en 0), si está apretado el <kbd>5</kbd>, une esa fila con la columna 2
+            (<code>GPIO32</code>), que baja a 0: el ESP32 sabe que es el 5 y escribe <kbd>TECLA:5</kbd>.</p>
+          <p><b>ESP32 → PC:</b> un solo cable USB, el mismo con el que se programa. Windows le da un puerto COM (los programas buscan <code>COM7</code>).
+            La misma tabla de pines de los temas 7 y 8.</p>
+        </div>
+        <div class="c9-fotos-col">
+          <figure class="c9-foto">
+            <img data-src="img/montaje-esp32-teclado.jpg" alt="ESP32 en su placa de expansión con el teclado 4x4 conectado por 8 cables de colores y el cable USB al portátil">
+            <figcaption>8 cables al teclado (4 filas y 4 columnas) y un USB al PC. Nada más.</figcaption>
+          </figure>
+          <figure class="c9-foto">
+            <img data-src="img/montaje-teclado.jpg" alt="El teclado 4x4 en la mano, con el ESP32 encendido detrás">
+            <figcaption>El teclado es pasivo: solo interruptores (las columnas usan la pull-up interna del ESP32).</figcaption>
+          </figure>
+        </div>
       </div>
-      <h3>Tabla de pines (la misma de los temas 7 y 8)</h3>
-      <div class="c9-tabla-scroll">
-      <table class="c9-tabla">
-        <thead><tr><th>Teclado</th><th>Teclas de esa línea</th><th>ESP32</th><th>Qué hace</th></tr></thead>
-        <tbody>
-          <tr><td>Fila 1</td><td><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>A</kbd></td><td><code>GPIO14</code></td><td>salida: se pone en 0 al revisar esta fila</td></tr>
-          <tr><td>Fila 2</td><td><kbd>4</kbd> <kbd>5</kbd> <kbd>6</kbd> <kbd>B</kbd></td><td><code>GPIO27</code></td><td>salida</td></tr>
-          <tr><td>Fila 3</td><td><kbd>7</kbd> <kbd>8</kbd> <kbd>9</kbd> <kbd>C</kbd></td><td><code>GPIO26</code></td><td>salida</td></tr>
-          <tr><td>Fila 4</td><td><kbd>*</kbd> <kbd>0</kbd> <kbd>#</kbd> <kbd>D</kbd></td><td><code>GPIO25</code></td><td>salida</td></tr>
-          <tr><td>Columna 1</td><td><kbd>1</kbd> <kbd>4</kbd> <kbd>7</kbd> <kbd>*</kbd></td><td><code>GPIO33</code></td><td>entrada con pull-up: baja a 0 si su tecla une con la fila en 0</td></tr>
-          <tr><td>Columna 2</td><td><kbd>2</kbd> <kbd>5</kbd> <kbd>8</kbd> <kbd>0</kbd></td><td><code>GPIO32</code></td><td>entrada con pull-up</td></tr>
-          <tr><td>Columna 3</td><td><kbd>3</kbd> <kbd>6</kbd> <kbd>9</kbd> <kbd>#</kbd></td><td><code>GPIO18</code></td><td>entrada con pull-up</td></tr>
-          <tr><td>Columna 4</td><td><kbd>A</kbd> <kbd>B</kbd> <kbd>C</kbd> <kbd>D</kbd></td><td><code>GPIO19</code></td><td>entrada con pull-up</td></tr>
-        </tbody>
-      </table>
-      </div>
-      <p><b>Ejemplo:</b> al revisar la fila 2 (<code>GPIO27</code> en 0), si está apretado el <kbd>5</kbd>, une esa fila con la columna 2
-        (<code>GPIO32</code>), que baja a 0: el ESP32 sabe que es el 5 y escribe <kbd>TECLA:5</kbd>.</p>
-      <p><b>ESP32 → PC:</b> un solo cable USB, el mismo con el que se programa. Windows le da un puerto COM (los programas buscan <code>COM7</code>).</p>
     </section>
 
-    <!-- 4 -->
-    <section class="paso" data-titulo="Antes de probar">
+    <!-- ===== ANTES DE PROBAR ===== -->
+    <section class="c9-vista" id="v-preparar" data-titulo="Antes de probar" hidden>
       <h2>Antes de probar: lo que pasa solo la primera vez</h2>
-      <div class="c9-nota"><b>La primera vez tarda.</b> Al pulsar cualquier "Iniciar" de Python, la app crea el entorno del tema e
-        instala PyBullet. PyBullet no trae versión lista para Windows: se <b>compila</b> en tu PC, lo que tarda <b>varios minutos</b>
-        y necesita Visual Studio Build Tools (con "Desarrollo para el escritorio con C++"). Si faltan, la app lo avisa y dice qué
-        instalar. Desde la segunda vez todo abre en segundos.</div>
-      <div class="c9-prueba neutro">
-        <h3>Bajar los modelos de Baxter y Atlas</h3>
-        <div class="c9-que">
-          <div><b>Qué va a pasar</b>Se bajan de GitHub (repositorio del profesor) las mallas 3D reales de Baxter y Atlas, unos 37 MB, a la carpeta <code>modelos</code>.</div>
-          <div><b>Qué hacer</b>Solo pulsar Iniciar con internet. Si ya están, termina enseguida sin volver a bajar nada.</div>
-          <div><b>Qué deberías ver</b>"baxter_common: … archivos", "atlas: … archivos" y al final <code>Listo: … MB</code>.</div>
+      <div class="c9-columnas">
+        <div class="c9-caja">
+          <h3>1 · El entorno de Python (automático)</h3>
+          <div class="c9-estado-grande" id="estado-entorno">Revisando…</div>
+          <p>Al pulsar cualquier "Iniciar" de Python, la app crea el entorno del tema e instala PyBullet. PyBullet no trae versión
+            lista para Windows: si no está en la caché de pip, <b>se compila en el PC (unos 10 minutos)</b> y necesita Visual Studio
+            Build Tools ("Desarrollo para el escritorio con C++"). Mientras tanto el panel muestra una barra y lo que está haciendo pip.
+            Desde la segunda vez todo abre en segundos.</p>
         </div>
-        <div class="c9-nota info" style="margin:0 0 10px">Es opcional: si se salta, Baxter y Atlas lo hacen solos la primera vez que se abren
-          (solo se nota que tardan un poco más en aparecer). Los drones no lo necesitan: su modelo viene en el repo.</div>
+        <div class="c9-caja">
+          <h3>2 · Los modelos de Baxter y Atlas (37 MB, una vez)</h3>
+          <div class="c9-estado-grande" id="estado-modelos">Revisando…</div>
+          <div class="c9-descarga" id="descarga" hidden>
+            <div class="c9-barra-prog"><i id="descarga-barra"></i></div>
+            <small id="descarga-txt">esperando…</small>
+          </div>
+          <p>Las mallas 3D reales se bajan de GitHub (repositorio <code>pybullet_robots</code> del profesor) a la carpeta
+            <code>modelos/</code>, que no se sube a git. Es opcional: si se salta, Baxter y Atlas lo hacen solos la primera vez.
+            Los drones no lo necesitan.</p>
+        </div>
+      </div>
+      <div class="c9-prueba neutro">
+        <h3>Descargar los modelos ahora</h3>
+        <div class="c9-que">
+          <div><b>Qué va a pasar</b>Se bajan de GitHub las mallas de Baxter y Atlas (unos 37 MB) con una barra de MB descargados.</div>
+          <div><b>Qué hacer</b>Solo pulsar Iniciar con internet. Si ya están, termina enseguida sin bajar nada.</div>
+          <div><b>Qué deberías ver</b>"Baxter: 18 archivos", "Atlas: 53 archivos" y al final <code>Listo: 36.7 MB</code>.</div>
+        </div>
         <div data-panel="modelos"></div>
       </div>
     </section>
 
-    <!-- 5 -->
-    <section class="paso" data-titulo="a) Drones">
-      <h2>a) Drones: de A a B y a C</h2>
-      <p class="c9-intro">Cinco drones en formación en V. El líder es el rojo; los cuatro azules lo siguen. Vuelan con física real
-        (gravedad y la fuerza de los 4 motores de cada uno). Los tres destinos son esferas de color:
-        <b style="color:#5b9bd5">A</b> azul (0; 0,9; 1,2 m), <b style="color:#e8963a">B</b> naranja (1,4; −0,6; 1,6 m) y
-        <b style="color:#4caf7d">C</b> verde (−1,3; 0,4; 0,9 m).</p>
+    <!-- ===== a) DRONES ===== -->
+    <section class="c9-vista" id="v-drones" data-titulo="a) Drones" hidden>
+      <h2><span class="c9-letra drones">a</span>Drones: de A a B y a C</h2>
+      <p class="c9-intro">Cinco drones en V; el líder es el rojo y los cuatro azules lo siguen. Vuelan con física real (gravedad y la
+        fuerza de los 4 motores de cada uno). Los destinos: <b style="color:#5b9bd5">A</b> (0; 0,9; 1,2 m),
+        <b style="color:#e8963a">B</b> (1,4; −0,6; 1,6 m) y <b style="color:#4caf7d">C</b> (−1,3; 0,4; 0,9 m).</p>
 
       <div class="c9-prueba drones">
-        <h3>1 · Prueba rápida, sin ventana</h3>
-        <div class="c9-que">
-          <div><b>Qué va a pasar</b>Se vuela la misión A → B → C sin abrir ventana (unos segundos) y se mide en cuánto llegó a cada punto y cuánto se inclinó.</div>
-          <div><b>Qué hacer</b>Nada: pulsar Iniciar y esperar.</div>
-          <div><b>Qué deberías ver</b>Las tres llegadas en verde en las casillas de arriba (en nuestra corrida: A a 1,2 s, B a 2,9 s, C a 4,9 s) y <code>PRUEBA OK</code>.</div>
+        <h3>1 · Prueba rápida, sin ventana: la ruta dibujada</h3>
+        <div class="c9-prueba-grid">
+          <div>
+            <div class="c9-que">
+              <div><b>Qué va a pasar</b>Se vuela la misión A → B → C sin abrir ventana (tarda unos segundos) y el programa imprime la posición del líder cada 0,1 s.</div>
+              <div><b>Qué hacer</b>Nada: pulsar Iniciar y mirar el dibujo de la derecha.</div>
+              <div><b>Qué deberías ver</b>La ruta que despega, pasa por A, B y C y las tres llegadas en verde (en nuestra corrida: A a 1,2 s, B a 2,9 s, C a 4,9 s) y <code>PRUEBA OK</code>.</div>
+            </div>
+            <div data-panel="drones-prueba"></div>
+          </div>
+          <div class="c9-visual">
+            <div class="c9-visual-cab"><b>La ruta del líder, vista desde arriba</b><span id="ruta-estado" class="c9-tenue">sin correr</span></div>
+            <svg id="ruta-svg" viewBox="0 0 400 300" role="img" aria-label="Ruta del dron líder vista desde arriba"></svg>
+            <svg id="ruta-alto" viewBox="0 0 400 70" role="img" aria-label="Altura del líder en el tiempo"></svg>
+            <div class="c9-ruta" id="ruta-drones">
+              <div data-p="A"><b>A</b><span>esperando</span></div>
+              <div data-p="B"><b>B</b><span>esperando</span></div>
+              <div data-p="C"><b>C</b><span>esperando</span></div>
+              <div data-p="OK"><b>Resultado</b><span>sin correr</span></div>
+            </div>
+            <p class="c9-explica"><b>Cómo leerlo:</b> arriba, el piso visto desde el techo (X a la derecha, Y hacia arriba, cuadrícula de 50 cm);
+              abajo, la altura en el tiempo. La línea no va recta de un punto al otro: el dron tiene que <b>inclinarse</b> para
+              empujarse de lado, acelera, se pasa un poco y corrige (control PD en cascada). Cuando el líder queda a menos de 12 cm
+              y casi quieto, la misión pasa al siguiente punto. Se dibuja con las líneas <code>RUTA t x y z</code> que imprime la prueba.</p>
+          </div>
         </div>
-        <div class="c9-ruta" id="ruta-drones">
-          <div data-p="A"><b>A</b><span>esperando</span></div>
-          <div data-p="B"><b>B</b><span>esperando</span></div>
-          <div data-p="C"><b>C</b><span>esperando</span></div>
-          <div data-p="OK"><b>Resultado</b><span>sin correr</span></div>
-        </div>
-        <div data-panel="drones-prueba"></div>
       </div>
 
-      <div class="c9-prueba drones">
-        <h3>2 · Misión automática, con ventana</h3>
-        <div class="c9-que">
-          <div><b>Qué va a pasar</b>Se abre la ventana de PyBullet; los drones despegan solos y vuelan A → B → C. El líder deja un trazo amarillo.</div>
-          <div><b>Qué hacer en la ventana</b>Mirar. Se puede girar la cámara con <kbd>Ctrl</kbd> + arrastrar y acercar con la rueda. Al terminar siguen activos los botones de la derecha.</div>
-          <div><b>Qué deberías ver</b>La V que sube a 1 m, pasa por la esfera azul, la naranja y la verde, y se queda flotando en C. Se cierra cerrando la ventana.</div>
+      <div class="c9-columnas">
+        <div class="c9-prueba drones">
+          <h3>2 · Misión automática, con ventana</h3>
+          <div class="c9-que">
+            <div><b>Qué va a pasar</b>Se abre PyBullet; los drones despegan solos y vuelan A → B → C. El líder deja un trazo amarillo.</div>
+            <div><b>Qué hacer en la ventana</b>Mirar. <kbd>Ctrl</kbd> + arrastrar gira la cámara y la rueda acerca. Al terminar siguen activos los botones de la derecha.</div>
+            <div><b>Qué deberías ver</b>La V que sube a 1 m, pasa por la esfera azul, la naranja y la verde, y se queda flotando en C. Se cierra cerrando la ventana.</div>
+          </div>
+          <div data-panel="drones-mision"></div>
         </div>
-        <div data-panel="drones-mision"></div>
-      </div>
-
-      <div class="c9-prueba drones">
-        <h3>3 · A mano, con los botones de la ventana</h3>
-        <div class="c9-que">
-          <div><b>Qué va a pasar</b>Se abre la ventana con los cinco drones en el piso, quietos. En la consola sale "No se encontró el ESP32: usa los botones" (normal sin ESP32).</div>
-          <div><b>Qué hacer en la ventana</b><ol>
-            <li>En el panel <b>Params</b> de la derecha, clic en <b>Despegar</b>.</li>
-            <li>Clic en <b>Ir a A</b>, luego <b>Ir a B</b> y <b>Ir a C</b>.</li>
-            <li>Mover a mano con Adelante / Atrás / Izquierda / Derecha / Subir / Bajar (10 cm por clic).</li>
-            <li><b>Aterrizar</b> o <b>Home (origen)</b> para terminar.</li></ol></div>
-          <div><b>Qué deberías ver</b>Que los drones se inclinan hacia donde van (así vuela un cuadricóptero) y la formación se mantiene. En la esquina, la última línea cruda del ESP32 ("nada todavía" sin ESP32).</div>
+        <div class="c9-prueba drones">
+          <h3>3 · A mano, con los botones de la ventana</h3>
+          <div class="c9-que">
+            <div><b>Qué va a pasar</b>Se abre la ventana con los cinco drones en el piso. En la consola sale "No se encontró el ESP32: usa los botones" (normal sin ESP32).</div>
+            <div><b>Qué hacer en la ventana</b><ol>
+              <li>Panel <b>Params</b> de la derecha: <b>Despegar</b>.</li>
+              <li><b>Ir a A</b>, luego <b>Ir a B</b> e <b>Ir a C</b>.</li>
+              <li>Adelante / Atrás / Izquierda / Derecha / Subir / Bajar (10 cm por clic).</li>
+              <li><b>Aterrizar</b> o <b>Home (origen)</b> para terminar.</li></ol></div>
+            <div><b>Qué deberías ver</b>Que se inclinan hacia donde van (así vuela un cuadricóptero) y la formación se mantiene.</div>
+          </div>
+          <div data-panel="drones"></div>
         </div>
-        <div data-panel="drones"></div>
       </div>
+      <p class="c9-mas">Todo el detalle (control PD, cascada, mezclador, código): <button class="c9-enlace" type="button" data-readme="punto-a-drones-waypoints/README.md">README del punto a)</button></p>
     </section>
 
-    <!-- 6 -->
-    <section class="paso" data-titulo="b) Baxter">
-      <h2>b) Baxter: dos brazos, posicionar y coger un objeto</h2>
-      <p class="c9-intro">El robot Baxter real (el mismo modelo del ejemplo del profesor) frente a una mesa con un cubo. Se mueve la
-        pinza en X, Y y Z y la <b>cinemática inversa</b> calcula solita cómo doblar las 7 articulaciones del brazo para llegar ahí.
-        <kbd>*</kbd> cambia de brazo; el otro se queda quieto, sostenido por sus motores.</p>
-      <div class="c9-dos">
-        <figure class="c9-foto"><img data-src="punto-b-brazo-tipo-baxter/img/baxter-home.png" alt="Baxter en su pose inicial frente a la mesa con el cubo"><figcaption>Así abre: los dos brazos sobre la mesa y el cubo en el origen.</figcaption></figure>
-        <figure class="c9-foto"><img data-src="punto-b-brazo-tipo-baxter/img/baxter-agarra-cubo.png" alt="Baxter agarrando el cubo con la pinza"><figcaption>La pinza cerrada sobre el cubo, lista para llevarlo.</figcaption></figure>
-      </div>
+    <!-- ===== b) BAXTER ===== -->
+    <section class="c9-vista" id="v-baxter" data-titulo="b) Baxter" hidden>
+      <h2><span class="c9-letra baxter">b</span>Baxter: dos brazos, posicionar y coger un objeto</h2>
+      <p class="c9-intro">El robot Baxter real frente a una mesa con un cubo. Se mueve la pinza en X, Y y Z y la <b>cinemática inversa</b>
+        calcula cómo doblar las 7 articulaciones del brazo para llegar ahí. <kbd>*</kbd> cambia de brazo; el otro se queda quieto.</p>
 
       <div class="c9-prueba baxter">
         <h3>1 · Baxter con ventana</h3>
-        <div class="c9-que">
-          <div><b>Qué va a pasar</b>Se abre PyBullet con Baxter, la mesa y el cubo (si faltan los modelos, primero los baja). Tarda unos segundos en cargar las mallas.</div>
-          <div><b>Qué hacer en la ventana</b><ol>
-            <li>Lo más rápido: clic en <b>Demo: coger y mover [D]</b>.</li>
-            <li>A mano: jog hasta encima del cubo, <b>Bajar</b>, <b>Cerrar pinza</b>, <b>Subir</b>, mover al destino, bajar, <b>Abrir pinza</b>.</li>
-            <li><b>Cambiar de brazo [*]</b> y repetir con el otro.</li>
-            <li><b>Reponer cubo [0]</b> lo vuelve a poner en el origen.</li></ol></div>
-          <div><b>Qué deberías ver</b>El brazo baja con la pinza mirando hacia abajo, cierra, levanta el cubo y lo deja en el destino (la demo dura unos 9 s). La pinza nunca atraviesa la mesa.</div>
+        <div class="c9-prueba-grid">
+          <div>
+            <div class="c9-que">
+              <div><b>Qué va a pasar</b>Se abre PyBullet con Baxter, la mesa y el cubo (si faltan los modelos, primero los baja). Tarda unos segundos en cargar las mallas.</div>
+              <div><b>Qué hacer en la ventana</b><ol>
+                <li>Lo más rápido: <b>Demo: coger y mover [D]</b>.</li>
+                <li>A mano: jog hasta encima del cubo, <b>Bajar</b>, <b>Cerrar pinza</b>, <b>Subir</b>, mover, bajar, <b>Abrir pinza</b>.</li>
+                <li><b>Cambiar de brazo [*]</b> y repetir; <b>Reponer cubo [0]</b>.</li></ol></div>
+              <div><b>Qué deberías ver</b>El brazo baja con la pinza mirando hacia abajo, cierra, levanta el cubo y lo deja en el destino (unos 9 s). La pinza nunca atraviesa la mesa.</div>
+            </div>
+            <div data-panel="baxter"></div>
+          </div>
+          <div class="c9-visual">
+            <div class="c9-fotos-2">
+              <figure class="c9-foto"><img data-src="punto-b-brazo-tipo-baxter/img/baxter-home.png" alt="Baxter en su pose inicial frente a la mesa con el cubo"><figcaption>Así abre: los dos brazos sobre la mesa.</figcaption></figure>
+              <figure class="c9-foto"><img data-src="punto-b-brazo-tipo-baxter/img/baxter-agarra-cubo.png" alt="Baxter agarrando el cubo con la pinza"><figcaption>La pinza cerrada sobre el cubo.</figcaption></figure>
+            </div>
+          </div>
         </div>
-        <div data-panel="baxter"></div>
       </div>
 
       <div class="c9-prueba baxter">
-        <h3>2 · Prueba sin ventana</h3>
-        <div class="c9-que">
-          <div><b>Qué va a pasar</b>Se mide sin ventana que cada pinza llega a sus objetivos, que la demo deja el cubo en el destino con los dos brazos, la regla de "un golpe" del teclado y que no hay choques.</div>
-          <div><b>Qué hacer</b>Pulsar Iniciar y esperar (menos de un minuto).</div>
-          <div><b>Qué deberías ver</b>Una lista de <code>OK</code> (error de la pinza por debajo de 0,2 cm, cubo a menos de 0,6 cm del destino) y al final <code>Todas las pruebas pasaron.</code></div>
+        <h3>2 · Prueba sin ventana: medido contra el límite</h3>
+        <div class="c9-prueba-grid">
+          <div>
+            <div class="c9-que">
+              <div><b>Qué va a pasar</b>Sin ventana (~40 s) se mide que cada pinza llega a sus objetivos, que la demo deja el cubo en el destino con los dos brazos, la regla de "un golpe" y que no hay choques.</div>
+              <div><b>Qué hacer</b>Pulsar Iniciar y mirar el tablero de la derecha.</div>
+              <div><b>Qué deberías ver</b>Todo en verde (error de la pinza ~0,1 cm contra un límite de 2 cm; cubo a menos de 0,6 cm del destino) y <code>Todas las pruebas pasaron.</code></div>
+            </div>
+            <div data-panel="baxter-prueba"></div>
+          </div>
+          <div class="c9-visual">
+            <div class="c9-visual-cab"><b>Tablero de la prueba</b><span id="baxter-cuenta" class="c9-tenue">sin correr</span></div>
+            <div class="c9-barra-prog"><i id="baxter-barra"></i></div>
+            <div class="c9-tablero" id="baxter-tablero"><p class="c9-tenue">Cada comprobación sale aquí al medirse: en verde si pasó y, si es una distancia, una barra con lo medido contra el límite permitido.</p></div>
+            <p class="c9-explica"><b>Por qué la barra:</b> "OK" solo dice que pasó; la barra dice <b>por cuánto</b>. Una pinza que llega a 0,12 cm de un
+              límite de 2 cm sobra; una que llegara a 1,9 cm pasaría raspando.</p>
+          </div>
         </div>
-        <div data-panel="baxter-prueba"></div>
       </div>
+      <p class="c9-mas">Todo el detalle (cinemática inversa, constraint, escena, código): <button class="c9-enlace" type="button" data-readme="punto-b-brazo-tipo-baxter/README.md">README del punto b)</button></p>
     </section>
 
-    <!-- 7 -->
-    <section class="paso" data-titulo="c) Atlas">
-      <h2>c) Atlas: caminar con y sin asistente de equilibrio</h2>
+    <!-- ===== c) ATLAS ===== -->
+    <section class="c9-vista" id="v-atlas" data-titulo="c) Atlas" hidden>
+      <h2><span class="c9-letra atlas">c</span>Atlas: caminar con y sin asistente de equilibrio</h2>
       <p class="c9-intro">El humanoide Atlas real (el de <code>atlas.py</code> del profesor; el enunciado dice "Baxter" pero su imagen es Atlas).
-        Camina, gira, posa y mueve sus juntas con física real. El <b>asistente de equilibrio</b> es un arnés virtual que sostiene la
-        mitad del peso y endereza la cadera: se prende y se apaga para comparar.</p>
-      <div class="c9-tres">
-        <figure class="c9-foto"><img data-src="punto-c-atlas/img/atlas-de-pie-asistente.png" alt="Atlas de pie con el asistente prendido"><figcaption>Así abre: de pie, asistente ON.</figcaption></figure>
-        <figure class="c9-foto"><img data-src="punto-c-atlas/img/atlas-caminando.png" alt="Atlas a mitad de un paso"><figcaption>Caminando.</figcaption></figure>
-        <figure class="c9-foto"><img data-src="punto-c-atlas/img/atlas-sin-asistente.png" alt="Atlas con el asistente apagado"><figcaption>Asistente OFF.</figcaption></figure>
+        El <b>asistente de equilibrio</b> es un arnés virtual que sostiene la mitad del peso y endereza la cadera: se prende y se apaga para comparar.</p>
+
+      <div class="c9-prueba atlas">
+        <h3>1 · Prueba de estrés con y sin asistente: la gráfica</h3>
+        <div class="c9-prueba-grid">
+          <div>
+            <div class="c9-que">
+              <div><b>Qué va a pasar</b>Sin ventana (unos 3 a 4 minutos) se repiten las mismas teclas con el asistente prendido y apagado: de pie, caminar, arrancar y frenar, girar, retroceder y poses.</div>
+              <div><b>Qué hacer</b>Pulsar Iniciar y mirar la gráfica: cada barra aparece al medirse.</div>
+              <div><b>Qué deberías ver</b>Con asistente, todas las barras llenas (de pie todo el tiempo); sin asistente, barras cortas al girar y al retroceder (se cae a los 2-3 s).</div>
+            </div>
+            <div data-panel="atlas-prueba"></div>
+          </div>
+          <div class="c9-visual">
+            <div class="c9-visual-cab"><b>Segundos de pie, de lo que dura cada prueba</b><span id="atlas-cuenta" class="c9-tenue">mostrando lo medido antes</span></div>
+            <div class="c9-barra-prog"><i id="atlas-barra"></i></div>
+            <div class="c9-leyenda-graf"><span><i class="con"></i>con asistente</span><span><i class="sin"></i>sin asistente</span><span class="c9-tenue">barra llena = no se cayó</span></div>
+            <div class="c9-grafica" id="atlas-grafica"></div>
+            <p class="c9-explica" id="atlas-explica"><b>Cómo leerla:</b> cada prueba dura lo que dice su nombre; la barra es cuánto aguantó de pie
+              antes de caerse (llena = no se cayó). Con el arnés virtual, el mismo control de caminata aguanta todo; sin él, la física
+              sola aguanta estar de pie y las poses, pero al girar o retroceder el apoyo cambia de lado demasiado rápido y se cae.
+              Al lado de cada barra, lo que avanzó o giró.</p>
+          </div>
+        </div>
       </div>
 
       <div class="c9-prueba atlas">
-        <h3>1 · Atlas con ventana</h3>
-        <div class="c9-que">
-          <div><b>Qué va a pasar</b>Se abre PyBullet con Atlas de pie (si faltan los modelos, primero los baja). Los botones de la derecha son 16.</div>
-          <div><b>Qué hacer en la ventana</b><ol>
-            <li><b>Caminar adelante on/off (8)</b>: un clic arranca, otro clic frena.</li>
-            <li><b>Girar izquierda on/off (4)</b> y luego frenarlo igual.</li>
-            <li><b>Asistente ON/OFF (A)</b> para apagarlo y volver a caminar o girar.</li>
-            <li>Si se cae: <b>Ponerlo de pie (B)</b>. Poses: <b>Saludar (C)</b>, <b>Agacharse (D)</b>, <b>Brazos arriba (#)</b>.</li></ol></div>
-          <div><b>Qué deberías ver</b>Con asistente camina (unos 12 cm/s), gira y retrocede sin caerse. Sin él aguanta de pie y en las poses, pero al girar o retroceder se cae en 2 o 3 segundos. <b>B</b> lo levanta.</div>
+        <h3>2 · Atlas con ventana</h3>
+        <div class="c9-prueba-grid">
+          <div>
+            <div class="c9-que">
+              <div><b>Qué va a pasar</b>Se abre PyBullet con Atlas de pie (si faltan los modelos, primero los baja). Los botones de la derecha son 16.</div>
+              <div><b>Qué hacer en la ventana</b><ol>
+                <li><b>Caminar adelante on/off (8)</b>: un clic arranca, otro frena.</li>
+                <li><b>Girar izquierda on/off (4)</b> y luego frenarlo igual.</li>
+                <li><b>Asistente ON/OFF (A)</b> para apagarlo y volver a caminar o girar.</li>
+                <li>Si se cae: <b>Ponerlo de pie (B)</b>. Poses: <b>Saludar (C)</b>, <b>Agacharse (D)</b>, <b>Brazos arriba (#)</b>.</li></ol></div>
+              <div><b>Qué deberías ver</b>Con asistente camina (unos 12 cm/s), gira y retrocede sin caerse. Sin él, al girar o retroceder se cae en 2 o 3 segundos. <b>B</b> lo levanta.</div>
+            </div>
+            <div data-panel="atlas"></div>
+          </div>
+          <div class="c9-visual">
+            <div class="c9-fotos-3">
+              <figure class="c9-foto"><img data-src="punto-c-atlas/img/atlas-de-pie-asistente.png" alt="Atlas de pie con el asistente prendido"><figcaption>De pie, asistente ON.</figcaption></figure>
+              <figure class="c9-foto"><img data-src="punto-c-atlas/img/atlas-caminando.png" alt="Atlas a mitad de un paso"><figcaption>Caminando.</figcaption></figure>
+              <figure class="c9-foto"><img data-src="punto-c-atlas/img/atlas-sin-asistente.png" alt="Atlas con el asistente apagado"><figcaption>Asistente OFF.</figcaption></figure>
+            </div>
+          </div>
         </div>
-        <div data-panel="atlas"></div>
       </div>
-
-      <div class="c9-prueba atlas">
-        <h3>2 · Prueba de estrés con y sin asistente</h3>
-        <div class="c9-que">
-          <div><b>Qué va a pasar</b>Sin ventana (alrededor de un minuto) se repiten las mismas teclas con el asistente prendido y apagado: de pie, caminar, arrancar y frenar, girar, retroceder y poses.</div>
-          <div><b>Qué hacer</b>Pulsar Iniciar y esperar.</div>
-          <div><b>Qué deberías ver</b>Dos bloques de resultados: con asistente todo "de pie"; sin asistente "se cae a los … s" al girar y al retroceder. Al final, los 3 intentos de tirarlo y levantarlo con B.</div>
-        </div>
-        <div data-panel="atlas-prueba"></div>
-      </div>
-
-      <h3>Lo que medimos (de esta misma prueba)</h3>
-      <div class="c9-tabla-scroll">
-      <table class="c9-tabla">
-        <thead><tr><th>Prueba</th><th>Con asistente</th><th>Sin asistente</th></tr></thead>
-        <tbody>
-          <tr><td>De pie quieto 20 s</td><td>de pie</td><td>de pie</td></tr>
-          <tr><td>Caminar adelante 15 s (<kbd>8</kbd>)</td><td>de pie, avanzó 188 cm</td><td>al borde: recién creado se cae a los 5,4 s; tras otras pruebas aguantó 15 s</td></tr>
-          <tr><td>Arrancar y frenar 5 veces</td><td>de pie, avanzó 129 cm</td><td>se cae a los 9,8 s</td></tr>
-          <tr><td>Girar a la izquierda 8 s (<kbd>4</kbd>)</td><td>de pie, giró 151°</td><td>se cae a los 2,5 s</td></tr>
-          <tr><td>Caminar atrás 8 s (<kbd>2</kbd>)</td><td>de pie, retrocedió 94 cm</td><td>se cae a los 2,4 s</td></tr>
-          <tr><td>Poses seguidas (<kbd>C</kbd> <kbd>D</kbd> <kbd>#</kbd> <kbd>5</kbd>)</td><td>todas bien</td><td>todas bien</td></tr>
-        </tbody>
-      </table>
-      </div>
+      <p class="c9-mas">Todo el detalle (por qué caminar es difícil, parámetros de la marcha, código): <button class="c9-enlace" type="button" data-readme="punto-c-atlas/README.md">README del punto c)</button></p>
     </section>
 
-    <!-- 8 -->
-    <section class="paso" data-titulo="Sin Python: el preview">
-      <h2>Sin Python: las tres consolas en el navegador</h2>
-      <p class="c9-intro">Un simulador liviano, sin PyBullet: el mismo teclado 4x4 con las tres configuraciones en un esquema 2D y la misma
-        regla de "un golpe". En <b>Modo prueba</b> se juega con el mouse; en <b>Conectado (Web Serial)</b> se usa el ESP32 real (Chrome o Edge)
-        y se ven las líneas <kbd>TECLA:x</kbd> que llegan.</p>
-      <div class="c9-botones-portada" style="margin-top:4px">
-        <button class="c9-btn" type="button" id="abrir-preview">Abrir el preview en su propia pestaña</button>
+    <!-- ===== PREVIEW ===== -->
+    <section class="c9-vista" id="v-preview" data-titulo="Sin Python: el preview" hidden>
+      <div class="c9-cab-fila">
+        <div>
+          <h2>Sin Python: las tres consolas en el navegador</h2>
+          <p class="c9-intro">El mismo teclado 4x4 con las tres configuraciones en un esquema 2D y la misma regla de "un golpe". En
+            <b>Modo prueba</b> se juega con el mouse; <b>Conectado (Web Serial)</b> usa el ESP32 real (Chrome o Edge).</p>
+        </div>
+        <button class="c9-btn" type="button" id="abrir-preview">Abrir en su pestaña (para Web Serial)</button>
       </div>
-      <div class="c9-nota info">Para el modo <b>Conectado</b> conviene abrirlo en su propia pestaña (el botón de arriba): el navegador pide
-        elegir el puerto del ESP32 y no deja hacerlo dentro de un recuadro.</div>
       <div class="c9-marco-env" id="env-preview"><iframe class="c9-marco" id="marco-preview" title="Preview de las tres consolas"></iframe></div>
     </section>
 
-    <!-- 9 -->
-    <section class="paso" data-titulo="Con el ESP32 real">
-      <h2>Con el ESP32 real, paso a paso</h2>
-      <p class="c9-intro">Opcional. El mismo firmware sirve para los tres puntos: se carga una vez y se deja conectado.</p>
-      <ol class="c9-pasos-esp32">
-        <li><b>Conectar el teclado</b> con los 8 cables según la tabla de "Cómo se conecta" (filas a 14, 27, 26, 25; columnas a 33, 32, 18, 19).</li>
-        <li><b>Cargar el firmware</b> con Thonny: abrir <code>esp32_teclado.py</code> (está en la carpeta del tema 9), "Guardar como" → dispositivo MicroPython → <code>main.py</code>. Así arranca solo al enchufarlo. El código está abajo, en "Ver el firmware".</li>
-        <li><b>Probar que manda teclas</b>: en la consola de Thonny deben pasar líneas <code>TECLA:-</code>, y al apretar una tecla, <code>TECLA:8</code>, etc.</li>
-        <li><b>Cerrar Thonny</b> (o pulsar "Detener"): si Thonny tiene el puerto abierto, la simulación no puede usarlo.</li>
-        <li><b>Ver el puerto COM</b> en el Administrador de dispositivos de Windows. Los programas buscan <code>COM7</code>; si el tuyo es otro, mira "Detalles técnicos" al final.</li>
-        <li><b>Abrir la simulación</b> desde los pasos a), b) o c). Al conectarse, el ESP32 se reinicia y el programa espera 2 s; en la consola de la app sale "ESP32 conectado en COM7".</li>
-        <li><b>Manejar con el teclado</b>: sostener <kbd>8</kbd> mueve de corrido; las teclas de "un golpe" actúan una vez. Los botones de la ventana siguen funcionando igual.</li>
-        <li><b>Si no pasa nada</b>: mirar la "última línea cruda" que muestra la ventana. Si nunca cambia, el ESP32 no manda (puerto equivocado o Thonny abierto). Si siempre dice <code>TECLA:-</code>, revisar los cables: una fila o columna suelta deja muda toda esa línea de teclas.</li>
-      </ol>
-      <details class="c9-tecnico" id="det-firmware">
-        <summary>Ver el firmware del ESP32 (<code>esp32_teclado.py</code>)</summary>
-        <pre id="codigo-firmware">Cargando…</pre>
-      </details>
-    </section>
-
-    <!-- 10 -->
-    <section class="paso" data-titulo="Resultados: videos">
+    <!-- ===== VIDEOS ===== -->
+    <section class="c9-vista" id="v-videos" data-titulo="Videos" hidden>
       <h2>Resultados: los cuatro videos</h2>
-      <p class="c9-intro">Grabados de las mismas simulaciones, con el teclado simulado mandando <kbd>TECLA:x</kbd> cada 50 ms como el ESP32.</p>
-      <div class="c9-dos">
-        <figure class="c9-foto"><video data-src="punto-a-drones-waypoints/video/drones-mision.mp4" controls muted loop playsinline preload="metadata"></video>
-          <figcaption><b>a) Drones, misión A → B → C.</b> En la prueba el líder llegó a A a los 1,2 s, a B a los 2,9 s y a C a los 4,9 s.</figcaption></figure>
-        <figure class="c9-foto"><video data-src="punto-b-brazo-tipo-baxter/video/baxter-demo.mp4" controls muted loop playsinline preload="metadata"></video>
-          <figcaption><b>b) Baxter coge y lleva el cubo.</b> Pinza a menos de 0,2 cm del objetivo; cubo a menos de 0,6 cm del destino con los dos brazos.</figcaption></figure>
-        <figure class="c9-foto"><video data-src="punto-c-atlas/video/atlas-con-asistente.mp4" controls muted loop playsinline preload="metadata"></video>
+      <p class="c9-intro">Grabados de las mismas simulaciones, con el teclado simulado mandando <kbd>TECLA:x</kbd> cada 50 ms como el ESP32
+        (<code>grabar_videos.py</code>). Clic en uno para verlo grande.</p>
+      <div class="c9-videos">
+        <figure class="c9-foto"><img data-src="punto-a-drones-waypoints/video/drones-mision.gif" alt="Drones: misión A → B → C">
+          <figcaption><b>a) Drones, misión A → B → C.</b> El líder llegó a A a los 1,2 s, a B a los 2,9 s y a C a los 4,9 s.</figcaption></figure>
+        <figure class="c9-foto"><img data-src="punto-b-brazo-tipo-baxter/video/baxter-demo.gif" alt="Baxter coge y lleva el cubo">
+          <figcaption><b>b) Baxter coge y lleva el cubo.</b> Pinza a menos de 0,2 cm del objetivo; cubo a menos de 0,6 cm del destino.</figcaption></figure>
+        <figure class="c9-foto"><img data-src="punto-c-atlas/video/atlas-con-asistente.gif" alt="Atlas con asistente">
           <figcaption><b>c) Atlas con asistente.</b> Camina, gira y retrocede sin caerse.</figcaption></figure>
-        <figure class="c9-foto"><video data-src="punto-c-atlas/video/atlas-sin-asistente.mp4" controls muted loop playsinline preload="metadata"></video>
+        <figure class="c9-foto"><img data-src="punto-c-atlas/video/atlas-sin-asistente.gif" alt="Atlas sin asistente">
           <figcaption><b>c) Atlas sin asistente.</b> Se cae al girar y lo levanta la tecla <kbd>B</kbd>.</figcaption></figure>
       </div>
-      <div class="c9-botones-portada">
-        <button class="c9-btn" type="button" data-abrir="punto-a-drones-waypoints/video/drones-mision.mp4">Abrir aparte: drones</button>
-        <button class="c9-btn" type="button" data-abrir="punto-b-brazo-tipo-baxter/video/baxter-demo.mp4">Abrir aparte: Baxter</button>
-        <button class="c9-btn" type="button" data-abrir="punto-c-atlas/video/atlas-con-asistente.mp4">Abrir aparte: Atlas con asistente</button>
-        <button class="c9-btn" type="button" data-abrir="punto-c-atlas/video/atlas-sin-asistente.mp4">Abrir aparte: Atlas sin asistente</button>
-      </div>
     </section>
 
-    <!-- 11 -->
-    <section class="paso" data-titulo="Checklist y detalles">
+    <!-- ===== CHECKLIST ===== -->
+    <section class="c9-vista" id="v-checklist" data-titulo="Checklist y detalles" hidden>
       <h2>Checklist de la actividad</h2>
       <p class="c9-intro">Cada punto se marca solo cuando su prueba corrió bien desde esta app (también se puede marcar a mano).</p>
       <div id="checklist-final"></div>
@@ -394,8 +477,29 @@ entorno\Scripts\python punto-c-atlas\probar_atlas.py</pre>
           installation" con las Build Tools instaladas, falta en el PATH la carpeta <code>Microsoft Visual Studio\Installer</code> (la app lo agrega sola).</p>
         <p><b>Modelos:</b> <code>modelos/</code> no se sube a git; Baxter usa <code>toms_baxter.urdf</code> y Atlas <code>atlas_v4_with_multisense.urdf</code>, del
           repositorio <code>pybullet_robots</code>.</p>
-        <div id="md-protocolo"></div>
       </details>
+    </section>
+
+    <!-- ===== ESP32 REAL ===== -->
+    <section class="c9-vista" id="v-esp32" data-titulo="Con el ESP32 real" hidden>
+      <h2>Con el ESP32 real, paso a paso</h2>
+      <p class="c9-intro">Opcional. El mismo firmware sirve para los tres puntos: se carga una vez y se deja conectado.</p>
+      <div class="c9-columnas">
+        <ol class="c9-pasos-esp32">
+          <li><b>Conectar el teclado</b> con los 8 cables según "Cómo se conecta" (filas a 14, 27, 26, 25; columnas a 33, 32, 18, 19).</li>
+          <li><b>Cargar el firmware</b> con Thonny: abrir <code>esp32_teclado.py</code>, "Guardar como" → dispositivo MicroPython → <code>main.py</code>. Así arranca solo al enchufarlo.</li>
+          <li><b>Probar que manda teclas</b>: en la consola de Thonny deben pasar líneas <code>TECLA:-</code>, y al apretar una tecla, <code>TECLA:8</code>, etc.</li>
+          <li><b>Cerrar Thonny</b> (o pulsar "Detener"): si Thonny tiene el puerto abierto, la simulación no puede usarlo.</li>
+          <li><b>Ver el puerto COM</b> en el Administrador de dispositivos. Los programas buscan <code>COM7</code>; si es otro, ver "Checklist y detalles".</li>
+          <li><b>Abrir la simulación</b> desde a), b) o c). Al conectarse, el ESP32 se reinicia y el programa espera 2 s; en la consola sale "ESP32 conectado en COM7".</li>
+          <li><b>Manejar con el teclado</b>: sostener <kbd>8</kbd> mueve de corrido; las teclas de "un golpe" actúan una vez.</li>
+          <li><b>Si no pasa nada</b>: mirar la "última línea cruda" de la ventana. Si nunca cambia, el ESP32 no manda (puerto equivocado o Thonny abierto). Si siempre dice <code>TECLA:-</code>, revisar los cables.</li>
+        </ol>
+        <details class="c9-tecnico abierto" id="det-firmware" open>
+          <summary>El firmware del ESP32 (<code>esp32_teclado.py</code>)</summary>
+          <pre id="codigo-firmware">Cargando…</pre>
+        </details>
+      </div>
     </section>
   </main>
 </div>

@@ -33,15 +33,15 @@
       "id": "montaje",
       "nombre": "Montaje 3D del circuito",
       "tipo": "archivo",
-      "archivo": "img/montaje-3d.png",
+      "archivo": "img/montaje-3d.jpg",
       "descripcion": "ESP32 en la protoboard: GPIO25, 26 y 27 a través de 330 Ω a los LEDs amarillo, azul y rojo, cátodos a GND."
     },
     {
       "id": "estados",
       "nombre": "Estados de los LEDs (puño / victoria / dos manos)",
       "tipo": "archivo",
-      "archivo": "img/estado-puno.png",
-      "descripcion": "Render del LED amarillo al 30 % (puño). En img/ están también estado-victoria.png y estado-dos-manos.png."
+      "archivo": "img/estado-puno.jpg",
+      "descripcion": "Render del LED amarillo al 30 % (puño). En img/ están también estado-victoria.jpg y estado-dos-manos.jpg."
     },
     {
       "id": "fw",
