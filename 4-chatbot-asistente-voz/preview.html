@@ -112,7 +112,8 @@ function pintarLeds(rojo, azul) {
 
 // ---------------- Intérprete por palabras clave (copia de interpretar_por_reglas) ----------------
 function interpretarPorReglas(texto) {
-  const t = texto.toLowerCase();
+  // Sin tildes, igual que en Python ("enciéndeme" tiene que coincidir con "enciend").
+  const t = texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const datos = {};
   if (["show", "espectaculo", "espectáculo", "parpade", "fiesta"].some(p => t.includes(p))) {
     datos.show = true; return datos;

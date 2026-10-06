@@ -764,7 +764,7 @@ def main():
     print(f"Emulador del enjambre: laberinto {lab.nombre}, {len(lab.aristas)} aristas, "
           f"CRC {lab.crc():08X}")
     print(f"Parametros: {params}")
-    print(f"Nodos: " + ", ".join(f"{n} -> {ip}:{p}" for n, (ip, p) in mapa.items())
+    print("Nodos: " + ", ".join(f"{n} -> {ip}:{p}" for n, (ip, p) in mapa.items())
           + f"   telemetria -> {args.pc}:{args.puerto_pc}")
     print(f"Escala de tiempo {args.escala_tiempo}  (barrera {tiempos.barrera:.2f} s, vivo "
           f"{tiempos.vivo:.2f} s, pausa {tiempos.pausa:.3f} s)  perdida {args.perdida:.1%}")

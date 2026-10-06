@@ -18,6 +18,7 @@ Ctrl+C (o cerrar la ventana) cierra los dos procesos.
 from __future__ import annotations
 
 import argparse
+import http.client
 import os
 import subprocess
 import sys
@@ -70,7 +71,7 @@ def _esperar(url: str, segundos: float = 60) -> bool:
         try:
             urllib.request.urlopen(url, timeout=2)
             return True
-        except OSError:
+        except (OSError, http.client.HTTPException):   # HTTPException no es OSError (respuesta rota)
             time.sleep(0.5)
     return False
 
@@ -107,6 +108,8 @@ def main() -> None:
         print(f"La simulacion ya esta corriendo: visor 3D en http://127.0.0.1:{puerto_visor}/")
         anotados = puertos.leer()
         puerto_dash = anotados.get("dashboard", args.puerto) if anotados.get("visor") == puerto_visor else args.puerto
+        # La app de la practica (app-practica) saca de esta linea el enlace del dashboard.
+        print(f"Dashboard en http://127.0.0.1:{puerto_dash}")
         if args.abrir:
             webbrowser.open(f"http://127.0.0.1:{puerto_visor}/" + (f"?{args.ver}" if args.ver else ""))
         if args.abrir_dashboard and _esperar(f"http://127.0.0.1:{puerto_dash}/", segundos=5):

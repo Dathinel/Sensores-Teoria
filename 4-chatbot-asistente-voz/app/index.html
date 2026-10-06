@@ -267,7 +267,8 @@
         <div id="panelFw" class="mini-panel"></div></li>
       <li><b>Cierra Thonny</b> (o desconéctalo de la placa): el puerto solo lo puede usar un programa a la vez.</li>
       <li><b>Mira el puerto</b> en el Administrador de dispositivos → Puertos (COM y LPT). El programa usa
-        <code>COM7</code>; si el tuyo es otro, cámbialo en <code>PUERTO_SERIAL</code> de <code>comando_voz.py</code>.</li>
+        <code>COM7</code>; si el tuyo es otro, cambia <code>default="COM7"</code> (opción <code>--puerto</code>) al principio de
+        <code>comando_voz.py</code>, o córrelo a mano con <code>--puerto COM5</code>.</li>
       <li><b>Pulsa Iniciar</b> en <em>Pruébalo</em> (o en el modo micrófono). Ahora verás <code>ESP32 conectado en COM7</code> y,
         tras cada orden, <code>ESP32 dice: OK 10</code>: los LEDs de la protoboard y los dibujados se mueven a la vez.</li>
     </ol>

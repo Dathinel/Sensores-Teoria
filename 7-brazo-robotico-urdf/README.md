@@ -11,9 +11,17 @@ Doble clic en [`ABRIR.bat`](ABRIR.bat) (en Linux o Mac, `sh abrir.sh`). Se abre 
 
 ![La app del tema 7: el teclado 4x4 clicable, el brazo de lado y desde arriba, y la línea serial](img/app.png)
 
+**Paso a paso de todo:**
+
+1. [Cómo se hizo, paso a paso](#cómo-se-hizo-paso-a-paso): qué se hizo primero, qué después, qué falló y cómo se arregló.
+2. [Cómo probarlo con la app, sección por sección](#con-la-app-sección-por-sección): qué ver y qué botón pulsar en cada sección, y qué hacer si algo falla.
+3. [Cómo probarlo sin la app](#sin-la-app-desde-la-consola) (con comandos) y [con el ESP32 y el teclado reales](#con-el-esp32-y-el-teclado-reales).
+
+Todo se puede probar sin hardware (la simulación de PyBullet con sus botones, el teclado de la app y `preview.html`). El montaje real, el teclado 4x4 cableado directo al ESP32, está en las [fotos](#el-montaje-y-la-demo) y se prueba con los pasos de "con el ESP32 y el teclado reales".
+
 ## ¿Quiere saber cómo funciona? → aquí está todo
 
-[Qué es un URDF](#qué-es-un-urdf) (y [el árbol de este brazo](#el-árbol-de-este-brazo)) · [Qué es PyBullet](#qué-es-pybullet) · [El teclado matricial y su barrido](#qué-es-un-teclado-matricial-y-cómo-se-barre) · [UART](#qué-es-uart-y-cómo-llega-el-dato-al-pc) · [La idea general](#la-idea-general) · [Conexiones](#conexiones) · [Qué hace cada archivo](#qué-hace-cada-archivo) · [La lógica del código](#la-lógica-del-código) ([ESP32](#en-el-esp32-esp32_brazopy), [PC](#en-el-pc-brazo_pybulletpy)) · [Cómo probarlo a mano](#cómo-probarlo) · [El montaje y la demo](#el-montaje-y-la-demo)
+[Qué es un URDF](#qué-es-un-urdf) (y [el árbol de este brazo](#el-árbol-de-este-brazo)) · [Qué es PyBullet](#qué-es-pybullet) · [El teclado matricial y su barrido](#qué-es-un-teclado-matricial-y-cómo-se-barre) · [UART](#qué-es-uart-y-cómo-llega-el-dato-al-pc) · [La idea general](#la-idea-general) · [Conexiones](#conexiones) · [Qué hace cada archivo](#qué-hace-cada-archivo) · [La lógica del código](#la-lógica-del-código) ([ESP32](#en-el-esp32-esp32_brazopy), [PC](#en-el-pc-brazo_pybulletpy)) · [Cómo probarlo](#cómo-probarlo) · [El montaje y la demo](#el-montaje-y-la-demo) · [Cómo se hizo](#cómo-se-hizo-paso-a-paso)
 
 ---
 
@@ -194,9 +202,9 @@ Si al apretar una tecla sale otra distinta, el teclado tiene sus pines en otro o
 
 ## Qué hace cada archivo
 
-- **`brazo.urdf`**: el brazo del profesor, tal cual viene en U_Militar (5 links y 5 joints, ver el árbol de arriba). No lo modificamos; `brazo_pybullet.py` lee de él los nombres, índices y límites de cada articulación.
+- **`brazo.urdf`**: el brazo del profesor, tal cual viene en U_Militar (6 links y 5 joints, ver el árbol de arriba). No lo modificamos; `brazo_pybullet.py` lee de él los nombres, índices y límites de cada articulación.
 - **`esp32_brazo.py`**: el firmware del ESP32 en MicroPython. Se guarda en la placa como `main.py`. Barre el teclado (8 GPIO), actualiza las tres posiciones con los pasos de jog y las imprime cada 100 ms.
-- **`brazo_pybullet.py`**: el programa del PC. Abre el puerto serial si puede, carga el URDF en PyBullet, crea los botones de jog y en un bucle lee el serial, aplica los botones, mueve los motores y avanza la simulación.
+- **`brazo_pybullet.py`**: el programa del PC. Abre el puerto serial si puede, carga el URDF en PyBullet, crea los botones de jog y en un bucle lee el serial, aplica los botones, mueve los motores y avanza la simulación. Si el ESP32 se desenchufa a mitad de camino, sigue con los botones y reintenta abrir el puerto cada 3 s.
 - **`img/enunciado-actividad.png`**: la captura del enunciado de la actividad.
 - **`img/`**: las fotos del montaje real, el montaje en 3D y las animaciones de la sección "El montaje y la demo".
 - **`entorno/`**: el entorno virtual de Python del tema, con `pybullet` y `pyserial` ya instalados. No se sube a GitHub (tiene su propio `.gitignore` con `*`).
@@ -230,7 +238,7 @@ J1:0.150,J2:0.000,G:0.000
 
 ### En el PC (`brazo_pybullet.py`)
 
-**1. Patrón "sin necesidad de estar conectado".** El puerto se abre dentro de un `try/except serial.SerialException`. Si falla (no hay ESP32, otro COM, o Thonny tiene el puerto abierto), `ser` queda en `None`, se avisa por consola y todo lo demás funciona igual con los botones de la ventana. Si abre bien, espera 2 segundos y vacía el buffer: abrir el puerto mueve la línea DTR del conversor USB-serial y eso **reinicia** el ESP32, así que hay que darle tiempo a que arranque `main.py` y descartar el texto de arranque de MicroPython.
+**1. Patrón "sin necesidad de estar conectado".** El puerto (`PUERTO_SERIAL`, `COM7` salvo que se pase otro como argumento: `python brazo_pybullet.py COM5`) se abre dentro de un `try/except serial.SerialException`. Si falla (no hay ESP32, otro COM, o Thonny tiene el puerto abierto), `ser` queda en `None`, se avisa por consola y todo lo demás funciona igual con los botones de la ventana. Si abre bien, espera 2 segundos y vacía el buffer: abrir el puerto mueve la línea DTR del conversor USB-serial y eso **reinicia** el ESP32, así que hay que darle tiempo a que arranque `main.py` y descartar el texto de arranque de MicroPython.
 
 **2. Leer los límites del propio URDF.** En vez de copiar los números a mano, recorre las articulaciones con `p.getJointInfo()` y guarda el índice de cada una (por nombre) y sus límites (`info[8]` e `info[9]`). Si el URDF cambia, el script se adapta solo.
 
@@ -248,32 +256,58 @@ Si solo se leyera una línea por vuelta, las líneas se irían apilando y el bra
 
 **4. Diagnóstico en la ventana.** La última línea **cruda** que llegó (sea o no válida) se muestra arriba en la ventana, en verde, como `Serial: ...`. Es la herramienta más útil cuando "no pasa nada": si nunca cambia de `(sin datos todavia)`, el ESP32 no está mandando nada; si cambia pero no es `J1:..`, el problema es de formato (por ejemplo, otro programa en la placa en vez de `esp32_brazo.py`). El texto solo se reescribe cuando cambia (`replaceItemUniqueId`), porque recrearlo 240 veces por segundo lo haría parpadear.
 
-**5. Botones de jog.** Siete botones fijos (`joint_1 (base) +`, `joint_1 (base) -`, `joint_2 (codo) +`, `joint_2 (codo) -`, `pinza +`, `pinza -`, `Home (0, 0, 0)`) con los mismos pasos que el ESP32 (`PASO_LOCAL = {"j1": 0.05, "j2": 0.05, "g": 0.005}`). Como un botón de PyBullet es un contador, `leer_botones()` compara cada contador con el de la vuelta anterior y aplica la diferencia (si hubo dos clicks entre dos vueltas, se aplican los dos). Funcionan también con el ESP32 conectado.
+**5. Botones de jog.** Siete botones fijos (`joint_1 (base) +`, `joint_1 (base) -`, `joint_2 (codo) +`, `joint_2 (codo) -`, `pinza +`, `pinza -`, `Home (0, 0, 0)`) con los mismos pasos que el ESP32 (`PASO_LOCAL = {"j1": 0.05, "j2": 0.05, "g": 0.005}`). Como un botón de PyBullet es un contador, `leer_botones()` compara cada contador con el de la vuelta anterior y aplica la diferencia (si hubo dos clicks entre dos vueltas, se aplican los dos). Funcionan también con el ESP32 conectado, aunque ahí la siguiente línea del ESP32 (a los 100 ms) vuelve a poner la posición del teclado.
 
    Primero probamos un solo slider cuyo rango cambiaba según la articulación elegida (borrarlo y crear uno nuevo). No funcionó: `p.removeUserDebugItem()` no borra de forma confiable los sliders ya creados y los viejos se iban quedando pegados en el panel. Por eso quedaron botones fijos, creados una sola vez, que nunca se recrean.
 
 **6. Una sola posición objetivo.** Tanto las líneas del ESP32 como los botones escriben sobre el mismo diccionario `valores = {"j1", "j2", "g"}`. Cuando el ESP32 manda algo, su posición reemplaza a la local; en las vueltas en que no llega nada, el brazo mantiene la última posición (no vuelve a 0). Así el brazo nunca "salta" entre dos fuentes.
 
-**7. Mover y avanzar.** En cada vuelta se manda el objetivo a los cinco motores (los dos dedos con `g / 3`), se llama a `p.stepSimulation()` y se duerme 1/240 s. El bucle es `while p.isConnected()`, así que al cerrar la ventana el script termina limpio, y en el `finally` se cierra el puerto para que Thonny lo pueda volver a abrir.
+**7. Mover y avanzar.** En cada vuelta se manda el objetivo a los cinco motores (los dos dedos con `g / 3`), se llama a `p.stepSimulation()` y se duerme 1/240 s. El bucle es `while p.isConnected()`, así que al cerrar la ventana el script termina limpio (si la ventana se cierra justo a mitad de una vuelta, la siguiente llamada a PyBullet tira `pybullet.error`; el script lo reconoce como "se cerró la ventana" y no muestra ningún error), y en el `finally` se cierra el puerto para que Thonny lo pueda volver a abrir. Al final imprime `Simulacion terminada.`
+
+**8. Si el ESP32 se desenchufa a mitad de la simulación.** Con el puerto ya abierto, desenchufar la placa hace que la siguiente consulta a `ser.in_waiting` (o `ser.read`) tire `SerialException`. Antes eso tumbaba el script con un traceback; ahora `leer_esp32()` lo atrapa y llama a `perder_esp32()`, que cierra el puerto, pone `ser = None`, avisa por consola (`Se perdio el ESP32 en COM7 ...`) y escribe en la línea verde `Serial: ESP32 desconectado: modo botones (reintentando COM7)`. El brazo se queda en la última posición recibida y los botones siguen funcionando. Cada 3 s (`REINTENTO_S`), `intentar_reconectar()` prueba a abrir el puerto otra vez; abrir un COM que no existe falla en milisegundos, así que no frena la simulación. Al volver a enchufarlo dice `ESP32 reconectado en COM7` y sigue con los datos del teclado; como abrir el puerto reinicia la placa (DTR), el ESP32 vuelve a empezar en `0, 0, 0` y el brazo vuelve a home. Esto solo pasa si el ESP32 estaba conectado al empezar: si se arrancó sin él, el script no vuelve a tocar el puerto (el modo "solo botones" queda exactamente igual).
 
 ## Cómo probarlo
 
-Todos los comandos se corren desde la carpeta `7-brazo-robotico-urdf`, con el entorno del tema (ya trae `pybullet` y `pyserial`).
+Hay tres formas, de la más fácil a la más completa: con la app (doble clic, sin escribir comandos), sin la app (desde la consola) y con el ESP32 y el teclado reales.
+
+### Con la app, sección por sección
+
+1. **Abrirla.** Doble clic en [`ABRIR.bat`](ABRIR.bat) (en Linux o Mac, `sh abrir.sh`). Sale una consola que dice `Abriendo la app de 7-brazo-robotico-urdf...` y se minimiza sola: es la que mantiene la app funcionando, no hay que cerrarla mientras se usa. Se abre una ventana tipo programa con la pantalla "Abriendo la práctica…" y después la app, con la barra lateral a la izquierda. Arriba a la derecha están el estado del entorno (`Entorno listo`, o `Entorno: se prepara al iniciar` la primera vez) y el botón **Pantalla completa** (Esc para salir). Abajo de la barra lateral, **README completo** abre este README dentro de la app. Si el `ABRIR.bat` dice que no encuentra Python, hay que instalar Python 3.9 o más nuevo (el mismo mensaje dice cómo) y volver a hacer doble clic.
+2. **Inicio.** Qué hace la práctica en una frase y el GIF del jog. **Probar la simulación** lleva a "Pruébalo" y **Mover el brazo aquí mismo** lleva a "El teclado". Abajo, cuánto tarda cada cosa y la lista **Qué pide la actividad** (los 5 puntos del enunciado, cada uno con la prueba que lo cubre); las casillas se marcan solas cuando termina bien una prueba que cubre ese punto.
+3. **Pruébalo** (la simulación real). Pulsar **Iniciar la simulación**. La primera vez la app crea el entorno e instala `pybullet` y `pyserial`: PyBullet se compila (~10 min, necesita las Build Tools de C++ de Visual Studio; si faltan, el panel lo avisa con el comando para instalarlas) y la barra muestra el avance; las siguientes veces abre en unos 5 s. Mientras arranca, el botón dice "Ejecutándose…", aparece **Detener** y una barra "Abriendo PyBullet…". En "Lo que dice el programa" debe salir `No se encontro el ESP32 en COM7: se usan los botones de jog de PyBullet.` (es lo normal sin placa), varios avisos `No inertial data for link, using mass=1` (normales: el URDF del profesor no trae masas) y `Ventana de PyBullet abierta...`. La ventana de PyBullet puede quedar detrás de la app: buscarla en la barra de tareas. En su panel derecho, cada clic en `joint_1 (base) +`/`-` gira la base ~2,9°, `joint_2 (codo) +`/`-` dobla el codo, `pinza +`/`-` sube la pinza 5 mm y abre los dedos a la vez, y `Home (0, 0, 0)` lo devuelve todo a cero. Arriba, en verde, `Serial: sin ESP32 (modo botones)`. Para terminar: cerrar la ventana de PyBullet o pulsar **Detener**; al cerrar la ventana, la salida termina con `Simulacion terminada.` Si falla, el panel muestra un resumen y las últimas líneas; "Detalles técnicos" (plegado) tiene el comando exacto.
+4. **El teclado.** El mismo teclado 4x4 del ESP32, clicable, sin instalar nada. Mantener presionada una tecla de color con el mouse (o con los números del teclado del PC): `8`/`2` giran la base, `6`/`4` doblan el codo, `9`/`7` abren y cierran la pinza, `5` vuelve a home; las teclas grises no hacen nada, igual que en el firmware. Mientras se sostiene, cada 100 ms suma un paso: se ven cambiar las lecturas J1/J2/G, el brazo de lado y desde arriba, y la línea `J1:..,J2:..,G:..` que mandaría el ESP32 por el USB (por ejemplo, 1 s sostenido el `8` deja `J1:0.550`: el primer paso se aplica al apretar y después uno cada 100 ms). El desplegable "¿Cómo sabe el ESP32 qué tecla se apretó con solo 8 cables?" explica el barrido.
+5. **En el navegador.** `preview.html` dentro de la app: el teclado clicable y la vista 3D del brazo arriba, y debajo los modos y el monitor. En **Modo prueba** la página hace de ESP32: mantener `8/2/6/4/9/7/5` mueve el brazo y el monitor muestra 10 líneas por segundo. **Conectado (Web Serial)** muestra el botón **Conectar por USB**, que pide elegir el puerto del ESP32 (solo Chrome o Edge) y desde ahí el brazo sigue al teclado real. **Abrir en su propia pestaña** abre la misma página a pantalla completa.
+6. **Cómo funciona.** El flujo teclado → ESP32 → USB → `brazo_pybullet.py` → PyBullet, las tres articulaciones y, en desplegables, los trozos de este README (qué es un URDF, qué es PyBullet, la lógica del código).
+7. **Conexiones.** El montaje en 3D, la cinta de 8 pines con su GPIO y la tabla de conexiones, y las fotos del montaje real. Las imágenes se amplían con un clic.
+8. **Con el ESP32.** Los pasos del montaje real (los mismos de [más abajo](#con-el-esp32-y-el-teclado-reales)), qué revisar "si no pasa nada", el programa del ESP32 completo (desplegable "Ver el programa del ESP32") y "Detalles técnicos" (puerto, versiones, cómo compilar PyBullet).
+9. **Resultados.** El GIF del jog, el montaje y las capturas de `preview.html`; el enlace lleva a esta carpeta en GitHub.
+
+Si algo falla: si la app dice "El lanzador se cerró", se cerró la consola del `ABRIR.bat` (volver a hacer doble clic); si la ventana de PyBullet no aparece, mirar la salida del panel "Pruébalo" (el error está ahí) y la barra de tareas; si la compilación de PyBullet falla con `Unable to find a compatible Visual Studio installation`, ver la nota de `entorno/` en [Qué hace cada archivo](#qué-hace-cada-archivo).
+
+### Sin la app (desde la consola)
+
+Todos los comandos se corren desde la carpeta `7-brazo-robotico-urdf`, con el entorno del tema (ya trae `pybullet` y `pyserial`; para crearlo en otro PC, ver `entorno/` en [Qué hace cada archivo](#qué-hace-cada-archivo)).
 
 **Sin ESP32 conectado:**
 
 1. `entorno\Scripts\python -m pip list` para comprobar que el entorno está bien (deben aparecer `pybullet` y `pyserial`).
 2. `entorno\Scripts\python brazo_pybullet.py`. En la consola aparece `No se encontro el ESP32 en COM7: se usan los botones de jog de PyBullet.` y se abre la ventana. Los avisos `No inertial data for link, using mass=1` que salen antes son normales: el URDF del profesor no trae `<inertial>` y PyBullet le pone 1 kg a cada pieza.
 3. En el panel de la derecha, hacer click en los botones de jog: cada click mueve la articulación ~2.9° (o la pinza 5 mm). Con `pinza +` se ve cómo la pinza sube y los dedos se separan a la vez; `Home (0, 0, 0)` lo devuelve todo a cero. Arriba, la línea de estado dice `Serial: sin ESP32 (modo botones)`.
+4. Cerrar la ventana (o `Ctrl+C` en la consola): sale `Simulacion terminada.` sin ningún error.
+5. `preview.html` también se abre sin la app: doble clic en el archivo (Chrome o Edge) y funciona igual que en la sección "En el navegador" de la app.
+
+### Con el ESP32 y el teclado reales
 
 **Con ESP32 conectado:**
 
-1. Armar las conexiones de arriba.
+1. Armar las conexiones de arriba (los 8 cables de la cinta del teclado a `GPIO14/27/26/25` y `GPIO33/32/18/19`) y conectar el ESP32 al PC por USB.
 2. Con Thonny, guardar `esp32_brazo.py` en la placa con el nombre `main.py`. Antes de seguir, **cerrar Thonny** (o darle Stop y desconectarlo): Windows deja abrir un puerto COM a un solo programa a la vez.
-3. Poner en `PUERTO_SERIAL` (arriba de `brazo_pybullet.py`) el COM que se ve en el Administrador de dispositivos.
-4. `entorno\Scripts\python brazo_pybullet.py`. En la consola debe salir `ESP32 conectado en COM7: usando los datos reales del teclado.`
-5. Mantener presionadas las teclas `8/2/6/4/9/7` y el brazo simulado se mueve en tiempo real; `5` lo lleva a home. Arriba de la ventana, `Serial: J1:..,J2:..,G:..` tiene que ir cambiando mientras se sostiene la tecla.
-6. Si algo no anda: si la línea `Serial:` se queda en `(sin datos todavia)`, el ESP32 no está mandando (revisar que el archivo se llame `main.py` en la placa y que Thonny no tenga el puerto); si las líneas `J1:..` llegan pero no cambian al apretar, el USB está bien y el problema es el cableado del teclado (revisar la tabla de conexiones: una fila o columna suelta deja sin respuesta a sus 4 teclas).
+3. Comprobación rápida, sin PyBullet: en `preview.html` (o en la sección "En el navegador" de la app), **Conectado (Web Serial)** → **Conectar por USB** → elegir el puerto del ESP32. El monitor debe mostrar `J1:0.000,J2:0.000,G:0.000` diez veces por segundo y, al sostener una tecla física, los números y el brazo de la página deben cambiar. Después cerrar esa página (o recargarla) para liberar el puerto.
+4. Ver en el Administrador de dispositivos (Puertos COM y LPT) qué `COM` tiene la placa. Si no es `COM7`, cambiar `PUERTO_SERIAL` arriba de `brazo_pybullet.py`, o pasarlo al correrlo: `entorno\Scripts\python brazo_pybullet.py COM5`. (La app usa siempre `PUERTO_SERIAL`.)
+5. `entorno\Scripts\python brazo_pybullet.py` (o **Iniciar la simulación** en la app). Tarda 2 s más que sin placa, porque abrir el puerto reinicia el ESP32 y hay que esperar a que arranque; en la consola debe salir `ESP32 conectado en COM7: usando los datos reales del teclado.`
+6. Mantener presionadas las teclas `8/2/6/4/9/7` y el brazo simulado se mueve en tiempo real; `5` lo lleva a home. Arriba de la ventana, `Serial: J1:..,J2:..,G:..` tiene que ir cambiando mientras se sostiene la tecla. Los botones de la ventana también funcionan, pero la siguiente línea del ESP32 (100 ms después) vuelve a poner la posición del teclado: con la placa conectada manda el teclado.
+7. Si se desenchufa el USB con la simulación abierta, no se cae: la consola dice `Se perdio el ESP32 en COM7 ...`, la línea verde pasa a `ESP32 desconectado: modo botones (reintentando COM7)` y quedan los botones. Al volver a enchufarlo, en unos 3 s dice `ESP32 reconectado en COM7`, el brazo vuelve a home (la placa se reinició) y sigue al teclado.
+8. Si algo no anda: si la línea `Serial:` se queda en `(sin datos todavia)`, el ESP32 no está mandando (revisar que el archivo se llame `main.py` en la placa y que Thonny no tenga el puerto); si las líneas `J1:..` llegan pero no cambian al apretar, el USB está bien y el problema es el cableado del teclado (revisar la tabla de conexiones: una fila o columna suelta deja sin respuesta a sus 4 teclas); si al apretar una tecla se mueve otra articulación, el teclado trae los pines en otro orden (intercambiar cables o las listas `ROW_PINS`/`COL_PINS`).
 
 ## El montaje y la demo
 
@@ -303,3 +337,19 @@ Tres poses en el camino:
 | Recién abierta: brazo en home | Jog con `8`, `9` y `6` sostenido |
 |---|---|
 | ![Modo prueba recién abierto, brazo en home y el monitor con J1:0.000,J2:0.000,G:0.000](img/interfaz-web.png) | ![Después del jog: el brazo girado con el codo doblado y el monitor mostrando J2 subiendo](img/interfaz-web-jog.png) |
+
+## Cómo se hizo, paso a paso
+
+La historia técnica del tema, en el orden en que se fue armando (los detalles de cada pieza están en las secciones de arriba):
+
+1. **Partir del ejemplo de la cátedra.** El [brazo.urdf](https://github.com/dialejobv/U_Militar/blob/main/8%29%20Brazo_URDF/brazo.urdf) de U_Militar y su `main.py`, que solo cargaba el brazo en PyBullet y listaba sus articulaciones. El URDF se dejó sin modificar; lo primero fue leerlo y dibujar [su árbol](#el-árbol-de-este-brazo) (6 links, 5 joints, con sus límites).
+2. **Entender qué mueve cada joint.** `joint_gripper` dice "PINZA (APERTURA)" en el comentario del URDF, pero en realidad es un riel que **sube** la pinza; los que abren son los dos dedos. Para no tener cinco controles se unió todo en una variable: dedos = `g / 3` (0,05 m es un tercio de 0,15 m).
+3. **Primer control en la ventana: un slider por articulación elegida.** Un solo slider cuyo rango cambiaba según la articulación (borrarlo y crear otro). No funcionó: `p.removeUserDebugItem()` no borra bien los sliders y los viejos se quedaban pegados en el panel. Se cambió a **7 botones fijos de jog** (cada clic suma o resta un paso fijo), creados una sola vez.
+4. **El ESP32: de potenciómetros al teclado solo.** Primero 3 potenciómetros fijos (uno por articulación); después el teclado más un potenciómetro compartido; al final se quitó el potenciómetro: el teclado solo, como mando de jog (*teach pendant*), alcanza para mover todo y es el mismo teclado, con los mismos pines, que el tema 8 punto 1 y el taller. Se eligieron GPIO sin función especial al arrancar y con pull-up interna para las columnas (ver [Conexiones](#conexiones)).
+5. **El protocolo.** Una línea de texto `J1:..,J2:..,G:..` cada 100 ms con las tres posiciones siempre (no solo la que cambió), para que cada línea sea autosuficiente; los límites del URDF se aplican ya en el ESP32.
+6. **La lectura serial que trababa la simulación.** Un `readline()` dentro del bucle de PyBullet ataba los 240 pasos/s de la física a las 10 líneas/s del ESP32 y el brazo se veía trabado. Arreglo: leer solo si `in_waiting > 0`, drenar todo lo acumulado y quedarse con la última línea válida (y `timeout=0` por si acaso).
+7. **El reinicio al abrir el puerto.** Abrir el COM mueve DTR y reinicia el ESP32: se agregó la espera de 2 s y el `reset_input_buffer()` para descartar el texto de arranque de MicroPython.
+8. **Diagnóstico.** La última línea **cruda** en verde arriba de la ventana (`Serial: ...`), para distinguir "no llega nada" de "llega con otro formato".
+9. **Sin hardware: `preview.html`.** Una página suelta con el mismo teclado 4x4 clicable, el mismo jog y la cinemática directa del URDF, con "Modo prueba" y "Conectado" por Web Serial; después la demo animada y las capturas.
+10. **La app.** `ABRIR.bat` + `app/` sobre el lanzador común del repo (`_lanzador/`): la simulación con un botón, el teclado clicable con el brazo de lado y desde arriba, y `preview.html` embebido. Para que el script funcione lanzado desde otra carpeta, el URDF se carga con ruta absoluta.
+11. **Revisión (2026-10-06).** Se encontró que desenchufar el ESP32 con la simulación abierta tumbaba el script (`SerialException` en `ser.in_waiting`): ahora pasa a modo botones y reintenta abrir el puerto cada 3 s ([punto 8 de la lógica del PC](#en-el-pc-brazo_pybulletpy)). También: cerrar la ventana justo a mitad de una vuelta ya no deja un `pybullet.error`, el puerto se puede pasar como argumento (`python brazo_pybullet.py COM5`), en `preview.html` se puede volver a pulsar "Conectar" tras perder la conexión (antes el puerto quedaba abierto y fallaba) y, dentro de la app a 1366 px, el teclado y el brazo quedan lado a lado arriba. En el README se corrigió "5 links" por 6 y se agregó este paso a paso.

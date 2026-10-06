@@ -83,6 +83,19 @@ Puntos de este proyecto (el commit lo hace la sesión principal):
   prueba visual junto al estado real (`/api/estado`). Sin commit (lo hace la sesión principal). La app escondida
   NO se relanzó.
 
+**Pedido EN CURSO del 2026-10-06 (agente Q9 del plan `github\PLAN-REVISION-PASOAPASO.md`).** Textual del usuario:
+> "ahora actualice los cambios y mejore el repositorio de github sin cambiar los nombres ya que los links se podrian
+> perder, igualmente paso por paso de todo y revisiones de multiples partes"
+
+Puntos de este proyecto (NO renombrar ni mover nada; sin git; la corrida escondida 8766/8501 no se toca):
+- [x] 1. Paso a paso: cómo se hizo (README conecta `docs/paso-a-paso.md` y la bitácora), cómo probarlo con la app
+  (sección por sección, botón por botón, qué hacer si falla), sin la app (comandos) y con el montaje real (qué falta).
+- [x] 2. Revisión del README y docs principales: exactitud contra el código, enlaces/anclas, imágenes, mermaid,
+  tablas, ortografía, cifras actuales (pytest).
+- [x] 3. Revisión de la app `app-practica` con el lanzador (puerto propio 8260-8279) y capturas a 1366x768 y 1920x1080.
+- [x] 4. Revisión del código reciente (`app/puertos.py`, `app/charla.py`, `app/lanzar.py`): bugs; `pytest -q` al final.
+  TERMINADOS (Q9, 2026-10-06; detalle en `docs/bitacora.md`): 937 pruebas pasan. Sin commit (lo hace la sesión principal).
+
 Pedidos cerrados (2 a 17): `docs/historial-pedidos.md`.
 
 ## 1. Reglas estrictas del usuario (no negociables)
@@ -122,7 +135,7 @@ PARO solo con "paro"/urgencia; asistente 60/60. Dashboard en 127.0.0.1 con chequ
 Siguiente (cuando el usuario diga): montaje físico, medir los PROVISIONALES, visión real (fase 5), clave
 válida de DeepSeek.
 
-- Pruebas: `entorno/Scripts/python -m pytest -q` → todas deben pasar (936 el 2026-10-05, ~4 min).
+- Pruebas: `entorno/Scripts/python -m pytest -q` → todas deben pasar (937 el 2026-10-06, ~5 min).
   Están por capa en `tests/control`, `tests/sim`, `tests/visor`, `tests/app` y `tests/firmware`
   (una sola capa: `... -m pytest -q tests/control`).
 - Paso a paso (`docs/paso-a-paso.yaml`, 17 puntos): 1-15 aprobados; **16 y 17 en pausa (montaje real)**.

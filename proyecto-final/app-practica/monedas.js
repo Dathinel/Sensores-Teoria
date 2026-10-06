@@ -330,11 +330,11 @@ const PROGRAMAS = [
   { id: 'asistente', el: '#asistente', nombre: 'Asistente (preguntas y órdenes)', sub: '~5 s en arrancar' },
   { grupo: 'Física en PyBullet (ventana aparte)' },
   { id: 'sim-filtro', el: '#simFiltro', nombre: 'Escena 1 · filtro de monedas', sub: '~5 s · dura ~1 min' },
-  { id: 'sim-vasos', el: '#simVasos', nombre: 'Escena 2 · embalaje de vasos', sub: '~5 s · dura ~1,5 min' },
-  { id: 'sim-carro', el: '#simCarro', nombre: 'Escena 3 · carro en la pista', sub: '~5 s · dura ~3 min' },
-  { id: 'sim-todo', el: '#simTodo', nombre: 'Escena 4 · todo junto', sub: '~5 s · dos ventanas' },
+  { id: 'sim-vasos', el: '#simVasos', nombre: 'Escena 2 · embalaje de vasos', sub: '~5 s · dura ~2 min' },
+  { id: 'sim-carro', el: '#simCarro', nombre: 'Escena 3 · carro en la pista', sub: '~5 s · dura ~2,5 min' },
+  { id: 'sim-todo', el: '#simTodo', nombre: 'Escena 4 · todo junto', sub: '~5 s · dura ~4,5 min · dos ventanas' },
   { grupo: 'Comprobar' },
-  { id: 'pruebas', el: '#pruebas', nombre: 'Pruebas automáticas (936)', sub: '~4-5 min' },
+  { id: 'pruebas', el: '#pruebas', nombre: 'Pruebas automáticas (937)', sub: '~4-5 min' },
   { id: 'chequeo', el: '#chequeo', nombre: 'Chequeo del PC', sub: '~10-20 s' },
 ];
 const ESTADOS = {
@@ -425,11 +425,38 @@ function enlacesEnVivo() {
   };
 }
 
+// Programas que se quedan abiertos (la línea en vivo, el asistente, las ventanas de PyBullet): su
+// "duracion" del probar.json es lo que tardan en ABRIR, no en terminar. Sin esto, pasado ese tiempo la
+// barra común decía "Está tardando más de lo habitual", que es falso: ya está abierto y sigue hasta que
+// se cierre. Pasado el arranque se oculta esa barra y se dice claro que ya está funcionando.
+function marcarAbierto(id, segundos, texto) {
+  const caja = document.querySelector(`.pf-panel[data-programa="${id}"]`);
+  let reloj = null;
+  const quitar = () => { clearTimeout(reloj); reloj = null; caja.classList.remove('abierto'); };
+  return (t) => {
+    if (t.estado !== 'lanzada') { quitar(); return; }
+    if (reloj || caja.classList.contains('abierto')) return;
+    reloj = setTimeout(() => {
+      reloj = null;
+      let nota = caja.querySelector('.pf-abierto');
+      if (!nota) {
+        nota = document.createElement('p');
+        nota.className = 'app-aviso ok pf-abierto';
+        const ejec = caja.querySelector('.app-ejecucion');
+        if (ejec) ejec.before(nota); else caja.appendChild(nota);
+      }
+      nota.textContent = texto;
+      caja.classList.add('abierto');
+    }, segundos * 1000);
+  };
+}
+
 function panel(id, el, opciones) {
   const prog = PROGRAMAS.find((p) => p.id === id);
+  const abierto = opciones.abierto ? marcarAbierto(id, opciones.abierto[0], opciones.abierto[1]) : null;
   ctls[id] = App.panelEjecucion(el, id, {
     ...opciones,
-    alEstado: (t) => { marcarFila(id, t.estado); opciones.alEstado && opciones.alEstado(t); },
+    alEstado: (t) => { marcarFila(id, t.estado); abierto && abierto(t); opciones.alEstado && opciones.alEstado(t); },
   });
   return ctls[id] && prog;
 }
@@ -442,21 +469,23 @@ function programas() {
     queVaAPasar: 'Arranca la simulación completa (escenario prueba_completa) y, apenas responde, abre en el navegador el visor 3D y el dashboard. El visor tarda unos 8-10 s en responder; el dashboard un poco más. Mientras corra, aquí abajo salen los enlaces con los puertos reales, y en "Prueba visual" se ven las piezas reales pasando.',
     queHacer: [
       'Visor 3D: arrastra para girar, rueda para acercar. Pestaña Sensores → "Ver la prueba de este sensor"; botones de sabotaje (retirar un vaso, mano en la cortina…).',
-      'Dashboard: barra lateral → "Probar un filtro" (cada filtro por separado, como pide la sustentación); pestañas Monedas y vasos, Carro y ruta, Asistente.',
+      'Dashboard: pestaña Pruebas → "Probar un filtro" (cada filtro por separado, como pide la sustentación), "Colocar una pieza" y los sabotajes; la barra lateral tiene Empezar, Pausa y Paro; pestañas Monedas y vasos, Carro y ruta, Asistente.',
       'Detener cierra la simulación y el dashboard.',
     ],
     queDeberiasVer: 'En el visor, el chip de arriba pasa de "conectando…" a "corriendo" y las piezas avanzan por la cinta; en el dashboard, "La línea está trabajando" y el valor aceptado subiendo. Arriba en esta app, "Simulación: en marcha".',
     alLinea: (texto) => alLineaVivo(texto),
+    abierto: [12, 'La línea ya está corriendo: sigue en marcha hasta que pulses Detener. Si el navegador no abrió las pestañas, usa los enlaces de abajo.'],
   });
 
+  const enVentana = [8, 'La ventana de PyBullet ya debería estar abierta (mira la barra de tareas): sigue hasta que la cierres, pulses q o Detener.'];
   const teclas = ['En la ventana de PyBullet: espacio pausa, r reinicia, q sale (o ciérrala).', 'Arrastra con el ratón para girar la cámara; rueda para acercar.'];
-  panel('sim-filtro', '#simFiltro', { queHacer: teclas,
+  panel('sim-filtro', '#simFiltro', { queHacer: teclas, abierto: enVentana,
     queDeberiasVer: '18 piezas mezcladas, cada una con un rótulo de su material o su causa de rechazo; al final 7 en el almacén y 11 en rechazo, sin falsas aceptaciones.' });
-  panel('sim-vasos', '#simVasos', { queHacer: teclas,
+  panel('sim-vasos', '#simVasos', { queHacer: teclas, abierto: enVentana,
     queDeberiasVer: 'El vaso se verifica, se llena por lotes, se tapa y se prensa; con los sabotajes, la línea se detiene a tiempo.' });
-  panel('sim-carro', '#simCarro', { queHacer: teclas,
+  panel('sim-carro', '#simCarro', { queHacer: teclas, abierto: enVentana,
     queDeberiasVer: 'El carro sigue la línea, rodea los tres muros, llega a la meta y vuelve de reversa al muelle.' });
-  panel('sim-todo', '#simTodo', { queHacer: [...teclas, 'Se abren DOS ventanas: la planta y el carro (PyBullet permite una por proceso).'],
+  panel('sim-todo', '#simTodo', { abierto: enVentana, queHacer: [...teclas, 'Se abren DOS ventanas: la planta y el carro (PyBullet permite una por proceso).'],
     queDeberiasVer: 'La planta y el carro en la misma corrida.' });
 
   panel('asistente', '#asistente', {
@@ -464,10 +493,11 @@ function programas() {
     queDeberiasVer: 'Cada respuesta con las cifras de la última corrida guardada y, al final, [respondió: local] (las reglas). Las órdenes ("avanza 20 cm") las entiende, pero desde aquí no mueven nada: para eso, la pestaña Asistente del dashboard con la línea en vivo.',
     sugerencias: ['¿cuántas monedas se aceptaron?', '¿cuántas piezas se rechazaron y por qué?', '¿qué sensor detecta el metal?',
       'cuanto hay de 500', '¿cuánto cuesta construir el proyecto?', 'avanza 20 cm'],
+    abierto: [6, 'El asistente está esperando tu pregunta: escríbela abajo. Sigue abierto hasta que escribas "salir" o pulses Detener.'],
   });
 
   panel('pruebas', '#pruebas', {
-    queDeberiasVer: 'Una fila de puntos que avanza hasta 100 % y al final "936 passed" (con la instalación mínima se omiten 2, "skipped": las que compilan el firmware con mpy-cross). Tarda unos 4-5 minutos.',
+    queDeberiasVer: 'Una fila de puntos que avanza hasta 100 % y al final "937 passed" (con la instalación mínima se omiten 2, "skipped": las que compilan el firmware con mpy-cross). Tarda unos 4-5 minutos.',
   });
   panel('chequeo', '#chequeo', {
     queDeberiasVer: 'Una lista con ✓ (listo), ! (aviso) y ✗ (falta), cada una con cómo arreglarla. Con la instalación mínima es normal ver ✗ en Ollama, la voz o el firmware: no hacen falta para verlo. Si dice "Puerto 8765 … lo ocupa OTRO programa", no pasa nada: se usará el siguiente libre.',
@@ -501,12 +531,12 @@ async function main() {
   irA((location.hash || '').slice(1) || leer('vista') || 'inicio');
 
   await App.iniciar();
-  App.checklist('#pide');
+  App.checklist('#pideLista');   // el id NO puede ser igual a una vista (#pide): el navegador saltaría a él al abrir con ese hash
   $$('[data-abrir]').forEach((a) => a.addEventListener('click', (ev) => { ev.preventDefault(); App.abrir(a.dataset.abrir); }));
 
   App.markdown('#arquitectura', 'README.md', { desde: '## La idea general', hasta: '### El recorrido de una moneda' });
   App.markdown('#recorridoMd', 'README.md', { desde: '### El recorrido de una moneda', sinTitulo: true });
-  App.markdown('#estado', 'README.md', { desde: '## Estado del proyecto', sinTitulo: true });
+  App.markdown('#estadoMd', 'README.md', { desde: '## Estado del proyecto', sinTitulo: true });
 
   programas();
   estadoReal();

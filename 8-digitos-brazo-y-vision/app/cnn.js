@@ -74,10 +74,15 @@
   // gris: Uint8Array (lado x lado), 255 = papel blanco, 0 = tinta negra.
   // Devuelve {entrada: Float32Array(784), caja: [x, y, w, h]} o null si no hay dígito.
   function preprocesar(gris, lado) {
-    // 1.1-1.3 El lienzo ya es gris y limpio: el umbral (Otsu) separa tinta (255) de papel (0).
+    // 1.1-1.4 El lienzo ya es gris y limpio (sin ruido de cámara): los desenfoques, el umbral
+    // adaptativo + Otsu y la limpieza morfológica de Python dejan prácticamente lo mismo que un corte fijo en
+    // 128, así que se hace solo eso: tinta (< 128) = 255, papel = 0 (fondo negro como MNIST).
     const bin = new Uint8Array(lado * lado);
     for (let i = 0; i < bin.length; i++) bin[i] = gris[i] < 128 ? 255 : 0;
-    // 1.5 Componentes conectadas: nos quedamos con la más grande (como el contorno mayor)
+    // 1.5 Componentes conectadas (vecinos en 8 direcciones): nos quedamos con la más grande, como
+    // el contorno mayor de findContours. Diferencia a sabiendas: aquí "grande" es el área de su
+    // CAJA (ancho x alto), no el área encerrada por el contorno (cv2.contourArea); para un dígito
+    // dibujado de un solo trazo, que es lo que hay en el lienzo, eligen la misma pieza.
     const etiqueta = new Int32Array(lado * lado); let mejor = null; let n = 0;
     for (let p = 0; p < bin.length; p++) {
       if (!bin[p] || etiqueta[p]) continue;
@@ -96,7 +101,7 @@
       const area = (x1 - x0 + 1) * (y1 - y0 + 1);
       if (!mejor || area > mejor.area) mejor = { n, x0, y0, w: x1 - x0 + 1, h: y1 - y0 + 1, area };
     }
-    if (!mejor || mejor.area < 500) return null;            // "ignorar ruido"
+    if (!mejor || mejor.area < 500) return null;            // "ignorar ruido" (< 500 px², como en Python)
     // 1.6 Recortar a su caja (como umbral[y:y+h, x:x+w]: entra todo lo que haya dentro)
     const { x0, y0, w, h } = mejor;
     let dig = new Uint8Array(w * h);

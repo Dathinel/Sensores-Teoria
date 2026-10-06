@@ -183,3 +183,9 @@ body.pf { height: 100vh; overflow: hidden; display: flex; flex-direction: column
 .m-md { margin-top: 1rem; }
 .pf-docs { display: flex; flex-wrap: wrap; gap: 0.45rem; margin: 0.9rem 0; }
 .pf-docs a { text-decoration: none; }
+
+/* Programas que se quedan abiertos (línea en vivo, asistente, ventanas de PyBullet): pasado el arranque
+   se oculta la barra estimada común ("tardando más de lo habitual" sería falso) y queda .pf-abierto. */
+.pf-panel.abierto .app-ejecucion,
+.pf-panel.abierto .app-tiempo { display: none !important; }
+.pf-abierto { margin: 10px 0; }

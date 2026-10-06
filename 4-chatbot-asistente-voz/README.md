@@ -13,12 +13,132 @@ el arranque) y, al tocar una frase de ejemplo ("enciende el rojo", "haz un show 
 recorrido completo de esa frase en cinco etapas, una tras otra: **voz o teclado → texto → intención (JSON) → orden al ESP32
 (`10`, `01`, `11`, `00` o `SHOW`) → LEDs**. Los dos LEDs dibujados se prenden según lo que decidió el programa. La app
 trae también el circuito, el simulador `preview.html`, el modo con micrófono y DeepSeek, los pasos con el ESP32 real y
-los videos de la demostración.
+los videos de la demostración. El recorrido completo, botón por botón, está en
+[Paso a paso: cómo se hizo y cómo probarlo](#paso-a-paso-cómo-se-hizo-y-cómo-probarlo).
 
 ![La app de la práctica: el recorrido de "haz un show de luces" hasta los LEDs, las frases de ejemplo y el historial](img/app-pruebalo.png)
 
+## Paso a paso: cómo se hizo y cómo probarlo
+
+Tres recorridos completos, de principio a fin: cómo se construyó la práctica (con lo que falló), cómo probarla con la app
+botón por botón, y cómo probarla sin la app y con el ESP32 real. El detalle técnico de cada parte está más abajo, en
+«¿Quiere saber cómo funciona?».
+
+### Cómo se hizo, paso a paso
+
+1. **Partir del material del profesor.** [`chatbot.py`](https://github.com/dialejobv/U_Militar/blob/main/3%29%20chatbot/chatbot.py)
+   es un chat de consola: `input()` → petición HTTP a DeepSeek armada a mano con `requests` → respuesta en texto libre.
+   Primero se corrió tal cual para confirmar que la clave y el modelo `deepseek-chat` respondían.
+2. **Cambiar `requests` por la librería `openai`** apuntando a `https://api.deepseek.com` (la API de DeepSeek tiene el
+   mismo formato que la de OpenAI), y **sacar la clave del código** a un `.env` leído con `python-dotenv`. Aquí aparecieron
+   los primeros errores: el `KeyError` por tener solo `.env.example` (python-dotenv solo lee `.env`) y la clave pegada por
+   error dentro de `os.environ[...]`, que obligó a revocarla y generar otra
+   (ver [Problemas encontrados](#problemas-encontrados)). Desde entonces se lee con `os.environ.get(...)`.
+3. **Pedir un JSON en vez de texto libre.** Se escribió el prompt de sistema (solo `led_rojo`, `led_azul`, `show`) y se
+   agregó `response_format={"type": "json_object"}`; después, `validar()` con lista blanca para que nada mal formado
+   llegue a un pin.
+4. **Recordar el estado de los dos LEDs** en el PC (`estado`), porque el modelo solo devuelve lo que la frase menciona, y
+   armar siempre la orden completa de dos caracteres (`10`, `01`, `11`, `00`).
+5. **El firmware `esp32_voz.py`**, escrito desde cero: `select.poll()` sobre `sys.stdin` para no bloquearse, pines 25 y 26,
+   y respuestas `OK ...` / `IGNORADO ...` para poder diagnosticar desde el PC. Se probó primero desde Thonny y después con
+   el script ya mandando por `pyserial`.
+6. **La voz.** `SpeechRecognition` + `pyaudio` con `recognize_google(..., language="es-CO")`. pyaudio no instalaba en
+   Python 3.14 (no hay wheel y la compilación pide `portaudio.h`): se rehízo el `entorno` con Python 3.12. Luego
+   apareció el `ModuleNotFoundError` de `pydantic_core` por la sincronización de OneDrive, que se resolvió reinstalando y
+   sacando el proyecto de OneDrive.
+7. **El show de luces** (`SHOW`): el ESP32 guarda el estado, alterna 6 veces (2,4 s) y lo restaura; contesta `OK SHOW`
+   antes de empezar para que el PC no espere.
+8. **Los modos de respaldo**, para poder probar sin todo el hardware: sin ESP32 (`try/except serial.SerialException`), sin
+   micrófono (se escribe la frase) y sin clave o sin internet (intérprete por palabras clave). La primera versión del
+   intérprete buscaba un solo verbo en toda la frase y «enciende el rojo y apaga el azul» apagaba los dos; se cambió a
+   leer la frase por partes, con «deja/mantén» para no tocar un LED. En la revisión del 2026-10-06 se agregó quitar las
+   tildes antes de buscar raíces: Google transcribe «enciéndeme» o «apágalo» con tilde y no coincidían con `enciend` ni
+   `apaga`.
+9. **La demo con el montaje real**, por voz (los gifs de [Demostración](#demostración-en-funcionamiento)).
+10. **`preview.html`**, el simulador sin Python (mismo intérprete, ESP32 simulado y Web Serial), y al final **la app**
+    (`app/`, `probar.json`, `ABRIR.bat`), para la que se agregaron a `comando_voz.py` las opciones `--texto`,
+    `--sin-clave` y `--puerto`. En la misma revisión: espera de 2 s al abrir el puerto (abrirlo reinicia el ESP32) y,
+    si el cable se suelta a mitad de la sesión, el programa sigue sin ESP32 en vez de cerrarse.
+
+### Cómo probarlo con la app, sección por sección
+
+1. **Abrirla.** Doble clic en `ABRIR.bat` (en Linux/Mac, `sh abrir.sh`). Sale «Abriendo la práctica…» y se abre una
+   ventana con el índice de 8 pasos a la izquierda. Arriba están siempre **▶ Probar** (salta a *Pruébalo*), **README**,
+   el chip del asistente («Asistente detenido» / «Asistente en marcha (modo texto)»), el estado de la práctica y
+   **Pantalla completa**. La primera vez el entorno de Python se prepara solo al pulsar Iniciar (1-3 min).
+2. **Qué hace.** Qué es la práctica, el gif del montaje y la lista **Qué pide la actividad**: cada punto se marca solo
+   al probar la parte que lo cumple (o a mano). **▶ Ir a Pruébalo** lleva al paso 4.
+3. **Cómo funciona.** Las cinco etapas (voz → texto → intención → orden → LEDs) y una tabla con 7 frases de ejemplo,
+   su JSON, la orden y cómo quedan los LEDs, calculada con las mismas reglas del programa. Aquí no hay botones.
+4. **Cómo se conecta.** El circuito (clic en la imagen para ampliarla), la tabla de pines y las cinco órdenes que
+   viajan por el cable (`10`, `01`, `11`, `00`, `SHOW`, esta última animada).
+5. **Pruébalo** (lo principal, sin ESP32, micrófono ni clave):
+   - Toca una frase de ejemplo, por ejemplo **enciende el rojo**. Si el asistente no está en marcha, se arranca solo
+     (`comando_voz.py --texto --sin-clave`): una barra dice «Arrancando el asistente… suele tardar ~3 s» y el chip pasa a
+     «Asistente en marcha (modo texto)».
+   - La frase se escribe sola en la caja y recorre las cinco etapas de arriba: *Escrita* → `"enciende el rojo"` →
+     `{"led_rojo": true}` → `10` → LED rojo encendido. El **ESP32 dibujado** prende el rojo y dice «Última orden: 10», y
+     el **historial** de la derecha guarda la frase y la respuesta («Listo: rojo encendido, azul apagado», con «sin ESP32:
+     solo se muestra»).
+   - **haz un show de luces** → `SHOW`: los LEDs dibujados alternan 2,4 s y vuelven a como estaban.
+   - **¿qué hora es?** → `{}`: la etapa 4 dice «No se manda nada» y los LEDs siguen igual.
+   - Las demás frases prueban la memoria del estado y el intérprete por partes («enciende el rojo y apaga el azul» →
+     `10`, «apaga el rojo pero deja el azul» solo apaga el rojo, «apaga todo» → `00`).
+   - Abajo está **el programa real**: su salida en vivo («Lo que dice el programa»), la caja para escribir frases
+     propias (Enter para mandar) y **Detener**. Escribir `salir` también lo termina. Al usar las frases se marcan en
+     *Qué hace* los puntos «Orden al ESP32…» y «Extra: show de luces…».
+6. **Simulador en el navegador.** `preview.html` dentro de la app (o **Abrir el simulador en una pestaña aparte**). En
+   **Modo prueba (sin ESP32)**: escribir la frase y **Interpretar** (o **Hablar**, con el micrófono del navegador en
+   Chrome/Edge) muestra texto, JSON, orden y la respuesta de un ESP32 simulado; los botones **10 · 01 · 11 · 00 · SHOW**
+   mandan la orden directa. **Conectado (Web Serial)** + **Elegir puerto del ESP32** le habla al ESP32 real.
+7. **Micrófono y DeepSeek (opcional).** **Iniciar con micrófono** arranca `comando_voz.py` sin opciones: se manda la
+   caja **vacía** (Enter), el programa dice `Habla ahora...`, se dice la frase y aparece `Se entendio: ...`. Si el `.env`
+   tiene la clave, se ve `DeepSeek respondio: {...}`; los pasos para crear el `.env` están en la misma sección. Necesita
+   internet (Google y DeepSeek). El resultado también se dibuja en *Pruébalo*.
+8. **Con el ESP32 real.** Los cinco pasos para grabar `esp32_voz.py` como `main.py` (**Ver: Firmware del ESP32** muestra
+   el código) y qué revisar si «no pasa nada».
+9. **Resultados.** Los gifs de la demo (clic para ampliar), otra vez la lista de lo pedido y **Detalles técnicos**
+   (con **Abrir el README completo**).
+
+**Si algo falla en la app:** si el panel dice que falta Python, instalar Python 3.12 o 3.13 (no 3.14: pyaudio no tiene
+wheel); si la preparación del entorno se corta, volver a pulsar Iniciar (pip retoma); si una frase no responde, mirar
+«Lo que dice el programa» en el panel de abajo y pulsar Detener e Iniciar otra vez. La consola minimizada de
+`ABRIR.bat` es la que mantiene la app: no cerrarla mientras se usa.
+
+### Cómo probarlo sin la app (consola)
+
+Desde la carpeta `4-chatbot-asistente-voz`, con el entorno ya creado (ver [Preparar el entorno](#preparar-el-entorno)):
+
+```
+entorno\Scripts\python comando_voz.py --texto --sin-clave
+```
+
+1. Esperar `Escribe el comando (por ejemplo: enciende el rojo) | salir = terminar`.
+2. Escribir `enciende el rojo` y Enter → `[sin ESP32] se habria enviado: 10` y `Estado enviado al ESP32: 10`.
+3. `prende los dos` → `11`; `haz un show de luces` → `SHOW` y `Enviando show de luces`; `que hora es` →
+   `El comando no tenia relacion con los LEDs, no se hizo nada.`
+4. `salir` termina. Sin `--texto` se usa el micrófono (Enter vacío = hablar) y sin `--sin-clave`, DeepSeek si hay clave.
+   La corrida completa está en [El protocolo por serial](#el-protocolo-por-serial-con-los-mensajes-reales).
+
+### Con el ESP32 real, paso a paso
+
+1. Armar el circuito de [Conexiones](#conexiones): LED rojo → 220 Ω → GPIO25, LED azul → 220 Ω → GPIO26, cátodos a GND.
+2. En Thonny (intérprete *MicroPython (ESP32)*), abrir `esp32_voz.py` y guardarlo **en el dispositivo** como `main.py`.
+   Pulsar EN: la consola dice `Esperando comandos de voz por serial...`.
+3. Cerrar Thonny (el puerto solo lo puede tener un programa).
+4. Ver el número de puerto en el Administrador de dispositivos → Puertos (COM y LPT).
+5. Correr `entorno\Scripts\python comando_voz.py --puerto COM7` (con el puerto que corresponda; sin `--puerto` usa
+   `COM7`). Tarda unos 2 s más en arrancar porque abrir el puerto reinicia el ESP32. Debe decir
+   `ESP32 conectado en COM7`.
+6. Escribir o decir `enciende el rojo`: se prende el LED rojo de la protoboard y aparece `  ESP32 dice: OK 10`.
+   `haz un show de luces` → `ESP32 dice: OK SHOW` y los LEDs alternan 2,4 s. Desde la app es lo mismo: *Pruébalo* o
+   *Micrófono y DeepSeek* usan `COM7` y muestran `ESP32 dice: OK 10` en el historial.
+7. Si nunca aparece `ESP32 dice`, `main.py` no está corriendo (reiniciar la placa) o el puerto es otro; si aparece
+   `IGNORADO ...`, el cable está bien y llegó algo con otro formato.
+
 ## ¿Quiere saber cómo funciona? → aquí está todo
 
+0. Paso a paso: [cómo se hizo](#cómo-se-hizo-paso-a-paso) · [con la app, sección por sección](#cómo-probarlo-con-la-app-sección-por-sección) · [sin la app](#cómo-probarlo-sin-la-app-consola) · [con el ESP32 real](#con-el-esp32-real-paso-a-paso)
 1. [Qué pedía la actividad y qué quedó](#qué-pedía-la-actividad-y-qué-quedó)
 2. Conceptos: [reconocimiento de voz](#qué-es-el-reconocimiento-de-voz) · [LLM y DeepSeek](#qué-es-un-llm-y-qué-es-deepseek) · [API, clave y `.env`](#qué-es-una-api-una-clave-de-api-y-el-archivo-env) · [JSON y prompt de sistema](#qué-es-json-y-el-prompt-de-sistema)
 3. [La idea general](#la-idea-general) (diagramas del recorrido PC ↔ ESP32)
@@ -213,7 +333,7 @@ A diferencia del tema de YOLO, aquí **no hay apagado de seguridad**: los LEDs m
 
 Fíjense que la PC siempre manda el estado **completo** de los dos LEDs, aunque la frase solo haya hablado de uno. Si el rojo está prendido y uno dice "prende el azul", el modelo responde solo `{"led_azul": true}`, el script lo combina con lo que ya sabía y manda `11`, no `01`.
 
-Esta es una corrida real del script, sin ESP32 conectado y sin clave de DeepSeek (por eso usa el intérprete por palabras clave), escribiendo las frases en vez de hablarlas. Para asegurar que no encontrara ninguna placa, en esa corrida el puerto se cambió a `COM99` (en el código queda `PUERTO_SERIAL = "COM7"`, el de nuestro montaje):
+Esta es una corrida real del script, sin ESP32 conectado y sin clave de DeepSeek (por eso usa el intérprete por palabras clave), escribiendo las frases en vez de hablarlas. Para asegurar que no encontrara ninguna placa, en esa corrida el puerto se cambió a `COM99` (con `--puerto COM99`; sin esa opción `PUERTO_SERIAL` vale `"COM7"`, el de nuestro montaje):
 
 ```
 No se pudo abrir COM99 -> could not open port 'COM99': FileNotFoundError(2, 'El sistema no puede encontrar el archivo especificado.', None, 2)
@@ -269,7 +389,7 @@ Si ninguna de las tres aparece, la respuesta es un JSON vacío `{}`, el script d
 
 **1. Arranque: tres piezas opcionales.** El script está pensado para poder probarse aunque falte alguna pieza, así que al arrancar intenta preparar cada una y, si falla, sigue sin ella:
 
-- **El ESP32**: abre el puerto dentro de un `try/except serial.SerialException`. Si el ESP32 no está conectado (o Thonny tiene el puerto abierto), queda `ser = None` y cada orden solo se imprime como `[sin ESP32] se habria enviado: ...`.
+- **El ESP32**: abre el puerto dentro de un `try/except serial.SerialException`. Si el ESP32 no está conectado (o Thonny tiene el puerto abierto), queda `ser = None` y cada orden solo se imprime como `[sin ESP32] se habria enviado: ...`. Si sí lo abre, espera 2 s: abrir el puerto reinicia el ESP32 (la línea DTR del USB va a su pin EN) y sin esa pausa la primera orden llegaría antes de que `main.py` esté escuchando.
 - **DeepSeek**: si en el `.env` hay una clave de verdad (no vacía y distinta del relleno `tu_api_key_aqui`), crea el cliente apuntando al servidor de DeepSeek:
 
   ```python
@@ -303,7 +423,7 @@ respuesta = cliente.chat.completions.create(
 
 Imprime el JSON crudo (`DeepSeek respondio: ...`) y lo convierte en diccionario con `json.loads`. Todo va dentro de un `try`: si la consulta falla por cualquier motivo (sin internet, clave revocada, JSON roto), avisa y cae al intérprete por reglas en vez de cerrarse.
 
-**5. `interpretar_por_reglas(texto)`.** El plan B. Pasa la frase a minúsculas y busca pedazos de palabras: si aparece `show`, `espectaculo`, `parpade` o `fiesta`, es un show; si no, parte la frase en pedazos (`re.split` por "y", comas, "pero", "luego", "después") y en cada pedazo busca un verbo de apagar (`apaga`, `desactiva`, `quita`; se revisa antes que encender porque "desactiva" contiene "activa"), de encender (`enciend`, `prend`, `activa`, `pon`, `dale`) o de no tocar (`deja`, `mantén`), y después los colores (`roj`, `azul`) o "los dos"/"ambos"/"todos". Un pedazo sin verbo hereda el del anterior: "prende el rojo y el azul" prende los dos. Busca raíces y no palabras completas para que "enciende", "enciéndeme" y "encender" coincidan todas con `enciend`. Devuelve un diccionario con el mismo formato que el JSON del modelo, así que el resto del programa no nota la diferencia.
+**5. `interpretar_por_reglas(texto)`.** El plan B. Pasa la frase a minúsculas, le quita las tildes (con `unicodedata.normalize("NFD", ...)`, porque Google transcribe «enciéndeme» o «apágalo» con tilde) y busca pedazos de palabras: si aparece `show`, `espectaculo`, `parpade` o `fiesta`, es un show; si no, parte la frase en pedazos (`re.split` por "y", comas, "pero", "luego", "después") y en cada pedazo busca un verbo de apagar (`apaga`, `desactiva`, `quita`; se revisa antes que encender porque "desactiva" contiene "activa"), de encender (`enciend`, `prend`, `activa`, `pon`, `dale`) o de no tocar (`deja`, `mantén`), y después los colores (`roj`, `azul`) o "los dos"/"ambos"/"todos". Un pedazo sin verbo hereda el del anterior: "prende el rojo y el azul" prende los dos. Busca raíces y no palabras completas para que "enciende", "enciéndeme" y "encender" coincidan todas con `enciend`. Devuelve un diccionario con el mismo formato que el JSON del modelo, así que el resto del programa no nota la diferencia.
 
 **6. `validar(datos)`.** La lista blanca. Un modelo de lenguaje puede equivocarse de formato (devolver `"si"`, `"on"` o `1` en vez de `true`, o inventarse una clave), y nada de eso debe llegar a mover un pin:
 
@@ -319,7 +439,7 @@ Solo pasan `led_rojo`, `led_azul` y `show`, y solo si su valor es un booleano de
 linea = ("1" if estado["led_rojo"] else "0") + ("1" if estado["led_azul"] else "0")
 ```
 
-**8. `enviar(linea)` y `leer_respuestas_esp32()`.** `enviar` escribe la orden con su `\n` final, obligatorio porque el ESP32 lee con `readline()`, o solo la muestra si no hay ESP32. `leer_respuestas_esp32` vacía **todo** lo que el ESP32 haya mandado, pero solo mientras `ser.in_waiting > 0`, así nunca se queda esperando, y muestra cada línea como `  ESP32 dice: OK 10`. La última línea cruda es el diagnóstico más útil cuando "no pasa nada": si nunca aparece, el ESP32 no está corriendo `main.py` o el puerto es otro; si aparece `IGNORADO`, el cable está bien y el problema es de formato.
+**8. `enviar(linea)` y `leer_respuestas_esp32()`.** `enviar` escribe la orden con su `\n` final, obligatorio porque el ESP32 lee con `readline()`, o solo la muestra si no hay ESP32; si el cable se suelta a mitad de la sesión, la escritura falla, se avisa `Se perdio el ESP32` y el programa sigue sin ESP32 en vez de cerrarse. `leer_respuestas_esp32` vacía **todo** lo que el ESP32 haya mandado, pero solo mientras `ser.in_waiting > 0`, así nunca se queda esperando, y muestra cada línea como `  ESP32 dice: OK 10`. La última línea cruda es el diagnóstico más útil cuando "no pasa nada": si nunca aparece, el ESP32 no está corriendo `main.py` o el puerto es otro; si aparece `IGNORADO`, el cable está bien y el problema es de formato.
 
 ### `esp32_voz.py`, guardado como `main.py` en el ESP32
 
@@ -413,7 +533,7 @@ Sin Python también se puede probar con `preview.html` (abrirlo con doble clic, 
 1. Armar el circuito según la tabla de conexiones.
 2. En Thonny, con el ESP32 conectado por USB, abrir `esp32_voz.py` y guardarlo directamente en el dispositivo con el nombre `main.py`, para que se ejecute solo cada vez que el ESP32 se reinicie o reciba energía.
 3. Cerrar la conexión de Thonny con la placa, porque el puerto serial solo puede estar abierto por un programa a la vez.
-4. Revisar en el Administrador de dispositivos, sección Puertos (COM y LPT), el número de puerto del ESP32, y ponerlo en `PUERTO_SERIAL` dentro de `comando_voz.py` si no es `COM7`.
+4. Revisar en el Administrador de dispositivos, sección Puertos (COM y LPT), el número de puerto del ESP32, y, si no es `COM7`, pasarlo con `--puerto COM5` (por ejemplo) o cambiar el `default="COM7"` de la opción `--puerto` al principio de `comando_voz.py` (de ahí sale `PUERTO_SERIAL`; la app usa ese valor por defecto).
 5. Con el `.env` ya con la clave, correr:
 
    ```

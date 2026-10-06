@@ -2,7 +2,7 @@
 
 Basado en [atlas.py](https://github.com/erwincoumans/pybullet_robots/blob/master/atlas.py), del repositorio [pybullet_robots](https://github.com/erwincoumans/pybullet_robots) que compartió el profesor.
 
-> **¿Quiere probarlo?** Doble clic en [`ABRIR.bat`](../ABRIR.bat) (carpeta del tema 9) → paso **c) Atlas** de la app: la prueba de estrés dibuja en la app, prueba por prueba, cuántos segundos aguanta de pie con y sin asistente. **¿Quiere saber cómo funciona?** Aquí está todo: [qué es Atlas](#qué-es-atlas) · [modelos 3D](#los-modelos-3d-reales) · [cómo se maneja](#cómo-se-maneja-comportamientos-y-modos) · [por qué caminar es difícil](#por-qué-caminar-es-difícil-para-un-bípedo) · [idea general](#la-idea-general) · [lógica paso a paso](#lógica-paso-a-paso) · [prueba de estrés](#la-prueba-de-estrés) · [cómo probarlo a mano](#cómo-probarlo).
+> **¿Quiere probarlo?** Doble clic en [`ABRIR.bat`](../ABRIR.bat) (carpeta del tema 9) → sección **Atlas: asistente** del menú de la app: la prueba de estrés dibuja en la app, prueba por prueba, cuántos segundos aguanta de pie con y sin asistente. **Paso a paso:** [cómo se hizo](#cómo-se-hizo-paso-a-paso) · [cómo probarlo con la app](#cómo-probarlo-con-la-app-botón-por-botón) · [sin la app y con el ESP32 real](#cómo-probarlo). **¿Quiere saber cómo funciona?** Aquí está todo: [qué es Atlas](#qué-es-atlas) · [modelos 3D](#los-modelos-3d-reales) · [cómo se maneja](#cómo-se-maneja-comportamientos-y-modos) · [por qué caminar es difícil](#por-qué-caminar-es-difícil-para-un-bípedo) · [idea general](#la-idea-general) · [lógica paso a paso](#lógica-paso-a-paso) · [prueba de estrés](#la-prueba-de-estrés) · [cómo probarlo a mano](#cómo-probarlo).
 
 Atlas, el humanoide de Boston Dynamics, manejado entero desde el teclado 4x4 del ESP32: se le mueven brazos, torso, cabeza y piernas junta por junta, se lo manda a poses (saludar, agacharse, brazos arriba), camina hacia adelante y hacia atrás y gira dando pasos, todo con física real. La gracia está en una tecla, la `A`: prende y apaga un **asistente de equilibrio** (un arnés virtual), así que la misma caminata se puede probar con ayuda y sin ella, y ver dónde la física sola aguanta y dónde no. Si se cae, la `B` lo pone de pie. En el montaje real funcionó con el teclado respondiendo en todas las teclas.
 
@@ -28,6 +28,36 @@ Atlas, el humanoide de Boston Dynamics, manejado entero desde el teclado 4x4 del
 ![Enunciado](img/enunciado-actividad.png)
 
 El texto del punto c) dice: "Desarrollar una consola de mandos con la esp32 para un movimiento fluido del robot Baxter que permita una movilidad real". Pero la imagen no es Baxter: es el humanoide **Atlas** de Boston Dynamics parado sobre una plataforma azul, que es justamente lo que carga `atlas.py` del repositorio enlazado. El texto parece copiado del punto b) (que sí es Baxter), así que este punto se hizo con Atlas. (Una primera versión de este punto usó un robot de reemplazo; quedó en el historial de git.)
+
+## Paso a paso
+
+### Cómo se hizo, paso a paso
+
+1. **Leer el enunciado contra la imagen.** El texto dice "Baxter", la imagen es Atlas y el repositorio enlazado trae `atlas.py`, que solo carga el robot y deja sus juntas en 0. La primera versión de este punto usó un cuadrúpedo de reemplazo (en el historial de git); después se pasó al **Atlas real**, con sus mallas bajadas por [`../descargar_modelos.py`](../descargar_modelos.py).
+2. **Que se sostenga de pie.** Con las fuerzas del URDF, los tobillos (92 y 45 N·m) y el torso de costado (300 N·m) no sostienen 182 kg: inclinar las caderas 0,1 rad lo tiraba. Se subieron a 800 N·m en piernas y 1000 en el torso, la pose de pie lleva las rodillas algo dobladas (cadera −f, rodilla 2f, tobillo −f: pies planos) y el paso de física es de 1/500 s para que los contactos de las suelas sean estables.
+3. **Mover el cuerpo.** Jog de juntas por grupos (`*`, `1/3`, `7/9`) que nunca pasa del límite del URDF; en piernas una tecla mueve cadera, rodilla y tobillo a la vez. Poses de un golpe (`C`, `D`, `#`, `5`) con rampa en S de 0,6 s; para el agachado se midió que inclinar el torso 0,3 rad lo tiraba de cara, y quedó en 0,15.
+4. **Caminar.** Un patrón de senos (CPG): pasar el peso de costado, levantar el pie con la rodilla y dar la zancada con la cadera. Los parámetros salieron de barridos sin ventana de 20 s **sin asistente** (tabla en [Cómo se eligieron los parámetros](#cómo-se-eligieron-los-parámetros-de-la-caminata)): solo aguantan pasos cortos. Girar se hace con la cadera vertical, dando pasos en el lugar.
+5. **El asistente de equilibrio.** Para comparar con y sin ayuda se agregó un arnés virtual (`A`). Primero se probó con una restricción fija que seguía a la pelvis: frenaba el avance (−1,7 cm en 10 s). Quedó con dos fuerzas sobre la pelvis, la mitad del peso hacia arriba y un torque que la endereza, ninguna horizontal.
+6. **Levantarlo y no repetir acciones.** `B` lo pone de pie en el lugar y lo asienta 0,6 s con asistente; `0` reinicia todo. Como el ESP32 repite la tecla cada 50 ms, las acciones de un golpe van por flanco (si no, sostener `A` medio segundo la conmutaría 10 veces) y caminar arranca al pulsar y frena al soltar, con rampa de 0,6 s, para que los motores nunca reciban un tirón.
+7. **Medirlo.** [`probar_atlas.py`](probar_atlas.py) repite las mismas teclas con y sin asistente y mide cuándo se cae ([La prueba de estrés](#la-prueba-de-estrés)). Con eso se escribió la tabla de "Qué esperar", se grabaron los dos GIF con `../grabar_videos.py` y se manejó con el teclado real.
+
+### Cómo probarlo con la app, botón por botón
+
+En la app (doble clic en [`../ABRIR.bat`](../ABRIR.bat)), menú de la izquierda → **Atlas: asistente**. Si faltan los modelos, se bajan solos al primer **Iniciar**.
+
+1. **1 · Prueba de estrés con y sin asistente: la gráfica.** Antes de correrla, la gráfica de la derecha muestra lo que medimos ("mostrando lo medido antes"). **Iniciar: c) Atlas: prueba de estrés con y sin asistente** la borra y la va llenando prueba por prueba (16 en total, unos 3 a 4 minutos): una barra verde (con asistente) y una amarilla (sin asistente) por prueba; llena quiere decir que no se cayó, y al lado sale lo que avanzó o giró. Al final se agregan los 3 intentos de tirarlo y levantarlo con `B` y la prueba de flanco de la tecla `A`, y se marca el punto **c)** del checklist.
+2. **2 · Atlas con ventana.** **Iniciar: c) Atlas: humanoide con asistente de equilibrio** abre PyBullet con Atlas de pie y el asistente prendido. Los 16 botones del panel derecho:
+   - **Caminar adelante on/off (8)**, **Caminar atras on/off (2)**, **Girar izquierda on/off (4)**, **Girar derecha on/off (6)**: un clic arranca y el siguiente frena (un clic no se puede sostener como la tecla).
+   - **Asistente ON/OFF (A)**: para repetir lo mismo sin ayuda (arriba se pone en rojo `ASISTENTE: OFF`). **Ponerlo de pie (B)** si se cae; **Reiniciar todo (0)** lo lleva al origen.
+   - Poses: **Saludar (C)**, **Agacharse (D)**, **Brazos arriba (#)**, **De pie / detener (5)**.
+   - Juntas: **Siguiente grupo (*)** y **Junta A - (1)**, **Junta A + (3)**, **Junta B - (7)**, **Junta B + (9)** (0,15 rad por clic).
+   - Para ver la diferencia: seguir los [experimentos](#experimentos-para-probar-las-físicas) (sin asistente, girar lo tira a los ~2,5 s; `B` lo levanta; con asistente gira sin caerse).
+
+El mando de Atlas, tecla por tecla, también está en la sección **El mando: cada tecla** (pestaña c) Atlas), y el esquema 2D con el arnés dibujado en **Preview sin Python**.
+
+### Sin la app y con el ESP32 real
+
+Con comandos y con el teclado conectado: más abajo, en [Cómo probarlo](#cómo-probarlo). El montaje y la carga del firmware, paso a paso, están en el [README del taller](../README.md#4-con-el-esp32-y-el-teclado-reales-paso-a-paso).
 
 ## Qué es Atlas
 

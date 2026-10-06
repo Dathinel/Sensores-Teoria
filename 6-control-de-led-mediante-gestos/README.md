@@ -6,7 +6,7 @@ Actividad asignada por la cátedra (Actividad 4): usando la librería [MediaPipe
 
 ## ¿Quiere probarlo? → aquí está
 
-Doble clic en **[`ABRIR.bat`](ABRIR.bat)** (en Linux o Mac, `./abrir.sh`). Solo hace falta Python 3.9 o más nuevo para el lanzador: no se instala nada más, y **no hace falta ni el ESP32 ni la cámara**. Se abre una app (una ventana tipo programa, con un menú lateral como el de Docker Desktop) que recorre el tema paso a paso:
+Doble clic en **[`ABRIR.bat`](ABRIR.bat)** (en Linux o Mac, `sh abrir.sh`). Solo hace falta Python 3.9 o más nuevo para el lanzador: no se instala nada más, y **no hace falta ni el ESP32 ni la cámara**. Se abre una app (una ventana tipo programa, con un menú lateral como el de Docker Desktop) que recorre el tema paso a paso:
 
 1. **Gestos → LEDs**: se toca un gesto y la orden recorre la cadena entera, iluminando cada etapa (cámara → MediaPipe con su confianza → el filtro de 15 cuadros llenándose → la palabra `FIST`/`VICTORY`… → el cable USB → el ESP32 que contesta `OK`), hasta los tres LEDs simulados con la misma lógica de `esp32_gestos.py` y un monitor de lo que pasaría por el cable.
 2. **Cómo funciona** y **cómo se conecta** (el montaje 3D y la tabla de pines).
@@ -15,15 +15,72 @@ Doble clic en **[`ABRIR.bat`](ABRIR.bat)** (en Linux o Mac, `./abrir.sh`). Solo 
 
 ![La app del tema 6: un gesto recorriendo la cadena hasta los LEDs simulados](img/app-gestos-leds.png)
 
+**Paso a paso de todo:** [cómo se hizo](#cómo-se-hizo-paso-a-paso) · [cómo probarlo con la app, sección por sección](#cómo-probarlo-con-la-app-sección-por-sección) · [sin la app](#cómo-probarlo-sin-la-app) · [con el ESP32 real](#con-el-esp32-real-paso-a-paso) · [si algo falla](#si-algo-falla).
+
 ## ¿Quiere saber cómo funciona? → aquí está todo
 
+- [Paso a paso](#paso-a-paso): cómo se hizo y cómo probarlo (con la app, sin la app y con el ESP32)
 - [Qué pedía la actividad y qué hicimos](#qué-pedía-la-actividad-y-qué-hicimos)
 - Conceptos: [MediaPipe](#qué-es-mediapipe) · [landmarks de la mano](#qué-son-los-landmarks-de-la-mano) · [clasificar un gesto](#qué-es-clasificar-un-gesto) · [Web Serial](#qué-es-web-serial) · [PWM (30 % / 70 % / 100 %)](#qué-es-pwm-y-por-qué-da-el-30--70--100) · [interrupción por Timer](#qué-es-una-interrupción-por-timer-los-modos-1-y-2)
 - [Cómo se evita que el LED "tiemble"](#cómo-se-evita-que-el-led-tiemble-con-cada-frame) (los filtros)
 - [La idea general](#la-idea-general) (diagramas) y [conexiones](#conexiones)
 - [Qué hace cada archivo](#qué-hace-cada-archivo)
 - [La lógica del código, paso a paso](#la-lógica-del-código-paso-a-paso): [en la página](#en-la-página-gesture_controlhtml), [en el ESP32](#en-el-esp32-esp32_gestospy) y [el protocolo con mensajes reales](#el-protocolo-con-mensajes-reales)
-- [Cómo probarlo](#cómo-probarlo) y [el circuito funcionando](#el-circuito-funcionando)
+- [Cómo probarlo](#cómo-probarlo), [el circuito funcionando](#el-circuito-funcionando) y [pendiente](#pendiente)
+
+## Paso a paso
+
+### Cómo se hizo, paso a paso
+
+Lo que se hizo y lo que hubo que corregir en el camino (el detalle de cada parte está más abajo):
+
+1. **Elegir dónde corre cada cosa.** El enunciado pide MediaPipe Gesture Recognizer, que tiene versión para el navegador. Se decidió que todo el reconocimiento corriera en una página web (`gesture_control.html`, HTML y JavaScript puro, sin Python ni servidor) y que el ESP32 solo recibiera una palabra por línea por el cable USB ([Web Serial](#qué-es-web-serial)).
+2. **Usar el modelo ya entrenado.** El `GestureRecognizer` de Google trae siete gestos; de ahí salen cinco comandos (`FIST`, `VICTORY`, `OPEN2`, `THUMB_DOWN`, `THUMB_UP`). "Las dos manos abiertas" no existe en el modelo: se pidió `numHands: 2` y se escribió una regla propia, `Open_Palm_2` ([clasificar un gesto](#qué-es-clasificar-un-gesto)).
+3. **El primer problema: los LEDs temblaban.** El modelo clasifica cada frame por separado y se equivoca a ratos, así que mandar un comando por frame hacía parpadear los LEDs. Se agregaron los tres filtros: confianza mínima de 65 %, ventana de 15 frames y 80 % de dominio ([los filtros](#cómo-se-evita-que-el-led-tiemble-con-cada-frame)).
+4. **El firmware.** Tres PWM a 5000 Hz con duty 306, 716 y 1023 (30, 70 y 100 %), y las dos "interrupciones" del enunciado como un `Timer` periódico de 200 ms, porque el bucle principal pasa bloqueado en `sys.stdin.readline()`. Cada línea se contesta con `OK <comando>` o `? <comando>` para poder diagnosticar desde la página.
+5. **Los pulgares se disparaban una y otra vez** mientras se sostenía el gesto. Se volvieron de un solo disparo: quedan desarmados hasta que se confirme otro gesto, con un enfriamiento de 2,5 s como segunda protección.
+6. **Un error encontrado al probar: puño → pulgar → puño no volvía a mandar `FIST`**, porque la página recordaba que el último gesto continuo ya era `FIST`. Se arregló haciendo que, al dispararse un pulgar, ese recuerdo vuelva a `NONE` (está comentado en `enviarComando`).
+7. **Dos formas de apagar.** *Persistente* (el gesto alterna su LED y bajar la mano no hace nada) y *automático* (el LED vive mientras se sostiene el gesto). Para el automático se agregaron `FIST_ON`/`FIST_OFF` (y los de los otros LEDs) en el firmware, para no depender de cómo había quedado el LED antes.
+8. **Que se pueda probar sin nada.** La página no se cae si no carga MediaPipe o no hay cámara: lo avisa, y los botones de Control manual y el panel "LEDs (espejo del firmware)", una copia en JavaScript de `manejar_comando()`, siguen funcionando.
+9. **Documentarlo.** El circuito se representó en 3D con la biblioteca de componentes de Blender (renders de cada estado y la animación de los modos), se tomaron capturas de la página y se armó la app del `ABRIR.bat`; las imágenes se recomprimieron para que el tema pese menos.
+
+### Cómo probarlo con la app, sección por sección
+
+1. Doble clic en [`ABRIR.bat`](ABRIR.bat) (Linux/Mac: `sh abrir.sh`). Sale la pantalla "Abriendo la práctica…" y después la app; la consola negra se minimiza sola y hay que dejarla abierta. Arriba a la derecha: el chip **"Listo: no instala nada"** (no usa Python), **Pantalla completa**, **README completo** y **GitHub ↗**. A la izquierda, el recorrido de 7 pasos (clic en cualquiera para saltar; abajo de cada paso, **← Anterior** y **Siguiente →**).
+2. **Inicio.** Qué hace la práctica, la animación de los LEDs (clic para ampliarla) y cuatro botones que llevan a "Gestos → LEDs", "Cómo funciona", "Pruébalo" y "Resultados". Abajo, **"Qué pide la actividad"**: los siete puntos del enunciado con casillas; los seis del reconocimiento y los LEDs se marcan solos al abrir el reconocedor en otra pestaña (en "Pruébalo") y todos se pueden marcar a mano.
+3. **Gestos → LEDs** (no necesita internet ni cámara). Seis tarjetas: **Puño cerrado**, **Victoria (V)**, **Dos manos abiertas**, **Pulgar abajo**, **Pulgar arriba** y **Bajar la mano**. Al tocar una, la orden recorre la cadena de arriba etapa por etapa (Cámara → MediaPipe con una confianza típica → Filtro con sus 15 cuadros, alguno "dudoso" → Orden → USB → ESP32 con `OK ...`), y al final cambian los tres LEDs simulados y el monitor "Cable USB · 115200 baudios" (`→ FIST`, `← OK FIST`). Qué debería pasar, igual que en el firmware: Puño = amarillo 30 %, otra vez Puño = se apaga; Victoria = azul 70 % (pueden quedar varios prendidos); Pulgar abajo = barrido amarillo → azul → rojo cada 200 ms; Pulgar arriba = los tres parpadean; un gesto de LED fijo detiene el modo y apaga lo demás; Bajar la mano = todo apagado. La tarjeta queda resaltada mientras su efecto sigue vivo. El desplegable **"¿Por qué 30 %, 70 % y 100 %? (PWM)"** lo explica.
+4. **Cómo funciona.** Los seis pasos de la mano al LED, por qué el filtro y qué son las "interrupciones"; **"Leer la explicación completa (del README)"** despliega la sección de los filtros de este README.
+5. **Cómo se conecta.** El montaje en 3D (clic para ampliar), la tabla de pines (GPIO25/26/27 a través de 330 Ω, cátodos a GND) y tres notas. Solo lectura.
+6. **Pruébalo: el reconocedor.** **"Abrir el reconocedor aquí"** carga [`gesture_control.html`](gesture_control.html) dentro de la app, con una barra de carga por etapas (Página → Runtime WebAssembly → Modelo `gesture_recognizer.task` → Listo para reconocer) y el tiempo que lleva (con internet, 5-20 s la primera vez). El navegador pide permiso de cámara:
+   - **Con cámara**: hacer los gestos; en "Lectura en vivo" se ven el gesto crudo, su confianza y el dominio en la ventana, y al llegar al 80 % el "Gesto confirmado"; el comando sale en "Registro de comandos enviados" y en "LEDs (espejo del firmware)". **Landmarks** dibuja los 21 puntos, **Cámara / 3D / Cámara + 3D** cambia la vista, **Agrandar** hace la cámara más grande.
+   - **Sin cámara** (o si se niega el permiso): la página lo dice y los botones de **Control manual** (Puño — 30 %, Victoria — 70 %, Manos abiertas — 100 %, Modo 1, Modo 2, Detener todo) hacen lo mismo que los gestos.
+   - **"Modo de apagado por cámara"** (columna izquierda, debajo de la cámara): en *Persistente* un clic alterna; en *Automático* hay que mantener presionado el botón (al soltarlo se apaga).
+   - **Conectar ESP32** solo hace falta con la placa (ver "Con el ESP32 real"). El botón de la app pasa a **"Cerrar el reconocedor (libera la cámara)"**: pulsarlo apaga la cámara.
+   - El desplegable **"¿Prefieres abrirlo en una pestaña aparte del navegador?"** tiene **"Abrir el reconocedor en otra pestaña"** (y marca las casillas de "Qué pide la actividad").
+7. **Con el ESP32 real.** Los cinco pasos para la placa, "Si no pasa nada" (qué significa cada síntoma) y el firmware con **"Copiar el código"** (si el navegador no deja copiar, lo deja seleccionado: Ctrl+C).
+8. **Resultados.** Los renders de cada estado, la animación y las capturas de la página (clic para ampliar), y **"Detalles técnicos"** plegado (versión de MediaPipe, protocolo y filtros).
+
+### Cómo probarlo sin la app
+
+- **La página sola:** doble clic en [`gesture_control.html`](gesture_control.html) en Chrome o Edge (la primera vez necesita internet para bajar MediaPipe). Todo lo de "Pruébalo: el reconocedor" de arriba funciona igual. Los pasos están en [Cómo probarlo](#cómo-probarlo), "Sin ESP32 conectado".
+- **El servidor de la app desde la consola** (en la raíz del repo): `python _lanzador/lanzador.py --practica 6-control-de-led-mediante-gestos` (o con `--no-navegador`, que solo imprime la URL).
+- **El firmware** no corre en el PC (usa `machine.PWM` y `machine.Timer`): se carga con Thonny. Para probar el protocolo sin la página: abrir `esp32_gestos.py` en Thonny, correrlo con Run (F5) y, mientras corre, escribir `FIST`, `VICTORY`, `THUMB_DOWN`, `NONE`... en la Shell de Thonny (Enter después de cada uno): el programa los lee por `sys.stdin`, contesta `OK FIST`, etc., y los LEDs reaccionan.
+
+### Con el ESP32 real, paso a paso
+
+Está en [Cómo probarlo](#cómo-probarlo), "Con ESP32 conectado": armar el circuito (GPIO25/26/27 con 330 Ω, cátodos a GND), guardar `esp32_gestos.py` como `main.py` con Thonny, cerrar Thonny, **Conectar ESP32** en la página y hacer los gestos; en "Última línea recibida" debe aparecer `OK FIST`, `OK VICTORY`... Las imágenes del circuito de este README son renders del montaje en 3D (ver [pendiente](#pendiente)).
+
+### Si algo falla
+
+| Qué pasa | Qué hacer |
+|---|---|
+| `ABRIR.bat` dice que no encuentra Python 3.9 o más nuevo | Instalar Python desde python.org marcando "Add python.exe to PATH" y volver a abrirlo (los pasos salen en la misma ventana) |
+| La barra se queda en "Descargando…" o dice "MediaPipe no cargó (¿sin internet?)" | MediaPipe se baja de cdn.jsdelivr.net y storage.googleapis.com: revisar internet. Mientras tanto, los botones de Control manual funcionan |
+| "Sin cámara (...)" | No hay webcam, otra aplicación la está usando o se negó el permiso (se cambia en el candado de la barra de direcciones). Los botones manuales hacen lo mismo |
+| "Este navegador no tiene Web Serial" | Usar Chrome o Edge (Firefox y Safari no lo traen) |
+| Conectado, pero "Última línea recibida" no muestra nada | Thonny tiene el puerto abierto o la placa no está corriendo `main.py`: cerrar Thonny y desconectar/conectar el USB |
+| Llega `? algo` | El cable anda bien; la palabra no es una de las del [protocolo](#el-protocolo-con-mensajes-reales) |
+| Llega `OK ...` pero un LED no prende | LED al revés (pata larga al GPIO) o su resistencia mal puesta |
 
 ## Qué pedía la actividad y qué hicimos
 
@@ -236,7 +293,7 @@ gestoConfirmado: mejorProporcion >= UMBRAL_CONFIRMACION ? mejorGesto : null,
 - Los pulgares son de **un solo disparo**: después de dispararse quedan "desarmados" hasta que se confirme otro gesto distinto, y además hay un enfriamiento de `COOLDOWN_MS = 2500` ms como segunda protección, por si la confirmación parpadea entre el pulgar y otra cosa.
 - Los gestos de LED solo se mandan cuando **cambian** respecto al último (`ultimoComandoContinuo`). Cuando se dispara un pulgar, `ultimoComandoContinuo` vuelve a `NONE`: el modo de secuencia reemplaza lo que hacían los LEDs, así que el gesto siguiente cuenta como nuevo aunque sea el mismo de antes (así puño → pulgar → puño, sin bajar la mano, sí vuelve a mandar `FIST`).
 
-**7. Persistente o automático.** A la izquierda de la página se elige cómo se apagan los LEDs con la cámara:
+**7. Persistente o automático.** En la columna izquierda de la página, debajo de la cámara ("Modo de apagado por cámara"), se elige cómo se apagan los LEDs con la cámara:
 
 - **Persistente**: el gesto *alterna* su LED (manda `FIST`, `VICTORY`, `OPEN2`). Bajar la mano no manda nada; repetir el mismo gesto lo apaga. Así se pueden dejar varios LEDs prendidos a la vez.
 - **Automático**: el LED está prendido *solo mientras se sostiene el gesto* (manda `FIST_ON` al confirmarlo, `FIST_OFF` si se pasa directo a otro gesto, y `NONE` al bajar la mano, que apaga todo y detiene cualquier modo). Se usan `_ON`/`_OFF` en vez del alternar para que el resultado no dependa de cómo había quedado el LED antes: con el alternar, un LED que ya estaba prendido se apagaría justo al hacer su gesto.
@@ -343,3 +400,7 @@ Y la secuencia completa, incluidas las dos "interrupciones" por Timer: sin gesto
 | Victoria (manual): LED azul al 70 % | Modo 1 corriendo: el barrido va por el LED azul |
 |---|---|
 | ![Victoria pulsada: el LED azul del espejo del firmware al 70 % y VICTORY en el registro](img/interfaz-web-victoria.png) | ![Modo 1 corriendo: THUMB_DOWN en el registro y el LED azul al 100 %](img/interfaz-web-modo1.png) |
+
+## Pendiente
+
+Las imágenes del circuito de este README son renders del montaje en 3D, con los pines y los duty reales de `esp32_gestos.py`. Falta una foto o un video del montaje físico (el ESP32 con los tres LEDs respondiendo a los gestos frente a la cámara), que se agrega aquí cuando esté.

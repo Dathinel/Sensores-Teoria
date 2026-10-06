@@ -274,7 +274,13 @@ function pintar(s) {
     c.textContent = x === undefined ? "" : x === null ? "·" : x;
     c.title = x === undefined ? "todavía sin cuadro" : x === null ? "sin dígito o confianza < 60 %: cuenta como nada" : "este cuadro votó " + x;
   });
-  const pct = Math.round((s.proporcion || 0) * 100);
+  // La barra muestra cuánto lleva el dígito más votado (no "nada"): con el lienzo vacío, "nada"
+  // gana 15 de 15 y la proporción del ganador sería 100 %, lo que se leía como "casi confirmado".
+  // Con un dígito ganando es el mismo número que la proporción de reconocer_digito.py.
+  const cuenta = {};
+  ventana.forEach((x) => { if (x !== null && x !== undefined) cuenta[x] = (cuenta[x] || 0) + 1; });
+  const mejor = Math.max(0, ...Object.values(cuenta));
+  const pct = ventana.length ? Math.round(mejor / ventana.length * 100) : 0;
   $("prop-relleno").style.width = pct + "%";
   $("prop-relleno").className = s.confirmado !== null && s.confirmado !== undefined ? "ok" : "";
   $("prop-txt").textContent = pct + " %";

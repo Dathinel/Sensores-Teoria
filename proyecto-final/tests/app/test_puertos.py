@@ -75,3 +75,24 @@ def test_sin_conflicto_no_hay_mensaje():
     p = _puerto_con_siguiente_libre()
     assert puertos.elegir(p) == (p, "libre", [])
     assert puertos.mensaje(p, p, "libre", []) == ""
+
+
+def test_un_programa_que_no_habla_http_no_tumba_la_eleccion():
+    """Si en el puerto hay algo que responde basura (no HTTP), urllib lanza BadStatusLine, que NO es
+    OSError: antes eso tumbaba app.lanzar en vez de pasar al puerto siguiente (revisión 2026-10-06)."""
+    import socketserver
+
+    class _NoHttp(socketserver.BaseRequestHandler):
+        def handle(self):
+            self.request.recv(200)
+            self.request.sendall(b"NO SOY HTTP\r\n\r\n")
+
+    p = _puerto_con_siguiente_libre()
+    srv = socketserver.ThreadingTCPServer(("127.0.0.1", p), _NoHttp)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        assert not puertos.es_nuestro(p)
+        assert puertos.elegir(p)[:2] == (p + 1, "libre")
+    finally:
+        srv.shutdown()
+        srv.server_close()

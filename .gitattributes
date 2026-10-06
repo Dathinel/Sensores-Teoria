@@ -2,3 +2,22 @@
 # <carpeta>/abrir.sh (con LF: sh no acepta el retorno de carro). Los dos llaman a _lanzador/lanzador.py.
 ABRIR.bat text eol=crlf
 abrir.sh text eol=lf
+
+# --- Estadísticas de lenguajes de GitHub (Linguist) ---------------------------------------
+# La barra de lenguajes del repo cuenta bytes de código. Sin estas líneas la dominarían archivos
+# que no se escribieron a mano: se marcan para que no cuenten (y sus diffs salgan plegados).
+# No cambian el contenido ni los fines de línea de nada.
+
+# Generado: el visor 3D del proyecto final en UN solo .html (2,6 MB, con Three.js y los datos
+# dentro), lo arma app/portable.py a partir de app/visor3d/.
+proyecto-final/visor-portable.html linguist-generated
+# Generado: la grabación y la geometría de la demo del visor (app/grabar_demo.py).
+proyecto-final/app/visor3d/demo/*.json linguist-generated
+# Generado: resultados de las pruebas que escriben los propios scripts (resúmenes y consolas).
+10-enjambre-algoritmo-hormigas/pruebas/resultados/** linguist-generated
+11-zonas-virtualizadas-esp32-vlan/pruebas/resultados/** linguist-generated
+# Generado: los pesos de la CNN del tema 8 para la app (app/exportar_pesos_web.py).
+8-digitos-brazo-y-vision/app/cnn-pesos.bin linguist-generated binary
+
+# Librerías de terceros copiadas tal cual (Three.js y OrbitControls), no código propio.
+proyecto-final/app/visor3d/vendor/** linguist-vendored

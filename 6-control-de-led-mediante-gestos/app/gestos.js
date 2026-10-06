@@ -27,7 +27,10 @@
     }
   }
   function apagarTodo() { brillo.amarillo = brillo.azul = brillo.rojo = 0; }
-  function pararModo() { if (timerModo) { clearInterval(timerModo); timerModo = null; } }
+  // Igual que parar_secuencia_si_activa() del firmware: si un modo estaba corriendo, se detiene
+  // el timer Y se apaga todo; si no, el LED que el modo dejó prendido quedaría encendido y el
+  // "alternar" del gesto siguiente partiría de ese brillo (puño tras Modo 1 apagaba el amarillo).
+  function pararModo() { if (timerModo) { clearInterval(timerModo); timerModo = null; apagarTodo(); } }
   function alternar(k) { brillo[k] = brillo[k] > 0 ? 0 : INT[k]; }
   function iniciarModo(fn) {
     pararModo(); apagarTodo(); pasoModo = 0; fn(); pintar();

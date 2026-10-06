@@ -40,7 +40,7 @@
         "el resultado se replica en PyBullet con 3 robots virtuales",
         "el ACO corre dentro de cada ESP32"
       ],
-      "duracion": "~4-6 min",
+      "duracion": "~4-5 min",
       "duracion_s": 300,
       "progreso_regex": "t =\\s*([\\d.]+) s de ([\\d.]+) s"
     },
@@ -62,7 +62,7 @@
       "cubre": [
         "intercambian feromona por red, con un ESP32 en modo AP"
       ],
-      "duracion": "~4 min",
+      "duracion": "~4-5 min",
       "duracion_s": 240,
       "progreso_regex": "t =\\s*([\\d.]+) s de ([\\d.]+) s"
     },
@@ -83,8 +83,7 @@
         "el resultado se replica en PyBullet con 3 robots virtuales"
       ],
       "duracion": "~1 min (con el emulador)",
-      "duracion_s": 70,
-      "progreso_regex": "it\\s+(\\d+)/(\\d+)"
+      "duracion_s": 70
     },
     {
       "id": "emulador",
@@ -173,8 +172,7 @@
         "intercambian feromona por red, con un ESP32 en modo AP"
       ],
       "duracion": "~1 min (con el emulador)",
-      "duracion_s": 70,
-      "progreso_regex": "it\\s+(\\d+)/(\\d+)"
+      "duracion_s": 70
     },
     {
       "id": "preview",

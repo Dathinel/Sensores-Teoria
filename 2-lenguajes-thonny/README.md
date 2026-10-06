@@ -15,7 +15,19 @@ MicroPython en el ESP32 como lista para ir marcando y qué hacer si algo falla.
 
 ![La app del tema 2: MicroPython frente a C/C++ lado a lado](img/app.png)
 
+Qué hacer en cada parte de la app, botón por botón, está en
+[Cómo probarlo con la app, paso a paso](#cómo-probarlo-con-la-app-paso-a-paso).
+
 ## ¿Quiere saber cómo funciona? Aquí está todo
+
+**Paso a paso**
+
+- [Cómo se hizo, paso a paso](#cómo-se-hizo-paso-a-paso) (qué se hizo primero, qué después y qué
+  problemas se resolvieron)
+- [Cómo probarlo con la app, paso a paso](#cómo-probarlo-con-la-app-paso-a-paso) (cada paso de la
+  guía y cada botón)
+- [Cómo probarlo sin la app y con el ESP32 real](#cómo-probarlo) (Wokwi, Thonny, `mpremote` y
+  `arduino-cli` por consola, y la placa de verdad)
 
 **Los conceptos**
 
@@ -61,6 +73,102 @@ Lo que hicimos, en tres partes:
 3. **La comparación de sintaxis**: un display de siete segmentos que muestra un "2", simulado en
    Wokwi con el mismo circuito programado una vez en C/C++ y otra en MicroPython, con las dos
    capturas lado a lado.
+
+## Cómo se hizo, paso a paso
+
+1. **Partir de la guía del profesor.** La guía de U_Militar (enlazada arriba) graba MicroPython en un
+   NodeMCU V3 con ESP8266 usando `esptool`. Se repitió el procedimiento para el ESP32 del curso y se
+   anotaron las dos diferencias reales: el firmware es el de `ESP32_GENERIC` y la dirección de
+   grabación es `0x1000` y no `0` (ver [Instalar MicroPython en el ESP32](#instalar-micropython-en-el-esp32)).
+   También se dejó el camino corto, desde el propio Thonny, que no necesita la consola.
+2. **Explicar el porqué.** La guía solo deja el firmware instalado; la actividad pedía entender la
+   elección. Se escribieron "Qué es Thonny", "Qué es MicroPython", "Qué es compilar y qué es
+   interpretar" y el diagrama de los dos caminos (Arduino IDE frente a Thonny).
+3. **La comparación de sintaxis en Wokwi.** Se armó en Wokwi un display de siete segmentos de cátodo
+   común en GPIO 17, 16, 32, 33, 25, 14 y 12 y se programó dos veces para dibujar un "2": una en C/C++
+   (Arduino) y otra en MicroPython. Se guardaron las dos capturas (`img/wokwi-arduino-c.png` y
+   `img/wokwi-micropython.png`) y el código de cada una (`siete_segmentos/siete_segmentos.ino` y
+   `siete_segmentos.py`), comentado.
+   - **Problema:** el `while True` de MicroPython, sin pausa, reescribe los pines sin parar, ocupa
+     todo el procesador y deja la Shell de Thonny lenta para detenerlo. **Arreglo:** un
+     `time.sleep_ms(100)` al final del bucle (por eso el `.py` tiene una línea más que la captura).
+4. **La comparación con números.** A simple vista un semáforo se ve igual en los dos lenguajes, así
+   que se escribió `semaforo_velocidad.py` y su par `semaforo_velocidad/semaforo_velocidad.ino`: la
+   misma secuencia y después 20 000 cambios del LED rojo medidos con el reloj de microsegundos del
+   chip (`time.ticks_us()` y `micros()`).
+   - **Problema:** el contador de microsegundos da la vuelta. **Arreglo:** `time.ticks_diff()` en
+     MicroPython y la resta de `unsigned long` en C, que calculan bien el tiempo aunque pase eso.
+   - **Problema:** la variante "método local" usaba al principio `ROJO.on()` y `ROJO.off()`, que no
+     son el mismo método que `ROJO.value(1)`, y además en el nivel del archivo una variable "local"
+     es en realidad global. **Arreglo (revisión del 2026-10-06):** la variante llama al mismo
+     `ROJO.value` guardado en una variable local dentro de una función, así lo único que cambia es la
+     búsqueda de nombres (ver [Qué hace el código](#qué-hace-el-código)).
+5. **Los conceptos de cada circuito.** Se agregaron "Qué es un LED y por qué lleva resistencia" y
+   "Qué es un display de siete segmentos", con las tablas de conexiones sacadas del código, y por qué
+   cada pin sirve (GPIO12 y GPIO5 son de arranque; los 34-39 no sirven como salida).
+6. **Los problemas de compatibilidad.** Lo que más hace perder tiempo al empezar (driver del
+   conversor USB, cable que solo carga, firmware de otra variante, Thonny viejo, puerto tomado,
+   Arduino que borra MicroPython) quedó en [Problemas de compatibilidad](#problemas-de-compatibilidad).
+7. **La app.** Se armó una guía de seis pasos (`app/`) que lee los `.py` y `.ino` de esta carpeta
+   para mostrarlos lado a lado, abre Wokwi, copia el código y trae la instalación como lista para ir
+   marcando.
+8. **Lo que falta.** Los microsegundos por cambio medidos en la placa real y la foto del montaje (ver
+   [Pendiente](#pendiente)): no se inventaron valores, y los números de Wokwi no sirven para
+   comparar.
+
+## Cómo probarlo con la app, paso a paso
+
+Todo el tema se prueba sin placa: la app explica, compara los dos códigos y abre Wokwi (simulador de
+ESP32 en el navegador) con el código listo para pegar. No instala nada en el PC.
+
+1. **Abrirla.** Doble clic en [`ABRIR.bat`](ABRIR.bat) (en Linux o Mac, `./abrir.sh`). Se abre una
+   ventana propia, maximizada, con la pantalla "Abriendo la práctica…" unos segundos. La consola del
+   `ABRIR.bat` se minimiza sola: no hay que cerrarla mientras se usa la app.
+2. **La barra de arriba.** "Tema 2 · Thonny o Arduino: MicroPython frente a C/C++", el botón **Ver en
+   GitHub ↗** (la carpeta del tema en GitHub), el chip verde "Listo: no instala nada" y **Pantalla
+   completa** (Esc para salir).
+3. **La portada.** Tres botones que saltan a un paso de la guía: **Ver la comparación →** (paso 2),
+   **Probar en Wokwi** (paso 3) e **Instalar MicroPython** (paso 5). Debajo, **Qué pide la
+   actividad**, con un contador "N de 4 probados": los puntos 1 y 3 se marcan solos al abrir el paso
+   1, el 2 al terminar la lista de instalación y el 4 al abrir Wokwi desde la app (también se pueden
+   marcar a mano). A la derecha, los dos caminos lado a lado y el botón **▶ Ver cómo corre cada uno**:
+   una animación (no a escala) donde C/C++ tarda en compilar y grabar y después el LED parpadea
+   rápido, y MicroPython arranca al instante pero lee cada línea. Mientras corre, el botón dice **■
+   Detener**; al terminar, **↺ Otra vez**.
+4. **La guía de seis pasos.** A la izquierda, el índice numerado (un clic salta a ese paso); arriba
+   del paso, "Paso N de 6" y una barra; abajo, **← Anterior** y **Siguiente: <paso> →** (en el último,
+   **Volver al inicio**). La app recuerda el paso abierto.
+5. **Paso 1, Qué es Thonny y qué es MicroPython.** Tres tarjetas (Thonny, MicroPython, compilar
+   frente a interpretar), una ventana de Thonny dibujada con sus tres partes (archivos, editor, Shell)
+   y la tabla comparativa. El plegado **Leer la explicación completa del README** muestra esas
+   secciones de este README.
+6. **Paso 2, Lado a lado.** Los dos códigos del siete segmentos. Los cinco botones de ideas (**Traer
+   lo necesario**, **Declarar los pines**, **Configurarlos como salida**, **Prender / apagar un
+   segmento**, **Repetir para siempre**) resaltan, al pasar el ratón o hacer clic, las líneas que
+   hacen eso en cada lenguaje y explican la diferencia en una frase. Debajo, las dos capturas de
+   Wokwi (un clic las amplía).
+7. **Paso 3, Ejemplo 1: siete segmentos en Wokwi.** Primero se elige **MicroPython** o **C/C++
+   (Arduino)** (la app lo recuerda); los pasos cambian según el lenguaje. **Abrir Wokwi ↗** abre un
+   proyecto nuevo del tipo correcto en una pestaña. Se arma el circuito con el "+" de Wokwi según la
+   tabla. **Copiar el código** copia `siete_segmentos.py` o `siete_segmentos.ino` (si el navegador no
+   deja copiar, abre el archivo en una pestaña para copiarlo con Ctrl+A y Ctrl+C); se pega en
+   `main.py` o `sketch.ino` y se pulsa el ▶ verde de Wokwi: debe verse un "2". A la derecha, el
+   display dibujado y los botones **0** a **9**: cada número prende sus segmentos, la tabla dice qué
+   GPIO va encendido y abajo sale cómo quedaría el código para ese número en el lenguaje elegido.
+8. **Paso 4, Ejemplo 2: el semáforo.** Igual que el paso 3 (lenguaje, **Abrir Wokwi ↗**, **Copiar el
+   código**) con los tres LEDs en GPIO5, 17 y 16. Al darle ▶ en Wokwi: verde 1,5 s, amarillo 0,5 s y
+   rojo 1,5 s, tres veces, y al final las líneas de microsegundos en la consola de Wokwi (que no
+   sirven para comparar: el simulador no reproduce los tiempos del chip). A la derecha, el semáforo
+   animado con los mismos tiempos y la captura del circuito. El plegado **¿Por qué el truco del
+   "método local" sale más rápido?** lo explica.
+9. **Paso 5, Instalar MicroPython en tu ESP32.** Seis casillas para ir marcando (la app las
+   recuerda), con qué hacer si falla en los pasos delicados. Al marcar las seis aparece "Listo: tu
+   ESP32 ya corre MicroPython" con un enlace al script de la ficha técnica del tema 1. Dos plegados:
+   la instalación con `esptool` por consola y cómo subir la versión C/C++ con el Arduino IDE.
+10. **Paso 6, Si algo falla.** Los cinco problemas típicos, cada uno plegado con su solución.
+11. **Si algo falla en la app.** Si los códigos dicen "No se pudo leer el código", el lanzador se
+    cerró: volver a hacer doble clic en `ABRIR.bat`. Wokwi y las fuentes necesitan internet; sin
+    internet la app abre igual, pero Wokwi no.
 
 ## Qué es Thonny
 
@@ -285,17 +393,27 @@ resultado se divide entre 20 000 y se imprime con dos decimales. Ese tiempo incl
 el propio `for`, igual que en la versión de C/C++, así que la comparación es pareja.
 
 **4. La variante "método local".** En MicroPython, cada vez que se escribe `ROJO.value(1)` el
-intérprete tiene que buscar el nombre `ROJO` y después buscar `value` dentro de él, en cada vuelta.
-La variante guarda los métodos antes del bucle:
+intérprete tiene que buscar el nombre `ROJO` (una variable global, guardada en un diccionario) y
+después buscar `value` dentro de él, en cada vuelta. La variante guarda el mismo método en una
+variable local antes del bucle, dentro de una función:
 
 ```python
-encender = ROJO.on
-apagar = ROJO.off
+def medir_metodo_local():
+    valor = ROJO.value
+    inicio = time.ticks_us()
+    for _ in range(REPETICIONES):
+        valor(1)
+        valor(0)
+    return time.ticks_diff(time.ticks_us(), inicio)
 ```
 
-y el bucle solo llama `encender()` y `apagar()`. Si esta variante sale más rápida, la diferencia es
-tiempo que el intérprete gastaba buscando nombres, no moviendo el pin. Es un truco típico de
-MicroPython y muestra de dónde viene parte de su costo.
+El bucle va dentro de una función porque solo ahí las variables son de verdad locales (en el nivel
+del archivo todo es global y se busca por nombre), y se sigue llamando al mismo `value` con 1 y 0,
+para que lo único distinto entre las dos mediciones sea la búsqueda de nombres. Si esta variante
+sale más rápida, la diferencia es tiempo que el intérprete gastaba buscando nombres, no moviendo el
+pin. Es un truco típico de MicroPython y muestra de dónde viene parte de su costo. (Una versión
+anterior usaba `ROJO.on` y `ROJO.off` en la variante; se cambió porque esos métodos no reciben
+argumento y la comparación mezclaba dos cosas distintas.)
 
 En la versión de Arduino el orden es el mismo, con dos diferencias que vale la pena notar:
 
@@ -441,6 +559,11 @@ En resumen, la guía original resuelve un problema puntual, dejar MicroPython gr
 
 ## Cómo probarlo
 
+Con la app: [Cómo probarlo con la app, paso a paso](#cómo-probarlo-con-la-app-paso-a-paso). Sin la
+app no se pierde nada: los códigos están en esta carpeta y lo que hace la app con ellos (abrir Wokwi,
+pegar el código) se hace a mano como se explica abajo. Para abrir la app desde una consola en vez del
+`ABRIR.bat`, en la raíz del repositorio: `python _lanzador/lanzador.py --practica 2-lenguajes-thonny`.
+
 **Sin ESP32 conectado**
 
 Todo el tema se puede probar en [Wokwi](https://wokwi.com), sin instalar nada:
@@ -472,6 +595,33 @@ no reproduce los tiempos reales del chip.
 6. Para el siete segmentos, el mismo procedimiento con `siete_segmentos.py` (Thonny) o
    `siete_segmentos/siete_segmentos.ino` (Arduino IDE) y el display cableado según su tabla.
 7. Al terminar, reinstalar MicroPython (sección de instalación) para seguir con los demás temas.
+
+Lo mismo por consola, sin Thonny ni el Arduino IDE abiertos (si no, tienen el puerto tomado). `COM7`
+es el puerto que nos tocó a nosotros; el de cada placa sale en el Administrador de dispositivos.
+
+- MicroPython, con [`mpremote`](https://docs.micropython.org/en/latest/reference/mpremote.html), la
+  herramienta oficial: `run` manda el archivo a la placa y lo ejecuta sin guardarlo (igual que F5),
+  mostrando en la consola lo que imprime. `siete_segmentos.py` no termina nunca (`while True`): se
+  corta con Ctrl+C.
+
+  ```
+  python -m pip install mpremote
+  python -m mpremote connect COM7 run semaforo_velocidad.py
+  python -m mpremote connect COM7 run siete_segmentos.py
+  ```
+
+- C/C++, con [`arduino-cli`](https://arduino.github.io/arduino-cli/) (la versión de consola del
+  Arduino IDE), desde esta carpeta. La primera vez hay que instalar el soporte de placas de
+  Espressif (`arduino-cli core install esp32:esp32`, después de agregar su URL de placas como en el
+  IDE). `esp32:esp32:esp32` es la placa "ESP32 Dev Module". Grabar el sketch borra MicroPython.
+
+  ```
+  arduino-cli compile --fqbn esp32:esp32:esp32 semaforo_velocidad
+  arduino-cli upload -p COM7 --fqbn esp32:esp32:esp32 semaforo_velocidad
+  arduino-cli monitor -p COM7 -c baudrate=115200
+  ```
+
+  Con el monitor abierto, presionar EN en la placa para ver la línea `C/C++: ...`.
 
 ## Pendiente
 

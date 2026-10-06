@@ -1,5 +1,5 @@
 # Mueve el brazo de brazo.urdf para "dibujar" el digito recibido del
-# ESP32 (esp32_teclado_lcd.py) por UART, trazando su recorrido con
+# ESP32 (esp32_teclado_lcd.py) por el USB (serial), trazando su recorrido con
 # lineas de depuracion de PyBullet. Igual que en el tema 7, si no hay
 # ESP32 conectado el script sigue funcionando: 10 botones (uno por
 # digito) lo dibujan sin necesidad de hardware.

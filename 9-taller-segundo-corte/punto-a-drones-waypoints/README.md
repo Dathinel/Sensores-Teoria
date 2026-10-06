@@ -1,6 +1,6 @@
 # Punto a) Drones: mover entre 3 puntos A, B y C
 
-> **¿Quiere probarlo?** Doble clic en [`ABRIR.bat`](../ABRIR.bat) (carpeta del tema 9) → paso **a) Drones** de la app: la prueba rápida dibuja en la app la ruta A → B → C del líder a partir de lo que imprime la simulación. **¿Quiere saber cómo funciona?** Aquí está todo: [qué es un waypoint](#qué-es-un-waypoint) · [cómo vuela un cuadricóptero](#qué-es-un-cuadricóptero-y-cómo-vuela) · [control PD](#qué-es-un-control-pd) · [cascada](#qué-es-el-control-en-cascada) · [mezclador](#qué-es-el-mezclador) · [idea general](#la-idea-general) · [el código paso a paso](#la-lógica-del-código-paso-a-paso) · [lo que probamos](#lo-que-probamos-y-descartamos) · [cómo probarlo a mano](#cómo-probarlo).
+> **¿Quiere probarlo?** Doble clic en [`ABRIR.bat`](../ABRIR.bat) (carpeta del tema 9) → sección **Drones A → B → C** del menú de la app: la prueba rápida dibuja en la app la ruta A → B → C del líder a partir de lo que imprime la simulación. **Paso a paso:** [cómo se hizo](#cómo-se-hizo-paso-a-paso) · [cómo probarlo con la app](#cómo-probarlo-con-la-app-botón-por-botón) · [sin la app y con el ESP32 real](#cómo-probarlo). **¿Quiere saber cómo funciona?** Aquí está todo: [qué es un waypoint](#qué-es-un-waypoint) · [cómo vuela un cuadricóptero](#qué-es-un-cuadricóptero-y-cómo-vuela) · [control PD](#qué-es-un-control-pd) · [cascada](#qué-es-el-control-en-cascada) · [mezclador](#qué-es-el-mezclador) · [idea general](#la-idea-general) · [el código paso a paso](#la-lógica-del-código-paso-a-paso) · [lo que probamos](#lo-que-probamos-y-descartamos) · [cómo probarlo a mano](#cómo-probarlo).
 
 Basado en [gym-pybullet-drones](https://github.com/utiasDSL/gym-pybullet-drones). El enunciado pide mover los drones de un lugar A a un lugar B y a un lugar C, con el control gestionado desde el ESP32:
 
@@ -25,6 +25,33 @@ PRUEBA OK
 La inclinación máxima (32,8°) es la de los cinco drones juntos, y pasa un poco del límite que se le pide al controlador (30°) porque el cuerpo tarda un instante en frenar su giro; la prueba falla si pasa de 35°.
 
 No usamos gym-pybullet-drones completo porque trae `gymnasium` y `stable-baselines3`, que sirven para *entrenar* controladores con redes neuronales y no hacen falta acá. Sí tomamos su idea central (un cuerpo por dron, la fuerza de cada motor aplicada en la punta de su brazo en cada paso) y el esquema de su controlador PID en cascada.
+
+## Paso a paso
+
+### Cómo se hizo, paso a paso
+
+1. **Leer la base.** gym-pybullet-drones arma cada dron como un cuerpo con masa y le aplica en cada paso la fuerza de sus 4 motores. Nos quedamos con eso y con su control en cascada, sin sus dependencias de aprendizaje por refuerzo.
+2. **Primera versión, descartada.** Movía los drones fijando su posición en cada cuadro (`resetBasePositionAndOrientation`, sin gravedad). Funcionaba, pero se veía como un objeto arrastrado: no se inclinaba, no frenaba, no se pasaba.
+3. **El dron (`dron.urdf`).** Un solo link de 0,35 kg con su inercia (`ixx = iyy = 0,0045`, `izz = 0,0085`), cuatro brazos en X de 24 cm y una caja de colisión chata para apoyarse en el piso.
+4. **El control en cascada (`Dron.paso`).** Posición → aceleración pedida (PD) → inclinación y empuje → torques (otro PD, unas 8 veces más rápido) → fuerza de cada motor (mezclador). Las ganancias de actitud no salieron de probar al azar: se despejaron de un sistema de segundo orden de 20 rad/s con la inercia del dron.
+5. **Los cinco en V.** Al principio los cuatro azules perseguían la *posición* del líder y la V se deformaba cada vez que él se inclinaba; ahora persiguen su *objetivo* más su lugar en la V.
+6. **Aterrizar de verdad.** Con los motores siempre prendidos el dron flotaba a ras del piso: ahora, con el objetivo en el piso y el dron a menos de 5 cm y casi quieto, se apagan.
+7. **El teclado (`Mando`).** Cada tecla cambia el objetivo del líder; `0` carga la misión A → B → C, que pasa al siguiente punto cuando el líder está a menos de 12 cm y a menos de 0,3 m/s. El serial se lee sin bloquear (solo si hay bytes esperando), la lección que dejó el punto b).
+8. **Probarlo y mostrarlo.** `--prueba` vuela la misión sin ventana y la mide (además imprime `RUTA t x y z` cada 0,1 s, que la app dibuja); `--mision` hace lo mismo con ventana, para mostrarla. Después se manejó con el teclado real y se grabó el GIF con `../grabar_videos.py`.
+
+### Cómo probarlo con la app, botón por botón
+
+En la app (doble clic en [`../ABRIR.bat`](../ABRIR.bat)), menú de la izquierda → **Drones A → B → C**. Tiene tres bloques, cada uno con su botón **Iniciar**:
+
+1. **1 · Prueba rápida, sin ventana: la ruta dibujada.** Pulsar **Iniciar: a) Drones: prueba sin ventana**. En unos 10 s, a la derecha se dibuja la ruta del líder vista desde arriba (cuadros de 50 cm) y su altura en el tiempo; A, B y C se ponen en verde con la hora de llegada (1,2 / 2,9 / 4,9 s) y el último recuadro dice **PRUEBA OK** con la inclinación máxima (32,8°). El punto **a)** del checklist se marca solo y aparece un punto verde en el menú.
+2. **2 · Misión automática, con ventana.** **Iniciar** abre PyBullet: los drones despegan, al segundo vuelan A → B → C (esferas azul, naranja y verde) y el líder deja un trazo amarillo. `Ctrl` + arrastrar gira la cámara y la rueda acerca. Se cierra cerrando la ventana (o con **Detener** en la app).
+3. **3 · A mano, con los botones de la ventana.** **Iniciar** abre la ventana con los drones en el piso. En el panel **Params** de la derecha: **Despegar**, después **Ir a A**, **Ir a B**, **Ir a C**; el jog (**Adelante**, **Atras**, **Izquierda**, **Derecha**, **Subir**, **Bajar**) mueve el objetivo 10 cm por clic; **Detener** lo deja flotando donde está; **Aterrizar** o **Home (origen)** para terminar; **Mision A -> B -> C** hace todo de una.
+
+Si algo falla, el panel muestra un resumen y las últimas líneas del programa. Si la ventana no aparece, puede estar detrás de la app (barra de tareas). El mando de los drones, tecla por tecla, también está en la sección **El mando: cada tecla** de la app (pestaña a) Drones).
+
+### Sin la app y con el ESP32 real
+
+Con comandos y con el teclado conectado: más abajo, en [Cómo probarlo](#cómo-probarlo). El montaje y la carga del firmware, paso a paso, están en el [README del taller](../README.md#4-con-el-esp32-y-el-teclado-reales-paso-a-paso).
 
 ## Qué es un waypoint
 
@@ -224,7 +251,7 @@ Las de actitud no salieron de probar al azar: con la inercia del dron y la frecu
 
 ### 3. Lo que hace cada tecla (`Mando`)
 
-`Mando.tecla(t)` solo cambia el **objetivo** del líder: suma o resta `PASO_JOG` (10 cm) en el jog, lo reemplaza por un waypoint con `A`/`B`/`C`, por el origen con `D`, por la posición actual con `5`, o solo cambia la altura con `*` (1 m) y `#` (piso). Cualquier tecla distinta de `0` cancela la misión en curso. `0` carga la lista `["A", "B", "C"]` y pone el objetivo en A.
+`Mando.tecla(t)` solo cambia el **objetivo** del líder: suma o resta `PASO_JOG` (10 cm) en el jog, lo reemplaza por un waypoint con `A`/`B`/`C`, por el origen con `D`, por la posición actual con `5`, o solo cambia la altura con `*` (1 m) y `#` (piso). Cualquier tecla con uso distinta de `0` cancela la misión en curso (`1`, `3` y `TECLA:-` no hacen nada, así que no la cancelan). `0` carga la lista `["A", "B", "C"]` y pone el objetivo en A.
 
 `Mando.avanzar_mision(pos, vel)` se revisa en cada paso: cuando el líder está a menos de 12 cm del punto y se mueve a menos de 0,3 m/s, lo da por alcanzado, lo saca de la lista y pone el siguiente como objetivo. Exigir "casi quieto" además de "cerca" evita que cuente como llegada un paso rápido por encima del punto.
 

@@ -29,5 +29,5 @@
     {"id": "fw-tres", "nombre": "Firmware: tres peces (pez5_esp32.py)", "tipo": "info", "archivo": "pez5_esp32.py",
      "descripcion": "La versión final de la entrega: un pez base reutilizado tres veces con crear_pez(centro, escala). Mismo cableado y mismo procedimiento que pez3_esp32.py (uno u otro como main.py)."}
   ],
-  "notas": "No hay nada que instalar en el PC. Para la demo real hace falta un ESP32 clásico (los S2/S3/C3 no tienen DAC) y un osciloscopio de dos canales con modo XY. El modo Conectado del preview necesita Chrome o Edge."
+  "notas": "No hay nada que instalar en el PC. Para la demo real hace falta un ESP32 clásico (los S3/C3/C6 no tienen DAC; el S2 sí, pero en GPIO17/18) y un osciloscopio de dos canales con modo XY. El modo Conectado del preview necesita Chrome o Edge."
 }

@@ -87,10 +87,12 @@ IMG_T = [0.0]  # cuando se escribio ultimo.jpg por ultima vez (la app lo usa par
 
 
 def guardar_vista(datos, imagen=None):
-    """Escribe estado.json (y ultimo.jpg si se da la imagen) en la carpeta --vista."""
+    """Escribe estado.json (y ultimo.jpg si se da la imagen) en la carpeta --vista.
+    Devuelve False si se dio una imagen y NO se pudo escribir (para reintentarlo)."""
     if VISTA is None:
-        return
+        return True
     datos = dict(datos, t=time.time(), inicio=INICIO_PROGRAMA, pid=os.getpid())
+    imagen_ok = imagen is None
     try:
         if imagen is not None:
             # 800 px de ancho bastan para verla en la app y el archivo queda en
@@ -103,13 +105,16 @@ def guardar_vista(datos, imagen=None):
                 (VISTA / "ultimo.tmp.jpg").write_bytes(jpg.tobytes())
                 os.replace(VISTA / "ultimo.tmp.jpg", VISTA / "ultimo.jpg")
                 IMG_T[0] = time.time()
+                imagen_ok = True
         datos["img_t"] = IMG_T[0]
         (VISTA / "estado.tmp.json").write_text(json.dumps(datos, ensure_ascii=False), encoding="utf-8")
         os.replace(VISTA / "estado.tmp.json", VISTA / "estado.json")
     except OSError:
         # En Windows el reemplazo falla si justo en ese instante el servidor
-        # esta leyendo el archivo: se ignora, el siguiente cuadro lo vuelve a escribir.
+        # esta leyendo el archivo: se ignora y el siguiente cuadro lo vuelve a
+        # escribir (con fotos, el bucle reintenta la imagen gracias a imagen_ok).
         pass
+    return imagen_ok
 
 
 # Fases del arranque: se imprimen como "Arranque 1/3: ..." (la app las usa para
@@ -338,9 +343,13 @@ while not salir:
                 datos.update(foto=indice + 1, fotos=len(imagenes), nombre_foto=nombres_fotos[indice],
                              segundos_por_foto=SEGUNDOS_POR_IMAGEN)
             # La imagen solo se reescribe si cambio (con fotos quietas es la misma).
-            guardar_vista(datos, annotated_frame if (cambio_foto or not imagenes) else None)
+            escrita = guardar_vista(datos, annotated_frame if (cambio_foto or not imagenes) else None)
             ultima_vista = ahora
-            if imagenes:
+            # Si la imagen de la foto nueva no se pudo escribir (en Windows pasa si
+            # justo la estaba leyendo el servidor), foto_vista no cambia y en la
+            # siguiente vuelta se reintenta; si no, la app mostraria la foto
+            # anterior con las detecciones de la nueva durante 3 s.
+            if imagenes and escrita:
                 foto_vista = indice
 
     if args.sin_ventana:

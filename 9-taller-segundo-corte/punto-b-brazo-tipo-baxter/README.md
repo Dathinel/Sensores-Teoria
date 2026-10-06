@@ -1,6 +1,6 @@
 # Punto b) Baxter: mover los dos brazos, posicionar y coger un objeto
 
-> **¿Quiere probarlo?** Doble clic en [`ABRIR.bat`](../ABRIR.bat) (carpeta del tema 9) → paso **b) Baxter** de la app (abre la ventana con sus 13 botones, o la prueba sin ventana con la lista de OK). **¿Quiere saber cómo funciona?** Aquí está todo: [cómo se maneja](#cómo-se-maneja-comportamientos-y-modos) · [qué es Baxter](#qué-es-baxter) · [modelos 3D](#los-modelos-3d-reales) · [cinemática inversa](#qué-es-la-cinemática-inversa) · [constraint](#qué-es-un-constraint) · [idea general](#la-idea-general) · [la escena](#la-escena) · [lógica paso a paso](#lógica-paso-a-paso) · [cómo probarlo a mano](#cómo-probarlo) · [resultados](#resultados-de-la-prueba).
+> **¿Quiere probarlo?** Doble clic en [`ABRIR.bat`](../ABRIR.bat) (carpeta del tema 9) → sección **Baxter: el cubo** del menú de la app (abre la ventana con sus 13 botones, o la prueba sin ventana con su tablero de 18 comprobaciones). **Paso a paso:** [cómo se hizo](#cómo-se-hizo-paso-a-paso) · [cómo probarlo con la app](#cómo-probarlo-con-la-app-botón-por-botón) · [sin la app y con el ESP32 real](#cómo-probarlo). **¿Quiere saber cómo funciona?** Aquí está todo: [cómo se maneja](#cómo-se-maneja-comportamientos-y-modos) · [qué es Baxter](#qué-es-baxter) · [modelos 3D](#los-modelos-3d-reales) · [cinemática inversa](#qué-es-la-cinemática-inversa) · [constraint](#qué-es-un-constraint) · [idea general](#la-idea-general) · [la escena](#la-escena) · [lógica paso a paso](#lógica-paso-a-paso) · [cómo probarlo a mano](#cómo-probarlo) · [resultados](#resultados-de-la-prueba).
 
 Basado en [baxter_ik_demo.py](https://github.com/erwincoumans/pybullet_robots/blob/master/baxter_ik_demo.py), del repositorio [pybullet_robots](https://github.com/erwincoumans/pybullet_robots) que compartió el profesor. De ese script tomamos el robot (el mismo `toms_baxter.urdf`, con la base fija) y la técnica: mover la pinza con `p.calculateInverseKinematics` y repartir la respuesta entre las articulaciones según su `qIndex`.
 
@@ -15,6 +15,35 @@ Una consola de mandos con el ESP32 para mover a Baxter con fluidez, con movilida
 - **Coger y mover un objeto**: `C` cierra la pinza y agarra el cubo si está entre los dedos, `A` la abre y lo suelta, y `D` hace todo sola: va al cubo, lo agarra, lo levanta, lo lleva al destino y lo deja.
 
 Quedó funcionando en el montaje real: el teclado conectado al ESP32 maneja los dos brazos de Baxter en la simulación, tecla por tecla. (Al principio, como Baxter no viene con PyBullet, este punto usaba otro brazo de reemplazo; ahora es el modelo real de Baxter.)
+
+## Paso a paso
+
+### Cómo se hizo, paso a paso
+
+1. **Partir del demo del profesor.** De `baxter_ik_demo.py` se tomó cómo cargar `toms_baxter.urdf` con la base fija y cómo repartir la respuesta de `calculateInverseKinematics` según el `qIndex` de cada articulación.
+2. **Conseguir el robot real.** Baxter no viene en `pybullet_data`; la primera versión usó otro brazo de reemplazo y, a pedido, se pasó al Baxter real: [`../descargar_modelos.py`](../descargar_modelos.py) lee el URDF y baja solo las mallas que pide. Para que PyBullet las encontrara, la ruta de búsqueda (que es una sola) quedó en `modelos/baxter_common/` y el piso y el cubo se cargan con ruta completa.
+3. **Armar la escena.** Mesa delante del pedestal, cuadro azul de origen y verde de destino a los dos lados, en una zona que alcanzan los dos brazos (se eligió probando la IK en una grilla de puntos). El cubo de 5 cm casi no entraba en la pinza abierta (5,6 cm entre las puntas): se cargó a escala 0,7.
+4. **Hacer que la IK acierte.** Con los límites de −2 a 2 del demo y una sola llamada, la pinza quedaba a varios cm y fallaba hasta por 22 cm al cruzar al lado del otro brazo. Se arregló con los límites reales del URDF, hasta 10 iteraciones sin teletransportar el robot, el hombro apuntando al objetivo (`s0_hacia`) y la pinza "hacia abajo" girada 180° (la muñeca dejó de quedar en su tope).
+5. **Moverse con física y en línea recta.** Los motores (`POSITION_CONTROL` con fuerza y velocidad máximas) llevan el brazo; al principio la pinza hacía una curva y, al subir después de soltar, golpeaba el cubo y lo giraba 57°. `mover_a` parte cada tramo en pedacitos de 1 cm.
+6. **Agarrar sin que se resbale.** Los dedos se cierran de verdad, y además un constraint "suelda" el cubo a la pinza; al soltar, primero se abren los dedos y después se borra el constraint (al revés, el cubo caía 2,7 cm corrido).
+7. **El teclado.** Jog de 1,5 cm recortado a la caja de trabajo de cada brazo (así `7` sostenida baja hasta la altura de agarre y no atraviesa la mesa), `*` para cambiar de brazo, y dos fallos con el ESP32 real: un `readline()` a secas trababa toda la simulación a unos 20 cuadros por segundo (ahora se lee solo si hay bytes, `in_waiting`) y un toque de `D` corría la demo cuatro veces (ahora las acciones de un golpe van por flanco).
+8. **Medirlo.** [`probar_baxter.py`](probar_baxter.py) corre todo sin ventana y comprueba con números (ver [Resultados de la prueba](#resultados-de-la-prueba)); `../capturar_modelos.py` y `../grabar_videos.py` hicieron las imágenes y el GIF. Por último se manejó con el teclado real.
+
+### Cómo probarlo con la app, botón por botón
+
+En la app (doble clic en [`../ABRIR.bat`](../ABRIR.bat)), menú de la izquierda → **Baxter: el cubo**. Si el chip de arriba dice "Modelos: faltan (37 MB)", no hace falta hacer nada: se bajan solos al primer **Iniciar** (o antes, en **Antes de probar**).
+
+1. **1 · Baxter con ventana.** **Iniciar: b) Baxter: dos brazos, coger y mover el cubo** abre PyBullet (tarda unos segundos en cargar las mallas). En el panel de la derecha:
+   - **Demo: coger y mover [D]**: el brazo activo (el izquierdo) baja, cierra la pinza, levanta el cubo y lo deja en el cuadro verde (unos 9 s).
+   - **Reponer cubo [0]** y **Cambiar de brazo [*]**: repetir la demo con el brazo derecho (arriba de la ventana cambia `Brazo activo: DERECHO`).
+   - A mano: el jog (**Adelante (Y+) [8]**, **Atras (Y-) [2]**, **Izquierda (X-) [4]**, **Derecha (X+) [6]**, **Subir (Z+) [9]**, **Bajar (Z-) [7]**, 1,5 cm por clic) hasta encima del cubo, **Bajar** hasta que no baje más, **Cerrar pinza [C]**, subir, ir al destino, bajar y **Abrir pinza [A]**. **Home [5]** devuelve el brazo activo a su pose inicial y **Demo: recorrer los 3 ejes [B]** muestra todo su rango.
+2. **2 · Prueba sin ventana: medido contra el límite.** **Iniciar: b) Baxter: prueba sin ventana**. El tablero de la derecha se llena con las 18 comprobaciones a medida que se miden: los errores de la pinza con cada brazo (unos 0,1 cm contra un límite de 2 cm), la demo con cada brazo (cubo a 0,19 y 0,57 cm del destino), los choques y la regla de flancos. Termina con **Todas las pruebas pasaron (18 de 18)** en entre 40 s y 1 min y medio, y se marca el punto **b)** del checklist.
+
+El mando de Baxter, tecla por tecla, está también en la sección **El mando: cada tecla** (pestaña b) Baxter), y el preview 2D en **Preview sin Python**.
+
+### Sin la app y con el ESP32 real
+
+Con comandos y con el teclado conectado: más abajo, en [Cómo probarlo](#cómo-probarlo). El montaje y la carga del firmware, paso a paso, están en el [README del taller](../README.md#4-con-el-esp32-y-el-teclado-reales-paso-a-paso).
 
 ## Así se ve
 
@@ -273,7 +302,7 @@ Los comandos van desde la carpeta del taller (`9-taller-segundo-corte\`), usando
 2. Cambiar `PUERTO_SERIAL = "COM7"` al principio de `brazo_pybullet.py` por el COM que muestre el Administrador de dispositivos.
 3. `entorno\Scripts\python punto-b-brazo-tipo-baxter\brazo_pybullet.py`. En consola sale `ESP32 conectado en COM7: el teclado mueve a Baxter.`; sosteniendo `8 2 4 6 9 7` la pinza se mueve de corrido, y los botones siguen funcionando a la par.
 
-**Prueba automática** (sin ventana, unos 10 s): `entorno\Scripts\python punto-b-brazo-tipo-baxter\probar_baxter.py`. Imprime cada cifra y termina con `Todas las pruebas pasaron.` (o con código 1 si algo falla).
+**Prueba automática** (sin ventana, entre 40 s y 1 min y medio según el PC): `entorno\Scripts\python punto-b-brazo-tipo-baxter\probar_baxter.py`. Imprime cada cifra y termina con `Todas las pruebas pasaron.` (o con código 1 si algo falla).
 
 | Tecla | Efecto | Tipo |
 |---|---|---|

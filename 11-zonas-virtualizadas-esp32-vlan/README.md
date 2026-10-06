@@ -4,13 +4,16 @@ Actividad del segundo corte (en el aula virtual aparece como "Actividad 8"; en e
 
 ## ¿Quiere probarlo? → aquí está
 
-**Doble clic en [`ABRIR.bat`](ABRIR.bat)** (en Linux o Mac, `abrir.sh`). Se abre la app de este tema, el "centro de control del laboratorio", en una ventana propia, con un índice a la izquierda (como Docker Desktop) y todo explicado paso a paso:
+**Doble clic en [`ABRIR.bat`](ABRIR.bat)** (en Linux o Mac, `abrir.sh`). Se abre la app de este tema, el "centro de control del laboratorio", en una ventana propia, con un índice de nueve secciones a la izquierda (como Docker Desktop):
 
-1. **Docker paso a paso**: una animación en seis escenas de qué es una imagen, un contenedor, una red (VLAN), cómo viaja un paquete por el router y cómo el `DROP` del cortafuegos lo bloquea, cada escena con su prueba al lado (lo mismo leído del Docker del PC o de los resultados de la entrega).
-2. **Levantar el laboratorio**: un botón levanta los 16 contenedores con **progreso real**, leído de lo que va diciendo `docker compose`: qué imagen se baja o se construye, qué red se crea y qué contenedor arranca, con el tiempo que lleva y el típico (~30 s si las imágenes ya están; la primera vez baja ~415 MB de Docker Hub, que ocupan ~2,4 GB).
-3. **El laboratorio en vivo**: el mapa de las tres VLAN con la luz de cada contenedor, los 6 LED de la ESP32 esclava, la lista de contenedores como en Docker Desktop (con sus puertos) y lo que mide la sala de control.
-4. **Las pruebas**: la de aislamiento dibuja cada uno de sus 45 casos como un paquete que llega o se bloquea; la de disponibilidad apaga contenedores y se ven los LED apagarse y volver.
-5. **Sin Docker**, el **montaje 3D**, los **resultados** y **detener** el laboratorio.
+1. **Inicio**: qué es el laboratorio, la demo grabada y la lista de lo que pide la actividad, que se marca sola al probar cada cosa.
+2. **Docker paso a paso**: una animación en seis escenas de qué es una imagen, un contenedor, una red (VLAN), cómo viaja un paquete por el router y cómo el `DROP` del cortafuegos lo bloquea, cada escena con su prueba al lado (lo mismo leído del Docker del PC o de los resultados de la entrega).
+3. **Levantar el laboratorio**: un botón levanta los 16 contenedores con **progreso real**, leído de lo que va diciendo `docker compose`: qué imagen se baja o se construye, qué red se crea y qué contenedor arranca, con el tiempo que lleva y el típico (~30-40 s si las imágenes ya están; la primera vez baja ~415 MB de Docker Hub, que ocupan ~2,4 GB).
+4. **El laboratorio en vivo**: el mapa de las tres VLAN con la luz de cada contenedor, los 6 LED de la ESP32 esclava, la lista de contenedores como en Docker Desktop (con sus puertos) y lo que mide la sala de control.
+5. **Las pruebas**: la de aislamiento dibuja cada uno de sus 45 casos como un paquete que llega o se bloquea; la de disponibilidad apaga contenedores y se ven los LED apagarse y volver; la de latencia y jitter, y la del protocolo.
+6. **Sin Docker**, 7. el **montaje 3D**, 8. los **resultados** y 9. **detener** el laboratorio.
+
+Qué pulsar en cada sección, qué debería verse y qué hacer si algo falla está en [Cómo probarlo con la app, paso a paso](#sin-esp32-conectado-con-la-app-paso-a-paso).
 
 Solo hace falta Python 3.9 o más nuevo; para el laboratorio de verdad, además, **Docker Desktop abierto**. Sin Docker, el paso "Sin Docker" (o `preview.html` con doble clic) simula todo en el navegador. El dashboard del admin queda en `http://127.0.0.1:8180` (en el PC se publica en el **8180** y no en el 8080, que suele estar ocupado por otro programa).
 
@@ -25,6 +28,8 @@ docker compose --profile emulado up -d      # levanta los 16 contenedores (baja 
 docker compose --profile emulado stop       # los detiene sin borrar nada
 ```
 
+El paso a paso completo de los tres caminos (con la app, sin la app con `docker compose`, y con las placas reales) está en [Cómo probarlo](#cómo-probarlo).
+
 ## ¿Quiere saber cómo funciona? → aquí está todo
 
 El tema se entrega **completo en simulación**: los siete ESP32 están emulados (mandan exactamente los mismos mensajes que el firmware) y el montaje de las placas está dibujado en 3D con los pines del firmware. Conviene leer primero [La idea general](#la-idea-general) y, si los conceptos son nuevos, las secciones "Qué es...". Todo lo técnico, en orden:
@@ -34,7 +39,7 @@ El tema se entrega **completo en simulación**: los siete ESP32 están emulados 
 - **La arquitectura**: [La idea general](#la-idea-general) · [Las tres redes y el router](#las-tres-redes-y-el-router)
 - **Cada zona**: [Zona Gamer (VLAN 1)](#la-zona-gamer-vlan-1) ([servidor de pista](#el-servidor-de-pista-zona-gamerservidor-pista), [protocolo WebSocket](#el-protocolo-websocket-ws19216810108765), [jugador](#el-contenedor-jugador-zona-gamerjugador)) · [Zona Robótica (VLAN 2)](#la-zona-robótica-vlan-2) ([modelos y licencias](#los-modelos-y-sus-licencias), [qué mueve cada ángulo](#qué-mueve-cada-ángulo), [error real-to-sim](#cómo-se-mide-el-error-real-to-sim)) · [Plano de administración (VLAN 3)](#el-plano-de-administración-vlan-3) ([OK, LENTO o CAIDO](#cómo-decide-ok-lento-o-caido), [el dashboard](#el-dashboard))
 - **Los mensajes y las placas**: [El protocolo](#el-protocolo) · [El firmware](#el-firmware) ([conexiones](#conexiones), [materiales](#materiales), [pines de una maestra](#pines-de-una-maestra), [pines de la esclava](#pines-de-la-esclava), [compilar y subir](#compilar-y-subir)) · [El emulador de ESP32](#el-emulador-de-esp32-emuladoremulador_esp32py)
-- **Archivos, instalación y Docker**: [Qué hace cada archivo](#qué-hace-cada-archivo) · [Cómo instalar lo necesario](#cómo-instalar-lo-necesario) · [Cómo probarlo](#cómo-probarlo) (sin ESP32 y con ESP32) · [Docker paso a paso](#docker-paso-a-paso) ([construir y levantar](#construir-y-levantar), [las imágenes](#las-imágenes), [Docker Hub](#docker-hub), [licencia de SoftBank](#la-licencia-de-softbank-al-construir), [problemas típicos](#problemas-típicos))
+- **Archivos, instalación y Docker**: [Qué hace cada archivo](#qué-hace-cada-archivo) · [Cómo instalar lo necesario](#cómo-instalar-lo-necesario) · [Cómo probarlo](#cómo-probarlo) ([con la app, paso a paso](#sin-esp32-conectado-con-la-app-paso-a-paso), [sin la app, con docker compose](#sin-esp32-conectado-sin-la-app-con-docker-compose), [sin Docker, en el navegador](#sin-esp32-conectado-sin-docker-en-el-navegador), [con las placas reales](#con-esp32-conectado-placas-reales)) · [Docker paso a paso](#docker-paso-a-paso) ([construir y levantar](#construir-y-levantar), [las imágenes](#las-imágenes), [Docker Hub](#docker-hub), [licencia de SoftBank](#la-licencia-de-softbank-al-construir), [problemas típicos](#problemas-típicos))
 - **La demo y las pruebas**: [El montaje y la demo](#el-montaje-y-la-demo) (montaje 3D, video) · [Pruebas](#pruebas) ([protocolo](#protocolo), [objetivo 1](#objetivo-1-zona-gamer-vlan-1), [2](#objetivo-2-zona-robótica-vlan-2), [3](#objetivo-3-plano-de-administración-vlan-3), [4: aislamiento](#objetivo-4-router-inter-vlan-y-aislamiento), [5: latencia, jitter y disponibilidad](#objetivo-5-validación-experimental-latencia-jitter-disponibilidad), [entregables](#entregables)) · [Pendiente](#pendiente)
 
 Los tres caminos para probarlo, de menos a más: **sin instalar nada**, `preview.html` con doble clic (Chrome o Edge) es todo el laboratorio simulado en el navegador (las tres VLAN con el router, la pista con un joystick virtual, los robots con deslizadores, las fallas y los LED de la esclava); **el laboratorio de verdad, en Docker**, con la app (`ABRIR.bat`) o con `docker compose --profile emulado up -d` desde esta carpeta, y el dashboard del admin en `http://127.0.0.1:8180`, con enlaces a los cuatro visores (la pista en `8010` y el Spot, el Pepper y el NAO en `8011`, `8012` y `8013`); y **las pruebas** de aislamiento, disponibilidad y latencia, desde la app o con los scripts de `pruebas/` (lo que lanza cada botón está en `probar.json`). El video de la demo y el montaje en 3D están en [El montaje y la demo](#el-montaje-y-la-demo).
@@ -83,16 +88,20 @@ Dónde está cada cosa que pide el enunciado:
 
 ## Cómo lo hicimos, paso a paso
 
+En orden, con lo que falló en cada paso y cómo lo arreglamos (el detalle de cada cosa está en su sección):
+
 1. **Leímos el enunciado y fijamos un contrato común.** Antes de escribir código dejamos por escrito las IP de cada contenedor, los puertos que se publican en el PC para los ESP32 físicos, el formato exacto de cada mensaje (`CTRL`, `JOINTS`, `HB`, `PING`/`PONG`), los tópicos MQTT y los nombres de las imágenes. Con eso, cada parte se pudo hacer por separado sin que después no encajaran. Lo común quedó en `comun/protocolo.py` (armar y leer los mensajes, contar pérdidas por número de secuencia, jitter) y `comun/lab.py` (ruta al router, latido y MQTT).
-2. **Armamos la red y el router.** Tres redes bridge con IP fijas y un contenedor Alpine en las tres. El router identifica cada interfaz por su subred y no por su nombre, porque en las pruebas el orden de `eth0`, `eth1` y `eth2` cambió entre corridas. Lo probamos con contenedores de relleno antes de tener las zonas.
-3. **Hicimos el servidor de pista.** La pista, el control del racecar, los autónomos con *pure pursuit*, el protocolo WebSocket y un proceso aparte que dibuja, para que el render no frene la física.
-4. **Hicimos el jugador y el emulador.** El jugador traduce UDP a WebSocket y mide la red del ESP32. El emulador manda los mismos mensajes que el firmware; contra un servidor falso comprobamos que el jugador contaba exactamente los paquetes que el emulador no mandaba.
-5. **Hicimos los robots.** Buscamos los modelos reales de los repositorios del enunciado, resolvimos la instalación de las mallas de SoftBank (más abajo, en "Las licencias") y escribimos el mapeo de cada ángulo, la cinemática inversa del Spot y su trote.
-6. **Hicimos el plano de administración.** Mosquitto, el monitor, las reglas OK/LENTO/CAIDO y el dashboard, probados primero solos, con un script que hacía de todos los demás.
-7. **Escribimos el firmware**, compilamos los seis roles y la esclava, y comprobamos en el PC que las líneas que arma el ESP32 son idénticas, carácter por carácter, a las de `comun/protocolo.py`.
+2. **Armamos la red y el router.** Tres redes bridge con IP fijas y un contenedor Alpine en las tres. Lo probamos con contenedores de relleno antes de tener las zonas (`pruebas/red/`). *Lo que falló:* el orden de `eth0`, `eth1` y `eth2` cambió entre corridas (y después de un `docker restart`), así que unas reglas escritas "a ciegas" por nombre de interfaz habrían aislado la red equivocada. *Arreglo:* el router identifica cada interfaz por su subred ([Las tres redes y el router](#las-tres-redes-y-el-router)). FRR 9 tampoco arrancaba sin la capacidad `SYS_ADMIN`: se la dimos sola, en vez de `privileged: true`.
+3. **Hicimos el servidor de pista.** La pista, el control del racecar, los autónomos con *pure pursuit*, el protocolo WebSocket y un proceso aparte que dibuja. *Lo que falló:* el render por software tardaba unos 250 ms por cuadro y frenaba la física. *Arreglo:* el dibujo pasó a otro proceso y se renderiza el fondo una sola vez y solo un recorte alrededor de cada carro (de 250 a 11 ms, con la imagen idéntica). Al URDF del racecar le agregamos una caja de colisión en el chasis, porque dos carros podían quedar uno dentro del otro ([El servidor de pista](#el-servidor-de-pista-zona-gamerservidor-pista)).
+4. **Hicimos el jugador y el emulador.** El jugador traduce UDP a WebSocket y mide la red del ESP32. El emulador manda los mismos mensajes que el firmware; contra un servidor falso comprobamos que el jugador contaba exactamente los paquetes que el emulador no mandaba (102 de 1202).
+5. **Hicimos los robots.** Buscamos los modelos reales de los repositorios del enunciado y escribimos el mapeo de cada ángulo, la cinemática inversa del Spot y su trote. *Lo que falló:* el instalador de las mallas de qiBullet solo existe hasta Python 3.9 (se resolvió con una construcción en dos etapas, y la licencia de SoftBank queda en `no` por defecto: [Los modelos y sus licencias](#los-modelos-y-sus-licencias)); la cinemática inversa de rex-gym usa medidas distintas a las de su URDF (la rehicimos); el trote de 2 Hz volcaba al Spot (un barrido de 64 combinaciones dio 3 Hz); y el render en el mismo bucle bajaba la física y metía un jitter falso de 77 ms (pasó a otro proceso: [Qué mueve cada ángulo](#qué-mueve-cada-ángulo)).
+6. **Hicimos el plano de administración.** Mosquitto, el monitor, las reglas OK/LENTO/CAIDO y el dashboard, probados primero solos, con un script que hacía de todos los demás (`plano-admin/admin/probar_admin.py`). El dashboard se publica en el 8180 del PC y no en el 8080, que en este PC ya estaba ocupado por otro programa.
+7. **Escribimos el firmware**, compilamos los seis roles y la esclava, y comprobamos en el PC que las líneas que arma el ESP32 son idénticas, carácter por carácter, a las de `comun/protocolo.py` ([Compilar y subir](#compilar-y-subir)).
 8. **Hicimos `preview.html`** y las pruebas (`pruebas/`).
-9. **Integramos.** Levantamos los 16 contenedores, corregimos lo que no encajaba (los rangos de grados de cada robot, que el emulador entendiera la línea central que manda el servidor, la licencia de SoftBank por defecto en `no`) y corrimos las pruebas de aislamiento y disponibilidad con el stack real. La de disponibilidad encontró un error del monitor, que corregimos (lo contamos en "Plano de administración").
-10. **Medimos latencia, jitter y disponibilidad** en tres escenarios (base, retardo artificial y carga), grabamos el video de la demo y publicamos las imágenes.
+9. **Integramos.** Levantamos los 16 contenedores y corregimos lo que no encajaba: los rangos de grados de cada robot, que el emulador entendiera la línea central que manda el servidor y la licencia de SoftBank por defecto en `no`. Corrimos las pruebas de aislamiento y disponibilidad con el stack real. *Lo que falló:* la de disponibilidad encontró un error del monitor (tardaba 57 s en volver a OK después de una caída) que corregimos; lo contamos en [El plano de administración](#el-plano-de-administración-vlan-3).
+10. **Medimos latencia, jitter y disponibilidad** en tres escenarios (base, retardo artificial y carga), grabamos el video de la demo y publicamos las imágenes en Docker Hub. *Lo que falló:* una corrida de carga salió mal porque arrastraba en la ventana del admin los RTT del escenario anterior, y otra porque un contenedor de prueba suelto se conectó al broker con el mismo nombre que `sim-pepper` y desconectó al real (ver [Objetivo 5](#objetivo-5-validación-experimental-latencia-jitter-disponibilidad)).
+11. **Hicimos la app** (`app/`, se abre con `ABRIR.bat`): la animación de Docker, el progreso real al levantar (leyendo línea a línea lo que imprime `docker compose`), el estado en vivo, las pruebas dibujadas y los resultados. *Lo que falló:* la página no puede leer el dashboard del admin directamente (otro puerto, sin CORS), así que `app/estado_vivo.py` lo lee y se lo pasa a la app por la salida del lanzador.
+12. **Revisamos todo de nuevo (2026-10-06)** levantando el laboratorio desde la app y corriendo las pruebas desde sus botones. Encontramos y arreglamos: el estado en vivo tardaba en aparecer porque cada `docker ps` (2-3 s en Docker Desktop) atrasaba la lectura del admin (ahora Docker se lee en un hilo aparte); la lista de contenedores mostraba a veces un código (`5cae2d3501e3`) en vez del nombre de la imagen (ahora se pide el nombre a Docker); y los tiempos que mostraba la app para dos pruebas eran otros que los medidos (la de aislamiento tarda unos 2 min y medio; la de disponibilidad, 1 a 2 min).
 
 ## Qué es una VLAN
 
@@ -949,16 +958,52 @@ No hace falta PyBullet en Windows: solo corre dentro de las imágenes, con Pytho
 
 ## Cómo probarlo
 
-**Sin ESP32 conectado**
+El tema se entrega **en simulación**: los siete ESP32 van emulados dentro del laboratorio, así que todo se prueba sin placas. Hay tres caminos sin ESP32 (con la app, con `docker compose` por consola, o sin Docker en el navegador) y, al final, cómo sería con las placas reales.
 
-*Todo el laboratorio en Docker, con los siete ESP32 emulados.* Desde la carpeta del tema:
+### Sin ESP32 conectado: con la app, paso a paso
+
+**Antes de empezar:** Python 3.9 o más nuevo (para abrir la app) y, para el laboratorio de verdad, **Docker Desktop abierto** y diciendo "Engine running". La primera vez que se pulsa un botón de Python, la app crea sola el entorno `entorno/` de esta carpeta (unos segundos; PyBullet no hace falta en Windows: corre dentro de las imágenes).
+
+**Abrir:** doble clic en [`ABRIR.bat`](ABRIR.bat). Se abre la ventana del "centro de control" con las nueve secciones a la izquierda; la consola del `ABRIR.bat` queda minimizada (es la que mantiene la app funcionando: no cerrarla). Arriba a la derecha, el chip "Laboratorio: ..." dice en todo momento cuántos servicios ve en OK; al pulsarlo lleva a "El laboratorio en vivo".
+
+1. **Inicio.** Arriba, qué es el laboratorio y la demo grabada (GIF). Los cuatro botones de "Elige por dónde empezar" llevan a "Docker paso a paso", "Levantar el laboratorio", "Sin Docker" y "Resultados". Abajo, la lista "Qué pide la actividad": cada punto se marca solo cuando termina bien una acción que lo prueba (o se marca a mano).
+2. **Docker paso a paso.** La animación arranca sola, en seis escenas: la imagen (un Dockerfile convertido en capas), el contenedor, la red (tres switches virtuales como tres VLAN), el router, el `DROP` (un paquete de la zona gamer a la robótica muere en el router) y `docker compose up` (todo, en orden). Botones: **◀ Anterior**, **❚❚ Pausa** / **▶**, **Siguiente ▶** y los puntos 1 a 6 para saltar a una escena. Al lado de cada escena, "La prueba, en tu laboratorio": con el laboratorio levantado muestra lo real de tu Docker (imágenes, contenedores, redes, contadores del router); sin él, los resultados de la entrega. Debajo, seis tarjetas con las ideas en simple y, plegada, la explicación completa de este README.
+3. **Levantar el laboratorio.** Pulsar **Levantar el laboratorio**. Arriba se ve el **progreso real** en cuatro fases, cada una con su barra: *Imágenes (6)* (cuáles se bajan de Docker Hub, con los MB bajados de ~415, o "ya estaba"), *Redes (3)*, *Contenedores (16)* (cada uno pasa de "creando" a "arriba"; el router arranca primero) y *La sala de control ve a todos* (cuántos servicios ve el admin en OK). Con las imágenes ya en el PC tarda unos 30-40 s (medido en esta revisión: 38 s); la primera vez, 2 a 6 min según la conexión. Al terminar, la app pasa sola a "El laboratorio en vivo". Debajo, "Lo que dice el programa" muestra la salida cruda de `docker compose`. Plegado, **Construir las imágenes y levantar** hace lo mismo construyendo desde los Dockerfile (10 a 20 min; el progreso muestra el paso "k de n" de cada uno).
+4. **El laboratorio en vivo.** Se conecta solo al entrar (o con **Mirar en vivo**; **Dejar de mirar** lo para y **Volver a mirar** lo retoma). En unos segundos debería verse "En vivo · actualizado ..." con la hora, el mapa de las tres VLAN con una luz por contenedor (verde OK, amarillo LENTO, rojo CAIDO, gris sin dato), los 6 LED de la esclava encendidos, la lista de los 16 contenedores "en marcha" (con los filtros **Todos**, **VLAN 1**, **VLAN 2**, **VLAN 3** y **router**; los puertos 8180 y 8010-8013 se abren con un clic), la tabla de lo que mide la sala de control (RTT, p95, jitter y disponibilidad de cada servicio, cruzando el router: décimas de milisegundo) y los latidos de los 7 ESP32. Al tocar una caja del mapa sale su ficha (IP, imagen, qué ESP32 la maneja, su LED) y, si tiene visor, **Abrir su visor**. Los cinco botones de "Los visores" abren el dashboard (8180), la pista (8010) y los robots (8011-8013) en otra pestaña; plegado, el dashboard original dentro de la app. Un LENTO suelto unos segundos (por ejemplo, el router con "jitter HB > 10 ms") es normal si el PC está ocupado con otras cosas.
+5. **Las pruebas.** Cada una tiene su botón, su salida en vivo, **Detener** mientras corre y, debajo, el último resultado guardado, dibujado:
+   - **Correr la prueba de aislamiento** (con el laboratorio arriba, unos 2 min y medio): cada caso se dibuja en el mapa como un paquete que llega (verde) o se bloquea (rojo, en la "puerta .1" de Docker o en el router), con los contadores *bloqueados*, *llegaron* y *DROP en el router*. Debe terminar en 45 de 45; el resultado muestra la matriz "quién llega a quién", los contadores `AISLAR_V1_V2` del router (de 0 a 12) y las 13 respuestas con `ttl=63`. **Repetir los 45 casos guardados en el mapa** vuelve a dibujar el último resultado sin correr nada.
+   - **Correr la prueba de disponibilidad** (1 a 2 min): detiene y vuelve a arrancar `sim-pepper`, `player-2` y el admin. Los LED de la tarjeta se apagan y vuelven; el resultado dibuja, por cada caída, cuánto tardó el admin en marcarla CAIDO y en volver a OK (en esta revisión, `sim-pepper`: CAIDO a los 0,43 s y OK 1,49 s después de arrancarlo).
+   - **Medir 5 minutos** (latencia y jitter, escenario base): al final, la tabla por servicio y las dos gráficas. Las pestañas **Base (5 min)**, **Con retardo en la VLAN 2** y **Con carga (100 Hz)** muestran los tres escenarios de la entrega.
+   - **Correr las pruebas del protocolo** (no necesita Docker, ~2 s): "Ran 40 tests" y "OK"; el resultado agrupa los 40 casos por tipo de mensaje.
+
+   Las de aislamiento, disponibilidad y red reescriben sus archivos de `pruebas/resultados/`.
+6. **Sin Docker.** La simulación `preview.html` dentro de la app (o en pantalla completa con **Abrir en una pestaña aparte**). Las cuatro tarjetas de arriba dicen qué probar: el joystick virtual, los robots con sus deslizadores, "Meter fallas" y el ping prohibido (el detalle está en [Sin Docker, en el navegador](#sin-esp32-conectado-sin-docker-en-el-navegador)).
+7. **Montaje 3D.** Las tres placas dibujadas con los pines del firmware (un clic amplía la imagen) y, plegado, el paso a paso con placas reales.
+8. **Resultados.** El video de la demo (60 s), el resumen de las 27 pruebas (22 aprobadas, 1 cubierta en el código, 4 que solo existen con placas físicas y 0 falladas), **Abrir el README del tema**, las capturas y, plegados, los comandos equivalentes por consola.
+9. **Detener el laboratorio.** **Detener el laboratorio** para los 16 contenedores en unos 15 s, sin borrar nada (siguen corriendo aunque se cierre la ventana de la app, y gastan CPU). Plegado, cómo liberar los ~2,4 GB de las imágenes.
+
+**Si algo falla:**
+
+| Lo que se ve | Qué hacer |
+|---|---|
+| "Docker no responde" o un error de `dockerDesktopLinuxEngine` al levantar | Abrir Docker Desktop, esperar a que diga "Engine running" y volver a pulsar |
+| "port is already allocated" | Otro programa usa el 8180, el 1883, el 8765 o el 8010-8013 (por ejemplo, un Mosquitto instalado en Windows): cerrarlo y volver a pulsar |
+| "Pool overlaps with other one on this address space" | Otro proyecto de Docker usa las redes 192.168.10/20/30.0/24: detenerlo primero |
+| "La sala de control no responde en 127.0.0.1:8180" en "El laboratorio en vivo" | El laboratorio no está levantado (o todavía se está levantando): ir a "Levantar el laboratorio" |
+| Los robots salen en CAIDO o LENTO al principio | Tardan unos segundos en cargar sus modelos: esperar |
+| Una prueba de red falla porque no encuentra los contenedores | Levantar el laboratorio primero (todas menos la del protocolo lo necesitan) |
+| La app no lanza nada | Se cerró la consola del `ABRIR.bat`: volver a abrir la app con doble clic |
+
+### Sin ESP32 conectado: sin la app, con docker compose
+
+Todo el laboratorio en Docker, con los siete ESP32 emulados. Desde la carpeta del tema:
 
 ```powershell
 docker compose --profile emulado up -d --build
 docker compose ps
 ```
 
-La primera construcción tarda varios minutos (baja PyBullet y los modelos de los robots). Después se levantan los 16 contenedores. Los robots tardan unos segundos en cargar; luego:
+La primera construcción tarda varios minutos (baja PyBullet y los modelos de los robots); sin `--build`, Docker baja las imágenes ya publicadas en Docker Hub, que es más rápido. Después se levantan los 16 contenedores. Los robots tardan unos segundos en cargar; luego:
 
 - `http://127.0.0.1:8180`: el dashboard del admin, con los seis servicios en OK y los enlaces a los visores.
 - `http://127.0.0.1:8010`: la pista, con los tres jugadores manejados por el piloto de sus emuladores y los tres autónomos.
@@ -967,7 +1012,19 @@ La primera construcción tarda varios minutos (baja PyBullet y los modelos de lo
 
 Para ver una caída: `docker compose stop sim-pepper`. En menos de un segundo el admin lo marca CAIDO y el LED de sim-pepper se apaga, mientras todo lo demás sigue igual. Con `docker compose start sim-pepper` vuelve a OK en un segundo.
 
-*Sin Docker, en el navegador.* `preview.html` se abre con doble clic (Chrome o Edge) y simula todo el laboratorio: las tres VLAN con el router y sus contadores, la pista con un joystick virtual, los tres robots con sus deslizadores, el admin con las reglas OK/LENTO/CAIDO y los seis LED de la esclava. Para probar:
+Las pruebas, con el entorno del tema (ver [Cómo instalar lo necesario](#cómo-instalar-lo-necesario)):
+
+```powershell
+entorno\Scripts\python -m unittest pruebas.test_protocolo -v                  # 40 pruebas, sin Docker
+entorno\Scripts\python pruebas\prueba_aislamiento.py                          # ~2 min y medio, 45 casos
+entorno\Scripts\python pruebas\prueba_disponibilidad.py                       # 1 a 2 min
+entorno\Scripts\python pruebas\medir_red.py --escenario base --minutos 5      # 5 min
+docker compose --profile emulado stop                                         # al terminar: detener sin borrar
+```
+
+### Sin ESP32 conectado: sin Docker, en el navegador
+
+`preview.html` se abre con doble clic (Chrome o Edge) y simula todo el laboratorio: las tres VLAN con el router y sus contadores, la pista con un joystick virtual, los tres robots con sus deslizadores, el admin con las reglas OK/LENTO/CAIDO y los seis LED de la esclava. Para probar:
 
 1. Mover el joystick virtual (o flechas/WASD y espacio) y ver cómo responde el carro elegido; los `CTRL` aparecen en el monitor de mensajes.
 2. En la zona robótica, elegir un robot, mover j1 a j3 y apretar el botón (trotar o saludar). Si un deslizador pasa el rango del robot, el número se pone amarillo y el medido se queda en el límite.
@@ -977,7 +1034,9 @@ Para ver una caída: `docker compose stop sim-pepper`. En menos de un segundo el
 
 Los números de latencia de `preview.html` son de un modelo (la latencia de un bridge de Docker más ruido y lo que se meta con los deslizadores), no medidos: los medidos están en "Pruebas".
 
-**Con ESP32 conectado** (opcional: el tema se entrega en simulación; esto es para quien quiera armar las placas de "El montaje y la demo")
+### Con ESP32 conectado (placas reales)
+
+Opcional: **el tema se entrega en simulación** y no se armó con placas; este es el paso a paso para quien quiera armar las de [El montaje y la demo](#el-montaje-y-la-demo).
 
 1. **Configurar la placa.** En `firmware/esp32_maestra/config.h` (y en el de la esclava): `WIFI_SSID` y `WIFI_CLAVE` de una red de 2,4 GHz, e `IP_PC_0..3` con la IP del PC en esa red (`ipconfig`, "Dirección IPv4" del adaptador WiFi). El PC y las placas tienen que estar en la misma red.
 2. **Compilar y subir** con `firmware\compilar.ps1` (ver "Compilar y subir"), una placa a la vez, con su rol.

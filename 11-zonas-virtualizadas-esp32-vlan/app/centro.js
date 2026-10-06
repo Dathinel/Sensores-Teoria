@@ -395,7 +395,9 @@
       // Fases
       const chip = (nombre, est, extra, color) => {
         const cls = /lista|ya estaba|creada|arriba/.test(est) ? "ok" : /error/.test(est) ? "mal" : est ? "trabaja" : "";
-        return `<div class="c11-chipf ${cls}" ${color ? `style="--zc:${color}"` : ""}><i></i><b>${esc(nombre)}</b><span>${esc(est || "pendiente")}${extra ? " · " + esc(extra) : ""}</span></div>`;
+        // title: el texto completo, porque en pantallas de 1366 px la segunda línea se corta con "…"
+        const completo = `${nombre}: ${est || "pendiente"}${extra ? " · " + extra : ""}`;
+        return `<div class="c11-chipf ${cls}" title="${esc(completo)}" ${color ? `style="--zc:${color}"` : ""}><i></i><b>${esc(nombre)}</b><span>${esc(est || "pendiente")}${extra ? " · " + esc(extra) : ""}</span></div>`;
       };
       const imgs = IMAGENES.map((i) => {
         const im = P.imgs[i.k];

@@ -226,7 +226,7 @@ if not os.path.exists('modelo_mnist_cnn.h5'):
     print("No existe 'modelo_mnist_cnn.h5' todavia.")
     print("Corre primero, una sola vez: python entrenar_modelo.py")
     print("(tarda varios minutos; despues de eso ya puedes correr este script normal)")
-    exit()
+    sys.exit(1)  # sys.exit y no exit(): exit() es un atajo de la consola interactiva
 
 # compile=False: aqui la red solo predice (no se entrena), asi que no hace
 # falta su optimizador; el .h5 se guarda sin el (ver entrenar_modelo.py) y

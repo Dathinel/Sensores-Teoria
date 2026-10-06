@@ -47,14 +47,23 @@ total_us = time.ticks_diff(time.ticks_us(), inicio)
 print("MicroPython: %d cambios en %d us -> %.2f us por cambio"
       % (2 * REPETICIONES, total_us, total_us / (2 * REPETICIONES)))
 
-# Variante "optimizada" tipica de MicroPython: guardar el metodo en una
-# variable local evita buscar ROJO.value en cada vuelta. Sirve para ver que
-# parte del costo es el interprete buscando nombres, no el pin en si.
-encender = ROJO.on
-apagar = ROJO.off
-inicio = time.ticks_us()
-for _ in range(REPETICIONES):
-    encender()
-    apagar()
-total_us = time.ticks_diff(time.ticks_us(), inicio)
+# Variante "optimizada" tipica de MicroPython: el MISMO metodo ROJO.value,
+# pero guardado en una variable local antes del bucle. En el bucle de arriba,
+# en cada vuelta el interprete busca el nombre global ROJO (en un diccionario)
+# y despues el atributo value dentro de el. Aqui esa busqueda se hace una sola
+# vez, y el bucle va dentro de una funcion porque solo ahi las variables son
+# de verdad locales (en el nivel del archivo todo es global y se busca por
+# nombre). Se llama igual, valor(1) y valor(0), para que lo unico distinto sea
+# la busqueda de nombres: si sale mas rapido, esa diferencia era tiempo del
+# interprete, no del pin.
+def medir_metodo_local():
+    valor = ROJO.value
+    inicio = time.ticks_us()
+    for _ in range(REPETICIONES):
+        valor(1)
+        valor(0)
+    return time.ticks_diff(time.ticks_us(), inicio)
+
+
+total_us = medir_metodo_local()
 print("MicroPython (metodo local): %.2f us por cambio" % (total_us / (2 * REPETICIONES)))

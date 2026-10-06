@@ -4,8 +4,8 @@
 
 **Doble clic en [`ABRIR.bat`](ABRIR.bat)** (en Linux o Mac, `sh abrir.sh`). Se abre la **consola de mando**: una app en una ventana propia, con un menú a la izquierda y una barra de estado arriba (si el entorno de Python ya está listo, si los modelos de Baxter y Atlas están descargados y qué programa está corriendo). Desde ahí se lanza todo con un botón, sin consola y sin ESP32:
 
-- **a) Drones, prueba rápida** (unos segundos): vuela la misión A → B → C sin ventana y **dibuja la ruta del líder** vista desde arriba, con su altura y la hora de llegada a cada punto.
-- **b) Baxter, prueba sin ventana** (~40 s): un tablero con cada comprobación y **lo medido contra el límite** (la pinza llega a 0,1 cm de un máximo de 2 cm).
+- **a) Drones, prueba rápida** (unos 10 s): vuela la misión A → B → C sin ventana y **dibuja la ruta del líder** vista desde arriba, con su altura y la hora de llegada a cada punto.
+- **b) Baxter, prueba sin ventana** (entre 40 s y 1 min y medio, según el PC): un tablero con las 18 comprobaciones y **lo medido contra el límite** (la pinza llega a 0,1 cm de un máximo de 2 cm).
 - **c) Atlas, prueba de estrés** (~3-4 min): una **gráfica con y sin asistente** que se dibuja prueba por prueba (cuántos segundos aguanta de pie en cada una).
 - Las tres **ventanas de PyBullet** (drones, Baxter, Atlas) con sus botones, el **teclado 4x4 interactivo** (qué hace cada tecla en cada simulación), el preview sin Python, los videos y el checklist de la actividad.
 
@@ -17,10 +17,76 @@ La primera vez, la app crea el entorno de Python e instala PyBullet (si no está
 
 ## ¿Quiere saber cómo funciona? → aquí está todo
 
+- **Paso a paso:** [cómo se hizo](#1-cómo-se-hizo-paso-a-paso) · [cómo probarlo con la app, sección por sección](#2-cómo-probarlo-con-la-app-sección-por-sección) · [sin la app (comandos)](#3-cómo-probarlo-sin-la-app-comandos) · [con el ESP32 y el teclado reales](#4-con-el-esp32-y-el-teclado-reales-paso-a-paso)
 - [Introducción y enunciado](#introducción) · [El montaje real](#el-montaje-real) · [Lo que se hizo en cada punto](#lo-que-se-hizo-en-cada-punto) · [Cómo se maneja cada punto: comportamientos y modos](#cómo-se-maneja-cada-punto-comportamientos-y-modos)
 - Conceptos: [Qué es PyBullet](#qué-es-pybullet) · [Qué es una consola de mandos](#qué-es-una-consola-de-mandos-y-por-qué-un-solo-teclado-para-todo) · [Qué es un teclado matricial](#qué-es-un-teclado-matricial-y-cómo-se-barre) · [Qué es un jog](#qué-es-un-jog-y-por-qué-no-un-dial) · [Los modelos 3D reales](#los-modelos-3d-reales-de-baxter-y-atlas)
 - Arquitectura y código: [La idea general](#la-idea-general) · [El firmware del ESP32 paso a paso](#el-firmware-del-esp32-paso-a-paso-esp32_tecladopy) · [El protocolo `TECLA:x`](#el-protocolo-teclax-y-cómo-lo-lee-el-pc) · [Conexiones](#conexiones) · [Qué hace cada archivo](#qué-hace-cada-archivo) · [Cómo probarlo a mano (comandos)](#cómo-probarlo)
 - Cada punto, con su análisis, su lógica paso a paso y sus resultados: [a) Drones](punto-a-drones-waypoints/README.md) · [b) Baxter](punto-b-brazo-tipo-baxter/README.md) · [c) Atlas](punto-c-atlas/README.md)
+
+## Paso a paso: cómo se hizo y cómo probarlo
+
+### 1. Cómo se hizo, paso a paso
+
+El orden real del trabajo, con lo que falló en cada etapa y cómo se arregló (el detalle de cada punto está en su README, en "Paso a paso"):
+
+1. **Un solo firmware para los tres puntos.** Lo primero fue decidir que el ESP32 no supiera nada de robots: `esp32_teclado.py` barre el teclado 4x4 por 8 GPIO directos (los mismos pines de los temas 7 y 8) y manda `TECLA:x` cada 50 ms, **cambie o no la tecla** (y `TECLA:-` si no hay ninguna). Así "sostener" llega al PC como una repetición continua y el ESP32 no se reprograma al pasar de un punto a otro: lo que hace cada tecla vive en el script de cada punto.
+2. **a) Drones.** La primera versión movía los drones fijando su posición en cada cuadro (`resetBasePositionAndOrientation`, sin gravedad): funcionaba, pero se veía como un objeto arrastrado. Se rehízo con **física real**: cada dron es un cuerpo con masa, lo sostienen las fuerzas de sus 4 motores y un control en cascada (posición → inclinación → actitud → mezclador) decide esas fuerzas, como en gym-pybullet-drones. Después se corrigieron dos cosas que se vieron al probar: los seguidores deformaban la V persiguiendo la *posición* del líder (ahora siguen su *objetivo*) y al aterrizar flotaban a ras del piso (ahora se apagan los motores). Se agregó la misión `0` (A → B → C de una) y la prueba sin ventana `--prueba`.
+3. **b) Baxter.** Baxter no viene en `pybullet_data`, así que al principio el punto usó otro brazo de reemplazo; a pedido, se cambió por el **Baxter real**, con `descargar_modelos.py` bajando sus mallas una sola vez a `modelos/`. Lo que costó: la ruta de búsqueda de PyBullet es una sola (se dejó en `modelos/baxter_common/`), la cinemática inversa fallaba por varios cm al cruzar al lado del otro brazo (se arregló con los límites reales, iteraciones sin teletransportar el robot, el hombro apuntando al objetivo y la pinza girada 180°), la pinza hacía curvas y golpeaba el cubo (ahora va en línea recta, en tramos de 1 cm) y el cubo de 5 cm casi no entraba en la pinza (se cargó a escala 0,7). Con el ESP32 aparecieron dos fallos de lectura: un `readline()` a secas trababa toda la simulación a 20 cuadros por segundo (ahora se lee solo si hay bytes, `in_waiting`) y un toque de `D` corría la demo cuatro veces (ahora las acciones de un golpe van por **flanco**).
+4. **c) Atlas.** El texto del punto dice "Baxter" pero la imagen es Atlas. La primera versión usó un cuadrúpedo de reemplazo (quedó en el historial de git); después se pasó al **Atlas real**. Lo que costó: los motores del tobillo y del torso del URDF no sostienen 182 kg (se subieron a 800 y 1000 N·m), y la caminata (un patrón de senos, CPG) solo se sostiene sin ayuda con pasos cortos, encontrados con barridos sin ventana. Para poder mostrar la diferencia se agregó el **asistente de equilibrio** (`A`): primero se probó con una restricción fija, que frenaba el avance, y quedó como dos fuerzas sobre la pelvis que nunca empujan en horizontal. `B` lo pone de pie si se cae, y toda pose y arranque usan rampas de 0,6 s.
+5. **Pruebas sin ventana y `preview.html`.** Cada punto tiene una prueba en modo `DIRECT` que simula al ESP32 (una línea `TECLA:x` cada 50 ms) y mide: tiempos de llegada de los drones, errores de la pinza y del cubo de Baxter, segundos de pie de Atlas con y sin asistente. `preview.html` simula las tres consolas en el navegador y habla con el ESP32 real por Web Serial, para probar el teclado sin Python.
+6. **Capturas, videos y el montaje real.** `capturar_modelos.py` y `grabar_videos.py` generan las imágenes y los GIF sin ventana, con el teclado simulado. Con el montaje real (fotos en "El montaje real") se manejaron los tres puntos desde el teclado sin reprogramar el ESP32.
+7. **La app.** Al final se armó la consola de mando (`app/`, abierta con `ABRIR.bat`): lanza todo con botones y convierte la salida de las pruebas en dibujos (la ruta de los drones, el tablero de Baxter, la gráfica de Atlas).
+
+### 2. Cómo probarlo con la app, sección por sección
+
+1. **Abrir.** Doble clic en [`ABRIR.bat`](ABRIR.bat) (en Linux o Mac, `sh abrir.sh`). Sale una consola que se minimiza sola (no cerrarla: es la que mantiene la app) y se abre la app maximizada, primero con la pantalla "Abriendo la práctica…".
+2. **Barra de arriba** (siempre visible). Tres chips: **Entorno** ("Entorno listo" o "1ª vez: compila PyBullet (~10 min)"), **Modelos** ("Modelos descargados" o "Modelos: faltan (37 MB)") y **qué está en marcha** ("Nada en marcha" o "En marcha: prueba de drones"...). El botón **README** abre este README dentro de la app y **⛶ Pantalla completa** la pone a pantalla completa (Esc o el mismo botón para salir). En ventanas angostas, **☰** muestra u oculta el menú.
+3. **Resumen.** El recuadro "¿Primera vez? Lo más rápido" lleva directo a la prueba rápida de los drones y a la de Atlas. Las tres tarjetas (con su GIF) llevan a cada punto con **Probar →**. Abajo está la lista de lo que pide la actividad: cada punto se marca solo cuando su prueba termina bien (también se puede marcar a mano).
+4. **Cómo funciona.** El recorrido de una tecla (teclado → ESP32 → USB → PC → PyBullet) y las tres formas de reaccionar (jog, un golpe, sostener). El desplegable "El protocolo `TECLA:x`" muestra esa parte de este README.
+5. **El mando: cada tecla.** Las pestañas **a) Drones / b) Baxter / c) Atlas** cambian la configuración. Se pulsa una tecla del dibujo (o la misma tecla en el teclado del PC) y a la derecha sale qué hace, cómo reacciona (el color de abajo de la tecla), cómo se llama su botón en la ventana de PyBullet y qué hace la misma tecla en los otros dos puntos.
+6. **Cómo se conecta.** La tabla de pines del teclado al ESP32 y las fotos del montaje. Solo hace falta para el ESP32 real.
+7. **Antes de probar.** Dice si el entorno de Python y los modelos ya están. **Iniciar: Descargar los modelos de Baxter y Atlas (una vez)** los baja con una barra de MB y termina con `Listo: 36.7 MB`; si ya estaban, termina enseguida. Es opcional: Baxter y Atlas los bajan solos la primera vez.
+8. **a) Drones A → B → C.** Tres bloques, cada uno con "Qué va a pasar / Qué hacer / Qué deberías ver" y su botón **Iniciar**:
+   - **1 · Prueba rápida, sin ventana**: en unos 10 s la ruta del líder se dibuja vista desde arriba (y la altura abajo); A, B y C se ponen en verde con su hora de llegada (1,2 / 2,9 / 4,9 s) y al final sale **PRUEBA OK** con la inclinación máxima (32,8°).
+   - **2 · Misión automática, con ventana**: se abre PyBullet; los drones despegan solos y vuelan A → B → C dejando un trazo amarillo. Se cierra cerrando la ventana.
+   - **3 · A mano, con los botones de la ventana**: los 14 botones del panel **Params** (Despegar, Ir a A / B / C, jog de 10 cm por clic, Aterrizar, Home, Mision A -> B -> C).
+9. **b) Baxter: el cubo.**
+   - **1 · Baxter con ventana**: 13 botones; lo más rápido es **Demo: coger y mover [D]** (unos 9 s: baja, cierra, levanta el cubo y lo deja en el cuadro verde). **Cambiar de brazo [*]** y repetir con el otro; **Reponer cubo [0]** lo devuelve al origen.
+   - **2 · Prueba sin ventana**: el tablero de la derecha se va llenando con las 18 comprobaciones (IK de los dos brazos, la demo con cada brazo, choques y la regla de flancos), cada distancia con una barra contra su límite. Termina con **Todas las pruebas pasaron (18 de 18)**. Tarda entre 40 s y 1 min y medio.
+10. **c) Atlas: asistente.**
+    - **1 · Prueba de estrés**: antes de correrla la gráfica muestra lo medido antes; al pulsar Iniciar se borra y cada barra (con asistente en verde, sin asistente en amarillo) aparece al medirse. Tarda unos 3 a 4 minutos (16 pruebas). Con asistente todas las barras quedan llenas; sin asistente, cortas al arrancar y frenar, al girar y al retroceder.
+    - **2 · Atlas con ventana**: 16 botones. **Caminar adelante on/off (8)** (un clic arranca, otro frena), **Asistente ON/OFF (A)** para comparar, **Ponerlo de pie (B)** si se cae, y las poses.
+11. **Preview sin Python.** El `preview.html` dentro de la app, en "Modo prueba" (con el mouse). **Abrir en su pestaña (para Web Serial)** lo abre aparte, que es donde funciona "Conectado (Web Serial)" con el ESP32 real.
+12. **Videos.** Los cuatro GIF; clic en uno para verlo grande.
+13. **Checklist y detalles.** La misma lista de lo que pide la actividad y, plegados, los comandos, el puerto COM y las notas de PyBullet y los modelos.
+14. **Con el ESP32 real.** Los 8 pasos del montaje (la sección 4 de abajo) y el código del firmware.
+
+**Mientras corre algo**, el botón dice "Ejecutándose…", aparece **Detener** y una franja verde "lleva 0:12 de ~0:40"; "Lo que dice el programa" muestra la salida en vivo y al terminar bien sale "Terminó bien" y un punto verde en el menú. **Si algo falla**, el panel muestra un resumen en palabras y las últimas líneas del programa. Lo más común:
+
+| Qué pasa | Qué hacer |
+|---|---|
+| El chip dice "Falta Python" | Instalar Python 3.12, 3.13 o 3.14 de python.org y volver a abrir `ABRIR.bat` |
+| La primera vez se queda "Preparando el entorno…" varios minutos | Es normal: PyBullet se compila (~10 min). Si falla, el panel muestra el comando para instalar las *Build Tools* de Visual Studio con C++ |
+| Baxter o Atlas dicen "No se pudo descargar" | Falta internet la primera vez; con internet, pulsar **Iniciar** en "Antes de probar" |
+| Pulsé Iniciar en una ventana de PyBullet y no veo nada | La ventana puede abrir detrás de la app: buscarla en la barra de tareas |
+| La app no lanza nada ("Entorno: sin lanzador") | Se abrió el `index.html` suelto: abrirla con `ABRIR.bat` |
+
+### 3. Cómo probarlo sin la app (comandos)
+
+Los mismos programas, desde una consola en `9-taller-segundo-corte\`, con el Python del entorno: crear el entorno, bajar los modelos, abrir cada ventana y correr las tres pruebas sin ventana. Está completo más abajo, en [Cómo probarlo](#cómo-probarlo).
+
+### 4. Con el ESP32 y el teclado reales, paso a paso
+
+1. **Armar el montaje**: el teclado 4x4 con sus 8 cables directo al ESP32, filas a los GPIO 14, 27, 26 y 25 y columnas a los GPIO 33, 32, 18 y 19 (tabla pin a pin en [Conexiones](#conexiones)). No lleva resistencias ni alimentación aparte.
+2. **Cargar el firmware**: conectar el ESP32 por USB, abrir `esp32_teclado.py` en Thonny y "Guardar como" → dispositivo MicroPython → `main.py`. Así arranca solo cada vez que se enchufa.
+3. **Comprobar que manda teclas**: en la consola de Thonny deben pasar líneas `TECLA:-` sin parar y, al sostener una tecla, `TECLA:8` (o la que sea). Si una fila o una columna de teclas nunca aparece, revisar ese cable.
+4. **Liberar el puerto**: cerrar Thonny (o pulsar "Detener"). Si Thonny tiene el puerto abierto, pyserial no puede abrirlo.
+5. **Ver el puerto COM** en el Administrador de dispositivos de Windows. Los scripts buscan `COM7`: si es otro, en los drones se pasa con `--puerto COM5` y en Baxter y Atlas se cambia la constante `PUERTO_SERIAL` al principio de `brazo_pybullet.py` y `atlas_pybullet.py`.
+6. **Abrir el punto** (desde la app o con el comando de [Cómo probarlo](#cómo-probarlo)). Al abrir el puerto el ESP32 se reinicia (la señal DTR del USB lo resetea), por eso los scripts esperan 2 s; en la consola sale `ESP32 conectado en COM7: ...`.
+7. **Manejar**: sostener `8` es moverse de corrido (o caminar, en Atlas); las teclas de un golpe actúan una vez por pulsación. Lo primero para ver cada punto: drones `*` y `0`; Baxter `D`; Atlas sostener `8`, después `A` y sostener `4`. El mismo teclado sirve para los tres sin reprogramar nada, y los botones de la ventana siguen funcionando a la par.
+8. **Si "no pasa nada"**, mirar la línea cruda del ESP32 que cada ventana muestra arriba: si nunca cambia, el ESP32 no manda (puerto equivocado, Thonny abierto o `main.py` detenido); si siempre dice `TECLA:-` al apretar, revisar los 8 cables contra la tabla de conexiones (una fila o columna suelta deja muda toda esa línea de teclas).
+
+No sirve escribir `TECLA:8` a mano en la consola de Thonny para probar: Thonny manda ese texto con su protocolo de "raw paste", interrumpe `main.py` y deja la placa en el REPL. Para ver qué manda el ESP32 sin Thonny, lo más directo es la propia línea cruda de la ventana, o un script de tres líneas con pyserial que abra el puerto e imprima lo que llega.
 
 ## Introducción
 
@@ -381,7 +447,7 @@ No hacen falta resistencias externas (las columnas usan la pull-up interna del E
 - **`esp32_teclado.py`**: se usa en los tres puntos, sin cambios. Barre el teclado por GPIO directo y manda `TECLA:x` cada 50 ms. Es lo único que se carga en el ESP32.
 - **`descargar_modelos.py`**: se corre una vez antes de los puntos b) y c); ver "Los modelos 3D reales".
 - **`capturar_modelos.py`** y **`grabar_videos.py`**: regeneran las capturas de `img/` y los videos de `video/` sin abrir ventana (PyBullet `DIRECT` con el renderizador por software). Los videos simulan al ESP32 mandando `TECLA:x` cada 50 ms por las mismas funciones de cada punto; necesitan `numpy` y `ffmpeg` (en el PATH o instalado con winget). No hacen falta para probar el taller.
-- **`entorno/`**: entorno virtual de Python 3.14 con `pybullet`, `pyserial` y `numpy`. Los tres scripts corren con él. No se sube a GitHub; quien clone el repo tiene que crearlo (ver "Cómo probarlo").
+- **`entorno/`**: entorno virtual de Python (3.14 en este PC) con `pybullet` y `pyserial`, más `numpy` si se van a regenerar las capturas y los videos. Los tres scripts corren con él. No se sube a GitHub; la app lo crea sola la primera vez, o se crea a mano (ver "Cómo probarlo").
 - **`drones_pybullet.py`, `brazo_pybullet.py`, `atlas_pybullet.py`**: un script por punto. Cada uno intenta abrir el puerto serial dentro de un `try/except serial.SerialException`; si no encuentra el ESP32, avisa por consola y sigue funcionando con botones en la ventana de PyBullet. Su lógica está explicada en el README de cada punto.
 - **`preview.html`**: una página suelta (sin instalar nada) con las tres consolas: un teclado 4x4 clicable que simula cada punto en el navegador ("modo prueba") o se conecta de verdad al ESP32 por Web Serial y muestra lo que llega. Sirve para probar el teclado y la lógica de flanco sin abrir PyBullet:
 
@@ -396,7 +462,7 @@ La tabla de qué hace cada tecla en cada punto está arriba, en "Cómo se maneja
 
 ## Cómo probarlo
 
-**La forma fácil es la app:** doble clic en `ABRIR.bat` (ver [¿Quiere probarlo?](#quiere-probarlo--aquí-está) al principio). Lo de abajo es lo mismo a mano, con comandos.
+**La forma fácil es la app:** doble clic en `ABRIR.bat` (ver [¿Quiere probarlo?](#quiere-probarlo--aquí-está) al principio y, botón por botón, [Cómo probarlo con la app](#2-cómo-probarlo-con-la-app-sección-por-sección)). Lo de abajo es lo mismo a mano, con comandos.
 
 Los tres scripts comparten el entorno que está en esta carpeta. Los comandos van desde `9-taller-segundo-corte\` y llaman al Python del entorno directamente (`entorno\Scripts\python ...`), que sigue funcionando aunque la carpeta se haya movido de lugar; el script `activate` guarda la ruta absoluta de cuando se creó y puede fallar.
 
@@ -424,13 +490,6 @@ entorno\Scripts\python descargar_modelos.py
    ```
 2. En consola sale `No se encontro el ESP32 en COM7: usa los botones de la ventana.` y la ventana de PyBullet abre igual. Los botones están en el panel de la derecha ("Params"); cada click equivale a una pulsación de la tecla correspondiente.
 3. Para ver la misión de los drones sin tocar nada: `entorno\Scripts\python punto-a-drones-waypoints\drones_pybullet.py --mision` (despega solo y vuela A → B → C).
-4. Para comprobar sin abrir ventana: `entorno\Scripts\python punto-a-drones-waypoints\drones_pybullet.py --prueba` (vuela la misión A → B → C y termina con `PRUEBA OK`), `entorno\Scripts\python punto-b-brazo-tipo-baxter\probar_baxter.py` y `entorno\Scripts\python punto-c-atlas\probar_atlas.py`.
+4. Para comprobar sin abrir ventana: `entorno\Scripts\python punto-a-drones-waypoints\drones_pybullet.py --prueba` (unos 3 s: vuela la misión A → B → C y termina con `PRUEBA OK`), `entorno\Scripts\python punto-b-brazo-tipo-baxter\probar_baxter.py` (entre 40 s y 1 min y medio: 18 comprobaciones y `Todas las pruebas pasaron.`) y `entorno\Scripts\python punto-c-atlas\probar_atlas.py` (unos 3 a 4 minutos: la tabla con y sin asistente).
 
-**Con ESP32 conectado:**
-1. Armar las conexiones de arriba y guardar `esp32_teclado.py` como `main.py` en el ESP32 (con Thonny: abrir el archivo, "Guardar como" → dispositivo MicroPython → `main.py`).
-2. Cerrar Thonny (o desconectarlo con "Detener"): si Thonny tiene el puerto abierto, pyserial no puede abrirlo.
-3. Ver el puerto COM en el Administrador de dispositivos. En los drones se pasa por consola (`--puerto COM5`); en Baxter y Atlas se cambia la constante `PUERTO_SERIAL` al principio del script.
-4. Correr el script del punto. Al abrir el puerto el ESP32 se reinicia (la señal DTR del USB lo resetea), por eso los scripts esperan 2 s antes de empezar a leer. El mismo teclado sirve para los tres puntos sin reprogramar nada.
-5. Si "no pasa nada", mirar la línea cruda del ESP32 en la ventana. Si nunca cambia, conectar Thonny y mirar la consola: si `main.py` corre pero siempre manda `TECLA:-`, revisar los 8 cables del teclado contra la tabla de conexiones (una fila o columna suelta deja muda toda esa línea de teclas).
-
-No sirve escribir `TECLA:8` a mano en la consola de Thonny para probar: Thonny manda ese texto con su protocolo de "raw paste", interrumpe `main.py` y deja la placa en el REPL. Para ver qué manda el ESP32 sin Thonny, lo más directo es la propia línea cruda de la ventana, o un script de tres líneas con pyserial que abra el puerto e imprima lo que llega.
+**Con ESP32 conectado:** los 8 pasos (montaje, cargar `main.py` con Thonny, liberar el puerto, elegir el COM con `--puerto` o `PUERTO_SERIAL`, qué mirar si no pasa nada) están arriba, en [Con el ESP32 y el teclado reales, paso a paso](#4-con-el-esp32-y-el-teclado-reales-paso-a-paso). Con el puerto ya elegido, los comandos son los mismos de "Sin ESP32 conectado"; por ejemplo, para los drones en otro puerto: `entorno\Scripts\python punto-a-drones-waypoints\drones_pybullet.py --puerto COM5`.

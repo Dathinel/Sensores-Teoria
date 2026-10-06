@@ -377,7 +377,9 @@
     if (d.terminado) return 1;
     if (d.t_total) return Math.min(0.99, d.t / d.t_total);
     const ns = Object.values(d.nodos || {});
-    if (!ns.length) return 0;
+    // Con hardware y sin ningún carrito todavía no hay avance real que medir: null deja la barra
+    // "estimada" (indeterminada) en vez de bajarla a 0 % de golpe al llegar la primera foto.
+    if (!ns.length) return null;
     const busq = Math.min(1, (d.iter || 0) / (d.iteraciones || 30));
     const rec = ns.map((n) => {
       if (n.apagado) return 1;
@@ -489,7 +491,10 @@
       } else {
         const tv = d.t_total ? `tiempo del enjambre ${coma(d.t, 1)} de ${coma(d.t_total, 1)} s` : `${coma(d.t, 1)} s escuchando`;
         sub = `${st.guardada ? "Última corrida guardada en resultados/ (nativa o en Docker) · " : ""}${tv} · vuelta ${d.iter} de ${d.iteraciones} · ${d.cuadros} cuadros de video`;
-        if (d.modo === "hardware" && !Object.keys(d.nodos || {}).length) sub = `${coma(d.t, 1)} s escuchando el puerto UDP 4211 · todavía no llega ningún carrito (lanza el emulador)`;
+        // t = 0 es la foto que el gemelo deja antes de armar la escena (unos segundos de PyBullet).
+        if (d.modo === "hardware" && !Object.keys(d.nodos || {}).length) sub = d.t > 0 ?
+          `${coma(d.t, 1)} s escuchando el puerto UDP 4211 · todavía no llega ningún carrito (lanza el emulador o enciende los carritos)` :
+          "Armando el laberinto en PyBullet; el puerto UDP 4211 ya está abierto (lo que llegue mientras tanto no se pierde)…";
       }
       V("sub").textContent = sub;
       // Laberinto.
@@ -504,8 +509,10 @@
         for (let i = 0; i + 1 < cod.length; i++) set.add(Math.min(cod[i], cod[i + 1]) + "-" + Math.max(cod[i], cod[i + 1]));
         let en = 0, tot = 0;
         d.aristas.forEach(([u, v], i) => { tot += d.tau[i]; if (set.has(u + "-" + v)) en += d.tau[i]; });
-        const pc = Math.round(100 * en / (tot || 1));
-        V("conc").innerHTML = `<div class="t10-fila t10-entre"><span>feromona sobre el camino ganador</span><b>${pc} %</b></div>
+        // En la vuelta 0 la feromona es uniforme y el "camino ganador" sale solo del desempate por
+        // orden de vecinos: su porcentaje (12 de 29 tramos, 41 %) no dice nada, así que no se muestra.
+        const pc = d.iter === 0 ? 0 : Math.round(100 * en / (tot || 1));
+        V("conc").innerHTML = `<div class="t10-fila t10-entre"><span>feromona sobre el camino ganador</span><b>${d.iter === 0 ? "—" : pc + " %"}</b></div>
           <div class="t10-medidor"><div style="width:${pc}%"></div></div>
           <div class="t10-nota">${d.iter === 0 ? "Al empezar todos los tramos tienen lo mismo." : d.convergio ? "Seguir siempre el tramo con más feromona ya da una ruta óptima (2,40 m): la colonia convergió." : "Todavía hay feromona repartida en varios caminos."}</div>`;
       } else V("conc").innerHTML = "";

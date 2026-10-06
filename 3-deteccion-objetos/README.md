@@ -10,10 +10,130 @@ Doble clic en **`ABRIR.bat`** (en Linux/Mac, `abrir.sh`). Se abre la app de esta
 - **Con tu cámara**: lo mismo en vivo, con la ventana de OpenCV y su resumen dentro de la app.
 - **Simulador**: el `preview.html` sin instalar nada, para ver el protocolo y el apagado de seguridad.
 
+El recorrido completo, botón por botón (y sin la app, y con el ESP32 real), está en
+[Paso a paso: cómo se hizo y cómo probarlo](#paso-a-paso-cómo-se-hizo-y-cómo-probarlo).
+
 ![La app del tema 3: YOLO mirando la foto de ejemplo del celular, con la confianza de cada caja, el mensaje '01' y el LED del celular encendido](img/app-ver-yolo.jpg)
+
+## Paso a paso: cómo se hizo y cómo probarlo
+
+Tres recorridos completos, de principio a fin: cómo se construyó la práctica (con lo que falló), cómo probarla con la app
+botón por botón, y cómo probarla sin la app y con el ESP32 real. El detalle técnico de cada parte está más abajo, en
+«¿Quiere saber cómo funciona?».
+
+### Cómo se hizo, paso a paso
+
+1. **Partir del ejemplo del profesor.** El script de la [explicación de YOLO](https://github.com/dialejobv/U_Militar/blob/main/2%29%20Yolo/Explicaci%C3%B3n_Arq_YOLO.md)
+   abre la cámara a 640×480, corre YOLOv8 nano y muestra la ventana con las cajas. Se creó el `entorno` con
+   `ultralytics`, `opencv-python` y `pyserial` (PyTorch llega como dependencia: cientos de MB) y se corrió tal cual.
+2. **Elegir qué objetos cuentan.** COCO ya trae `"chair"` y `"cell phone"`, así que no hubo que entrenar nada: la lista
+   `OBJETIVOS` filtra esas dos clases de las 80 y `CONFIANZA_MINIMA = 0.4` descarta las cajas dudosas que harían
+   parpadear un LED.
+3. **El protocolo y el firmware.** El estado se resume en dos caracteres (`10`, `01`, `11`, `00`) y viaja por el mismo USB.
+   `esp32_leds.py` se escribió desde cero: `select.poll()` para no bloquearse, validación de la línea antes de tocar un
+   pin y la respuesta `LEDS xy` para saber desde el PC que llegó.
+4. **El apagado de seguridad** (2 s sin mensajes → LEDs apagados). La primera versión mandaba el estado solo cuando
+   cambiaba, y con una silla quieta el ESP32 dejaba de oír mensajes y apagaba su LED a los 2 s: se agregó el reenvío
+   cada 500 ms (`REENVIO_S`). También se corrigió la resolución, que la primera versión pedía por error a 1902×1080.
+5. **Probar sin el hardware.** `serial.Serial(...)` dentro de `try/except` (sin ESP32 el script sigue solo con la visión),
+   lectura de respuestas solo si `in_waiting > 0` (un `readline()` a secas congelaba la cámara) y la franja de texto de la
+   ventana con el mensaje y `ESP32 dice: ...`.
+6. **El circuito y la demo.** LEDs en GPIO25 y GPIO26 con 220 Ω (ver [Conexiones](#conexiones)); se grabaron los gifs de
+   [Demostración](#demostración-en-funcionamiento), todavía con la versión que mandaba solo al cambiar.
+7. **La directiva del carro y la moto** como opción `--carro-moto` (mismas posiciones, LED rojo y verde); la demo quedó con
+   silla y celular por lo que se explica en [la directiva](#sobre-la-directiva-de-detectar-un-carro-y-una-moto-de-juguete).
+8. **Sin cámara web.** `--imagen` (seis fotos de ejemplo de Wikimedia Commons en `img/ejemplos/`) y `--video`, y el
+   simulador `preview.html` (mismo protocolo, ESP32 simulado y Web Serial).
+9. **La app** (`app/`, `probar.json`, `ABRIR.bat`). Para mostrar lo que ve YOLO dentro de la página se agregaron
+   `--vista` (último cuadro y `estado.json`) y `--sin-ventana`; las librerías pesadas se importan después de leer los
+   argumentos y el arranque se anuncia en tres fases (`Arranque 1/3...`) para que la app muestre en qué va. El modelo
+   `yolov8n.pt` dejó de subirse al repositorio (se descarga solo). En la revisión del 2026-10-06 se arregló que, si en
+   Windows fallaba escribir la imagen de una foto nueva (el servidor justo la estaba leyendo), la app mostraba durante
+   3 s la foto anterior con las detecciones de la nueva: ahora se reintenta.
+
+### Cómo probarlo con la app, sección por sección
+
+1. **Abrirla.** Doble clic en `ABRIR.bat` (en Linux/Mac, `sh abrir.sh`). Sale «Abriendo la práctica…» y luego la ventana
+   con el menú de la izquierda. Arriba están siempre los chips **modelo YOLO listo** (o «se descarga solo») y **ESP32
+   opcional**, el estado del entorno, **Pantalla completa** y **README ↗** (abre esta página en GitHub). Abajo del menú,
+   **Qué pide la actividad** cuenta cuántos puntos van probados.
+2. **Inicio.** Las dos tarjetas («Ver a YOLO con fotos de ejemplo ▸» y «La cadena en cinco piezas ▸») llevan a esas
+   secciones. Debajo, un aviso de cuánto tarda la primera vez (instalar PyTorch: 5-15 min, una sola vez) y la lista de lo
+   que pide la actividad, que se marca sola al probar cada parte.
+3. **Cómo funciona.** Un diagrama interactivo de la cadena cámara → YOLO → mensaje → USB → ESP32 → LEDs:
+   - **silla · celular** / **carro · moto** cambia la directiva;
+   - **+ silla** / **+ celular** ponen o quitan el objeto «frente a la cámara»: el mensaje cambia (`10`, `01`, `11`) y
+     los LEDs se prenden al llegar el pulso por el cable;
+   - **✂ Desconectar el cable**: la barrita del ESP32 se llena y a los 2 s apaga los LEDs y dice `APAGADO_SEGURIDAD`;
+     **⟳ Volver a conectar** lo restablece;
+   - cada pieza del diagrama se puede tocar para ver qué hace; abajo, «Qué es YOLO, en simple» y la explicación del
+     README, plegadas.
+4. **Ver a YOLO** (lo principal; sin cámara ni ESP32):
+   - Elegir **silla · celular** o **carro · moto** y pulsar **▶ Iniciar YOLO con las fotos**.
+   - El monitor muestra el arranque real en fases (preparar el entorno → cargar PyTorch → cargar el modelo → mirar):
+     10-30 s. La primera vez, antes, se instala el entorno con su barra.
+   - Luego, una foto cada 3 s con las cajas de YOLO. A la derecha, **Qué detectó YOLO**: cada objeto con su confianza,
+     la raya del umbral 0,4 y si «cuenta ✓», es «muy baja» o «no interesa»; el **mensaje al ESP32** (`10` → `01` → `11`)
+     y los dos **LEDs** como quedarían. Al ver las tres fotos se marcan dos puntos de la lista.
+   - **Detener** cierra el programa: el monitor cuenta los 2 s del apagado de seguridad y apaga los LEDs dibujados.
+     Para cambiar de directiva hay que detener primero.
+5. **Con tu cámara** (necesita webcam): **▶ Abrir la cámara con YOLO** abre la ventana de OpenCV «Deteccion en tiempo
+   real» (puede quedar detrás: buscarla en la barra de tareas) y la app muestra lo mismo que ella. Poner una silla o un
+   celular frente a la cámara. Se cierra con **q** sobre la ventana (manda `00`) o con **Detener**.
+6. **Simulador** (sin instalar nada): el `preview.html` dentro de la app (o **Abrir en pestaña aparte ↗**). **silla en
+   cuadro** / **celular en cuadro** hacen de YOLO, el ESP32 de la derecha responde `LEDS xy` y el monitor muestra cada
+   línea; **Simular cable desconectado** apaga todo a los 2 s con `APAGADO_SEGURIDAD`. El selector de arriba cambia a
+   carro/moto, **Usar cámara (COCO-SSD)** corre un detector en el navegador (webcam e internet) y **Conectar ESP32
+   (Web Serial)** le habla al ESP32 real desde Chrome o Edge.
+7. **Montaje y ESP32**: materiales, tabla de pines, el esquema (clic para ampliar) y los pasos para grabar el firmware;
+   **ver el código** lo muestra y **copiarlo** lo deja en el portapapeles para pegarlo en Thonny.
+8. **Resultados**: las grabaciones del montaje (clic para verlas en grande).
+
+**Si algo falla en la app:** la primera instalación de PyTorch puede cortarse con un internet lento: volver a pulsar
+Iniciar (pip retoma); si el panel dice «Error al abrir la camara», otra aplicación la está usando (o no hay cámara: usar
+*Ver a YOLO*); el recuadro de error del panel resume qué pasó y «Lo que dice el programa» tiene la salida completa. La
+consola minimizada de `ABRIR.bat` es la que mantiene la app: no cerrarla mientras se usa.
+
+### Cómo probarlo sin la app (consola)
+
+Desde la carpeta `3-deteccion-objetos`, con el entorno ya creado (ver
+[Preparar el entorno](#preparar-el-entorno-en-la-computadora)):
+
+```
+entorno\Scripts\python deteccion_pc.py --imagen
+```
+
+1. La consola dice `Arranque 1/3: cargando PyTorch...` y, unos 10-30 s después, `Arranque 2/3`, `Sin ESP32 (...)` y
+   `Arranque 3/3: listo`.
+2. Se abre la ventana «Deteccion en tiempo real» con las tres fotos de ejemplo, una cada 3 s. La franja de arriba dice
+   `chair: 1   cell phone: 0   -> '10'`, luego `'01'` y luego `'11'`, y `SIN ESP32 (solo vision) | FOTOS (3, ...)`.
+3. **q** sobre la ventana termina (`Programa terminado.`).
+4. Con `--carro-moto` usa las fotos de carro y moto; sin `--imagen`, la cámara web. Todas las variantes están en
+   [Cómo probarlo](#cómo-probarlo).
+
+### Con el ESP32 real, paso a paso
+
+1. Armar el circuito de [Conexiones](#conexiones): GPIO25 → 220 Ω → LED (silla, o rojo del carro) → GND y GPIO26 → 220 Ω
+   → LED (celular, o verde de la moto) → GND.
+2. En Thonny (intérprete *MicroPython (ESP32)*), abrir `esp32_leds.py` y guardarlo **en el dispositivo** como `main.py`.
+   Pulsar EN: la consola dice `Esperando datos de deteccion por serial...`.
+3. Cerrar Thonny (el puerto solo lo puede tener un programa).
+4. Ver el puerto en el Administrador de dispositivos → Puertos (COM y LPT); si no es `COM7`, cambiar `PUERTO_SERIAL` al
+   principio de `deteccion_pc.py`.
+5. Correr `entorno\Scripts\python deteccion_pc.py` (o con `--imagen`, sin cámara). Debe decir `ESP32 conectado en COM7.`
+   y la franja de la ventana, `ESP32 en COM7` y `ESP32 dice: LEDS 00` (o el mensaje que toque). Con `--imagen` los LEDs
+   van siguiendo las fotos: `10`, `01`, `11`. Desde la app es lo mismo: *Ver a YOLO* o *Con tu cámara* muestran
+   «ESP32 en COM7 · dice: LEDS ...».
+6. Poner una silla o un celular frente a la cámara: su LED se prende y se queda prendido mientras siga en cuadro.
+7. Probar el apagado de seguridad: con un LED prendido, cortar el programa sin la tecla q (**Detener** en la app, o
+   cerrar la consola): el ESP32 deja de recibir mensajes y apaga el LED solo a los 2 s (si la consola de Thonny
+   estuviera abierta, se vería `APAGADO_SEGURIDAD`). Al cerrar con **q** se apagan al instante (se manda `00`).
+   Desenchufar el USB también los apaga, pero porque el ESP32 se queda sin energía, no por el apagado de seguridad.
+8. Si `ESP32 dice` se queda en `(nada todavia)`, el ESP32 no tiene `main.py` corriendo o el puerto es otro.
 
 ## ¿Quiere saber cómo funciona? Aquí está todo
 
+0. Paso a paso: [cómo se hizo](#cómo-se-hizo-paso-a-paso) · [con la app, sección por sección](#cómo-probarlo-con-la-app-sección-por-sección) · [sin la app](#cómo-probarlo-sin-la-app-consola) · [con el ESP32 real](#con-el-esp32-real-paso-a-paso)
 1. [Qué pedía la actividad y qué quedó](#qué-pedía-la-actividad-y-qué-quedó)
 2. Conceptos: [qué es la detección de objetos](#qué-es-la-detección-de-objetos), [qué es YOLO](#qué-es-yolo), [qué es COCO](#qué-es-coco-y-por-qué-no-tuvimos-que-entrenar-nada) y [la comunicación serial](#qué-es-la-comunicación-serial-y-cómo-la-usa-el-esp32)
 3. [La idea general](#la-idea-general) (diagramas PC ↔ ESP32) y [conexiones](#conexiones)
@@ -168,7 +288,7 @@ Por ejemplo, si ponemos un celular frente a la cámara con la silla ya en cuadro
 
 ### `deteccion_pc.py`, en la computadora
 
-El script no está dividido en funciones porque es corto y todo pasa dentro de un mismo bucle, pero se lee por bloques, y cada bloque trae comentarios en el propio código explicando el porqué.
+El script casi no tiene funciones propias (solo tres pequeñas para la app: `guardar_vista`, `fase` y `pedir_salida`) porque es corto y todo pasa dentro de un mismo bucle, pero se lee por bloques, y cada bloque trae comentarios en el propio código explicando el porqué.
 
 **1. Configuración.** Arriba están las cosas que alguien tendría que tocar para adaptar el proyecto: `PUERTO_SERIAL` (`"COM7"` en nuestra computadora), `BAUDIOS`, `OBJETIVOS`, `CONFIANZA_MINIMA` y `REENVIO_S`. `OBJETIVOS` depende de la opción con la que se corra el script:
 
@@ -222,7 +342,7 @@ Si el ESP32 no está conectado, o Thonny tiene el puerto tomado, `serial.Serial`
 - Se lee lo que haya contestado el ESP32, vaciando **todo** el buffer pero solo si hay algo esperando (`while ser.in_waiting > 0: ...`). Un `readline()` a secas se quedaría esperando datos y congelaría la cámara. La última línea cruda se guarda para mostrarla.
 - Se escriben en la ventana, sobre una franja negra para que se lean siempre, tres líneas: el estado de cada objetivo con el mensaje (`chair: 1   cell phone: 0   -> '10'`), el modo (`ESP32 en COM7` o `SIN ESP32 (solo vision)`) junto con la fuente de las imágenes (`CAMARA`, `FOTOS` o `VIDEO`) y `ESP32 dice: ...` con la última respuesta. Esa última línea es la herramienta de diagnóstico: si se queda en `(nada todavia)`, el ESP32 no está recibiendo o no tiene `main.py` corriendo; si cambia pero no es lo esperado, el problema es de formato y no de cable.
 
-**6. Para la app (`--vista` y `--sin-ventana`).** Si se corre con `--vista CARPETA`, cada cierto tiempo (4 veces por segundo con la cámara; con fotos, al cambiar de foto) guarda el cuadro con las cajas en `ultimo.jpg` y un `estado.json` con la fase, las detecciones con su confianza, el mensaje y lo que contestó el ESP32. Los escribe con otro nombre y los reemplaza de golpe (`os.replace`) para que la app nunca lea un archivo a medias. Con `--sin-ventana` no abre la ventana de OpenCV (todo se ve en la app) y se sale con Ctrl+C o con el botón Detener. Sin esas dos opciones el programa se comporta exactamente igual que antes.
+**6. Para la app (`--vista` y `--sin-ventana`).** Si se corre con `--vista CARPETA`, cada cierto tiempo (4 veces por segundo con la cámara; con fotos, al cambiar de foto) guarda el cuadro con las cajas en `ultimo.jpg` y un `estado.json` con la fase, las detecciones con su confianza, el mensaje y lo que contestó el ESP32. Los escribe con otro nombre y los reemplaza de golpe (`os.replace`) para que la app nunca lea un archivo a medias; si en Windows el reemplazo de la imagen falla porque justo la está leyendo el servidor, con fotos se reintenta en la vuelta siguiente (si no, la app mostraría la foto anterior con las detecciones de la nueva). Con `--sin-ventana` no abre la ventana de OpenCV (todo se ve en la app) y se sale con Ctrl+C o con el botón Detener. Sin esas dos opciones el programa se comporta exactamente igual que antes.
 
 **7. Al salir con `q`** (o Ctrl+C). Manda `00` para apagar los LEDs de una vez en vez de esperar los 2 s del apagado de seguridad, y libera cámara, ventana y puerto.
 

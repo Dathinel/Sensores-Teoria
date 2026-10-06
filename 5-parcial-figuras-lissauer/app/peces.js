@@ -168,7 +168,7 @@
       codigo: "ojo = crear_elipse(0.33, 0.64, 0.040, 0.045, 30)", nota: "Otra elipse, mucho más pequeña: 31 puntos." },
     { nombre: "Pupila", forma: "elipse mínima", color: "#ffb36b", pts: elipseP(0.33, 0.65, 0.012, 0.014, 14),
       codigo: "pupila = crear_elipse(0.33, 0.65, 0.012, 0.014, 14)\ndibujar(pupila, 180)   # 180 µs en cada punto",
-      nota: "Tan chica que casi es un punto: el script se queda 180 µs en cada uno para que brille más que el resto. 15 puntos." },
+      nota: "Tan chica que casi es un punto: el script se queda 180 µs en cada uno (en vez de DRAW_US = 1) para que, con tan pocos puntos, brille parecido al resto y no más débil. 15 puntos." },
     { nombre: "Boca", forma: "arco 200°-340°", color: "#ff8fb1", pts: elipseP(0.31, 0.44, 0.070, 0.045, 30, 200, 340),
       codigo: "boca = crear_elipse(0.31, 0.44, 0.070, 0.045, 30, 200, 340)",
       nota: "Un trozo de elipse: solo los ángulos de 200° a 340° (la parte de abajo), y queda la sonrisa. 31 puntos." },
@@ -264,7 +264,7 @@
     const ol = $("#listaPiezas"); if (!ol) return;
     PIEZAS.forEach((p, i) => {
       const li = document.createElement("li");
-      li.innerHTML = '<button type="button" title="Dibujar solo esta pieza"><i style="background:' + p.color + '"></i><b>' + p.nombre +
+      li.innerHTML = '<button type="button" title="Dibujar esta pieza (las anteriores quedan como ya recorridas)"><i style="background:' + p.color + '"></i><b>' + p.nombre +
         "</b><span>" + p.forma + " · " + p.pts.length + "</span></button>";
       li.querySelector("button").addEventListener("click", () => {
         arm.n = inicioPieza(i); arm.hasta = inicioPieza(i) + p.pts.length; arm.corriendo = true; actualizarBotonArmar();

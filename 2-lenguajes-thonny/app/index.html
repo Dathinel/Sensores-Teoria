@@ -255,8 +255,9 @@ MicroPython (metodo local): Y us por cambio</pre>
       <details class="app-plegado">
         <summary>¿Por qué el truco del "método local" sale más rápido?</summary>
         <p>En MicroPython, cada <code>ROJO.value(1)</code> obliga al intérprete a buscar el nombre <code>ROJO</code> y después
-          <code>value</code> dentro de él, en cada vuelta. Guardando <code>encender = ROJO.on</code> antes del bucle, esa búsqueda se
-          hace una sola vez. Si sale más rápido, la diferencia era tiempo del intérprete buscando nombres, no del pin.
+          <code>value</code> dentro de él, en cada vuelta. Guardando <code>valor = ROJO.value</code> en una variable local (dentro
+          de una función) antes del bucle, esa búsqueda se hace una sola vez, y el bucle llama <code>valor(1)</code> y <code>valor(0)</code>:
+          el mismo método, solo cambia la búsqueda. Si sale más rápido, la diferencia era tiempo del intérprete buscando nombres, no del pin.
           En C/C++ no existe ese costo: el compilador ya resolvió todo antes.</p>
       </details>
     </section>

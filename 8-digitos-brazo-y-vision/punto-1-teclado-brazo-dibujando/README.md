@@ -1,6 +1,6 @@
 # Punto 1: Teclado matricial y LCD I2C + brazo robótico dibujando en PyBullet
 
-> **¿Quiere probarlo?** → doble clic en [`../ABRIR.bat`](../ABRIR.bat) (app del tema 8, secciones del *Punto 1*: el brazo de PyBullet, la trayectoria de cada dígito y el teclado + LCD simulados). **¿Quiere saber cómo funciona?** → [teclado](#qué-es-un-teclado-matricial-y-cómo-se-lee) · [I2C y LCD](#qué-es-i2c-y-cómo-maneja-la-lcd) · [URDF](#qué-es-un-urdf-y-qué-articulaciones-usa-el-dibujo) · [ángulos y no XYZ](#por-qué-el-brazo-se-maneja-por-ángulos-y-no-por-coordenadas-xyz) · [idea general](#la-idea-general) · [trazos](#los-trazos-de-cada-dígito) · [conexiones](#conexiones) · [archivos](#qué-hace-cada-archivo) · [código](#la-lógica-del-código) · [cómo probarlo](#cómo-probarlo) · [montaje y demo](#el-montaje-y-la-demo)
+> **¿Quiere probarlo?** → doble clic en [`../ABRIR.bat`](../ABRIR.bat) (app del tema 8, secciones del *Punto 1*: el brazo de PyBullet, la trayectoria de cada dígito y el teclado + LCD simulados). **Paso a paso** → [cómo se hizo](#cómo-se-hizo) · [con la app](#cómo-probarlo-con-la-app) · [sin la app y con el ESP32](#cómo-probarlo). **¿Quiere saber cómo funciona?** → [teclado](#qué-es-un-teclado-matricial-y-cómo-se-lee) · [I2C y LCD](#qué-es-i2c-y-cómo-maneja-la-lcd) · [URDF](#qué-es-un-urdf-y-qué-articulaciones-usa-el-dibujo) · [ángulos y no XYZ](#por-qué-el-brazo-se-maneja-por-ángulos-y-no-por-coordenadas-xyz) · [idea general](#la-idea-general) · [trazos](#los-trazos-de-cada-dígito) · [conexiones](#conexiones) · [archivos](#qué-hace-cada-archivo) · [código](#la-lógica-del-código) · [cómo probarlo](#cómo-probarlo) · [montaje y demo](#el-montaje-y-la-demo)
 
 Basado en el `brazo.urdf` compartido en el repositorio [U_Militar](https://github.com/dialejobv/U_Militar/blob/main/8%29%20Brazo_URDF/brazo.urdf) (el mismo del [tema 7](../../7-brazo-robotico-urdf)), como recomienda el enunciado.
 
@@ -12,6 +12,37 @@ El enunciado pide "Teclado I²C + simulación de brazo robótico en PyBullet dib
 - El ESP32 la muestra en la LCD (`Dibujando:` / `7`) y le manda al PC la línea `DIGIT:7` por el USB.
 - `brazo_dibuja.py` mueve el brazo simulado para trazar ese dígito y va dejando una línea amarilla por donde pasa la punta, como si tuviera un lápiz.
 - Sin ESP32, la ventana de PyBullet trae 10 botones (uno por dígito) que hacen exactamente lo mismo.
+
+## Paso a paso
+
+### Cómo se hizo
+
+1. **Lo que pide el enunciado.** Del esquema salió el reparto: el teclado 4x4 va a 8 GPIO (no por I2C) y lo que va por I2C es la LCD 16x2. El brazo es el `brazo.urdf` del profesor, igual al del tema 7.
+2. **El teclado, solo.** Primero `probar_teclado.py` (Thonny, *Run*): imprime fila y columna de cada tecla para comprobar el cableado antes de escribir el firmware. Ver "[Qué es un teclado matricial](#qué-es-un-teclado-matricial-y-cómo-se-lee)".
+3. **El firmware** (`esp32_teclado_lcd.py`): `i2c.scan()` al arrancar, la LCD en modo 4 bits por el PCF8574, el barrido cada 30 ms y una línea `DIGIT:n` por cada tecla nueva.
+4. **Primer fallo en la placa.** `str.ljust()` no existe en MicroPython: tiraba `AttributeError` y `main.py` moría antes del teclado, así que al PC no llegaba nada. Se rellenó con espacios a mano y la LCD quedó dentro de `try` (si falla, el teclado sigue). La LCD además mostraba cuadros: era el potenciómetro de contraste (fotos en "[Conexiones](#conexiones)").
+5. **El dibujo, tercer intento.** La cinemática inversa a un plano XYZ falló (error de hasta 0,75 m) y un mapeo amplio de (u, v) a los ángulos dejaba manchas. Funcionó manejar `joint_1` y `joint_2` en un rango chico (±0,35 rad) alrededor del codo doblado (1 rad) y con 8 puntos por tramo. Ver "[Por qué el brazo se maneja por ángulos](#por-qué-el-brazo-se-maneja-por-ángulos-y-no-por-coordenadas-xyz)".
+6. **La punta del lápiz.** El origen del link de la pinza queda dentro de su bloque y la línea se veía enredada: se desplazó 9 cm sobre su eje con `multiplyTransforms`.
+7. **La cámara y un error escondido.** Desde arriba el dígito se veía deformado y con `cameraYaw=0`, de canto; quedó en `cameraYaw=90`. Al proyectar el trazo para las imágenes de la demo se vio que cada dígito salía reflejado de arriba a abajo: el signo de `v` estaba al revés.
+8. **El PC sin hardware.** El puerto serial va en `try/except` (sin ESP32 quedan 10 botones), la lectura no bloquea la simulación y la última línea cruda se muestra en la ventana para diagnosticar.
+
+### Cómo probarlo con la app
+
+Doble clic en [`../ABRIR.bat`](../ABRIR.bat). En la barra lateral, el grupo **Punto 1 · teclado + brazo**:
+
+1. **Pruébalo**:
+   - **Iniciar el brazo** abre PyBullet en una ventana aparte (la primera vez se compila PyBullet, ~10 min con las *Build Tools* de C++, con su barra de avance). En la salida de la página: `No se pudo abrir COM7: ...`, `Sigue sin ESP32: usa los botones 0-9 de la ventana` y `Ventana de PyBullet abierta...`. En la ventana, cada botón 0-9 del panel derecho borra el dígito anterior y dibuja el nuevo (`Dibujando el digito n...` y `Listo.`). Se termina cerrando la ventana o con **Detener**.
+   - **La trayectoria de cada dígito**: los botones 0-9 animan el recorrido del lápiz con los mismos puntos del script, y debajo se lee la posición y los ángulos (el 7 termina en "posición 17 de 17 · base -4.0° · codo 77.3°").
+   - **Teclado 4x4 y LCD en el navegador**: en *Modo prueba*, cada tecla 0-9 pone `Dibujando:` / `n` en la LCD y dibuja el trazo; *Conectado* escucha al ESP32 real por Web Serial (Chrome o Edge).
+2. **Cómo funciona**: el flujo y los dos "Leer…" con las explicaciones de este README.
+3. **Conexiones**: el montaje 3D, las tablas de pines y las fotos (clic para ampliar).
+4. **Con el ESP32**: los pasos con la placa y qué hacer si no pasa nada.
+
+Si falla: el recuadro rojo resume el problema y muestra las últimas líneas. Lo típico es que falten las *Build Tools* (el aviso trae el comando para instalarlas) o que la ventana de PyBullet haya quedado detrás de la app.
+
+### Cómo probarlo sin la app y con el ESP32
+
+Los comandos y los pasos con la placa real están en "[Cómo probarlo](#cómo-probarlo)", más abajo.
 
 ## Qué es un teclado matricial y cómo se lee
 

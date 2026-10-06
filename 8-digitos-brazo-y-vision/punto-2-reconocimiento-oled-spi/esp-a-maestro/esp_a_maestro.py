@@ -4,7 +4,7 @@
 # mismo tiempo y usa el que le llegue de verdad segun como este
 # cableado -- asi no hace falta saber de antemano cual de los dos cables
 # se conecto, y si uno falla (por ejemplo un cable SPI mal puesto) el
-# otro sigue funcionando. Ver la seccion "Dos caminos a la vez: UART2 y SPI" del
+# otro sigue funcionando. Ver la seccion "Dos caminos a la vez: SPI y UART2" del
 # README para el detalle completo.
 #
 # Nota sobre "SPI esclavo": el esquema de la actividad pide comunicar

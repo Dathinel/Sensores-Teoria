@@ -3,6 +3,11 @@
 Qué hay en `docs/`. Hay dos clases de documento: los **generados** (salen de una fuente única del
 código o de un YAML; no se editan a mano, se regeneran) y los **escritos a mano**.
 
+Para no confundirse con los nombres: **cómo se hizo** el proyecto, en orden y con lo que falló, está en
+[`bitacora.md`](bitacora.md) (resumido en el [Paso a paso del README](../README.md#1-cómo-se-hizo-paso-a-paso));
+[`paso-a-paso.md`](paso-a-paso.md) son los **17 puntos del funcionamiento** de la máquina; y **cómo probarlo**
+(con la app, sin ella y con el montaje real) está en el [README](../README.md#paso-a-paso).
+
 ## Generados (no editar a mano)
 
 Se rehacen todos con `entorno\Scripts\python -m app.documentos`:

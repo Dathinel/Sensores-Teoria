@@ -19,6 +19,7 @@ import os
 import json
 import re
 import time
+import unicodedata
 
 import serial
 
@@ -59,6 +60,10 @@ try:
     # timeout=1 solo afecta a lecturas bloqueantes; aqui solo se lee lo que ya
     # este en el buffer (ver leer_respuestas_esp32), asi que nunca se espera.
     ser = serial.Serial(PUERTO_SERIAL, BAUDIOS, timeout=1)
+    # Abrir el puerto reinicia el ESP32 (la linea DTR del USB va a su pin EN):
+    # se esperan 2 s a que arranque main.py, si no la primera orden se perderia
+    # (igual que en deteccion_pc.py del tema 3). Sin ESP32 no se espera nada.
+    time.sleep(2)
     print("ESP32 conectado en", PUERTO_SERIAL)
 except serial.SerialException as error:
     ser = None
@@ -171,7 +176,11 @@ def escuchar_comando():
 def interpretar_por_reglas(texto):
     """Plan B sin DeepSeek: busca palabras clave. Mucho mas rigido que el
     modelo (no entiende frases raras), pero permite probar sin clave/internet."""
-    t = texto.lower()
+    # Minusculas y SIN tildes: Google transcribe con tildes ("enciéndeme",
+    # "apágalo", "préndelo") y la raiz "enciend" no coincide con "enciénd".
+    # NFD separa cada letra de su tilde (categoria "Mn") y aqui se descartan.
+    t = unicodedata.normalize("NFD", texto.lower())
+    t = "".join(c for c in t if unicodedata.category(c) != "Mn")
     datos = {}
     if any(p in t for p in ("show", "espectaculo", "espectáculo", "parpade", "fiesta")):
         datos["show"] = True
@@ -242,24 +251,36 @@ def validar(datos):
 
 def enviar(linea):
     """Manda una linea al ESP32, o solo la muestra si no hay ESP32."""
+    global ser
     if ser is None:
         print("[sin ESP32] se habria enviado:", linea)
         return
-    # El "\n" es obligatorio: el ESP32 lee con readline(), que espera el fin de linea.
-    ser.write((linea + "\n").encode())
+    try:
+        # El "\n" es obligatorio: el ESP32 lee con readline(), que espera el fin de linea.
+        ser.write((linea + "\n").encode())
+    except serial.SerialException:
+        # Se desconecto el cable a mitad de la sesion: en vez de cerrar el
+        # programa con un traceback, se sigue sin ESP32 (como al arrancar sin el).
+        print("Se perdio el ESP32 (cable desconectado). Se sigue SIN ESP32.")
+        ser = None
+        print("[sin ESP32] se habria enviado:", linea)
 
 
 def leer_respuestas_esp32():
     """Drena TODO lo que el ESP32 haya mandado (no una sola linea), sin
     bloquear: solo lee si in_waiting dice que ya hay bytes en el buffer."""
-    global ultima_linea_esp32
+    global ultima_linea_esp32, ser
     if ser is None:
         return
-    while ser.in_waiting > 0:
-        linea = ser.readline().decode(errors="replace").strip()
-        if linea:
-            ultima_linea_esp32 = linea
-            print("  ESP32 dice:", linea)
+    try:
+        while ser.in_waiting > 0:
+            linea = ser.readline().decode(errors="replace").strip()
+            if linea:
+                ultima_linea_esp32 = linea
+                print("  ESP32 dice:", linea)
+    except serial.SerialException:
+        print("Se perdio el ESP32 (cable desconectado). Se sigue SIN ESP32.")
+        ser = None
 
 
 def aplicar_comando(datos):

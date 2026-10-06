@@ -16,7 +16,8 @@
   // (el programa no lo imprime en ese modo; con DeepSeek sí, y entonces se muestra el suyo).
   // ---------------------------------------------------------------------------------------------
   function interpretarPorReglas(texto) {
-    const t = texto.toLowerCase();
+    // Sin tildes, igual que el programa ("enciéndeme" tiene que coincidir con "enciend").
+    const t = texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const datos = {};
     if (["show", "espectaculo", "espectáculo", "parpade", "fiesta"].some((p) => t.includes(p))) {
       datos.show = true; return datos;
@@ -147,7 +148,9 @@
         if (!orden) {
           this.poner("intencion", "hecha");
           this.poner("orden", "nula", "—", "No se manda nada: la frase no habla de los LEDs.");
-          this.poner("led", "nula", null, "Siguen como estaban.");
+          // Se dibuja el estado que tienen ahora (no lo que quedó de la frase anterior,
+          // que tras un SHOW seguiría parpadeando aquí).
+          this.poner("led", "nula", bulbos((leds.rojo ? "1" : "0") + (leds.azul ? "1" : "0")), "Siguen como estaban.");
           return;
         }
         await this.pasar("intencion");
@@ -198,6 +201,10 @@
           + `<span class="nota">${st.sinEsp ? "(sin ESP32: solo se muestra)" : ""}</span></div>`;
         st.ultimaBot = burbuja("bot", html);
         recorrido.fin({ json, origen, orden, sinEsp: st.sinEsp, alAplicar: () => aplicarOrden(orden) });
+        // El modo texto nunca "termina bien" (sigue esperando frases): el checklist se marca
+        // aquí, cuando el programa real ya armó una orden (y el show, si fue SHOW).
+        marcarPide(/^Orden al ESP32/);
+        if (orden === "SHOW") marcarPide(/^Extra: show/);
       } else {
         html += "<div>Eso no tiene que ver con los LEDs, así que no hice nada.</div>";
         st.ultimaBot = burbuja("bot nada", html);
@@ -253,6 +260,13 @@
       }
     }
     return { st, linea, anotar };
+  }
+
+  // Checklist de "Qué pide la actividad" (en Qué hace y en Resultados).
+  const checklists = [];
+  function marcarPide(re) {
+    const p = ((window.App && App.practica && App.practica.pide) || []).find((x) => re.test(x));
+    if (p) checklists.forEach((c) => c && c.marcar(p));
   }
 
   // ---------------------------- Integración con la API común ----------------------------
@@ -435,7 +449,7 @@
     const irProbar = () => { if (pasos) pasos.ir(3); };
     $("btnIrProbar").onclick = irProbar;
     $("btnPortadaProbar").onclick = irProbar;
-    try { App.checklist($("checklist")); App.checklist($("checklist2")); } catch (e) { console.warn(e); }
+    try { checklists.push(App.checklist($("checklist")), App.checklist($("checklist2"))); } catch (e) { console.warn(e); }
     panel("panelTexto", "texto", {
       titulo: "El asistente, en modo texto",
       botonTexto: "Iniciar el asistente",

@@ -22,7 +22,7 @@
 (function () {
   "use strict";
 
-  const VERSION = "2.0";
+  const VERSION = "2.1";
   const MARKED = "https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js";
   const MERMAID = "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js";
 
@@ -41,6 +41,9 @@
   const activo = (estado) => ACTIVOS.includes(estado);
   const norm = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
   const mmss = (seg) => { seg = Math.max(0, Math.round(seg)); return `${Math.floor(seg / 60)}:${String(seg % 60).padStart(2, "0")}`; };
+  // Ancla de un título como la genera GitHub: minúsculas, sin puntuación (tildes y ñ se quedan),
+  // cada espacio -> "-". La misma regla que _lanzador/revisar_enlaces.py.
+  const slugGitHub = (t) => String(t || "").trim().toLowerCase().replace(/[^\p{L}\p{M}\p{N}\p{Pc} -]/gu, "").replace(/ /g, "-");
   const rutaRepo = (ruta) => "/repo/" + [CARPETA, ...String(ruta).replace(/\\/g, "/").split("/")].filter(Boolean).map(encodeURIComponent).join("/");
 
   function crear(tag, clase, html) {
@@ -459,6 +462,8 @@
 
     // Cuánto suele tardar (campo "duracion"/"duracion_s" de la acción, u opción duracion_s del panel)
     const durS = Number(op.duracion_s || a.duracion_s) || 0;
+    // La duración es solo el arranque (programas que corren hasta que se detienen).
+    const arranque = (op.duracion_es || a.duracion_es) === "arranque" || !!a.entrada || a.vida === "app";
     if (durS && a.tipo !== "html" && a.tipo !== "url" && a.tipo !== "archivo" && a.tipo !== "info") {
       const d = a.duracion || ("~" + mmss(durS));
       const chip = crear("span", "app-chip app-duracion", esc(/^[~≈\d]/.test(d) ? "Tarda " + d : d));
@@ -609,8 +614,14 @@
       // El programa está corriendo: "lleva m:ss de ~m:ss" y la barra (real o estimada).
       const s = (Date.now() - (inicioProg || inicio)) / 1000;
       let txt = " · lleva " + mmss(s);
-      if (durS) txt += s <= durS * 1.1 ? " de ~" + mmss(durS) : " (suele tardar ~" + mmss(durS) + "; sigue trabajando)";
+      // Programas que siguen en marcha hasta que se detienen (leen del teclado, viven con la app o
+      // "duracion_es": "arranque"): su duración es solo lo que tardan en ARRANCAR. Pasado ese
+      // tiempo no están "tardando más de lo habitual": están en marcha.
+      const yaArranco = arranque && durS && s > durS && fracReal === null;
+      if (yaArranco) txt = " · en marcha (lleva " + mmss(s) + ")";
+      else if (durS) txt += s <= durS * 1.1 ? " de ~" + mmss(durS) : " (suele tardar ~" + mmss(durS) + "; sigue trabajando)";
       tEl.textContent = txt;
+      if (yaArranco) { ejec.hidden = true; return; }
       const hayBarra = (durS || reProg) && !consola;
       ejec.hidden = !hayBarra;
       if (!hayBarra) return;
@@ -825,16 +836,34 @@
     if (!window.marked) { el.innerHTML = ""; const p = crear("pre", "app-md-crudo"); p.textContent = parte; el.appendChild(p); return el; }
     el.innerHTML = window.marked.parse(parte);
     const dir = String(ruta).replace(/\\/g, "/").split("/").slice(0, -1).join("/");
-    const base = location.origin + rutaRepo(dir ? dir + "/" : "") + (dir ? "/" : "");
+    // Carpeta del .md con "/" al final SIEMPRE: sin ella, las rutas relativas del README de la
+    // raíz de la práctica ("img/x.png") se resolvían contra /repo/ y no cargaban.
+    const base = location.origin + rutaRepo(dir) + "/";
     const relativa = (u) => u && !/^([a-z]+:|\/|#)/i.test(u);
     for (const img of el.querySelectorAll("img")) {
       const s = img.getAttribute("src"); if (relativa(s)) img.src = new URL(s, base).href;
       img.loading = "lazy";
     }
+    // Anclas como en GitHub (marked no pone id a los títulos): así funcionan los "#..." del README.
+    const vistos = {};
+    for (const h of el.querySelectorAll("h1,h2,h3,h4,h5,h6")) {
+      const b = slugGitHub(h.textContent);
+      if (!h.id) h.id = vistos[b] ? `${b}-${vistos[b]}` : b;
+      vistos[b] = (vistos[b] || 0) + 1;
+    }
     for (const aEl of el.querySelectorAll("a[href]")) {
       const h = aEl.getAttribute("href");
       if (relativa(h)) aEl.href = new URL(h, base).href;
-      if (!h.startsWith("#")) { aEl.target = "_blank"; aEl.rel = "noopener"; }
+      if (!h.startsWith("#")) { aEl.target = "_blank"; aEl.rel = "noopener"; continue; }
+      // "#ancla": si el título está en este trozo, se desplaza ahí; si no (está en otra parte del
+      // README), se abre el README completo en esa sección.
+      aEl.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        const id = decodeURIComponent(h.slice(1));
+        const d = [...el.querySelectorAll("[id]")].find((x) => x.id === id);
+        if (d) d.scrollIntoView({ behavior: "smooth", block: "start" });
+        else if (/^readme\.md$/i.test(String(ruta))) window.open("/readme/" + encodeURIComponent(CARPETA) + "#" + encodeURIComponent(id), "_blank", "noopener");
+      });
     }
     for (const t of el.querySelectorAll("table")) { const w = crear("div", "app-tabla-scroll"); t.replaceWith(w); w.appendChild(t); }
     const merm = el.querySelectorAll("code.language-mermaid");

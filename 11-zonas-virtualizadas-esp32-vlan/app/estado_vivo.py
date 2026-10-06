@@ -7,7 +7,7 @@ puede: lo pide cada segundo y escribe una línea corta por cada lectura, que la 
 salida en vivo del lanzador y dibuja (los 6 LED, la latencia y el estado de cada servicio).
 
 Solo LEE el dashboard (un GET a /api/resumen.json, lo mismo que hace la página del admin): no se
-conecta al broker MQTT ni toca ningún contenedor. Además, cada 3 s pregunta a Docker (solo lectura:
+conecta al broker MQTT ni toca ningún contenedor. Además, cada 3 s y en un hilo aparte, pregunta a Docker (solo lectura:
 `docker ps`, `docker images`, `docker network ls`) qué contenedores, imágenes y redes del laboratorio
 existen y en qué estado están, para que la app los muestre como Docker Desktop. Usa solo la
 biblioteca estándar.
@@ -18,7 +18,7 @@ varias líneas cortas que la app junta:
     VIVO_SVC {nombre, estado, rtt...}        (una por servicio)
     VIVO_LAT [{origen, ip, edad, perdidos}...]
     VIVO_OK                                   (fin de la lectura: la app dibuja)
-    VIVO_CONT {nombre, servicio, imagen, estado, salud, texto, puertos}   (una por contenedor)
+    VIVO_CONT {id, nombre, servicio, imagen, estado, salud, texto, puertos}   (una por contenedor)
     VIVO_IMGS [{repo, tag, tamano}...]  VIVO_REDES [{nombre, subred}...]
     VIVO_DOCKER_OK                            (fin de la lectura de Docker)
 o bien  SIN_ADMIN <motivo>  y, al terminar,  FIN <motivo>.
@@ -29,6 +29,7 @@ import argparse
 import json
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -38,6 +39,17 @@ PROYECTO = "zonas-esp32"            # "name:" del docker-compose.yml: etiqueta d
 REDES = ("vlan1_gamer", "vlan2_robotica", "vlan3_admin")
 # En Windows, que los "docker ..." de cada lectura no abran una ventana de consola.
 SIN_VENTANA = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+# Docker se lee en un hilo aparte (un `docker ps` tarda 2-3 s en Docker Desktop y, en el mismo
+# bucle, atrasaba la lectura del admin, que es cada 1 s). Los dos hilos escriben en la misma
+# salida: cada grupo de líneas sale entero bajo este cerrojo, para que nunca se corte una línea.
+CERROJO = threading.Lock()
+
+
+def emitir(lineas):
+    """Escribe varias líneas de una vez (sin que el otro hilo se meta en medio) y las manda ya."""
+    with CERROJO:
+        sys.stdout.write("".join(linea + "\n" for linea in lineas))
+        sys.stdout.flush()
 
 
 def docker(*args, timeout=8):
@@ -79,9 +91,22 @@ def leer_docker(con_imagenes):
                 corto = p.split(":")[-1]
                 if corto not in puertos:
                     puertos.append(corto)
-        conts.append({"nombre": c.get("Names"), "servicio": etiquetas.get("com.docker.compose.service", ""),
+        conts.append({"id": c.get("ID"), "nombre": c.get("Names"),
+                      "servicio": etiquetas.get("com.docker.compose.service", ""),
                       "imagen": c.get("Image"), "estado": c.get("State"), "salud": salud,
                       "texto": texto, "puertos": puertos})
+    # Con el almacén de imágenes de containerd (Docker Desktop reciente), `docker ps` muestra a
+    # veces el resumen del manifiesto ("5cae2d3501e3") en vez del nombre, aunque el contenedor use
+    # la misma imagen dathinel/zonas-esp32-...:1.0. El nombre con que se creó está en
+    # .Config.Image: se pide de una vez para esos contenedores, así la app nunca muestra un hash.
+    sin_nombre = [c for c in conts if c["id"] and all(ch in "0123456789abcdef" for ch in (c["imagen"] or "x"))]
+    if sin_nombre:
+        salida = docker("inspect", "--format", "{{.Id}} {{.Config.Image}}", *[c["id"] for c in sin_nombre])
+        nombres = dict(l.split(" ", 1) for l in (salida or "").splitlines() if " " in l)
+        for c in sin_nombre:
+            nombre = next((v for k, v in nombres.items() if k.startswith(c["id"])), None)
+            if nombre:
+                c["imagen"] = nombre
     datos = {"contenedores": conts}
     if con_imagenes:
         imgs = docker("images", "--filter", "reference=*/zonas-esp32-*", "--format", "{{json .}}")
@@ -98,12 +123,29 @@ def leer_docker(con_imagenes):
 
 
 def imprimir_docker(d):
-    for c in d["contenedores"]:
-        print("VIVO_CONT " + compacto(c))
+    lineas = ["VIVO_CONT " + compacto(c) for c in d["contenedores"]]
     if "imagenes" in d:
-        print("VIVO_IMGS " + compacto(d["imagenes"]))
-        print("VIVO_REDES " + compacto(d["redes"]))
-    print("VIVO_DOCKER_OK", flush=True)
+        lineas += ["VIVO_IMGS " + compacto(d["imagenes"]), "VIVO_REDES " + compacto(d["redes"])]
+    emitir(lineas + ["VIVO_DOCKER_OK"])
+
+
+def bucle_docker(cada, fin, estado):
+    """Hilo: cada `cada` segundos pregunta a Docker (solo lectura) y lo escribe. Deja en
+    estado["hay_contenedores"] si hay algún contenedor del laboratorio corriendo o arrancando."""
+    vueltas = 0
+    while time.time() < fin:
+        t0 = time.time()
+        # Imágenes y redes cambian poco: cada 5 lecturas (y en la primera).
+        d = leer_docker(con_imagenes=(vueltas % 5 == 0))
+        vueltas += 1
+        if d is None:
+            emitir(["SIN_DOCKER Docker no responde: ¿está abierto Docker Desktop?"])
+            estado["hay_contenedores"] = False
+        else:
+            imprimir_docker(d)
+            estado["hay_contenedores"] = any(c["estado"] in ("running", "restarting", "created")
+                                             for c in d["contenedores"])
+        time.sleep(max(0.2, cada - (time.time() - t0)))
 
 
 def resumir(datos):
@@ -169,46 +211,34 @@ def main():
     ultimo_error = None
     alguna_vez = False   # después de la primera lectura buena ya no se rinde: el admin puede
                          # reiniciarse (la prueba de disponibilidad lo apaga 30 s) y se espera
-    ultimo_docker = 0.0
-    vueltas_docker = 0
-    hay_contenedores = False   # alguno del laboratorio corriendo (o arrancando): se espera al admin
+    # hay_contenedores: alguno del laboratorio corriendo (o arrancando): entonces se espera al admin
+    estado = {"hay_contenedores": False}
+    if a.docker:
+        threading.Thread(target=bucle_docker, args=(a.cada_docker, fin, estado), daemon=True).start()
     while time.time() < fin:
-        if a.docker and time.time() - ultimo_docker >= a.cada_docker:
-            ultimo_docker = time.time()
-            # Imágenes y redes cambian poco: cada 5 lecturas (y en la primera).
-            d = leer_docker(con_imagenes=(vueltas_docker % 5 == 0))
-            vueltas_docker += 1
-            if d is None:
-                print("SIN_DOCKER Docker no responde: ¿está abierto Docker Desktop?", flush=True)
-                hay_contenedores = False
-            else:
-                imprimir_docker(d)
-                hay_contenedores = any(c["estado"] in ("running", "restarting", "created") for c in d["contenedores"])
-        if not alguna_vez and not hay_contenedores and a.rendirse and time.time() - inicio > a.rendirse:
-            print(f"FIN el admin no respondió en {a.rendirse:g} s: levanta el laboratorio y vuelve a pulsar.", flush=True)
-            return
         try:
             with urllib.request.urlopen(a.url, timeout=3) as r:
                 datos = json.loads(r.read().decode("utf-8"))
             res = resumir(datos)
             lineas = ["VIVO_GEN " + compacto({k: res[k] for k in ("t", "en_marcha_s", "mqtt", "leds", "umbrales")})]
             lineas += ["VIVO_SVC " + compacto(dict(nombre=n, **v)) for n, v in res["servicios"].items()]
-            lineas += ["VIVO_LAT " + compacto(res["latidos"]), "VIVO_OK"]
-            for linea in lineas:
-                print(linea)
-            sys.stdout.flush()
+            emitir(lineas + ["VIVO_LAT " + compacto(res["latidos"]), "VIVO_OK"])
             ultimo_error = None
             alguna_vez = True
         except (urllib.error.URLError, OSError, ValueError) as e:
             motivo = getattr(e, "reason", e)
             texto = f"no responde {a.url} ({motivo}). ¿Está levantado el laboratorio?"
             # Se repite cada vez (la app la usa como latido), pero sin inundar: una cada 3 s.
-            print("SIN_ADMIN " + texto, flush=True)
+            emitir(["SIN_ADMIN " + texto])
             if texto == ultimo_error:
                 time.sleep(2)
             ultimo_error = texto
+        if (not alguna_vez and not estado["hay_contenedores"] and a.rendirse
+                and time.time() - inicio > a.rendirse):
+            emitir([f"FIN el admin no respondió en {a.rendirse:g} s: levanta el laboratorio y vuelve a pulsar."])
+            return
         time.sleep(a.cada)
-    print("FIN se cumplió el tiempo; vuelve a pulsar para seguir mirando.", flush=True)
+    emitir(["FIN se cumplió el tiempo; vuelve a pulsar para seguir mirando."])
 
 
 if __name__ == "__main__":

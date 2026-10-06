@@ -4,7 +4,7 @@
 // bloquear en el mismo loop(): el que de verdad este cableado es el
 // que entrega datos, el otro simplemente no recibe nada nunca (no hace
 // falta saber de antemano cual cable se conecto). Ver la seccion "Dos
-// caminos a la vez: UART2 y SPI" del README para el detalle completo.
+// caminos a la vez: SPI y UART2" del README para el detalle completo.
 //
 // Por que este archivo es un sketch de Arduino (C++) y no MicroPython
 // como el resto de los ESP32 del repositorio: escuchar SPI en modo

@@ -72,12 +72,12 @@
         "--prueba"
       ],
       "cwd": ".",
-      "descripcion": "Sin ventana: vuela la misión A → B → C, imprime la posición del líder cada 0,1 s (líneas RUTA t x y z, que la app dibuja como la ruta vista desde arriba y la altura en el tiempo), en cuántos segundos llegó a cada punto y la inclinación máxima, y termina con PRUEBA OK (unos segundos).",
+      "descripcion": "Sin ventana: vuela la misión A → B → C, imprime la posición del líder cada 0,1 s (líneas RUTA t x y z, que la app dibuja como la ruta vista desde arriba y la altura en el tiempo), en cuántos segundos llegó a cada punto y la inclinación máxima, y termina con PRUEBA OK (unos 3 s de cálculo; en la app, con el dibujo, unos 10 s).",
       "cubre": [
         "a) Mover los drones de un lugar A a un lugar B y a un lugar C"
       ],
-      "duracion": "~5 s",
-      "duracion_s": 5
+      "duracion": "~10 s",
+      "duracion_s": 10
     },
     {
       "id": "baxter",
@@ -100,12 +100,12 @@
       "script": "punto-b-brazo-tipo-baxter/probar_baxter.py",
       "args": [],
       "cwd": ".",
-      "descripcion": "Sin ventana (unos 40 s): mide la cinemática inversa de los dos brazos, la demo de coger y mover el cubo con cada brazo, la regla de flancos del teclado y los choques. Cada comprobación sale con OK o FALLA (la app las muestra como un tablero con lo medido contra el límite). Termina con 'Todas las pruebas pasaron.'. Necesita los modelos (los baja solos si faltan).",
+      "descripcion": "Sin ventana (entre 40 s y 1 min y medio, según el PC): mide la cinemática inversa de los dos brazos, la demo de coger y mover el cubo con cada brazo, la regla de flancos del teclado y los choques. Cada una de las 18 comprobaciones sale con OK o FALLA (la app las muestra como un tablero con lo medido contra el límite). Termina con 'Todas las pruebas pasaron.'. Necesita los modelos (los baja solos si faltan).",
       "cubre": [
         "b) Consola de mandos con el ESP32 para mover a Baxter"
       ],
-      "duracion": "~40 s",
-      "duracion_s": 40
+      "duracion": "~40-90 s",
+      "duracion_s": 60
     },
     {
       "id": "atlas",

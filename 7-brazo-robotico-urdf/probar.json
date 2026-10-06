@@ -29,6 +29,7 @@
       "args": [],
       "cwd": ".",
       "ventana": true,
+      "si_falla": "Si la ventana no aparece, búscala en la barra de tareas (puede quedar detrás de la app). Si falló al preparar el entorno con 'Unable to find a compatible Visual Studio installation', faltan las Build Tools de C++ de Visual Studio o la carpeta 'C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer' en el PATH (ver las notas del README, 'Qué hace cada archivo').",
       "descripcion": "Abre la ventana de PyBullet con el brazo. Sin ESP32 la consola dice 'No se encontro el ESP32 en COM7' y se usan los 7 botones del panel derecho: joint_1 (base) +/-, joint_2 (codo) +/-, pinza +/- (la pinza sube y los dedos se abren a la vez) y Home. Cada clic mueve ~2.9° o 5 mm. Se cierra cerrando la ventana. La primera vez se compila PyBullet (~10 min, con las Build Tools de C++ de Visual Studio); después abre en unos segundos.",
       "cubre": [
         "Script de Python que recibe datos por UART y controla el robot",

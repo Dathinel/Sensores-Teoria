@@ -122,7 +122,8 @@
       "cubre": [
         "Punto 2: el PC le manda el dígito por serial al ESP-A (maestro SPI)"
       ],
-      "duracion": "~8 s"
+      "duracion": "~8 s",
+      "si_falla": "Sin la placa conectada, 'No se pudo abrir COM7' es lo esperado: esta prueba solo sirve con el ESP-A en el USB (no hay modo sin ESP32). Con la placa: cierra Thonny y el Monitor Serie (un COM lo abre un solo programa) y revisa que PUERTO_SERIAL de probar_esp_a.py sea el COM del ESP-A."
     },
     {
       "id": "p2-preview",

@@ -202,10 +202,15 @@ class Mando:
         self.mision = []          # puntos que faltan de la mision A -> B -> C
         self.trazo_reiniciar = False
 
+    # Teclas que dan una orden (todas menos 0, que lanza la mision, y 1/3, sin uso). Es un conjunto
+    # y no un texto: con `t in "8246..."` una tecla vacia ("TECLA:" cortada) tambien "estaba" en el
+    # texto y cancelaba la mision.
+    TECLAS_QUE_CANCELAN = set("8246975ABCD*#")
+
     def tecla(self, t):
         o = self.lider.objetivo
         pos = p.getBasePositionAndOrientation(self.lider.id)[0]
-        if t != "0" and t in "82469757ABCD*#":
+        if t in self.TECLAS_QUE_CANCELAN:
             self.mision = []          # cualquier otra orden cancela la mision automatica
         if t == "8":
             o[1] += PASO_JOG

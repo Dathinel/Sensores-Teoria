@@ -25,18 +25,45 @@ sdkconfig
 sdkconfig.old
 managed_components/
 
-# --- Python / MicroPython (por si se usa a futuro) ---
+# Excepción a "*.bin": los pesos de la CNN del tema 8 que la app usa en el navegador (cnn.js).
+# Los genera app/exportar_pesos_web.py, pero sin ellos la app descargada de GitHub no reconoce
+# dígitos ("No se pudieron cargar los pesos de la red").
+!8-digitos-brazo-y-vision/app/cnn-pesos.bin
+
+# --- Python / MicroPython ---
 __pycache__/
 *.pyc
 .venv/
 venv/
+.pytest_cache/
+*.egg-info/
+.ipynb_checkpoints/
+# Entornos virtuales de cada práctica (convención del repo: se llaman "entorno/" y los crea la
+# app la primera vez). Cada uno ya trae su propio .gitignore con "*"; esta línea además hace que
+# git ni entre a mirarlos (miles de archivos; con TensorFlow, rutas "Filename too long").
+entorno/
+
+# --- Node (herramientas de capturas o de Word, si se usan dentro del repo) ---
+node_modules/
 
 # --- Archivos temporales generales ---
 *.log
 *.tmp
 
 # --- Secretos / variables de entorno ---
+# .env lleva la API key de DeepSeek (temas 4 y proyecto final): nunca se sube. Las plantillas
+# .env.example sí (dicen qué variables poner, sin valores reales).
 .env
+.env.*
+!.env.example
+
+# --- Bases de datos locales (las crean las simulaciones y las pruebas al correr) ---
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+*.sqlite
+*.sqlite3
 
 # --- Documentos de entrega para la uni (Word con el enlace al README): solo locales ---
 Enlace README - *.docx

@@ -452,10 +452,12 @@
       const fila = document.createElement("div");
       fila.className = "c9-tab-fila " + (ok ? "ok" : "mal");
       let barra = "";
-      const lim = m[2].match(/([\d.]+) cm \(([<>]) ([\d.]+) cm\)/);
+      // "error 0.12 cm (< 2 cm)", "cubo a 0.19 cm del destino (< 3 cm)", "subio 19.0 cm (> 5 cm)":
+      // lo medido es el ultimo numero en cm antes del parentesis con el limite.
+      const lim = m[2].match(/([\d.]+) cm[^()]*\(([<>]) ([\d.]+) cm\)/);
       if (lim) {
         const v = +lim[1], l = +lim[3];
-        const pct = Math.min(100, (v / Math.max(v, l) / (lim[2] === ">" ? 1 : 1)) * 100);
+        const pct = Math.min(100, (v / Math.max(v, l)) * 100);
         barra = '<span class="c9-mini"><i style="width:' + pct.toFixed(1) + '%"></i><em style="left:' + (lim[2] === "<" ? 100 : (l / Math.max(v, l)) * 100).toFixed(1) + '%"></em></span>' +
           '<span class="c9-mini-txt">' + coma(v, 2) + " de " + (lim[2] === "<" ? "máx. " : "mín. ") + coma(l, 0) + " cm</span>";
       }

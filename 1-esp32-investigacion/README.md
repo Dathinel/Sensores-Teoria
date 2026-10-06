@@ -14,7 +14,19 @@ sin internet se ve el mismo texto.
 
 ![La app del tema 1: la investigación del ESP32 como lector por capítulos](img/app.png)
 
+Qué hacer en cada parte de la app, botón por botón, está en
+[Cómo probarlo con la app, paso a paso](#cómo-probarlo-con-la-app-paso-a-paso).
+
 ## ¿Quiere saber cómo funciona? Aquí está todo
+
+**Paso a paso**
+
+- [Cómo se hizo, paso a paso](#cómo-se-hizo-paso-a-paso) (qué se hizo primero, qué después y qué
+  problemas se resolvieron)
+- [Cómo probarlo con la app, paso a paso](#cómo-probarlo-con-la-app-paso-a-paso) (sección por
+  sección y botón por botón)
+- [Cómo probarlo sin la app y con el ESP32 real](#cómo-probarlo) (Wokwi, Thonny o `mpremote` por
+  consola, y la placa de verdad)
 
 **La investigación**
 
@@ -52,6 +64,86 @@ datos de la ficha técnica: frecuencia de la CPU, tamaño de la flash, RAM libre
 y una lectura de tres periféricos (ADC, DAC y táctil). Así cada número de la tabla se puede
 comprobar en vez de creérselo al fabricante. Al final del README está qué periféricos de los que
 investigamos terminamos usando en los temas siguientes y en el proyecto final.
+
+## Cómo se hizo, paso a paso
+
+1. **La investigación, primero como texto.** Se armó la lista de lo que pedía la actividad (origen,
+   fabricante y familia, arquitectura, pines, programación, costo ambiental, usos) y se escribió una
+   sección por punto, más la ficha técnica en una tabla. Fue el primer contenido del repositorio:
+   empezó como un repositorio aparte (`esp32-investigacion`) y después pasó a ser esta carpeta
+   cuando se creó `Sensores-Teoria` para reunir todos los temas.
+2. **Los diagramas.** La línea de tiempo (`timeline`) y la arquitectura del módulo (`flowchart`) se
+   hicieron en `mermaid`, que GitHub dibuja directo desde el texto del README.
+3. **Los conceptos de base.** Se explicaron aparte las palabras que el resto del repositorio usa
+   todo el tiempo (GPIO, periférico, firmware, ADC, DAC, PWM, táctil capacitivo, UART, I2C, SPI,
+   ESP-NOW): "Qué es un microcontrolador", "Qué es un ADC, un DAC y el PWM" y la lista de buses,
+   para no darlas por sabidas en los temas siguientes.
+4. **El script que lo comprueba (`ficha_placa.py`).** Una investigación que solo se lee no se puede
+   verificar, así que se escribió un script corto de MicroPython que le pregunta al chip sus propios
+   datos. Las decisiones y problemas que se resolvieron en el código:
+   - `esp32.raw_temperature()` no existe en todos los firmwares: va dentro de un `try/except
+     AttributeError` para que su falta no tumbe el resto de las pruebas.
+   - Para la prueba DAC → ADC se eligió **GPIO34** (solo entrada, del ADC1) y no otro pin, para que
+     al unirlo con el DAC con un cable no haya riesgo de que los dos queden como salida y choquen.
+   - El ADC del ESP32 no es perfectamente lineal: por eso el script y el README dicen "cerca de
+     2000" y no un número exacto (la cuenta ideal da 128/255 × 4095 ≈ 2055).
+   - El táctil va en **GPIO4** (canal T0) y no en GPIO0, 2, 12 o 15, que también son táctiles pero
+     son pines de arranque.
+5. **Qué se usó después.** Al avanzar el curso se agregó la tabla
+   [Qué se usó de todo esto en este repositorio](#qué-se-usó-de-todo-esto-en-este-repositorio), que
+   conecta cada periférico investigado con el tema donde se usó de verdad.
+6. **La app.** Se armó un lector por capítulos (`app/`) que lee los títulos `## ` de este mismo
+   README, así que cualquier sección nueva aparece sola en la app sin tocar su código. Se le sumó un
+   capítulo propio, "Córrelo en tu ESP32", con el script listo para copiar.
+7. **Lo que falta.** La captura de la Shell de Thonny con la salida en la placa del laboratorio (ver
+   [Pendiente](#pendiente)): no se inventaron valores.
+
+## Cómo probarlo con la app, paso a paso
+
+El tema es de lectura, así que la app no lanza programas en el PC: es un lector de esta
+investigación con el script de la placa listo para copiar.
+
+1. **Abrirla.** Doble clic en [`ABRIR.bat`](ABRIR.bat) (en Linux o Mac, `./abrir.sh`). Se abre una
+   ventana propia, maximizada, con la pantalla "Abriendo la práctica…" unos segundos. La consola
+   negra del `ABRIR.bat` se minimiza sola: no hay que cerrarla mientras se usa la app.
+2. **La barra de arriba.** A la izquierda, "Tema 1 · Investigación del ESP32". En el centro, la
+   barra de progreso de lectura y el contador "N / 18 leídos" (los capítulos que ya se abrieron). A
+   la derecha, el chip verde "Listo: no instala nada" (este tema no necesita entorno de Python), el
+   botón **Pantalla completa** (Esc para salir) y **Ver en GitHub ↗**, que abre la carpeta del tema
+   en GitHub, donde se ven los diagramas aunque falle la app.
+3. **El índice de la izquierda.** "Portada" y los capítulos en dos grupos: *La investigación* y
+   *El script de la placa*. Un clic abre ese capítulo; el punto de la izquierda se pone verde cuando
+   ya se leyó y el capítulo abierto queda resaltado. Abajo, el enlace "Tema 2: Thonny y MicroPython
+   ↗" abre la app del tema 2. En una ventana angosta (menos de 900 px de ancho) el índice se esconde
+   y se abre con el botón **☰** de arriba a la izquierda.
+4. **La portada.** Dos botones: **Empezar a leer →** abre el primer capítulo e **Ir al script de la
+   placa** salta a "Córrelo en tu ESP32". Debajo, la tarjeta **Qué pide la actividad**: cada punto
+   del enunciado es un enlace al capítulo que lo responde y su casilla se marca sola al leer ese
+   capítulo (también se puede marcar a mano). La tarjeta **Cómo está organizado** dice cuántos
+   capítulos tiene cada grupo y por cuál empezar.
+5. **Un capítulo.** Es la sección del README con el mismo nombre. Los diagramas `mermaid` se dibujan
+   si hay internet (sin internet se ve el texto del diagrama). Los enlaces a otros temas abren la app
+   de ese tema, los enlaces a archivos abren GitHub y el enlace a `ficha_placa.py` lleva al capítulo
+   de la placa. Las imágenes se amplían con un clic.
+6. **"En este capítulo".** En pantallas anchas (desde 1500 px, por ejemplo 1920x1080) aparece a la
+   derecha una columna con los subtítulos, tablas y diagramas del capítulo abierto; un clic baja hasta
+   ese punto y la lista marca por dónde va la lectura. A 1366x768 no aparece, para no apretar el
+   texto.
+7. **Moverse entre capítulos.** Abajo de cada capítulo, **← Anterior** y **Siguiente: <nombre> →**
+   (en el último dice "Fin"), con "Capítulo N de 18" en el medio. Las flechas ← y → del teclado hacen
+   lo mismo. La app recuerda qué se leyó aunque se cierre.
+8. **"Córrelo en tu ESP32"** (el capítulo propio de la app, resaltado en azul en el índice): el
+   recorrido PC → ESP32 → Shell, los cinco pasos para correr el script en la placa, el botón
+   **Instalar MicroPython (tema 2) ↗** (abre la app del tema 2 directo en su paso de instalación),
+   qué se conecta, la salida que debe aparecer en la Shell y el código. **Copiar el código** lo deja
+   en el portapapeles con el aviso "Código copiado…"; si el navegador no deja copiar, lo selecciona
+   y avisa "Texto seleccionado: cópialo con Ctrl+C". **En GitHub ↗** abre el archivo en GitHub. El
+   plegado **¿Y sin placa? (Wokwi)** tiene el botón **Abrir Wokwi (MicroPython en ESP32) ↗**, que
+   abre un proyecto nuevo de Wokwi en una pestaña.
+9. **Si algo falla.** Si un capítulo dice "No se pudo cargar este capítulo", el lanzador se cerró
+   (la consola del `ABRIR.bat`): volver a hacer doble clic en `ABRIR.bat`. Si `ABRIR.bat` dice que no
+   encuentra Python, instalar Python 3.9 o más nuevo desde python.org marcando "Add python.exe to
+   PATH". Si los diagramas salen como texto, falta internet (el contenido es el mismo).
 
 ## Qué es un microcontrolador
 
@@ -420,6 +512,11 @@ lazos cerrados en laboratorios de mecatrónica, como los de este repositorio.
 
 ## Cómo probarlo
 
+Con la app: [Cómo probarlo con la app, paso a paso](#cómo-probarlo-con-la-app-paso-a-paso). Sin la
+app no se pierde nada: todo lo que muestra es este README (en GitHub, con los diagramas dibujados) y
+[`ficha_placa.py`](ficha_placa.py). Para abrir la app desde una consola en vez del `ABRIR.bat`, en
+la raíz del repositorio: `python _lanzador/lanzador.py --practica 1-esp32-investigacion`.
+
 **Sin ESP32 conectado**
 
 Casi todo este tema es lectura. Para ver los pines y periféricos en acción sin hardware,
@@ -446,6 +543,19 @@ objetivo del script es justamente medir el hardware de verdad.
 
 No hace falta grabarlo como `main.py`: F5 lo ejecuta una vez y la placa queda libre para el
 siguiente tema.
+
+Lo mismo por consola, sin Thonny (con Thonny cerrado, porque si no tiene el puerto tomado), con
+[`mpremote`](https://docs.micropython.org/en/latest/reference/mpremote.html), la herramienta oficial
+de MicroPython:
+
+```
+python -m pip install mpremote
+python -m mpremote connect COM7 run ficha_placa.py
+```
+
+`COM7` es el puerto que nos tocó a nosotros (el de cada placa sale en el Administrador de
+dispositivos). `run` manda el archivo a la placa, lo ejecuta sin guardarlo (igual que F5) y muestra
+en la consola los cinco bloques de la salida.
 
 ## Pendiente
 

@@ -40,7 +40,7 @@
       "modulo": "app.lanzar",
       "args": ["--auto", "prueba_completa", "--abrir", "--abrir-dashboard"],
       "cwd": ".",
-      "descripcion": "Arranca la simulación completa (escenario prueba_completa) y abre dos pestañas: el visor 3D en vivo (http://127.0.0.1:8765: planta, carro y pista; paneles En vivo, Pruebas, Paso a paso, Sensores y Componentes; botones de sabotaje y 'Ver la prueba de este sensor') y el dashboard (http://127.0.0.1:8501 o, si están ocupados, el siguiente libre: lo dice al arrancar; Resumen, Monedas y vasos, Calidad del filtro, Línea en vivo, Carro y ruta, Pruebas, Montaje real, Asistente y Ayuda; la barra lateral tiene Empezar, Pausa, Paro y 'Probar un filtro'). Tarda unos 10 s en responder. Se detiene cerrando su consola (Ctrl+C cierra los dos procesos). Si la simulación ya estaba corriendo, solo abre las pestañas.",
+      "descripcion": "Arranca la simulación completa (escenario prueba_completa) y abre dos pestañas: el visor 3D en vivo (http://127.0.0.1:8765: planta, carro y pista; paneles En vivo, Pruebas, Paso a paso, Sensores y Componentes; botones de sabotaje y 'Ver la prueba de este sensor') y el dashboard (http://127.0.0.1:8501 o, si están ocupados, el siguiente libre: lo dice al arrancar; Resumen, Monedas y vasos, Calidad del filtro, Línea en vivo, Pruebas, Carro y ruta, Montaje real, Asistente y Ayuda; la barra lateral tiene Empezar, Pausa y Paro, y la pestaña Pruebas 'Probar un filtro', 'Colocar una pieza' y los sabotajes). Tarda unos 10 s en responder. Se detiene cerrando su consola (Ctrl+C cierra los dos procesos). Si la simulación ya estaba corriendo, solo abre las pestañas.",
       "cubre": [
         "Contador de monedas, módulo de transporte y embalaje en vasos, y recolección de los vasos",
         "Vehículo que sigue una trayectoria con tres obstáculos hasta la meta",
@@ -152,7 +152,7 @@
       "modulo": "pytest",
       "args": ["-q"],
       "cwd": ".",
-      "descripcion": "Corre las 936 pruebas de tests/ (control, simulación, visor, dashboard, asistente y firmware contra una estación emulada). Tarda unos 4 minutos; al final dice cuántas pasaron (probado el 2026-10-05 con el entorno del proyecto: 936 pasan).",
+      "descripcion": "Corre las 937 pruebas de tests/ (control, simulación, visor, dashboard, asistente y firmware contra una estación emulada). Tarda unos 4 minutos; al final dice cuántas pasaron (probado el 2026-10-06 con el entorno del proyecto: 937 pasan).",
       "cubre": ["Grupo 7 (elemento diferencial): detector de elementos de monedas y vasos, cada filtro demostrable por separado"],
       "duracion": "~4-5 min",
       "duracion_s": 270,

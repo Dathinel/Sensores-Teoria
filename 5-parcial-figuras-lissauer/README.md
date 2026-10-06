@@ -4,7 +4,7 @@ Parcial del primer corte: dibujar una figura propia en un osciloscopio usando el
 
 ## ¿Quiere probarlo? → aquí está
 
-Doble clic en **[`ABRIR.bat`](ABRIR.bat)** (en Linux o Mac, `./abrir.sh`). Solo hace falta Python 3.9 o más nuevo: no instala nada más, ni hace falta ESP32 ni osciloscopio. Se abre una app (una ventana tipo programa, con un menú lateral como el de Docker Desktop) que recorre el tema paso a paso:
+Doble clic en **[`ABRIR.bat`](ABRIR.bat)** (en Linux o Mac, `sh abrir.sh`). Solo hace falta Python 3.9 o más nuevo: no instala nada más, ni hace falta ESP32 ni osciloscopio. Se abre una app (una ventana tipo programa, con un menú lateral como el de Docker Desktop) que recorre el tema paso a paso:
 
 1. **Lissajous y el modo XY**: dos senoidales en vivo, con la relación de frecuencias y el desfase ajustables; con 1:1 y 90° sale la elipse del cuerpo del pez.
 2. **El pez, pieza por pieza**: el pez de `pez3_esp32.py` se arma solo (cuerpo, cola, ojo, pupila, boca, aleta) con la geometría exacta del script, mostrando el número que recibe cada DAC, el voltaje, X e Y en el tiempo y la línea de código de cada pieza.
@@ -12,8 +12,11 @@ Doble clic en **[`ABRIR.bat`](ABRIR.bat)** (en Linux o Mac, `./abrir.sh`). Solo 
 
 ![La app del tema 5: el pez armándose pieza por pieza, con los valores de los dos DAC](img/app-pez-por-partes.png)
 
+**Paso a paso de todo:** [cómo se hizo](#cómo-se-hizo-paso-a-paso) · [cómo probarlo con la app, sección por sección](#cómo-probarlo-con-la-app-sección-por-sección) · [sin la app](#cómo-probarlo-sin-la-app) · [con el ESP32 real y el osciloscopio](#con-el-esp32-real-y-el-osciloscopio-paso-a-paso) · [si algo falla](#si-algo-falla).
+
 ## ¿Quiere saber cómo funciona? → aquí está todo
 
+- [Paso a paso](#paso-a-paso): cómo se hizo y cómo probarlo (con la app, sin la app y con el hardware)
 - [Qué pedía el parcial y qué hicimos](#qué-pedía-el-parcial-y-qué-hicimos)
 - Conceptos: [qué es un DAC](#qué-es-un-dac) · [el modo XY](#qué-es-el-modo-xy-de-un-osciloscopio) · [de Lissajous a una figura libre](#qué-son-las-figuras-de-lissajous-y-de-ahí-a-una-figura-libre)
 - [La idea general](#la-idea-general) (diagramas) y [conexiones](#conexiones)
@@ -23,6 +26,60 @@ Doble clic en **[`ABRIR.bat`](ABRIR.bat)** (en Linux o Mac, `./abrir.sh`). Solo 
 - [Las dos versiones del script](#las-dos-versiones-del-script) y [los límites del rango del DAC](#los-límites-del-rango-del-dac)
 - [Cómo probarlo](#cómo-probarlo) (sin ESP32, con ESP32 sin osciloscopio, con todo) y [problemas de compatibilidad](#problemas-de-compatibilidad)
 - [Demostración en funcionamiento](#demostración-en-funcionamiento) (los videos del laboratorio) y [pendiente](#pendiente)
+
+## Paso a paso
+
+### Cómo se hizo, paso a paso
+
+Lo que se hizo, en orden, con lo que salió mal en el camino (el detalle técnico de cada paso está en las secciones de más abajo):
+
+1. **Partir de Lissajous.** En clase se vio que dos senoidales en modo XY dibujan figuras. La primera observación fue que una elipse ya es una Lissajous (misma frecuencia, 90° de desfase): `x = cx + rx·cos(t)`, `y = cy + ry·sin(t)`. Esa iba a ser la base del cuerpo.
+2. **Elegir la figura y partirla en formas simples.** Se eligió un pez y se descompuso en piezas que se pueden calcular con fórmulas: el cuerpo, el ojo y la pupila son elipses; la boca, un arco de elipse (200° a 340°); la cola, tres rectas; la aleta, dos curvas Bezier cuadráticas. De ahí salieron los tres generadores `crear_elipse`, `crear_linea` y `crear_bezier`.
+3. **Pensar todo en un espacio de 0 a 1** y convertir al DAC solo al final (`convertir_x`/`convertir_y`), usando el rango 10-245 en vez de 0-255 para no pegar la figura al borde de la pantalla.
+4. **Calcular una vez y dibujar siempre.** Los senos y cosenos son lentos en MicroPython, así que las listas de puntos se arman al arrancar y el `while True` solo recorre esas listas escribiendo en los dos DAC (`dibujar`).
+5. **Primer intento en el laboratorio** (el GIF ["primer intento"](#demostración-en-funcionamiento)): la figura todavía no salía bien resuelta. Se corrigió ajustando la escala de las piezas y moviendo el pez entero con `DESPLAZAMIENTO_X = -0.08`, con los dos canales del osciloscopio en los mismos voltios por división y el formato en XY. Para no recablear si la figura salía espejada se agregaron `INVERT_X`/`INVERT_Y`.
+6. **Detalles que se ven en la pantalla.** La cola se hizo nacer exactamente del borde del cuerpo (`CUERPO_CX + CUERPO_RX`) para que no quedara hueco ni una línea metida dentro; la pupila, con solo 15 puntos, se veía más débil que el resto, y se le dio más tiempo por punto (`dibujar(pupila, 180)`). Así quedó `pez3_esp32.py` (un pez, 314 puntos).
+7. **Tres peces sin repetir coordenadas.** Para `pez5_esp32.py` el pez se redefinió como un modelo base centrado en (0, 0), y `transformar` + `crear_pez` lo escalan y lo mueven a tres posiciones. Con el triple de puntos por vuelta, la pupila bajó a 40 µs para no alargar el ciclo y que no parpadeara.
+8. **Comprobar sin el osciloscopio.** Los scripts traen `ENVIAR_SERIAL` (imprimir cada punto como `x y`) y `ESCRIBIR_DAC`, para revisar en el PC lo que calcula la placa. Repasando así la geometría se vio que en `pez5_esp32.py` 19 puntos del pez grande se recortan contra el borde izquierdo (está explicado en [los límites del rango del DAC](#los-límites-del-rango-del-dac)); el script entregado se dejó como se mostró en el laboratorio y el arreglo se puede probar en el simulador.
+9. **Para probarlo sin equipo**: después se armaron [`preview.html`](preview.html) (un osciloscopio XY simulado con la misma geometría, con modo Web Serial para la placa real) y la app del `ABRIR.bat`, y los GIF del laboratorio se recodificaron para que el repositorio pesara menos.
+
+### Cómo probarlo con la app, sección por sección
+
+1. Doble clic en [`ABRIR.bat`](ABRIR.bat) (Linux/Mac: `sh abrir.sh`). Se abre una ventana con la pantalla "Abriendo la práctica…" y después la app; la consola negra se minimiza sola y hay que dejarla abierta. Arriba a la derecha, el chip **"Listo: no instala nada"** (esta práctica no usa ningún entorno de Python), **Pantalla completa**, **README completo** y **GitHub ↗**. A la izquierda, el recorrido de 7 pasos; se puede saltar a cualquiera con un clic.
+2. **Inicio.** Las cifras clave (2 DAC, 314 puntos por pez, 3 peces = 942 puntos), el GIF de los tres peces (clic para verlo en grande) y cuatro botones que llevan directo a "Lissajous", "El pez, pieza por pieza", "Pruébalo" y "Resultados". Abajo, **"Qué pide la actividad"**: los tres puntos del parcial con casillas; se marcan solas al probar (al completar el pez, al abrir el simulador en grande y al abrir "Resultados") y también se pueden marcar a mano.
+3. **Lissajous y el modo XY.** Tres tarjetas (qué es un DAC, el modo XY, Lissajous) y un osciloscopio en vivo: a la derecha, X e Y en el tiempo. Cambiar **"Relación de frecuencias X:Y"** (arranca en 2:3) cambia la figura; el deslizador **Desfase** la gira y la deforma. El botón **"1:1 con 90° = la elipse del cuerpo del pez"** deja la elipse con la que se dibuja el cuerpo. **"Siguiente: armar el pez →"** pasa al paso 3.
+4. **El pez, pieza por pieza.** **"▶ Armar el pez"** hace que el haz recorra las 314 posiciones en el orden de `dibujar_pez()`; mientras corre, el botón dice **"⏸ Pausa"** y después **"▶ Seguir"**; al terminar, **"↺ Armar otra vez"**. **"Siguiente pieza"** dibuja solo hasta el final de la pieza actual (cuerpo, luego cola...). **"↺ Reiniciar"** vuelve a 0. **Velocidad del haz** (1 a 12 puntos por cuadro) cambia la rapidez. Las tarjetas de la derecha (Cuerpo, Cola, Ojo, Pupila, Boca, Aleta) también son botones: dibujan esa pieza dejando las anteriores como ya recorridas. Debajo se ve el punto actual ("245 / 314"), el número que recibe cada DAC con su voltaje aproximado, X e Y en el tiempo, la línea del script que crea la pieza y una nota. Al completar el pez se marca sola la casilla "Dibujar una figura propia".
+5. **Cómo se conecta.** El dibujo del ESP32 con las tres conexiones al osciloscopio, la tabla de pines y los cuatro ajustes del osciloscopio (formato XY, mismos V/div, persistencia apagada, `INVERT_X`/`INVERT_Y`). Es solo lectura: no hace falta para probar en el PC.
+6. **Pruébalo: osciloscopio simulado.** Es [`preview.html`](preview.html) dentro de la app (sale "Cargando el osciloscopio simulado…" uno o dos segundos). En **Modo prueba (sin ESP32)**:
+   - **"Qué dibuja el ESP32"**: `pez3_esp32.py: un pez` (314 puntos por ciclo, 0 recortados), `pez5_esp32.py: tres peces` (942 puntos, **19** recortados, en amarillo) o `Lissajous: dos senos puros` (aparecen los deslizadores Frecuencia X, Frecuencia Y y Desfase).
+   - **DESPLAZAMIENTO_X / DESPLAZAMIENTO_Y** arrancan con el valor de cada archivo (-0.08 y -0.03); con tres peces, llevar `DESPLAZAMIENTO_X` a 0.00 deja "Puntos recortados" en 0 (verde). **INVERT_X / INVERT_Y** espejan la figura.
+   - **Velocidad del haz** en 10-30: se ve el punto recorrer cuerpo, cola, ojo, pupila, boca y aleta; en 400 o más, la figura "sólida". **Persistencia del fósforo**: cuánto tarda en borrarse el trazo. "Punto actual (x, y)" muestra los dos números que recibirían los DAC.
+   - **Conectado (Web Serial)** y **Elegir puerto del ESP32**: para la placa real (ver [con el ESP32 real](#con-el-esp32-real-y-el-osciloscopio-paso-a-paso)). Sin placa no hacen nada útil.
+   - Debajo, **"Abrir el simulador en grande"** abre el mismo simulador en una pestaña aparte (y marca las casillas que cubre).
+7. **Con el ESP32 real.** Los pasos con y sin osciloscopio y, a la derecha, el código de los dos scripts en pestañas (**"Un pez · pez3_esp32.py"** y **"Tres peces · pez5_esp32.py"**). **"Copiar el código"** lo copia para pegarlo en Thonny (si el navegador no deja copiar, lo deja seleccionado: Ctrl+C). El enlace "instálalo con la app del tema 2" lleva a cómo poner MicroPython en la placa.
+8. **Resultados: el laboratorio.** Los cinco videos/fotos del osciloscopio real (clic para ampliar). Abrir este paso marca la casilla "Usar el ESP32 como generador de señales", que solo se puede comprobar con el equipo del laboratorio.
+
+### Cómo probarlo sin la app
+
+- **El simulador solo:** doble clic en [`preview.html`](preview.html) (no necesita servidor ni internet, salvo las fuentes); funciona igual que en el paso "Pruébalo" de la app.
+- **El servidor de la app desde la consola** (en la raíz del repo): `python _lanzador/lanzador.py --practica 5-parcial-figuras-lissauer` (abre la ventana) o con `--no-navegador` (solo imprime la URL `http://127.0.0.1:<puerto>/app/5-parcial-figuras-lissauer/`).
+- **Los scripts** no corren en el PC (usan `machine.DAC`, que solo existe en el ESP32): se leen tal cual o se cargan con Thonny como se explica abajo.
+
+### Con el ESP32 real y el osciloscopio, paso a paso
+
+Está detallado en [Cómo probarlo](#cómo-probarlo), en dos partes: **"Con ESP32 conectado pero sin osciloscopio"** (los puntos por la consola de Thonny o dibujados en el simulador con Web Serial) y **"Con ESP32 conectado y el osciloscopio"** (guardar como `main.py`, cablear GPIO25/GPIO26/GND, formato XY, mismos V/div, `INVERT_X`/`INVERT_Y` si sale espejado). La práctica se entregó con el hardware real: los resultados son los GIF de [Demostración en funcionamiento](#demostración-en-funcionamiento).
+
+### Si algo falla
+
+| Qué pasa | Qué hacer |
+|---|---|
+| `ABRIR.bat` dice que no encuentra Python 3.9 o más nuevo | Instalar Python desde python.org marcando "Add python.exe to PATH" y volver a abrirlo (los pasos salen en la misma ventana) |
+| El simulador se queda en "Cargando el osciloscopio simulado…" | Pulsar "Abrir el simulador en grande" o abrir `preview.html` con doble clic |
+| "Elegir puerto del ESP32" está gris o dice "Este navegador no tiene Web Serial" | Pasar primero a "Conectado (Web Serial)"; usar Chrome o Edge (Firefox no tiene Web Serial) |
+| Conectado, pero "Puntos recibidos" sigue en 0 | Cerrar Thonny (ocupa el puerto), revisar que `main.py` tenga `ENVIAR_SERIAL = True` y presionar EN en la placa; "Última línea cruda" dice qué está llegando |
+| En el osciloscopio solo se ven dos ondas | Falta poner el formato en XY (menú Pantalla → Formato) |
+| El pez sale estirado, espejado o cortado | Mismos V/div en los dos canales; `INVERT_X`/`INVERT_Y = True`; mover `DESPLAZAMIENTO_X`/`Y` (probarlo antes en el simulador) |
+| `ImportError` con `DAC` | La placa no es un ESP32 clásico (los S3, C3 y C6 no tienen DAC; el S2 sí, pero en otros pines): ver [problemas de compatibilidad](#problemas-de-compatibilidad) |
 
 ## Qué pedía el parcial y qué hicimos
 
@@ -278,7 +335,7 @@ La figura sale exactamente de las mismas funciones `crear_elipse`, `crear_linea`
 
 ## Problemas de compatibilidad
 
-- **El módulo `DAC` de MicroPython solo existe en el ESP32 "clásico"**, el mismo que se usa en el resto de este repositorio. Variantes más nuevas como el ESP32-S3, el ESP32-C3 o el ESP32-C6 no traen conversor digital a analógico en el silicio, así que `from machine import DAC` directamente no existe ahí y el script no puede correr sin cambios en esas placas. Antes de reutilizar este código en otra placa conviene confirmar en la hoja de datos que tenga DAC.
+- **El script está hecho para el ESP32 "clásico"**, el mismo que se usa en el resto de este repositorio: el módulo `DAC` de MicroPython solo existe en los chips que tienen DAC (el clásico y el ESP32-S2, que lo tiene en otros pines, GPIO17 y GPIO18). Variantes más nuevas como el ESP32-S3, el ESP32-C3 o el ESP32-C6 no traen conversor digital a analógico en el silicio, así que `from machine import DAC` directamente no existe ahí y el script no puede correr sin cambios en esas placas. Antes de reutilizar este código en otra placa conviene confirmar en la hoja de datos que tenga DAC.
 - **Los pines del DAC están fijos en GPIO25 y GPIO26** en el ESP32 clásico, no se pueden mover a otro pin como sí pasa con la mayoría de periféricos digitales del chip, así que el cableado hacia el osciloscopio tiene que respetar exactamente esos dos pines.
 - **La velocidad del bucle depende del firmware de MicroPython instalado**, no solo del código: versiones más viejas del firmware pueden ejecutar `dac.write()` más lento, lo que se nota como una figura más titilante o con más ruido en el trazo. Si el pez se ve inestable, vale la pena confirmar que el firmware esté razonablemente actualizado antes de sospechar del script.
 - **`utime.sleep_us` no garantiza precisión de microsegundos exacta**, porque MicroPython sigue teniendo que atender otras tareas internas del intérprete entre instrucción e instrucción; con `DRAW_US` en 1 esto no suele notarse a simple vista, pero en osciloscopios más exigentes o con la persistencia de pantalla activada sí puede verse como un trazo ligeramente irregular.

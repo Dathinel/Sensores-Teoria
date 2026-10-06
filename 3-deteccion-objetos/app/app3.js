@@ -17,7 +17,7 @@ const PARES = {
   carro: { nombres: ["carro", "moto"], coco: ["car", "motorcycle"] },
 };
 const INFO = {
-  camara: "La cámara web entrega unos 30 fotogramas por segundo de 640×480. Sin cámara, el programa puede leer fotos de ejemplo en su lugar (paso «Pruébalo con fotos»).",
+  camara: "La cámara web entrega unos 30 fotogramas por segundo de 640×480. Sin cámara, el programa puede leer fotos de ejemplo en su lugar (sección «Ver a YOLO»).",
   yolo: "YOLOv8 nano mira cada fotograma de una sola pasada y devuelve cajas con lo que reconoce (80 tipos de objetos). El programa se queda solo con los dos que le importan, y solo si la confianza es 0,4 o más.",
   mensaje: "Dos cifras, una por objeto: 1 = se ve, 0 = no se ve. Se manda apenas cambia y se repite cada 500 ms aunque nada cambie, para que el ESP32 sepa que la computadora sigue ahí.",
   esp32: "El ESP32 corre esp32_leds.py (guardado como main.py). Lee cada línea, pone los pines y contesta «LEDS xy». La barrita es su reloj: si llega a 2 s sin mensajes, apaga todo (apagado de seguridad).",

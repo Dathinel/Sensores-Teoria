@@ -44,7 +44,7 @@
 </section>
 
 <!-- 2 ─────────────────────────────────────────────────────────────── -->
-<section data-seccion="Pruébalo" data-icono="▶" data-sub="la simulación en PyBullet" id="s-probar">
+<section data-seccion="Pruébalo" data-icono="▶" data-sub="simulación PyBullet" id="s-probar">
   <h2>La simulación real en PyBullet</h2>
   <div class="b-dos-col b-sim-col">
     <div id="panelSim" class="b-panel-accion"></div>
@@ -125,7 +125,7 @@
 </section>
 
 <!-- 4 ─────────────────────────────────────────────────────────────── -->
-<section data-seccion="En el navegador" data-icono="◧" data-sub="preview.html, sin instalar" id="s-preview">
+<section data-seccion="En el navegador" data-icono="◧" data-sub="preview.html" id="s-preview">
   <h2>La versión en el navegador (sin instalar nada)</h2>
   <p>Una vista 3D simplificada del mismo brazo con <b>el mismo teclado 4x4 clicable</b>. En <b>Modo prueba</b> la
     página hace de ESP32: mantén presionadas 8/2, 6/4, 9/7 o 5 y mira el monitor con las líneas que mandaría.
@@ -229,6 +229,9 @@
       <li><b>Con la simulación de PyBullet:</b> el programa busca la placa en <code>COM7</code>. Si tu ESP32 está en ese
         puerto, inicia la simulación: la salida debe decir <i>"ESP32 conectado en COM7"</i> y el brazo
         obedece al teclado real. Si está en otro puerto, mira "Detalles técnicos".</li>
+      <li><b>Si desenchufas el ESP32 con la simulación abierta</b>, no se cae: la salida dice <i>"Se perdio el ESP32…"</i>,
+        siguen los botones de la ventana y cada 3 s prueba el puerto otra vez. Al volver a enchufarlo dice
+        <i>"ESP32 reconectado"</i> (la placa se reinicia al abrir el puerto, así que el brazo vuelve a 0, 0, 0).</li>
     </ol>
     <div>
       <div class="b-tarjeta b-diagnostico">
@@ -250,7 +253,8 @@
           <li>Simulación: <code>brazo_pybullet.py</code> con <code>brazo.urdf</code> (sin modificar), entorno con
             <code>pybullet==3.2.7</code> y <code>pyserial==3.5</code>.</li>
           <li>Puerto: la constante <code>PUERTO_SERIAL = "COM7"</code> al principio de <code>brazo_pybullet.py</code>. El COM de
-            la placa se ve en el Administrador de dispositivos de Windows (Puertos COM y LPT).</li>
+            la placa se ve en el Administrador de dispositivos de Windows (Puertos COM y LPT). Desde una consola, en la
+            carpeta del tema, también se puede pasar sin tocar el archivo: <code>entorno\Scripts\python brazo_pybullet.py COM5</code>.</li>
           <li>Firmware: <code>esp32_brazo.py</code> → <code>main.py</code>. Línea <code>J1:%.3f,J2:%.3f,G:%.3f</code> cada 100 ms a 115200 baudios.</li>
           <li>La lectura del PC no espera: solo lee si hay bytes (<code>in_waiting</code>), así la física sigue a 240 pasos/s.</li>
           <li>Compilar pybullet: Visual Studio 2022 Build Tools con C++; si dice <i>Unable to find a compatible Visual Studio

@@ -25,7 +25,13 @@
   h1 { font-size: 1.15rem; font-weight: 600; margin: 0 0 0.2rem; }
   p.sub { color: var(--text-muted); font-size: 0.8rem; margin: 0 0 1rem; }
   .rejilla { display: grid; grid-template-columns: minmax(260px, 320px) minmax(220px, 280px) 1fr; gap: 1rem; align-items: start; max-width: 1800px; }
-  @media (max-width: 1100px) { .rejilla { grid-template-columns: 1fr; } }
+  /* Ancho medio (p. ej. dentro de la app, en una pantalla de 1366 px): el teclado y el brazo
+     lado a lado arriba, y el monitor debajo; asi lo que se usa se ve sin desplazar la pagina. */
+  @media (max-width: 1100px) {
+    .rejilla { grid-template-columns: minmax(200px, 260px) 1fr; grid-template-areas: "teclado vista" "monitor monitor"; }
+    #panelModos { grid-area: monitor; } #panelControles { grid-area: teclado; } #panelVista { grid-area: vista; }
+  }
+  @media (max-width: 640px) { .rejilla { grid-template-columns: 1fr; grid-template-areas: "monitor" "teclado" "vista"; } }
   .panel { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 8px; padding: 1rem; }
   .modos { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
   .modos button {
@@ -71,7 +77,7 @@
 <p class="sub">Vista 3D simplificada (cinemática directa de brazo.urdf, sin física) de esp32_brazo.py + brazo_pybullet.py. No reemplaza la simulación en PyBullet. Solo teclado: mantener presionada una tecla mueve la articulación (jog), igual que el ESP32 real.</p>
 
 <div class="rejilla">
-  <div class="panel">
+  <div class="panel" id="panelModos">
     <div class="modos">
       <button id="btnModoPrueba" class="activo">Modo prueba</button>
       <button id="btnModoConectado">Conectado (Web Serial)</button>
@@ -88,7 +94,7 @@
     <div id="seleccionTexto">8/2 = joint_1 · 6/4 = joint_2 · 9/7 = pinza · 5 = home</div>
   </div>
 
-  <div class="panel">
+  <div class="panel" id="panelVista">
     <!-- Se dibuja por JS: proyeccion de los puntos 3D del brazo con la misma camara de brazo_pybullet.py (yaw 40, pitch -30) -->
     <svg id="vista" viewBox="0 0 300 260"></svg>
     <div class="lectura">
@@ -264,6 +270,9 @@ btnModoPrueba.addEventListener("click", () => {
   panelControles.style.pointerEvents = "auto";
   btnConectar.style.display = "none";
   estado.style.display = "none";
+  // El dibujo puede haber quedado en la ultima posicion que mando el ESP32: se vuelve
+  // a la posicion del modo prueba, que es la que el monitor sigue mostrando.
+  aplicar(valoresArticulaciones.j1, valoresArticulaciones.j2, valoresArticulaciones.g);
 });
 
 btnModoConectado.addEventListener("click", () => {
@@ -289,6 +298,9 @@ btnConectar.addEventListener("click", async () => {
     return;
   }
   try {
+    // Si ya habia un puerto abierto (segundo clic en "Conectar"), se cierra antes:
+    // abrir otra vez el mismo puerto falla con "The port is already open".
+    await cerrarPuerto();
     puerto = await navigator.serial.requestPort();
     await puerto.open({ baudRate: 115200 });
     estado.textContent = "conectado, esperando datos del ESP32...";
@@ -299,8 +311,20 @@ btnConectar.addEventListener("click", async () => {
   }
 });
 
+let lector = null;
+async function cerrarPuerto() {
+  const p = puerto;
+  puerto = null;
+  if (!p) return;
+  // cancel() hace que el read() pendiente termine; releaseLock() suelta el lector
+  // (close() falla si el flujo sigue tomado por un lector).
+  try { if (lector) { await lector.cancel(); lector.releaseLock(); } } catch (e) { /* ya estaba cerrado */ }
+  try { await p.close(); } catch (e) { /* desenchufado: no hay nada que cerrar */ }
+}
+
 async function leerPuerto() {
-  const lector = puerto.readable.getReader();
+  const puertoLeido = puerto;
+  lector = puertoLeido.readable.getReader();
   const decodificador = new TextDecoder();
   let bufferTexto = "";
   try {
@@ -322,10 +346,14 @@ async function leerPuerto() {
       }
     }
   } catch (error) {
-    estado.textContent = "conexion perdida: " + error.message;
+    // Cable desenchufado o ESP32 reiniciado: se avisa y se libera el puerto para
+    // poder volver a pulsar "Conectar" sin recargar la pagina.
+    estado.textContent = "conexion perdida: " + error.message + " (vuelve a pulsar Conectar)";
     estado.classList.remove("ok");
   } finally {
-    lector.releaseLock();
+    try { lector.releaseLock(); } catch (e) { /* ya liberado */ }
+    lector = null;
+    if (puerto === puertoLeido) await cerrarPuerto();
   }
 }
 </script>

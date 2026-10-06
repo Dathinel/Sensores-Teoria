@@ -1,6 +1,6 @@
 # Punto 2: Reconocimiento de dígitos con OpenCV + CNN + OLED
 
-> **¿Quiere probarlo?** → doble clic en [`../ABRIR.bat`](../ABRIR.bat) (app del tema 8, *Punto 2 · La red en vivo*: se dibuja un dígito y se ve la entrada 28×28, los filtros de la CNN, las probabilidades, los votos y la OLED, al instante en el navegador o en vivo desde `reconocer_digito.py --estado`). **¿Quiere saber cómo funciona?** → [CNN y MNIST](#qué-es-una-cnn-y-qué-es-mnist) · [OpenCV](#qué-es-opencv) · [SPI](#qué-es-spi-maestro-y-esclavo) · [UART2](#qué-es-uart2) · [OLED](#qué-es-una-oled-ssd1306) · [idea general](#la-idea-general) · [conexiones](#conexiones) · [archivos](#qué-hace-cada-archivo) · [entrenamiento](#cómo-se-entrenó-la-red-entrenar_modelopy) · [reconocimiento](#la-lógica-del-reconocimiento-reconocer_digitopy) · [los dos ESP32](#la-lógica-de-los-dos-esp32) · [cómo probarlo](#cómo-probarlo) · [montaje y demo](#el-montaje-y-la-demo)
+> **¿Quiere probarlo?** → doble clic en [`../ABRIR.bat`](../ABRIR.bat) (app del tema 8, *Punto 2 · La red en vivo*: se dibuja un dígito y se ve la entrada 28×28, los filtros de la CNN, las probabilidades, los votos y la OLED, al instante en el navegador o en vivo desde `reconocer_digito.py --estado`). **Paso a paso** → [cómo se hizo](#cómo-se-hizo) · [con la app](#cómo-probarlo-con-la-app) · [sin la app y con los ESP32](#cómo-probarlo). **¿Quiere saber cómo funciona?** → [CNN y MNIST](#qué-es-una-cnn-y-qué-es-mnist) · [OpenCV](#qué-es-opencv) · [SPI](#qué-es-spi-maestro-y-esclavo) · [UART2](#qué-es-uart2) · [OLED](#qué-es-una-oled-ssd1306) · [idea general](#la-idea-general) · [conexiones](#conexiones) · [archivos](#qué-hace-cada-archivo) · [entrenamiento](#cómo-se-entrenó-la-red-entrenar_modelopy) · [reconocimiento](#la-lógica-del-reconocimiento-reconocer_digitopy) · [los dos ESP32](#la-lógica-de-los-dos-esp32) · [cómo probarlo](#cómo-probarlo) · [montaje y demo](#el-montaje-y-la-demo)
 
 Basado en el ejemplo de visión computacional con OpenCV compartido en el repositorio [U_Militar](https://github.com/dialejobv/U_Militar/blob/main/10%29%20Open_Cv) (`entrenar_modelo.py` y `reconocer_digito.py`), como recomienda el enunciado.
 
@@ -16,6 +16,36 @@ El enunciado pide seguir un esquema fijo: cámara del PC → preprocesamiento Op
 - El ESP-B (sketch de Arduino) escucha los dos caminos y pinta el dígito grande en la OLED.
 
 Por qué hay dos caminos y por qué el ESP-B no está en MicroPython como todo lo demás del repositorio está explicado en "Qué es SPI" y "Dos caminos a la vez", más abajo.
+
+## Paso a paso
+
+### Cómo se hizo
+
+1. **La base del profesor.** `entrenar_modelo.py` y `reconocer_digito.py` de U_Militar: una CNN sobre MNIST y el preprocesamiento de un recuadro de la cámara a 28×28.
+2. **Cerrar el circuito con el ESP-A.** Se agregó el envío de `DIGIT:n` (una sola vez por dígito confirmado) y la lectura de `REENVIADO:n`, con la última línea cruda en pantalla para diagnosticar, todo en la misma ventana.
+3. **Que reconozca de verdad.** Con trazos gruesos y fotos de una pantalla la red fallaba (un "1" grueso salía hueco y se leía como "8"). Con un lote de 240 imágenes de prueba se ajustaron el umbral (adaptativo + Otsu), la limpieza (kernel 3×3, no 5×5), el adelgazado (si más del 45 % está pintado) y el entrenamiento (grosor de trazo aleatorio): de 78,3 % a 98,3 %. Ver "[Preprocesamiento](#preprocesamiento-de-la-foto-a-algo-que-parezca-mnist)".
+4. **Que no mande dígitos equivocados.** La ventana de 5 frames con "el más repetido" pasó a 15 frames, 60 % de confianza por voto y 80 % para el ganador (el patrón del tema 6). Ver "[Suavizar](#suavizar-ventana-de-15-frames-con-umbral-de-proporción)".
+5. **SPI sin esclavo en MicroPython.** El enlace entre placas quedó primero solo por UART2. Como `machine.SPI` no tiene modo esclavo, el ESP-B pasó entero a Arduino (`ESP32SPISlave`) y el ESP-A manda cada dígito por SPI y por UART2 a la vez. Ver "[Dos caminos a la vez](#dos-caminos-a-la-vez-spi-y-uart2)".
+6. **Dos fallos del ESP-A.** Un `int()` sobre una línea rota mataba `main.py` (ahora se valida antes de reenviar), y escribir `DIGIT:5` en la consola de Thonny lo interrumpía (*raw paste*): de ahí salió `probar_esp_a.py`.
+7. **Probar sin cámara ni placas.** El modo `--mouse` (un lienzo blanco con el mismo preprocesamiento), `preview.html` para el lado de los ESP32 y `--estado`, que escribe lo que ve el programa para que la app lo dibuje.
+8. **Detalles finales.** `modelo(entrada)` en vez de `predict()` (más FPS), el modelo guardado sin el optimizador (de ~2,7 MB a 0,9 MB) y la misma red en el navegador para la app (`../app/cnn.js` con los pesos en int8).
+
+### Cómo probarlo con la app
+
+Doble clic en [`../ABRIR.bat`](../ABRIR.bat). En la barra lateral, el grupo **Punto 2 · visión + OLED**:
+
+1. **La red en vivo**:
+   - **En el navegador** (al instante): dibuja un dígito grande en el lienzo blanco con el clic izquierdo; el clic derecho o **Borrar** lo limpian. En 1-2 s aparecen la entrada de 28×28, los 32 mapas de la primera capa, las 10 probabilidades (raya amarilla: 60 %), los 15 votos con su barra (raya blanca: 80 %) y, al confirmarse, `CONFIRMADO: n`, `DIGIT:n` y la OLED simulada con el número. Es la misma red de `modelo_mnist_cnn.h5` corriendo en JavaScript.
+   - **Programa de Python**: **Abrir el lienzo** corre `reconocer_digito.py --mouse --estado estado_en_vivo.json`. Tarda ~20-60 s en cargar TensorFlow (la primera vez, antes, instala ~400 MB); una barra cuenta el arranque hasta que el programa dice `Modelo cargado`. Se abre su ventana aparte: dibuja dentro del recuadro y la página muestra en vivo el recuadro en miniatura, la entrada de 28×28, las probabilidades, los votos y "ESP-A no conectado" (sin la placa). En la ventana, `c` o el clic derecho borran y `q` sale; la página dice entonces "El programa terminó". **Encender la cámara** hace lo mismo con la webcam (papel blanco, trazo grueso, buena luz) y, si la cámara no abre, pasa sola al lienzo.
+2. **Cómo funciona**: el flujo completo, la figura de cada paso de `preprocesar_digito()` y los "Leer…" de este README. En **Avanzado**, **Entrenar de nuevo** (~5 min, barra real por época; sobrescribe el modelo y no hace falta).
+3. **Conexiones**: maestro y esclavo, las tablas de SPI, UART2 y OLED, el montaje 3D y las fotos.
+4. **Con los ESP32**: **Probar el ESP-A** (~8 s) corre `probar_esp_a.py`; sin la placa termina con `No se pudo abrir COM7`, que es lo esperado. Debajo, el simulador del ESP-A + OLED (`preview.html`).
+
+Si falla: el recuadro rojo resume el problema y muestra las últimas líneas. Lo típico es que no haya Python 3.13 o 3.12 para crear el entorno de TensorFlow (el aviso lo dice) o que la ventana de OpenCV haya quedado detrás de la app.
+
+### Cómo probarlo sin la app y con los ESP32
+
+Los comandos y los pasos con las dos placas están en "[Cómo probarlo](#cómo-probarlo)", más abajo.
 
 ## Qué es una CNN y qué es MNIST
 
@@ -318,7 +348,7 @@ Todos los comandos se corren desde la carpeta `punto-2-reconocimiento-oled-spi`.
 
 ![Montaje 3D de los dos ESP32 con la OLED, con las conexiones rotuladas](img/montaje-3d.jpg)
 
-**El preprocesamiento, paso a paso.** Cada paso de `preprocesar_digito()` sobre un dígito, desde la foto de la hoja hasta la imagen de 28×28 centrada por centro de masa que recibe la CNN (el último cuadro es idéntico a la salida de la función real):
+**El preprocesamiento, paso a paso.** Cada paso de `preprocesar_digito()` sobre un dígito (uno de MNIST sobre una hoja simulada), desde la "foto" de la hoja hasta la imagen de 28×28 centrada por centro de masa que recibe la CNN (el último cuadro es idéntico a la salida de la función real):
 
 ![Los pasos del preprocesamiento de un dígito, de la foto a la entrada de la CNN](img/pipeline-preprocesamiento.png)
 

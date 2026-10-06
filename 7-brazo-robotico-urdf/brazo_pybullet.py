@@ -6,19 +6,26 @@
 #
 # Ajustar PUERTO_SERIAL segun el puerto que use el ESP32 en el
 # Administrador de dispositivos, por ejemplo "COM7" en Windows o
-# "/dev/ttyUSB0" en Linux. Si el puerto no existe o no responde, el
-# script sigue funcionando solo con los botones.
+# "/dev/ttyUSB0" en Linux (o pasarlo al correrlo, sin tocar el archivo:
+# "python brazo_pybullet.py COM5"). Si el puerto no existe o no
+# responde, el script sigue funcionando solo con los botones; y si el
+# ESP32 se desenchufa a mitad de la simulacion, tampoco se cae: sigue
+# con los botones e intenta volver a abrir el puerto cada pocos segundos.
 
 import os
 import re
+import sys
 import time
 
 import pybullet as p
 import pybullet_data
 import serial
 
-PUERTO_SERIAL = "COM7"
+# El puerto se puede pasar como primer argumento; si no, COM7 (el de la
+# placa con la que se armo el tema).
+PUERTO_SERIAL = sys.argv[1] if len(sys.argv) > 1 else "COM7"
 BAUDIOS = 115200  # tiene que coincidir con el del ESP32 (115200 es el de la consola USB de MicroPython)
+REINTENTO_S = 3.0  # cada cuanto se vuelve a probar el puerto si el ESP32 se desenchufo
 
 # ------------------------------------------------------------------
 # Conexion con el ESP32 (opcional)
@@ -41,6 +48,13 @@ except serial.SerialException:
     ser = None
     print(f"No se encontro el ESP32 en {PUERTO_SERIAL}: se usan los botones de jog de PyBullet.")
 
+# Solo si el ESP32 estaba conectado al empezar se intenta reconectarlo
+# cuando se pierde (cable desenchufado, placa reiniciada a mano...). Sin
+# ESP32 desde el principio el script no vuelve a tocar el puerto: asi el
+# modo "solo botones" queda exactamente igual que siempre.
+reconectar = ser is not None
+proximo_intento = 0.0
+
 # Formato exacto que imprime esp32_brazo.py: "J1:0.150,J2:-0.300,G:0.020".
 # -?[\d.]+ acepta numeros con signo y decimales.
 PATRON_LINEA = re.compile(r"J1:(-?[\d.]+),J2:(-?[\d.]+),G:(-?[\d.]+)")
@@ -50,6 +64,49 @@ PATRON_LINEA = re.compile(r"J1:(-?[\d.]+),J2:(-?[\d.]+),G:(-?[\d.]+)")
 # acumula aqui hasta que aparezca el "\n" que cierra la linea.
 buffer_serial = b""
 ultima_linea_cruda = "(sin datos todavia)"
+
+
+def perder_esp32(error):
+    """El puerto dejo de responder (ESP32 desenchufado): pasa a modo botones.
+
+    pyserial avisa con SerialException (o un OSError del sistema) en la
+    primera operacion sobre un puerto que ya no existe, normalmente
+    in_waiting. Sin esto, desenchufar la placa a mitad de la simulacion
+    tumbaria todo el script con un traceback.
+    """
+    global ser, buffer_serial, ultima_linea_cruda, proximo_intento
+    print(f"Se perdio el ESP32 en {PUERTO_SERIAL} ({error.__class__.__name__}): "
+          "se siguen usando los botones de jog; se reintenta cada "
+          f"{REINTENTO_S:.0f} s.")
+    try:
+        ser.close()
+    except Exception:
+        pass  # el puerto ya no existe: cerrarlo puede fallar y da igual
+    ser = None
+    buffer_serial = b""
+    ultima_linea_cruda = f"ESP32 desconectado: modo botones (reintentando {PUERTO_SERIAL})"
+    proximo_intento = time.monotonic() + REINTENTO_S
+
+
+def intentar_reconectar():
+    """Si el ESP32 se perdio, prueba a abrir de nuevo el puerto (sin bloquear).
+
+    Abrir un COM que no existe falla en milisegundos, asi que probar cada
+    REINTENTO_S segundos no frena la simulacion. Al reabrir NO se espera
+    los 2 s del arranque: el texto de arranque de MicroPython no cumple el
+    patron J1/J2/G y simplemente se ignora. Ojo: abrir el puerto reinicia
+    el ESP32 (DTR), asi que la placa vuelve a empezar en 0, 0, 0.
+    """
+    global ser, proximo_intento, ultima_linea_cruda
+    if ser is not None or not reconectar or time.monotonic() < proximo_intento:
+        return
+    proximo_intento = time.monotonic() + REINTENTO_S
+    try:
+        ser = serial.Serial(PUERTO_SERIAL, BAUDIOS, timeout=0)
+    except (serial.SerialException, OSError):
+        return  # sigue desenchufado: se vuelve a probar en REINTENTO_S
+    ultima_linea_cruda = "(reconectado, esperando datos)"
+    print(f"ESP32 reconectado en {PUERTO_SERIAL}: vuelven a mandar los datos del teclado.")
 
 
 def leer_esp32():
@@ -62,13 +119,20 @@ def leer_esp32():
     fisica, y el brazo se veria trabado.
     """
     global buffer_serial, ultima_linea_cruda
-    if ser is None or ser.in_waiting == 0:
+    intentar_reconectar()
+    if ser is None:
         return None
-
-    # Drena TODO lo acumulado de una vez: si solo se leyera una linea por
-    # vuelta, las lineas se irian apilando y el brazo reaccionaria con
-    # cada vez mas retraso respecto al teclado.
-    buffer_serial += ser.read(ser.in_waiting)
+    try:
+        esperando = ser.in_waiting
+        if esperando == 0:
+            return None
+        # Drena TODO lo acumulado de una vez: si solo se leyera una linea por
+        # vuelta, las lineas se irian apilando y el brazo reaccionaria con
+        # cada vez mas retraso respecto al teclado.
+        buffer_serial += ser.read(esperando)
+    except (serial.SerialException, OSError) as error:
+        perder_esp32(error)
+        return None
     *lineas_completas, buffer_serial = buffer_serial.split(b"\n")
 
     ultimo_valido = None
@@ -80,7 +144,11 @@ def leer_esp32():
         coincidencia = PATRON_LINEA.match(linea)
         if coincidencia:
             # Solo importa la mas reciente: es la posicion actual del jog.
-            ultimo_valido = tuple(float(valor) for valor in coincidencia.groups())
+            # (float() de algo como "1.2.3" fallaria: se descarta esa linea.)
+            try:
+                ultimo_valido = tuple(float(valor) for valor in coincidencia.groups())
+            except ValueError:
+                pass
     return ultimo_valido
 
 
@@ -186,7 +254,8 @@ print("Ventana de PyBullet abierta. Cierra la ventana o Ctrl+C en la terminal pa
 
 try:
     # p.isConnected() pasa a False cuando se cierra la ventana: el script
-    # termina limpio en vez de tirar un error en la siguiente llamada.
+    # termina limpio en vez de tirar un error en la siguiente llamada
+    # (y si se cierra justo a mitad de una vuelta, ver "except p.error").
     while p.isConnected():
         dato_esp32 = leer_esp32()
         if dato_esp32 is not None:
@@ -198,7 +267,9 @@ try:
 
         # Solo se reescribe el texto cuando cambia: recrearlo 240 veces
         # por segundo haria parpadear la ventana.
-        if ser is not None and ultima_linea_cruda != texto_serial_mostrado:
+        # (Solo si el ESP32 estuvo conectado alguna vez: sin el, el texto
+        # se queda en "sin ESP32 (modo botones)" desde el principio.)
+        if reconectar and ultima_linea_cruda != texto_serial_mostrado:
             texto_serial_mostrado = ultima_linea_cruda
             id_texto_serial = p.addUserDebugText(
                 "Serial: " + ultima_linea_cruda, [-0.3, 0.0, 0.93],
@@ -222,6 +293,18 @@ try:
         time.sleep(1 / 240)  # 240 Hz es el paso de tiempo por defecto de PyBullet: va a tiempo real
 except KeyboardInterrupt:
     pass
+except p.error:
+    # Si la ventana se cierra justo en medio de una vuelta (despues del
+    # isConnected() de arriba), la siguiente llamada a PyBullet tira
+    # "Not connected to physics server". No es un fallo: es la salida.
+    # Cualquier otro error de PyBullet (con la ventana todavia abierta)
+    # se deja ver tal cual, para no esconder un fallo de verdad.
+    if p.isConnected():
+        raise
 finally:
     if ser is not None:
-        ser.close()  # libera el COM para que Thonny u otro programa lo puedan abrir
+        try:
+            ser.close()  # libera el COM para que Thonny u otro programa lo puedan abrir
+        except (serial.SerialException, OSError):
+            pass  # el ESP32 ya no estaba: no hay nada que liberar
+    print("Simulacion terminada.")

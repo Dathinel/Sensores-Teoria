@@ -1664,3 +1664,41 @@ ahí mismo). `probar.json`: `duracion`/`duracion_s` en cada acción, `progreso_r
 del chequeo (sale con error si hay al menos una ✗, p. ej. Ollama apagado). Probado con el lanzador en 8071 a
 1366x768 y 1920x1080 (sin errores de consola), con el chequeo lanzado desde la app y con una corrida propia
 (visor 8791, dashboard 8512, ya cerrada) para ver el panel real con piezas moviéndose.
+
+## 2026-10-06 — Paso a paso de todo y revisión en varias partes (plan PLAN-REVISION-PASOAPASO, agente Q9)
+
+Pedido: "mejore el repositorio de github sin cambiar los nombres ya que los links se podrian perder, igualmente
+paso por paso de todo y revisiones de multiples partes". No se renombró ni movió nada (los títulos viejos del
+README siguen iguales: sus anclas ya están enlazadas).
+
+**Paso a paso (README, sección nueva "Paso a paso", enlazada desde el principio):** (1) cómo se hizo, en 11
+pasos con enlace a la entrada de esta bitácora de cada uno, y la diferencia con `docs/paso-a-paso.md` (que son
+los 17 puntos del funcionamiento; también lo aclaran `docs/README.md` y el propio `paso-a-paso.md`, generado
+desde `app/documentos.py`); (2) cómo probarlo con la app, sección por sección y botón por botón, con una tabla
+de "si algo falla"; (3) sin la app, los comandos en orden (incluidas las escenas con `--sin-ventana`); (4) con
+el montaje real, paso a paso, diciendo qué está listo y qué falta.
+
+**Revisión del README y docs:** enlaces, anclas (reglas de GitHub) e imágenes de 25 documentos con un script:
+0 rotos. Los 16 diagramas `mermaid` pasan `mermaid.parse` (mermaid 11). Corregido: "Probar un filtro" y
+"Colocar una pieza" estaban descritos en la barra lateral del dashboard y en el panel En vivo del visor; están en
+la pestaña **Pruebas** de los dos (README, `probar.json`, app). Orden de las pestañas del dashboard como en
+`app/dashboard/inicio.py`.
+
+**Revisión de la app** (lanzador en 8261, capturas a 1366x768 y 1920x1080 de las 8 vistas, sin errores de
+consola ni desbordes): abrir con `#pide` o `#estado` dejaba la vista desplazada (el navegador saltaba al `div`
+con ese mismo id): ids renombrados a `pideLista`/`estadoMd`. Los programas que se quedan abiertos (línea en
+vivo, asistente, escenas) decían "Está tardando más de lo habitual" pasado su tiempo de arranque: ahora,
+pasado ese tiempo, se oculta la barra estimada y se dice que ya está funcionando. Duración de las escenas
+medida con `--sin-ventana`: filtro 62 s, vasos 132 s, carro 157 s, todo junto 266 s (la app decía ~1,5 y ~3 min
+para vasos y carro). Lanzados desde la app: el chequeo (termina "falló" solo por Ollama apagado, como avisa) y
+el asistente (3 preguntas y una orden, que no se manda), detenido con su botón.
+
+**Código:** `app/puertos.py` (`es_nuestro`) y `app/lanzar.py` (`_esperar`) solo capturaban `OSError`; si en el
+puerto había un programa que no habla HTTP, urllib lanza `BadStatusLine` (no es `OSError`) y `app.lanzar` se
+caía en vez de pasar al puerto siguiente. Capturan también `http.client.HTTPException`; prueba nueva en
+`tests/app/test_puertos.py`. `app.lanzar`, cuando la simulación ya corría, no decía el puerto del dashboard: la
+app no podía mostrar su enlace; ahora lo imprime. Observación sin tocar: la escena `embalaje_vasos` termina con
+"0 vasos cargados al carro" (corre sin carro físico; la de todo junto sí carga 1).
+
+**Pruebas:** `entorno\Scripts\python -m pytest -q` → **937 passed** en 5 min 8 s (936 + la nueva de puertos); cifra
+actualizada en el README, `probar.json` y la app.

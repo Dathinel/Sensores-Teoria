@@ -43,7 +43,8 @@
       ],
       "duracion": "~10-30 s",
       "progreso_regex": "Arranque (\\d+)/(\\d+)",
-      "vida": "app"
+      "vida": "app",
+      "duracion_es": "arranque"
     },
     {
       "id": "fotos-carro-moto",
@@ -64,7 +65,8 @@
       ],
       "duracion": "~10-30 s",
       "progreso_regex": "Arranque (\\d+)/(\\d+)",
-      "vida": "app"
+      "vida": "app",
+      "duracion_es": "arranque"
     },
     {
       "id": "camara",
@@ -82,7 +84,8 @@
       ],
       "ventana": true,
       "duracion": "~10-30 s",
-      "progreso_regex": "Arranque (\\d+)/(\\d+)"
+      "progreso_regex": "Arranque (\\d+)/(\\d+)",
+      "duracion_es": "arranque"
     },
     {
       "id": "camara-carro-moto",
@@ -101,7 +104,8 @@
       ],
       "ventana": true,
       "duracion": "~10-30 s",
-      "progreso_regex": "Arranque (\\d+)/(\\d+)"
+      "progreso_regex": "Arranque (\\d+)/(\\d+)",
+      "duracion_es": "arranque"
     },
     {
       "id": "preview",
@@ -140,5 +144,5 @@
       "descripcion": "MicroPython. Se guarda en el ESP32 con Thonny como main.py; LEDs en GPIO25 y GPIO26 con resistencias de 220 Ω. No hace falta para probar: las acciones de arriba funcionan sin ESP32."
     }
   ],
-  "notas": "La webcam es opcional: sin ella usa 'Ver a YOLO con fotos' o el simulador. El modelo yolov8n.pt (6 MB) no viene en el repositorio: la primera vez que se corre, deteccion_pc.py lo descarga solo (necesita internet esa vez) y queda en la carpeta. La instalación trae PyTorch, unos cientos de MB, y tarda varios minutos la primera vez. El ESP32 se busca en COM7 (cambiar PUERTO_SERIAL en deteccion_pc.py si es otro); sin ESP32 todo sigue funcionando."
+  "notas": "La webcam es opcional: sin ella usa la sección 'Ver a YOLO' (fotos de ejemplo) o el simulador. El modelo yolov8n.pt (6 MB) no viene en el repositorio: la primera vez que se corre, deteccion_pc.py lo descarga solo (necesita internet esa vez) y queda en la carpeta. La instalación trae PyTorch, unos cientos de MB, y tarda varios minutos la primera vez. El ESP32 se busca en COM7 (cambiar PUERTO_SERIAL en deteccion_pc.py si es otro); sin ESP32 todo sigue funcionando."
 }

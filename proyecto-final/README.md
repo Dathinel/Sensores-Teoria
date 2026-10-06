@@ -10,7 +10,7 @@ una ventana tipo programa, con todo lo que pide el parcial en un solo lugar y ex
   las piezas reales en cada estación, el almacén y los rechazos por causa, actualizados cada segundo.
 - **Programas** (como en Docker Desktop: cada fila con su estado y cuánto tarda): la línea en vivo
   (visor 3D + dashboard de Streamlit; el visor tarda ~8-10 s en responder), las 4 escenas de PyBullet,
-  el asistente, las 936 pruebas automáticas (~4-5 min) y el chequeo del PC.
+  el asistente, las 937 pruebas automáticas (~4-5 min) y el chequeo del PC.
 - **Cómo funciona**, el **visor 3D sin instalar nada**, los **resultados** (videos y capturas), **qué pide
   el parcial** con qué se prueba cada punto, y el **estado honesto** del proyecto.
 
@@ -18,6 +18,8 @@ Solo hace falta Python 3.9 o más nuevo. La primera vez que se inicia algo de Py
 sola la instalación mínima (~0,7 GB; unos **3 min** con las descargas en caché, más en un PC nuevo
 porque PyBullet se compila ~10 min con las Microsoft C++ Build Tools) y lo muestra con una barra de
 progreso. Sin la app, lo mismo se abre con `visor.bat` y `simulaciones.bat`: ver [Cómo verlo](#cómo-verlo).
+Qué hay en cada sección de la app y qué pasa con cada botón, y qué hacer si algo falla:
+[Paso a paso → con la app](#2-cómo-probarlo-con-la-app-sección-por-sección).
 
 ![La app del proyecto: la prueba visual, con el recorrido animado de una pieza junto a la simulación en marcha](docs/capturas/app-practica.png)
 
@@ -25,6 +27,9 @@ progreso. Sin la app, lo mismo se abre con `visor.bat` y `simulaciones.bat`: ver
 
 Todo lo técnico sigue abajo, completo, en este orden:
 
+0. [Paso a paso](#paso-a-paso): [cómo se hizo](#1-cómo-se-hizo-paso-a-paso) (con enlaces a la bitácora),
+   cómo probarlo [con la app](#2-cómo-probarlo-con-la-app-sección-por-sección) y
+   [sin la app](#3-cómo-probarlo-sin-la-app-desde-la-consola), y [qué falta para el montaje real](#4-con-el-montaje-real-paso-a-paso-lo-que-falta).
 1. [Lo que nos tocó: el elemento 7](#lo-que-nos-tocó-el-elemento-7): qué exige el detector de monedas y vasos.
 2. [Cómo verlo](#cómo-verlo): instalación mínima o completa, `visor.bat`, puertos, visor portable y
    [las simulaciones de PyBullet](#las-simulaciones-de-pybullet-para-quien-evalúa).
@@ -62,6 +67,132 @@ ESP32 está escrito y probado contra una estación emulada. Lo que falta es el m
 explicado sin rodeos en [Estado del proyecto](#estado-del-proyecto-lo-hecho-y-lo-que-falta).
 
 ![Visor 3D: la planta, el carro en el muelle y la pista con los tres muros](docs/capturas/visor-planta-y-pista.png)
+
+## Paso a paso
+
+Cuatro recorridos, cada uno completo por sí solo: [cómo se hizo](#1-cómo-se-hizo-paso-a-paso),
+[cómo probarlo con la app](#2-cómo-probarlo-con-la-app-sección-por-sección),
+[cómo probarlo sin la app](#3-cómo-probarlo-sin-la-app-desde-la-consola) y
+[qué hace falta para el montaje real](#4-con-el-montaje-real-paso-a-paso-lo-que-falta).
+
+### 1. Cómo se hizo, paso a paso
+
+La historia completa, sesión por sesión y con lo que falló, está en la [bitácora](docs/bitacora.md). Otro
+documento parecido de nombre, [`docs/paso-a-paso.md`](docs/paso-a-paso.md), es otra cosa: los **17 puntos del
+funcionamiento** (qué hace la máquina en cada estación), y cada uno con el estado de su revisión con el grupo. En
+resumen, este fue el orden:
+
+1. **Andamiaje y control puro** (fases 0 y 1, [bitácora](docs/bitacora.md#2026-09-22--fase-0-y-fase-1)):
+   configuración, tabla de monedas, esquema de SQLite y la lógica de `control/` (registro de casillas, reglas de
+   rechazo, máquinas de estado) probada **sin PyBullet**, contra un hardware falso en memoria.
+2. **Mundo simulado y sensores** (fases 2 y 3, [fase 2](docs/bitacora.md#2026-09-22--fase-2) y
+   [cierre de la fase 3](docs/bitacora.md#2026-09-22--cierre-de-la-fase-3)): las cintas en URDF y PyBullet, los
+   sensores emulados con rayos y la HAL de simulación. Aquí apareció el primer fallo serio: PyBullet reutiliza los
+   identificadores de cuerpos borrados y una pieza heredaba el veredicto de otra.
+3. **Persistencia, dashboard y visor 3D** (fase 4,
+   [bitácora](docs/bitacora.md#2026-09-22--fase-4-persistencia-y-dashboard) y
+   [visor](docs/bitacora.md#2026-09-22--visualización-3d-paso-a-paso-y-sensores)): supervisor, SQLite en modo WAL,
+   Streamlit y el visor de Three.js con el paso a paso guiado.
+4. **Revisión con el grupo, punto por punto** (del
+   [punto 1](docs/bitacora.md#2026-09-22--revisión-del-punto-1-y-almacén-por-denominación) en adelante): cada uno
+   de los 17 puntos se discutió y se aprobó por separado. De ahí salieron los cambios grandes: el
+   [filtro total y el almacén revólver](docs/bitacora.md#2026-09-25-3--filtro-total-almacén-revólver-vasos-opacos-con-celda-de-carga)
+   (de 7 estaciones a 4) y, un día después, [fuera la celda de carga](docs/bitacora.md#2026-09-25-4--corrección-fuera-la-celda-de-carga)
+   (el peso pasó a ser estimado por conteo).
+5. **El carro** (fase 6, [bitácora](docs/bitacora.md#2026-09-26-4--puntos-12-y-13-aprobados-punto-14-el-carro-va-y-vuelve-solo)):
+   muelle de carga, seguimiento de línea, evasión de los tres muros y la vuelta solo, con física real.
+6. **Conexionado y parte eléctrica** ([bitácora](docs/bitacora.md#2026-09-26-9--conexionado-pin-a-pin-caja-como-tablero-y-carro-con-nombres)):
+   cada pin en `sim/conexiones.py`, de donde salen los cables del visor, `docs/conexiones.md` y los pines del firmware.
+7. **Asistente** (fase 7, [bitácora](docs/bitacora.md#2026-09-27-2--fase-7-asistente-deepseek-y-órdenes-al-carro)):
+   DeepSeek, después el modelo local con Ollama y las reglas, y la voz sin internet.
+8. **Firmware de los dos ESP32** (fase 8, [bitácora](docs/bitacora.md#2026-09-27-3--fase-8-firmware-de-los-dos-esp32-y-hardware-real)):
+   MicroPython, protocolo con ack y latido, y una estación emulada para probarlo sin placas.
+9. **Visor remodelado y simulaciones en ventana** ([visor](docs/bitacora.md#2026-09-28--visor-3d-remodelado-a-fondo-con-piezas-reutilizables-13-agentes),
+   [escenas de PyBullet y física contra 3D](docs/bitacora.md#2026-09-28--simulaciones-de-pybullet-en-ventana-videos-y-física-vs-3d-puntos-f-y-g)).
+10. **Tiempos reales y revisiones lógicas**: el [carrusel con su tiempo real](docs/bitacora.md#2026-09-28--el-carrusel-con-su-tiempo-real-la-moneda-espera-a-que-su-tubo-llegue-pedido-14),
+    las revisiones que encontraron [7 bugs de órdenes, serial y vasos](docs/bitacora.md#2026-09-28--revisión-lógica-7-bugs-de-órdenes-serial-y-vasos-depurador)
+    y la medición cuadro a cuadro que mostró monedas cayendo a tubos en movimiento
+    ([arreglo](docs/bitacora.md#2026-09-29--la-caída-ocupa-el-carrusel-el-giro-siguiente-espera-a-que-la-moneda-llegue-pedido-14-depurador)).
+11. **Para quien lo prueba por primera vez** ([bitácora](docs/bitacora.md#2026-10-05--arreglos-para-quien-lo-prueba-por-primera-vez--app-de-la-práctica-plan-plan-apps-practicas-p9)
+    y [la noche siguiente](docs/bitacora.md#2026-10-05-noche--menos-peso-readme-probarlo--cómo-funciona-y-app-tipo-docker-desktop-plan-plan-organizar-apps-agente-p)):
+    puerto libre automático, instalación mínima, la app del proyecto y menos peso en el repositorio.
+
+Lo que aprendimos de cada fallo está resumido en [Lo que nos enseñó la simulación](#lo-que-nos-enseñó-la-simulación).
+
+### 2. Cómo probarlo con la app, sección por sección
+
+Doble clic en **`ABRIR.bat`** (Linux o Mac: `sh abrir.sh`). Se abre una ventana tipo programa con una barra
+lateral; la consola que queda minimizada es la que mantiene viva la app (si se cierra, la app ya no puede arrancar
+nada). Arriba siempre están el chip **Simulación** (en marcha / corrida terminada / apagada, con su puerto; un clic
+lleva a la prueba visual), el estado del entorno y **Pantalla completa**.
+
+| Sección | Qué hay | Qué pulsar y qué debería pasar |
+|---|---|---|
+| **Inicio** | Qué hace el proyecto, el video del filtro y cuatro atajos | Cada atajo lleva a su sección (y en Programas deja elegido el programa). El aviso amarillo explica la primera instalación. |
+| **Prueba visual** | Izquierda: el recorrido animado de una pieza. Derecha: lo que pasa de verdad en la simulación | Elegir la pieza (moneda de $500, botón de plástico, arandela, bloque metálico o 1 euro) → **Reproducir el recorrido** (un paso cada 1,6 s, el ciclo real) o **Avanzar una casilla** de a una; **Poner otra pieza** vuelve a empezar. Abajo se explica qué decide cada estación y, si la rechaza, con qué causa. A la derecha, si la línea en vivo corre: las 4 casillas reales, el almacén y los rechazos por causa, cada segundo; **Abrir el visor 3D** o **Ver el visor 3D aquí**. Si no corre: **Arrancar la línea en vivo**. |
+| **Programas** | La lista de lo que se puede arrancar, con su estado, y el detalle del elegido | Elegir una fila → **Iniciar** (arriba a la derecha o el botón grande) → se ve "Preparando el entorno…" (solo la primera vez, con barra por pasos de pip) y luego "Se está ejecutando…" con lo que dice el programa. **Detener** lo cierra. Las filas: línea en vivo (visor + dashboard, ~10 s en responder), asistente (se le escribe en la caja de abajo o con las sugerencias), las 4 escenas de PyBullet (abren su propia ventana), las pruebas automáticas (~4-5 min, barra con el avance real) y el chequeo del PC (~15 s). |
+| **Cómo funciona** | Los 4 bloques de la línea y la arquitectura (esta misma sección del README, con sus diagramas) | Solo lectura. |
+| **Visor sin instalar** | El visor 3D portable con una corrida grabada | **Mostrar aquí el visor** (carga ~2,5 MB) o **Abrirlo en una pestaña**. Arriba dice DEMO GRABADA. |
+| **Resultados** | Los 4 videos de PyBullet, capturas y las pruebas | Reproducir cada video; el enlace lleva a Programas → Pruebas automáticas. |
+| **Qué pide el parcial** | Los 9 puntos del enunciado y con qué programa se prueba cada uno | Cada casilla se marca sola cuando termina bien un programa que la cubre (o a mano). |
+| **Estado y documentos** | Lo hecho y lo que falta (la sección [Estado del proyecto](#estado-del-proyecto-lo-hecho-y-lo-que-falta)) y botones a los documentos | README, especificación, paso a paso, conexiones, firmware y el enunciado en PDF. |
+
+**Si algo falla:**
+
+| Qué se ve | Qué hacer |
+|---|---|
+| La consola del `ABRIR.bat` dice "No encontre Python 3.9 o mas nuevo" | Instalar Python 3.13 (python.org, marcando "Add python.exe to PATH") y volver a abrir; la ventana dice los pasos. Para el entorno del proyecto sirve 3.13 o 3.14. |
+| La preparación del entorno se detiene al compilar PyBullet | Faltan las **Microsoft C++ Build Tools** ("Desarrollo para el escritorio con C++"); el panel muestra el comando para instalarlas. Ver [Instalar en otro PC](#instalar-en-otro-pc). |
+| El chequeo dice "falló" | Termina con error si encontró al menos una ✗: leer cada línea. Ollama, la voz sin internet o el firmware **no hacen falta** para verlo en simulación. |
+| La prueba visual dice "La simulación en vivo no está respondiendo" | Es normal hasta arrancar la línea en vivo; si ya se arrancó, esperar ~10 s (el chip de arriba cambia solo). |
+| El puerto 8765 u 8501 está ocupado | No pasa nada: se usa el siguiente libre y la app muestra los enlaces con el puerto real ([Cómo verlo](#cómo-verlo)). |
+| Una escena de PyBullet "no aparece" | Abre una ventana aparte: buscarla en la barra de tareas. Se cierra con `q` o con Detener. |
+
+### 3. Cómo probarlo sin la app (desde la consola)
+
+En la carpeta `proyecto-final/`, con el entorno instalado (`instalar.bat`, ver [Cómo verlo](#cómo-verlo)); todos los
+comandos con `entorno\Scripts\python`:
+
+1. `instalar.bat` (una vez): opción 1, mínima, o 2, completa.
+2. `entorno\Scripts\python -m app.chequeo --rapido`: qué está listo y qué falta, con cómo arreglarlo.
+3. `visor.bat` (o `entorno\Scripts\python -m app.lanzar --auto prueba_completa --abrir --abrir-dashboard`): la línea
+   en vivo, visor 3D y dashboard. `entorno\Scripts\python -m app.puertos` dice qué puertos va a usar.
+4. `simulaciones.bat`, o cada escena: `entorno\Scripts\python -m sim.ver.filtro_monedas` (también
+   `embalaje_vasos`, `carro_pista`, `todo_junto`). Con `--sin-ventana --velocidad 50` corre la misma escena sin abrir
+   nada y al final imprime el resultado; la del filtro, por ejemplo:
+   `FIN: 7 al almacen, 11 a rechazo, falsos rechazos 1, falsas aceptaciones 0`.
+5. `entorno\Scripts\python -m app.charla`: el asistente por consola (reglas, sin clave ni internet), sobre una copia
+   de la base. Con la línea en vivo, la pestaña Asistente del dashboard sí ejecuta las órdenes.
+6. `entorno\Scripts\python -m pytest -q`: las [pruebas automáticas](#pruebas-automáticas) (~4 min); una sola capa:
+   `... -m pytest -q tests/control`.
+7. `entorno\Scripts\python -m app.puente_serial`: el puente con el ESP32 fijo o, sin placa, con la estación emulada
+   (telemetría, mensajes perdidos y la última línea cruda).
+8. Sin Python: abrir `visor-portable.html` (demo grabada) o ver los [videos](#las-simulaciones-de-pybullet-para-quien-evalúa).
+
+### 4. Con el montaje real, paso a paso (lo que falta)
+
+**Hoy el proyecto se entrega en simulación**: el montaje físico no está construido. El software para las placas sí
+está, así que el camino es este, y cada paso dice si ya está hecho:
+
+1. **Comprar y construir** (falta): la lista de materiales con precios está en [`docs/componentes.md`](docs/componentes.md)
+   y [`docs/costos.md`](docs/costos.md); las medidas, en el visor 3D (todo lo del diseño está modelado con su soporte).
+2. **Cablear** (falta): pin a pin según [`docs/conexiones.md`](docs/conexiones.md) y la parte eléctrica de
+   [`docs/electrica.md`](docs/electrica.md) (fusibles, convertidores, Vref de los A4988). El circuito se puede ver
+   antes funcionando en [Wokwi](wokwi/README.md).
+3. **Subir el firmware** (listo en software, sin probar en placas): grabar MicroPython en cada ESP32 y
+   `python -m firmware.subir fijo` / `python -m firmware.subir carro` (detalle en [`firmware/README.md`](firmware/README.md)).
+4. **Comprobar la comunicación** (listo contra la estación emulada): `python -m app.puente_serial` con el ESP32 fijo
+   conectado; si la última línea cruda no cambia, la placa no manda nada; si cambia pero no se entiende, es formato.
+5. **Pasar a real**: en `config/parametros.yaml`, `hardware.backend: sim` → `real`, y `visor.bat`. Con eso ya
+   funcionan el monitoreo de los sensores, la prueba de actuadores y las órdenes al carro.
+6. **Medir y calibrar** (falta): cada valor marcado PROVISIONAL (medidas del vaso y la tapa, ángulos de los servos,
+   umbral de la cortina, mm por vuelta del rodillo, velocidad de las ruedas) y la **prueba de banco de 200 pasadas**
+   del error de cada sensor; qué medir y dónde se cambia, en [`docs/replicacion.md`](docs/replicacion.md).
+7. **Visión real** (falta, fase 5): fotos con `vision/capturar_dataset.py`, entrenamiento con `vision/entrenar.py`
+   y el procesamiento de imagen con OpenCV. **La línea automática con hardware real espera este paso**: hasta
+   entonces la cámara de la simulación funciona en modo oráculo.
+8. **Asistente con DeepSeek** (falta una clave válida): la que tenemos fue rechazada (401); el modelo local y las
+   reglas sí están probados.
 
 ## Lo que nos tocó: el elemento 7
 
@@ -130,7 +261,7 @@ Qué se ve:
   carro. Es también el boceto de cómo se construye: todo lo que existe en el diseño está modelado con
   su soporte.
 - **Dashboard** (Streamlit, <http://localhost:8501>): pestañas Resumen, Monedas y vasos, Calidad del
-  filtro, Línea en vivo, Carro y ruta, Pruebas, Montaje real, Asistente y Ayuda. Está pensado para alguien que
+  filtro, Línea en vivo, Pruebas, Carro y ruta, Montaje real, Asistente y Ayuda. Está pensado para alguien que
   no conoce el sistema: frases simples de "qué está pasando", una matriz de lo que era cada pieza
   contra lo que decidió la línea, el mapa del carro y los mismos sabotajes del visor.
 - **Asistente** (pestaña del dashboard; en el visor se ve en la pantalla del portátil): se le
@@ -140,14 +271,14 @@ Qué se ve:
 ![Dashboard, pestaña Carro y ruta: mapa, odometría y órdenes al carro](docs/capturas/dashboard-carro-y-ruta.png)
 
 **Los filtros, uno por uno.** El enunciado dice que en la sustentación cada filtro se prueba por
-separado. Además de la corrida normal, el dashboard (barra lateral, "Probar un filtro") y el visor
-(panel En vivo) corren **la prueba de un solo filtro**: material, diámetro fuera de rango, no
+separado. Además de la corrida normal, el dashboard y el visor (los dos en su pestaña **Pruebas**, "Probar un
+filtro") corren **la prueba de un solo filtro**: material, diámetro fuera de rango, no
 circular, perforado, no reconocida o incoherente, cada una con piezas que SOLO ese filtro debe
 rechazar (son los mismos escenarios de las pruebas automáticas, así que lo que se muestra es lo que
 está probado). Arriba sale qué se espera y cuántas piezas ya rechazó por esa causa. En el visor,
 pestaña **Sensores**, cada sensor tiene su botón **"Ver la prueba de este sensor"**: manda la prueba
 que hace trabajar solo a ese sensor (un filtro, un sabotaje, una orden al carro) y la cámara se queda
-mirándolo. Y con **"Colocar una pieza"** se pone a mano en la próxima carga la que uno quiera: una
+mirándolo. Y con **"Colocar una pieza"** (también en la pestaña Pruebas) se pone a mano en la próxima carga la que uno quiera: una
 moneda de cada denominación y familia, una de 1 euro, un botón de plástico o metálico, un bloque, un
 disco de 10 mm o una cara de $500 con otro diámetro.
 
@@ -796,7 +927,7 @@ Reglas que cuidan el hardware y que viven **en la placa**, no solo en el PC:
 
 ### Pruebas automáticas
 
-Tenemos **936 pruebas** en `tests/` (todas pasan: `entorno\Scripts\python -m pytest -q`, 2026-10-05, unos 4
+Tenemos **937 pruebas** en `tests/` (todas pasan: `entorno\Scripts\python -m pytest -q`, 2026-10-06, unos 4-5
 minutos) (ordenadas por capa: `control/`, `sim/`, `visor/`,
 `app/` y `firmware/`), y todas corren sin ventana (PyBullet en modo DIRECT):
 reglas de decisión, registro de casillas, máquinas de estado de las dos cintas, almacén, protocolo,

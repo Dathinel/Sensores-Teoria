@@ -41,7 +41,8 @@
   window.addEventListener("pointerup", soltar);
   window.addEventListener("blur", soltar);
   document.addEventListener("keydown", (e) => {
-    if (e.repeat || e.target.closest("input, textarea")) return;
+    // No robar las teclas a una caja de texto (p. ej. la entrada del panel de ejecución).
+    if (e.repeat || (e.target.closest && e.target.closest("input, textarea"))) return;
     if (FUNC[e.key] && !document.getElementById("s-teclado").hidden) presionar(e.key);
   });
   document.addEventListener("keyup", (e) => { if (e.key === teclaAbajo) soltar(); });

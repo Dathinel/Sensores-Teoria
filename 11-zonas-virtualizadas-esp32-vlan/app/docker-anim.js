@@ -231,7 +231,10 @@
         rotulo("las 6 capas apiladas = la imagen (solo lectura)", C.docker);
         await esperar(900, tk);
         await aparecer(r.hub, tk);
-        const p = paquete(C.docker, "push");
+        // Mientras sube no lleva etiqueta: entre la pila (termina en x=740) y Docker Hub (empieza en
+        // x=770) no cabe la palabra "push" sin tapar una de las dos; lo dice el rótulo de abajo.
+        const p = paquete(C.docker, "");
+        rotulo("docker push sube la imagen a Docker Hub…", C.docker);
         await mover(p, [[745, 180], [770, 160]], 700, tk);
         p.etiqueta.textContent = "pull (otro PC)";
         rotulo("docker push la sube; en otro PC, docker pull la baja (solo las capas que le falten)", C.docker);

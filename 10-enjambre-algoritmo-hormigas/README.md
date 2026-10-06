@@ -17,12 +17,18 @@ marcha con su barra de avance. No hace falta ningún ESP32: todo se prueba con e
 
 Cada botón dice cuánto tarda (el algoritmo, menos de un segundo; el gemelo, unos 4 a 5 minutos; gemelo + emulador, alrededor de un minuto).
 
+El recorrido completo de la app, sección por sección y botón por botón (y qué hacer si algo falla), está en
+[Con la app, sección por sección](#con-la-app-sección-por-sección). Para la consola, sin la app:
+[Sin ESP32 conectado](#sin-esp32-conectado-desde-la-consola-sin-la-app); con los tres carritos:
+[Con ESP32 conectado](#con-esp32-conectado-los-tres-carritos-reales-paso-a-paso).
+
 ![La app de la práctica con el gemelo digital en vivo](img/app-gemelo-en-vivo.png)
 
 ## ¿Quiere saber cómo funciona? Aquí está todo
 
 | Parte | Secciones |
 |---|---|
+| Paso a paso | [Cómo lo hicimos](#cómo-lo-hicimos-paso-a-paso) · [Probarlo con la app](#con-la-app-sección-por-sección) · [Sin la app (consola)](#sin-esp32-conectado-desde-la-consola-sin-la-app) · [Con los carritos reales](#con-esp32-conectado-los-tres-carritos-reales-paso-a-paso) |
 | Qué se hizo | [Lo que hicimos](#lo-que-hicimos) · [Parámetros](#parámetros-y-dónde-se-cambian) · [Cómo lo hicimos, paso a paso](#cómo-lo-hicimos-paso-a-paso) |
 | Los conceptos | [ACO](#qué-es-la-optimización-por-colonia-de-hormigas-aco) · [Enjambre sin servidor central](#qué-es-un-enjambre-con-memoria-común-sin-servidor-central) · [Gemelo digital](#qué-es-un-gemelo-digital) · [Docker](#qué-es-docker-y-por-qué-lo-usamos-aquí) · [UDP y modo AP](#qué-es-udp-y-qué-es-el-modo-ap) |
 | El diseño | [La idea general](#la-idea-general) · [El laberinto](#el-laberinto-mazejson) · [La lógica del algoritmo](#la-lógica-del-algoritmo-paso-a-paso) · [C++ = Python](#por-qué-el-c-y-el-python-dan-exactamente-lo-mismo) · [El protocolo de red](#el-protocolo-de-red) |
@@ -78,6 +84,8 @@ En `preview.html` están todos en el panel de la izquierda. Si se cambia un valo
 9. **Hicimos `preview.html`.** Portamos el ACO a JavaScript, lo comprobamos contra Python con node y tomamos las capturas.
 10. **Revisamos todo y corrimos las pruebas.** Una revisión del firmware nodo por nodo encontró tres errores de comportamiento, que corregimos: un carrito reiniciado durante el recorrido volvía a buscar solo, la caída del AP partía el enjambre y el carrito frenaba en cada celda recta. La revisión de la medida de convergencia nos llevó a un criterio más estricto. Luego corrimos las pruebas 6 a 11 y las de punta a punta del gemelo; las de hardware quedaron con la tabla lista.
 11. **Cambiamos la regla de depósito.** Con la regla original (deposita toda hormiga que llega) la prueba 6 mostró que la colonia se estancaba en rutas largas del laberinto abierto. Probamos dos variantes elitistas, que solo deposite la mejor hormiga de cada nodo o solo la mejor de todo el enjambre, y nos quedamos con la primera, que se comportó mejor (la segunda se aferraba a la primera ruta que encontraba). La cambiamos a la vez en C++, Python y JavaScript, volvimos a comprobar que los tres dan lo mismo bit a bit y repetimos todas las pruebas. La regla original sigue disponible para comparar (`ACO_SOLO_MEJOR 0`, `--deposito todas`).
+12. **Armamos la app de la práctica** (`app/`, que abre `ABRIR.bat` con el lanzador común del repositorio). Cada botón corre una acción declarada en `probar.json`, con cuánto tarda (`duracion`) y una expresión que reconoce el avance real en la salida (`progreso_regex`): el gemelo sin hardware imprime `t = 12.3 s de 42.0 s`, y de ahí sale la barra. En modo hardware no hay un total conocido de antemano (depende de cuándo lleguen los carritos), así que su barra de la app sale de la foto en vivo de abajo: la búsqueda cuenta un 40 % y los recorridos el 60 %. El problema fue que el gemelo no abre ventana y el video recién existe al final: durante 4 a 5 minutos no había nada que mirar. Lo resolvimos con una foto chiquita del estado, `resultados/vivo_<modo>.json`, que el gemelo reescribe cada 0,4 s (feromona de cada arista, fase y pose de cada carrito); la app la lee cada 0,6 s y dibuja el laberinto en vivo. Dos detalles: la foto se escribe a un `.tmp` y se renombra, para que la app nunca lea un json a medio escribir, y en Windows ese renombrado falla si justo en ese instante el servidor tiene el archivo abierto, así que esa foto se salta (llega otra enseguida); y cada foto lleva el instante de inicio de su corrida, para que la app no muestre como nueva la foto de una corrida anterior (también la del contenedor de Docker, que escribe en la misma carpeta).
+13. **Revisamos la app sección por sección**, a 1366 × 768 y 1920 × 1080, lanzando de verdad el algoritmo y el gemelo con el emulador. Salieron tres detalles que corregimos: con dos programas en marcha (gemelo y emulador) la segunda pastilla de la barra superior quedaba cortada a 1366 px; la barra de avance del gemelo en modo hardware bajaba a 0 % mientras esperaba al primer carrito; y en la vuelta 0 la vista en vivo mostraba un "41 % de feromona sobre el camino ganador" que no significaba nada (con la feromona uniforme ese camino sale solo del desempate). De paso, el gemelo pasó a usar para decir "convergió" el mismo criterio estricto (sin empates de feromona) que `aco.py` y las pruebas; la ruta y la feromona que da con la semilla 12345 no cambiaron.
 
 ## Qué es la optimización por colonia de hormigas (ACO)
 
@@ -370,6 +378,7 @@ Una iteración tarda unos 10 a 30 ms de cálculo (el double del ESP32 es por sof
 - **Escena.** Piso, baldosas de 20 cm, paredes como cajas de 8 cm de alto, la marca verde de A, la bandera a cuadros de la meta, y tres carritos (cuerpo y cuatro ruedas, de 10 cm, en rojo, azul y amarillo). Los carritos se mueven de forma cinemática (`resetBasePositionAndOrientation`): interpolan entre centros de celdas con los mismos tiempos del firmware, y en modo hardware se corrigen con la celda que reporta cada `ESTADO`. La feromona de cada arista es una franja plana cuyo color va de lila pálido a violeta según su valor. Un carrito apagado se ve gris.
 - **Imagen.** Cámara cenital con `getCameraImage` y el renderizador por software (`ER_TINY_RENDERER`), que funciona igual en Windows y en Docker sin tarjeta gráfica. `getCameraImage` no captura las líneas ni los textos de depuración de PyBullet, así que todo lo que se ve es geometría real y los textos se escriben con Pillow en un panel a la derecha: iteración, fase y mejor ruta de cada nodo, vivos, parámetros y leyenda.
 - **Salidas** (en `resultados/`, o en la carpeta de la variable `RESULTADOS`): `gemelo_<modo>.mp4` (H.264, 1120 × 720, 15 cuadros por segundo), `ruta_final_<modo>.png`, `telemetria_<modo>.jsonl` (cada mensaje con su instante) y `resumen_<modo>.json` (ruta y longitud de cada nodo, ruta óptima, si convergió, feromona final, avisos). La corrida con un nodo apagado agrega `_apagado<N>` al nombre. Además, mientras corre deja cada 0,4 s una foto chiquita del estado en `vivo_<modo>.json` (tiempo, iteración, feromona de cada arista, fase y posición de cada carrito): la app de la práctica la lee para mostrar el gemelo en vivo antes de que el video esté listo. Se escribe a un `.tmp` y se renombra, para que nunca se lea a medias.
+- **Avance en la consola.** Sin hardware imprime cada 2,5 s de tiempo virtual `t =  12.5 s de 42.0 s  iteracion 30  cuadros 189` (tiempo virtual hecho y total); en modo hardware, cada 5 s, `t = 20.1 s  it 18/30  vivos [1, 2, 3]  ultima linea: ...`. La app saca de la primera la barra de avance real (`progreso_regex` en `probar.json`); la segunda solo cuenta la búsqueda, así que en modo hardware la barra sale de `vivo_hardware.json` (búsqueda 40 %, recorridos 60 %).
 - **Fin.** En modo hardware termina cuando todos los nodos que se vieron están en `TERMINADO` y sus carritos terminaron, con `--timeout` (240 s por defecto) o con Ctrl+C; en los tres casos escribe las salidas. Si los carritos tardan en encenderse, conviene subir el `--timeout`.
 
 ## Conexiones
@@ -535,9 +544,110 @@ PyBullet no publica ruedas para Windows con ninguna versión de Python (solo par
 
 ## Cómo probarlo
 
-**Sin ESP32 conectado**
+Hay tres formas, de la más cómoda a la más completa: con la app (sin ESP32, todo con botones), desde la consola (los
+mismos programas a mano) y con los tres carritos reales.
 
-Lo más cómodo es la app (`ABRIR.bat`, ver [arriba](#quiere-probarlo-aquí-está)): corre cada uno de estos programas con un botón y muestra su salida. A mano, todo lo de software corre sin los carritos:
+### Con la app, sección por sección
+
+No hace falta ningún ESP32 ni instalar nada a mano: solo Python 3.9 o más nuevo (el `ABRIR.bat` lo busca y, si no está,
+explica cómo instalarlo).
+
+1. **Doble clic en `ABRIR.bat`** (en Linux o Mac, `sh abrir.sh`). Se abre una consola que se minimiza sola (es la que
+   mantiene la app funcionando: no hay que cerrarla) y, enseguida, la app en una ventana propia, maximizada, con la
+   pantalla "Abriendo la práctica…" mientras carga.
+2. **Lo que se ve siempre.** Arriba, la **barra superior**: el número 10 y el título; en el centro, **lo que está en
+   marcha** ("Nada en marcha" o una pastilla por programa, con su avance en % y el reloj; un clic en la pastilla lleva a
+   su panel); a la derecha, **README** (abre este README en otra pestaña), **Pantalla completa** (Esc para salir) y el
+   estado del entorno ("Entorno listo", "Entorno: se prepara al iniciar" o "▶ 2 programas en marcha"). A la izquierda,
+   el **menú de los 11 pasos**, agrupados en Empezar, Entender, Probar y Montaje y resultados; abajo de cada paso,
+   **← Anterior** y **Siguiente →**. La app recuerda el último paso abierto.
+3. **Paso 1, Inicio.** El GIF del gemelo, los datos clave (3 ESP32, laberinto de 5 × 5, ruta óptima de 2,40 m, red,
+   puertos) y tres botones: **▶ Ver el gemelo en vivo** (va al paso 6), **El algoritmo en 1 segundo** (paso 5) y
+   **Primero, entender la idea** (paso 2). Debajo, cuatro tarjetas que llevan a cada parte y la **lista de lo que pide la
+   actividad**: cada punto se marca solo cuando termina bien la prueba que lo demuestra.
+4. **Paso 2, Qué es el algoritmo de hormigas.** A la derecha, la animación del "puente doble": hormigas entre el nido y
+   la comida por dos caminos. Al principio van mitad y mitad, y a los pocos segundos el medidor "hormigas por el camino
+   corto" sube hacia el 100 %. **Reiniciar** vuelve a empezar, **Pausa** / **Seguir** la congela y el deslizador
+   **evaporación ρ** cambia la evaporación (con ρ muy alto las hormigas siguen indecisas). A la izquierda, la receta del
+   algoritmo en 7 pasos; el plegable "La fórmula, para quien la quiera" tiene la fórmula de la ruleta.
+5. **Paso 3, El laberinto.** El mapa de `maze.json` dibujado por la app, con tres botones: **Solo el mapa**, **Una ruta
+   óptima** (12 pasos, 2,40 m) y **Las rutas de los 3 carritos** (las de la semilla 12345). La imagen del gemelo se
+   amplía con un clic.
+6. **Paso 4, Cómo se conectan los carritos.** Solo para leer (no hace falta para probar): el diagrama de la red, los
+   mensajes de ejemplo, la tabla de los tres carritos y del PC, la de pines, el plegable "Más detalles del montaje" (la
+   alimentación y el brownout de este README) y las fotos de las placas, ampliables.
+7. **Paso 5, Pruébalo: el algoritmo.** Dos pestañas:
+   - **A · El enjambre completo**: botón **Iniciar: correr el enjambre** (menos de 1 s). Debe aparecer el laberinto con
+     las tres rutas, una tarjeta por carrito (las tres de **2,40 m · óptima**), "ruta óptima desde la vuelta 1" y "la
+     colonia convergió". Es `aco.py` con la semilla 12345.
+   - **B · Las pruebas 6 a 11**: **Iniciar: correr las pruebas 6 a 11** (unos 3 s). Salen las tablas de cada prueba con
+     "cumple" o "no cumple" (la 6 no cumple por una semilla, como se explica en [Pruebas](#pruebas)). Reescribe
+     `pruebas/resultados/pruebas_algoritmo.json` y `.md` con los mismos números (solo cambia el tiempo que tardó).
+
+   En cada panel, "Lo que dice el programa" muestra la salida cruda y "Detalles técnicos" el comando exacto.
+8. **Paso 6, Pruébalo: el gemelo digital.** Dos pestañas, cada una con su botón: **Iniciar el gemelo (4-5 min)** y
+   **Iniciar con el nodo 3 apagado (4-5 min)** (la prueba 14 en simulación). Antes de pulsar, la vista de la derecha
+   muestra la **última corrida** guardada en `resultados/`. Al pulsar:
+   - la primera vez se prepara el entorno de Python con PyBullet (franja amarilla "Preparando el entorno…", con la barra
+     de pip); después, la franja verde "Se está ejecutando… · lleva 0:40 de ~5:00";
+   - a la derecha, **el gemelo en vivo** (lee `resultados/vivo_sin-hardware.json`): la barra con el avance real ("37 % ·
+     lleva 1:30 · faltan ~2:35"), el laberinto con la feromona violeta de cada tramo (más gruesa = más feromona), la
+     mejor ruta de cada carrito punteada, los carritos numerados con una flecha hacia donde miran, en cuál de las 4 fases
+     va (se saludan, buscan, recorren, llegaron), el medidor "feromona sobre el camino ganador" y una tarjeta por
+     carrito con su fase, su longitud y su celda;
+   - en la pestaña B, después de la vuelta 10 el carrito 3 se pone gris y los otros dos terminan solos;
+   - al terminar: "Terminó bien", las tarjetas con la ruta de cada carrito y "la colonia convergió a la ruta óptima", y
+     los botones **Ver el video aquí** / **▶ Ver el video de esta corrida**, **Ver la imagen final** y **Abrir la carpeta
+     de resultados**.
+
+   **Detener** corta el programa; si se detiene a mitad, el mp4 puede quedar vacío (hay que volver a correrlo).
+9. **Paso 7, Pruébalo: gemelo + emulador de los ESP32.** Así se usa con los carritos, pero sin ellos. Lo más fácil es
+   **▶ Lanzar los dos en orden**: arranca el gemelo, espera a que diga `Escuchando telemetria UDP en 0.0.0.0:4211` y
+   recién entonces arranca el emulador; la línea de debajo del botón dice en qué va ("1/2 · arrancando el gemelo…", "2/2
+   · el gemelo escucha…", "El emulador terminó…"). A mano es lo mismo en dos pasos:
+   - **1) Iniciar el gemelo que escucha**: cuando aparece la línea "Escuchando…" se desbloquea el paso 2 (antes está
+      tapado con "Primero inicia el paso 1").
+   - **2) Iniciar los 3 ESP32 emulados**: se encienden las etiquetas **nodo 1**, **nodo 2** y **nodo 3** y la vista en
+      vivo, que esta vez va en tiempo real, muestra llegar a los tres: unos 15 s de búsqueda y después los recorridos,
+      escalonados 8 s.
+
+   Todo tarda alrededor de un minuto. Al final el emulador muestra una tarjeta por nodo (los tres en `TERMINADO`, 2,40 m)
+   e **"Idéntico a la simulación: SI"**, y el gemelo termina solo un segundo después de que llega el último carrito y
+   deja su video (con los mismos botones del paso 6).
+10. **Paso 8, Docker: el gemelo sin compilar nada.** Necesita Docker Desktop abierto ("Engine running"). Pestaña **A**:
+    **Levantar: Gemelo en Docker (sin hardware)** construye la imagen la primera vez (alrededor de 1 minuto, con internet)
+    y corre el gemelo dentro del contenedor (unos 2 minutos); la vista en vivo de la derecha funciona igual, porque el
+    contenedor escribe en la misma carpeta `resultados/`. Pestaña **B**: **Levantar: Gemelo en Docker en modo hardware**
+    deja el gemelo del contenedor escuchando el UDP 4211; después se lanza el paso 2 del emulador (paso 7) o se encienden
+    los carritos. **Detener el laboratorio** lo para. No se usa a la vez que el gemelo del paso 7: comparten el puerto.
+11. **Paso 9, Simulador en el navegador.** `preview.html` dentro de la app: elegir laberinto y parámetros, **Iniciar**
+    (seguido) o **Paso** (una vuelta), y los botones **Apagar nodo** para simular una caída. El botón **abrirlo en su
+    propia pestaña** hace falta para el modo "Conectado" (Web Serial, Chrome o Edge, un carrito por USB).
+12. **Paso 10, Con los carritos reales.** Los 7 pasos del montaje (los mismos de
+    [Con ESP32 conectado](#con-esp32-conectado-los-tres-carritos-reales-paso-a-paso)), con **Abrir la carpeta del
+    firmware** (abre `firmware/esp32_aco_nodo/` en el explorador, para abrir el `.ino` con el Arduino IDE), **Ver el
+    código del firmware** y el plegable con los comandos de `compilar.ps1` y de `herramientas_red.py`.
+13. **Paso 11, Resultados.** Los tres videos (se reproducen ahí mismo), la tabla de las 15 pruebas, la figura de
+    convergencia por ρ, la lista de lo que pide la actividad (se marca sola, o a mano) junto al enunciado, y los botones
+    **Abrir la carpeta de resultados** y **Ver el README completo en GitHub**.
+
+**Si algo falla en la app:**
+
+- **El primer gemelo tarda mucho en "Preparando el entorno".** En Windows PyBullet se compila (unos 13 minutos) y
+  necesita las Build Tools de Visual Studio con C++; el panel lo avisa con el comando para instalarlas. Sin ellas, el
+  paso 8 (Docker) corre el gemelo sin compilar nada. El algoritmo, las pruebas, el emulador y el simulador del navegador
+  no necesitan PyBullet.
+- **El gemelo del paso 7 no pasa de "todavía no llega ningún carrito".** Falta lanzar el paso 2 (el emulador), o el
+  firewall de Windows bloqueó el UDP 4211 (la primera vez pregunta: hay que permitirlo).
+- **"address already in use" o "port is already allocated".** El puerto 4211 ya lo tiene otro programa: el gemelo del
+  paso 7, el de Docker en modo hardware o `herramientas_red.py escuchar`. Se detiene el otro y se vuelve a lanzar.
+- **El paso 8 falla enseguida.** Docker Desktop no está abierto, o la primera construcción no tiene internet.
+- **El video no abre.** El gemelo se detuvo a mitad y el mp4 quedó vacío: hay que volver a correrlo hasta el final.
+- **Se cerró la consola minimizada.** La app deja de poder lanzar programas: doble clic otra vez en `ABRIR.bat`.
+
+### Sin ESP32 conectado (desde la consola, sin la app)
+
+A mano, todo lo de software corre sin los carritos (es lo mismo que lanzan los botones de la app):
 
 ```powershell
 entorno\Scripts\python aco.py                                   # el enjambre en consola
@@ -547,7 +657,7 @@ entorno\Scripts\python pruebas\pruebas_algoritmo.py             # pruebas 6 a 11
 entorno\Scripts\python pruebas\equivalencia\comparar_equivalencia.py
 ```
 
-El gemelo sin hardware tarda unos 4 minutos en este PC (renderiza cada cuadro por software). Hay que dejarlo terminar o pararlo con Ctrl+C, que cierra el video bien: si se cierra la terminal o se mata el proceso a mitad de camino, el mp4 queda vacío (unos 48 bytes) y no se puede abrir.
+El gemelo sin hardware tarda unos 4 a 5 minutos en este PC (renderiza cada cuadro por software). Hay que dejarlo terminar o pararlo con Ctrl+C, que cierra el video bien: si se cierra la terminal o se mata el proceso a mitad de camino, el mp4 queda vacío (unos 48 bytes) y no se puede abrir.
 
 Para probar el gemelo en **modo hardware** sin carritos, el emulador hace de los tres ESP32 y manda la telemetría al puerto 4211 del PC por UDP de verdad:
 
@@ -559,7 +669,7 @@ python emulador_nodos.py --apagar-nodo 3 --en-iteracion 10       # o con una ca�
 
 `preview.html` se abre con doble clic (más abajo está en "El montaje y la demo").
 
-**Con ESP32 conectado**
+### Con ESP32 conectado (los tres carritos reales, paso a paso)
 
 *Cargar el firmware en los tres carritos.* El mismo sketch va en los tres; lo único que cambia es el número de nodo. Se programa uno a la vez, con el interruptor de la batería apagado (ver "Alimentación").
 

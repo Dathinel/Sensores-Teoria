@@ -61,6 +61,8 @@ CAMPOS AÑADIDOS para las apps por práctica (ver _lanzador/LEEME.md):
   un buffer que la página lee por partes (/api/salida?tid=N&desde=M) y, si "entrada", su
   stdin queda abierto (/api/entrada). "modo": "consola" conserva la consola de siempre.
   "duracion": "~4-5 min" o "duracion_s": 270 -> barra estimada y reloj "lleva 1:23 de ~4:30".
+  "duracion_es": "arranque" -> esa duración es solo el arranque (el programa sigue hasta que se
+                  detiene): pasado ese tiempo la app dice "en marcha", no "tardando más".
   "progreso_regex": "it (\\d+)/(\\d+)" -> barra real con lo que imprime el programa (sintaxis
                   de JavaScript: la aplica la página; un grupo = porcentaje, dos = hecho/total).
 
@@ -233,8 +235,13 @@ def validar_accion(carpeta, a, i, vistos):
         "duracion": str(a.get("duracion") or ""),
         "duracion_s": None,
         "progreso_regex": str(a.get("progreso_regex") or ""),
+        # "arranque": la duración es solo lo que tarda en arrancar un programa que sigue en marcha
+        # hasta que se detiene (YOLO con la cámara); pasado ese tiempo la app dice "en marcha".
+        "duracion_es": str(a.get("duracion_es") or ""),
     }
     errores = []
+    if acc["duracion_es"] not in ("", "total", "arranque"):
+        errores.append(f"\"duracion_es\" \"{acc['duracion_es']}\" desconocido (válidos: total, arranque)")
     if a.get("duracion_s") is not None:
         try:
             acc["duracion_s"] = max(1, int(float(a["duracion_s"])))
@@ -539,12 +546,13 @@ def entorno_hijo():
     return env
 
 
-def correr_con_log(trabajo, cmd, cwd=None, tipo="pip"):
+def correr_con_log(trabajo, cmd, cwd=None, tipo="pip", env_extra=None):
     """Corre un comando sin ventana y va pasando su salida, línea a línea, al log del trabajo."""
     if trabajo.cancelado:
         raise ErrorClaro("Detenido.")   # pulsaron Detener mientras se preparaba: no seguir
     trabajo.escribir("$ " + " ".join(str(c) for c in cmd), tipo)
     env = entorno_hijo()
+    env.update(env_extra or {})
     env.setdefault("COMPOSE_ANSI", "never")       # docker compose sin colores ni cursores
     env.setdefault("BUILDKIT_PROGRESS", "plain")
     p = subprocess.Popen([str(c) for c in cmd], cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -707,16 +715,21 @@ def instalar_paquetes(trabajo, python, paquetes):
         # compilador en el PATH no basta. DISTUTILS_USE_SDK=1 le dice a setuptools que use ese
         # entorno ya preparado en vez de buscar Visual Studio por su cuenta (lo que fallaba).
         # Se escribe un .bat junto al entorno porque las rutas con espacios dentro de `cmd /c "..."`
-        # se rompen con facilidad.
+        # se rompen con facilidad. Las rutas NO van escritas dentro del .bat sino en variables de
+        # entorno (LANZ_*): cmd.exe lee los .bat con la página de códigos de la consola, así que
+        # una ruta con tildes o ñ (C:\Users\José\...) escrita en el archivo llegaría deformada;
+        # en una variable de entorno llega en Unicode tal cual.
         bat = Path(python).resolve().parent.parent / "instalar_con_msvc.bat"
-        linea = subprocess.list2cmdline(comando)
+        linea = subprocess.list2cmdline(comando[1:])   # "-m pip install ..." (solo ASCII)
         bat.write_text("@echo off\r\n"
-                       f"set \"PATH={carpeta_instalador_vs()};%PATH%\"\r\n"
-                       f"call \"{vcvars}\" >nul || exit /b 1\r\n"
+                       "set \"PATH=%LANZ_VS_INSTALADOR%;%PATH%\"\r\n"
+                       "call \"%LANZ_VCVARS%\" >nul || exit /b 1\r\n"
                        "set DISTUTILS_USE_SDK=1\r\n"
-                       f"{linea}\r\n", encoding="utf-8")
+                       f"\"%LANZ_PYTHON%\" {linea}\r\n", encoding="ascii", errors="replace")
         trabajo.escribir(f"Compilador: {vcvars}")
-        codigo = correr_con_log(trabajo, ["cmd", "/c", str(bat)])
+        codigo = correr_con_log(trabajo, ["cmd", "/c", str(bat)], env_extra={
+            "LANZ_VS_INSTALADOR": str(carpeta_instalador_vs()), "LANZ_VCVARS": str(vcvars),
+            "LANZ_PYTHON": str(python)})
     if codigo != 0:
         raise ErrorClaro("pip no pudo instalar los paquetes (mira las últimas líneas del registro). "
                          "Suele ser falta de internet o que no hay versión del paquete para ese Python.")
@@ -1087,7 +1100,9 @@ def iniciar_accion(carpeta, accion_id, detener=False, desde_app=False):
             previo.poner("detenida", "Detenido." if previo.modo == "app" else "Detenida desde el lanzador.")
             if accion["tipo"] != "docker":
                 return previo
-        elif detener and accion["tipo"] == "python":
+        elif detener and accion["tipo"] != "docker":
+            # Solo docker tiene un "detener" propio (docker compose stop) aunque no haya nada en
+            # marcha; en los demás tipos, seguir adelante LANZARÍA la acción (abriría el archivo).
             raise ErrorClaro("No hay nada en marcha que detener.")
         nombre = accion["nombre"] + (" (detener)" if detener else "")
         t = Trabajo(carpeta, accion_id + (":detener" if detener else ""), nombre,
@@ -1188,6 +1203,48 @@ def ejecutar(t, practica, accion, detener):
         t.poner("error", f"Algo falló al lanzar la acción: {e}")
 
 
+def detener_trabajos_de_app(motivo="Detenido: se cerró el lanzador."):
+    """Al cerrarse el lanzador (su ventana, Ctrl+C, el cierre solo por inactividad o "Salir"),
+    los programas que corren SIN consola (modo app) se detienen con sus hijos. Si no, quedarían
+    huérfanos e invisibles: nadie lee ya su salida, y en cuanto llenan el tubo de stdout se
+    quedan colgados (una ventana de PyBullet congelada que no se puede cerrar desde la app).
+    Los de "modo": "consola" tienen su propia ventana y siguen: se cierran desde ella."""
+    with TRABAJOS_LOCK:
+        activos = [t for t in TRABAJOS.values() if t.activo and t.modo == "app" and (t.pid or t.proceso)]
+    for t in activos:
+        t.cancelado = True
+        try:
+            matar_arbol(t.pid or t.proceso.pid)
+        except Exception:
+            pass
+        t.poner("detenida", motivo)
+    return len(activos)
+
+
+_MANEJADOR_CONSOLA = []   # referencia viva al callback de ctypes (si se libera, Windows llamaría a basura)
+
+
+def al_cerrar_la_consola():
+    """Windows: cerrar la ventana negra del ABRIR.bat (o cerrar sesión / apagar) mata el
+    proceso de golpe, sin pasar por los `finally`. Con SetConsoleCtrlHandler se alcanza a
+    detener los programas en modo app (Windows da ~5 s) antes de que eso pase."""
+    if not ES_WINDOWS:
+        return
+    try:
+        import ctypes
+        from ctypes import wintypes
+        tipo = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.DWORD)
+
+        def manejador(evento):
+            if evento in (2, 5, 6):   # CTRL_CLOSE_EVENT, CTRL_LOGOFF_EVENT, CTRL_SHUTDOWN_EVENT
+                detener_trabajos_de_app()
+            return False              # que siga el manejo normal (Ctrl+C -> KeyboardInterrupt)
+        _MANEJADOR_CONSOLA.append(tipo(manejador))
+        ctypes.windll.kernel32.SetConsoleCtrlHandler(_MANEJADOR_CONSOLA[-1], True)
+    except Exception:
+        pass
+
+
 def matar_arbol(pid):
     """Cierra el programa (o su consola) y todo lo que corre dentro (sus procesos hijos)."""
     if ES_WINDOWS:
@@ -1273,7 +1330,13 @@ def archivo_prohibido(rel):
     """Lo que el servidor de archivos nunca entrega aunque se lo pidan: secretos (.env), los
     entornos, git, las bases de datos locales y los PDF/Word privados que el .gitignore ya
     excluye del repo. Vale para /repo/ y para /app/."""
-    partes = [x.lower() for x in Path(rel).parts]
+    rel = str(rel).replace("\\", "/")
+    # Windows: "x.db::$DATA" (flujo de datos alternativo) abre el mismo archivo "x.db", y los
+    # puntos/espacios del final se ignoran ("x.db." es "x.db"): sin esto, se saltarían los
+    # filtros de abajo. Ningún archivo legítimo del repo lleva ":" en la ruta.
+    if ":" in rel:
+        return True
+    partes = [x.lower().rstrip(". ") for x in rel.split("/") if x]
     if any(x in ("entorno", ".git", "respaldos", "__pycache__", ".claude") for x in partes):
         return True
     nombre = partes[-1] if partes else ""
@@ -1318,8 +1381,10 @@ def inyectar_meta(html, carpeta, carga=None):
     carga: en la página principal de la app, {"num", "titulo"} para la pantalla de carga
     "Abriendo la práctica…" (va en el HTML mismo, así se ve desde el primer instante, antes
     de que carguen el CSS, las fuentes y app.js; app.js la va avanzando y la quita)."""
+    # El valor va escapado como HTML (no como JSON: "á" llegaría tal cual a app.js y una
+    # carpeta con tildes no se encontraría).
     meta = (f'<meta name="probar-token" content="{Config.token}">'
-            f'<meta name="probar-carpeta" content="{json.dumps(carpeta)[1:-1]}">')
+            f'<meta name="probar-carpeta" content="{escapar_html(carpeta)}">')
     if carga:
         meta += CARGA_HEAD
     m = re.search(r"<head[^>]*>", html, re.I)
@@ -1480,7 +1545,8 @@ class Manejador(BaseHTTPRequestHandler):
             d = ruta_dentro(Config.raiz, carpeta)
             if d is None or not (d / "README.md").is_file():
                 return self.responder(404, "No hay README en esa carpeta.", "text/plain; charset=utf-8")
-            pagina = (README_HTML.replace("__CARPETA__", json.dumps(carpeta))
+            # json.dumps dentro de <script>: "<" escapado para que un "</script>" no cierre el bloque.
+            pagina = (README_HTML.replace("__CARPETA__", json.dumps(carpeta).replace("<", "\\u003c"))
                       .replace("__CARPETA_URL__", urllib.parse.quote(carpeta))
                       .replace("__BASE__", "/repo/" + urllib.parse.quote(carpeta) + "/")
                       .replace("__GITHUB__", GITHUB + urllib.parse.quote(carpeta) + "/README.md"))
@@ -1832,7 +1898,9 @@ def main():
     servidor = crear_servidor(args.puerto)
     Config.puerto = servidor.server_address[1]
     url = f"http://127.0.0.1:{Config.puerto}{destino}"
-    threading.Thread(target=revisar_entornos_en_segundo_plano, args=(args.practica,), daemon=True).start()
+    al_cerrar_la_consola()
+    threading.Thread(target=revisar_entornos_en_segundo_plano, args=(nombre if args.practica else None,),
+                     daemon=True).start()
     threading.Thread(target=vigilar_latidos, daemon=True).start()
     threading.Thread(target=lambda: PYTHONS_VISTOS.extend(versiones_instaladas()), daemon=True).start()
     if ES_WINDOWS:
@@ -1860,8 +1928,9 @@ def main():
     except KeyboardInterrupt:
         pass
     finally:
+        n = detener_trabajos_de_app()
         servidor.server_close()
-        print("Lanzador cerrado.")
+        print("Lanzador cerrado." + (f" Detuve {n} programa(s) que seguían en marcha." if n else ""))
 
 
 # --------------------------------------------------------------------------------------
@@ -1969,7 +2038,24 @@ fetch("README.md").then((r) => r.text()).then(async (texto) => {
     const div = document.createElement("div"); div.className = "mermaid"; div.textContent = c.textContent;
     c.parentElement.replaceWith(div);
   }
+  // Anclas como en GitHub (marked ya no pone id a los títulos): minúsculas, sin puntuación
+  // (las tildes se quedan), espacios -> "-", y -1, -2... si se repite. Ver _lanzador/revisar_enlaces.py.
+  const vistos = {};
+  for (const h of main.querySelectorAll("h1,h2,h3,h4,h5,h6")) {
+    const base = h.textContent.trim().toLowerCase().replace(/[^\p{L}\p{M}\p{N}\p{Pc} -]/gu, "").replace(/ /g, "-");
+    h.id = vistos[base] ? `${base}-${vistos[base]}` : base; vistos[base] = (vistos[base] || 0) + 1;
+  }
+  // Con <base href> un enlace "#ancla" iría a /repo/<carpeta>/#ancla (otra página): se resuelve aquí.
+  main.addEventListener("click", (ev) => {
+    const a = ev.target.closest && ev.target.closest("a[href^='#']");
+    if (!a) return;
+    ev.preventDefault();
+    const id = decodeURIComponent(a.getAttribute("href").slice(1));
+    const destino = document.getElementById(id);
+    if (destino) { destino.scrollIntoView({ behavior: "smooth" }); history.replaceState(null, "", "#" + encodeURIComponent(id)); }
+  });
   if (window.mermaid) { mermaid.initialize({ startOnLoad: false, theme: "default" }); try { await mermaid.run(); } catch (e) {} }
+  if (location.hash) { const d = document.getElementById(decodeURIComponent(location.hash.slice(1))); if (d) d.scrollIntoView(); }
 }).catch(() => { document.getElementById("md").textContent = "No se pudo leer el README."; });
 </script>
 </body>

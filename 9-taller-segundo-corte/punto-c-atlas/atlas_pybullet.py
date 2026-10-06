@@ -308,6 +308,10 @@ def crear_mundo(modo=p.DIRECT):
     # y los links 0,5): con 0,5 las suelas patinan un poco al empujar.
     p.changeDynamics(piso, -1, lateralFriction=1.0)
 
+    # Masa total = la de la base (pelvis) + la de cada link. Se suma dentro del
+    # bucle de las juntas de giro: en este URDF TODAS las juntas son de giro
+    # (no hay juntas fijas que dejen links afuera), asi que da la masa
+    # completa, 182,4 kg (comprobado sumando todos los links).
     e.masa = p.getDynamicsInfo(e.atlas, -1)[0]
     for j in range(p.getNumJoints(e.atlas)):
         info = p.getJointInfo(e.atlas, j)

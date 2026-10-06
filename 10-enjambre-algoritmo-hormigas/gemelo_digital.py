@@ -403,14 +403,20 @@ class EstadoGemelo:
     # ----------------------------------------------------------------- resumen
     def convergio(self):
         """La colonia convergio si siguiendo siempre la arista de mas feromona (sin azar) se
-        llega a la meta por un camino de longitud optima."""
+        llega a la meta por un camino de longitud optima Y en ningun paso hubo empate de feromona.
+        Es el mismo criterio de aco.simular_enjambre y de las pruebas (camino_codicioso con
+        estricto=True), el que explica el README.
+
+        Devuelve (convergio, camino): el camino es el codicioso SIN la condicion de empate, para
+        poder dibujarlo siempre (en el video y en la app), aunque todavia no cuente como decidido."""
         cod = self.ref.camino_codicioso()
+        decidido = self.ref.camino_codicioso(estricto=True)
         opt = aco.camino_optimo(self.lab)
         # Sin ninguna iteracion aplicada toda la feromona vale tau0 y el camino "codicioso" sale
         # solo del orden de desempate (+x, +y, ...): podria coincidir con el optimo por suerte.
-        if self.iter_aplicada == 0 or cod is None or opt is None:
+        if self.iter_aplicada == 0 or decidido is None or opt is None:
             return False, cod
-        return abs(self.lab.longitud_camino(cod) - self.lab.longitud_camino(opt)) < 1e-9, cod
+        return abs(self.lab.longitud_camino(decidido) - self.lab.longitud_camino(opt)) < 1e-9, cod
 
 
 # ---------------------------------------------------------------------------------------------
@@ -1068,7 +1074,8 @@ def correr_hardware(args, lab, params) -> int:
             g.actualizar(t)
             vivo.escribir(g, t, sal.cuadros)
 
-            # Diagnostico en consola ("it k/N": la app saca de aqui la barra de la busqueda).
+            # Diagnostico en consola cada 5 s ("it k/N" = iteraciones aplicadas). La barra de la app en
+            # este modo sale de vivo_hardware.json (busqueda + recorridos), no de esta linea.
             if t >= proximo_cruda:
                 if g.ultima_linea:
                     print(f"  t = {t:5.1f} s  it {g.iter_aplicada:2d}/{params.iteraciones}  vivos {g.vivos(t)}  ultima linea: {g.ultima_linea[:90]}")

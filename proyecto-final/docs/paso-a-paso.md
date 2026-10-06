@@ -7,6 +7,8 @@ Cada punto de la secuencia de operación (sección 5 de `docs/especificacion.md`
 
 Para verlo en 3D: doble clic en `visor.bat` (pestaña Paso a paso del visor).
 
+Esto es el **funcionamiento** de la máquina. **Cómo se hizo** el proyecto, en orden y con lo que falló, está en la [bitácora](bitacora.md); **cómo probarlo** (con la app, sin ella y con el montaje real), en el [Paso a paso del README](../README.md#paso-a-paso).
+
 | # | Punto | Sensores | Revisión |
 |---|---|---|---|
 | 1 | [Carga del elemento y estación 1 (presencia)](#1-carga-del-elemento-y-estación-1-presencia) | [1](sensores.md#1-infrarrojo-de-presencia), [4](sensores.md#4-cámara-cenital) | ✅ aprobado |

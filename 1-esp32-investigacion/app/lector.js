@@ -15,7 +15,7 @@
   // investigación con el script). Cada capítulo se busca por el comienzo de su título.
   const GRUPOS = [
     { nombre: "La investigación", caps: [
-      "Qué pedía la actividad", "Qué es un microcontrolador", "Ficha técnica", "De dónde viene",
+      "Qué pedía la actividad", "Cómo se hizo", "Qué es un microcontrolador", "Ficha técnica", "De dónde viene",
       "La familia y quién la fabrica", "Arquitectura", "Pines", "Qué es un ADC", "Cómo se programa",
       "El costo ambiental", "Para qué se usa"] },
     { nombre: "El script de la placa", caps: [
@@ -33,6 +33,7 @@
   ];
   const TITULOS_CORTOS = {            // el índice lateral se lee mejor con títulos breves
     "Qué pedía la actividad y qué hicimos": "La actividad y qué hicimos",
+    "Cómo se hizo, paso a paso": "Cómo se hizo",
     "Ficha técnica (DevKit V1 con ESP32-WROOM-32, la placa de los labs)": "Ficha técnica",
     "Pines: lo que no se puede hacer con cada uno": "Pines y sus restricciones",
     "Qué es un ADC, un DAC y el PWM": "ADC, DAC y PWM",
@@ -224,8 +225,11 @@
       if (href.startsWith("#")) {
         const destino = decodeURIComponent(href.slice(1));
         const cap = caps.find((c) => c.id === destino);
-        if (cap) a.setAttribute("href", "#" + cap.id);
-        a.removeAttribute("target");
+        if (cap) { a.setAttribute("href", "#" + cap.id); a.removeAttribute("target"); return; }
+        // Una sección que la app no muestra como capítulo (Pendiente, Cómo probarlo...): se abre
+        // en el README de GitHub, en vez de caer a la portada.
+        a.setAttribute("href", GITHUB + "/tree/main/" + CARPETA + "#" + destino);
+        a.target = "_blank"; a.rel = "noopener";
         return;
       }
       const u = new URL(href, location.origin + REPO + "README.md");

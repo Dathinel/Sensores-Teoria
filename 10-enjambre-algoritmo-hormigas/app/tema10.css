@@ -146,6 +146,12 @@ details.t10-tecnico pre { background: #0a0d10; padding: 0.6rem; border-radius: 6
 .t10-mini { width: 56px; height: 5px; border-radius: 3px; background: #0a0d10; overflow: hidden; display: inline-block; }
 .t10-mini i { display: block; height: 100%; background: var(--t10-feromona); transition: width 0.5s; }
 @keyframes t10-latir { 50% { opacity: 0.35; } }
+/* Con dos o más programas en marcha (gemelo + emulador) las pastillas no cabían a 1366 px: la
+   segunda quedaba cortada dentro de la franja (que se desplaza, pero sin barra visible). En ese
+   caso se esconden la barrita de cada pastilla y el subtítulo del título, y caben enteras. */
+.t10-tareas:has(.t10-tarea + .t10-tarea) .t10-mini { display: none; }
+.t10-tareas:has(.t10-tarea + .t10-tarea) .t10-tarea { padding: 0.3rem 0.6rem; }
+@media (max-width: 1500px) { .t10-barra:has(.t10-tarea + .t10-tarea) .t10-barra-titulo span { display: none; } }
 .t10-barra-botones { flex: none; display: flex; gap: 0.4rem; align-items: center; }
 .t10-barra-botones .app-herr { margin-left: 0; flex-wrap: nowrap; }
 .t10-barra-botones .t10-boton { padding: 0.4rem 0.7rem; white-space: nowrap; }

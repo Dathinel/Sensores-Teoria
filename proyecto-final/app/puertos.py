@@ -18,6 +18,7 @@ nunca aparecia, sin un error claro. Ahora:
 
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import socket
@@ -69,7 +70,9 @@ def es_nuestro(puerto: int) -> bool:
         with urllib.request.urlopen(f"http://127.0.0.1:{puerto}/api/geometria", timeout=1.5) as r:
             datos = json.loads(r.read().decode("utf-8"))
         return isinstance(datos, dict) and "cinta_monedas" in datos
-    except (OSError, ValueError):
+    except (OSError, ValueError, http.client.HTTPException):
+        # HTTPException: el otro programa no habla HTTP (BadStatusLine...) y NO es OSError:
+        # sin capturarla, app.lanzar se caia en vez de pasar al puerto siguiente.
         return False
 
 

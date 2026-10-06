@@ -29,8 +29,6 @@
       "cwd": ".",
       "entrada": true,
       "vida": "app",
-      "duracion": "~3 s en arrancar",
-      "duracion_s": 3,
       "descripcion": "Consola: escribir una frase y Enter (enciende el rojo, prende los dos, apaga el azul, enciende el rojo y apaga el azul, haz un show de luces, apaga todo). Muestra el texto, la orden que saldría al ESP32 ([sin ESP32] se habria enviado: 10) y, si la frase no tiene que ver con los LEDs, que no hace nada. Usa el intérprete por palabras clave aunque haya clave en el .env. salir = terminar.",
       "cubre": ["Orden al ESP32 por serial; el ESP32 prende o apaga los LEDs (GPIO25 rojo, GPIO26 azul) y contesta OK", "Extra: show de luces que alterna los LEDs y los deja como estaban"]
     },
@@ -43,8 +41,6 @@
       "cwd": ".",
       "entrada": true,
       "vida": "app",
-      "duracion": "~3 s en arrancar",
-      "duracion_s": 3,
       "descripcion": "Igual, pero Enter vacío graba por el micrófono (Habla ahora...) y transcribe con Google (necesita internet); escribir una frase también sirve. Si el .env tiene DEEPSEEK_API_KEY, la intención la decide el modelo (se ve DeepSeek respondio: {...}); si no, usa las palabras clave. Si el ESP32 está en COM7 con esp32_voz.py como main.py, la orden sale por el cable y se ve ESP32 dice: OK 10.",
       "cubre": ["Chatbot domótico: encender y apagar un LED por comandos de voz", "Voz a texto (SpeechRecognition, Google es-CO) y texto a intención (DeepSeek, respuesta en JSON)"]
     },

@@ -175,12 +175,12 @@
       "script": "pruebas/prueba_aislamiento.py",
       "args": [],
       "cwd": ".",
-      "descripcion": "Con el laboratorio arriba (unos 30 s): pings y conexiones TCP de la zona gamer a la robótica y al revés (sin ruta y con ruta forzada por el router), contadores DROP del router, ping del admin a todas las zonas con ttl=63 y traceroute. Deben aprobarse los 45 casos. Reescribe pruebas/resultados/aislamiento.json.",
+      "descripcion": "Con el laboratorio arriba (unos 2 min y medio: cada caso corre su ping o su conexión dentro de un contenedor, y los bloqueados esperan su tiempo de espera): pings y conexiones TCP de la zona gamer a la robótica y al revés (sin ruta y con ruta forzada por el router), contadores DROP del router, ping del admin a todas las zonas con ttl=63 y traceroute. Deben aprobarse los 45 casos. Reescribe pruebas/resultados/aislamiento.json.",
       "cubre": [
         "Router inter-VLAN"
       ],
-      "duracion": "~30 s",
-      "duracion_s": 35
+      "duracion": "~2-3 min",
+      "duracion_s": 140
     },
     {
       "id": "disponibilidad",
@@ -189,13 +189,13 @@
       "script": "pruebas/prueba_disponibilidad.py",
       "args": [],
       "cwd": ".",
-      "descripcion": "Con el laboratorio arriba (unos 3 min): detiene y vuelve a arrancar sim-pepper, player-2 y el admin, y mide cuánto tarda el admin en marcar CAIDO y en volver a OK, y que las demás zonas sigan funcionando. Al terminar todo queda arriba otra vez. Reescribe pruebas/resultados/disponibilidad.json.",
+      "descripcion": "Con el laboratorio arriba (1 a 2 min): detiene y vuelve a arrancar sim-pepper, player-2 y el admin, y mide cuánto tarda el admin en marcar CAIDO y en volver a OK, y que las demás zonas sigan funcionando. Al terminar todo queda arriba otra vez. Reescribe pruebas/resultados/disponibilidad.json.",
       "cubre": [
         "Validación experimental: latencia, jitter y disponibilidad",
         "Plano de administración (VLAN 3)"
       ],
-      "duracion": "~3 min",
-      "duracion_s": 190
+      "duracion": "~1-2 min",
+      "duracion_s": 75
     },
     {
       "id": "red_base",
