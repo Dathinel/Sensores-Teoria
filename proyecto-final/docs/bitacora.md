@@ -1069,15 +1069,15 @@ fotos); clave de DeepSeek válida (la dada da 401).
   `apariencia` (moneda extranjera, disco, bloque metálico) y sus `contornos_internos` reales: el euro
   se ve como moneda bimetálica "1 €", el disco liso, y se nombran bien.
 - Visor 3D: remodelado por zonas con piezas reutilizables en `app/visor3d/piezas/` (copia y catálogo
-  en `Blender with claude/piezas-threejs/`, sin abrir Blender) — en curso.
+  en `Modelado 3D/piezas-threejs/`, sin abrir Blender) — en curso.
 
 ## 2026-09-28 — Visor 3D remodelado a fondo con piezas reutilizables (13 agentes)
 
 - A pedido del usuario ("mejorar absolutamente todo del visor"), modelado en **Three.js** (el usuario
-  pidió no abrir Blender) con el contexto de `Blender with claude/` (catálogo, medidas, lecciones).
+  pidió no abrir Blender) con el contexto de `Modelado 3D/` (catálogo, medidas, lecciones).
   Cada pieza es un módulo en `app/visor3d/piezas/` (convención en su `README.md`: `crearX(opciones)`,
   metros, origen = punto de montaje, anclas `pin_<id>_<PIN>` con `userData.dir`, try/catch con el
-  modelo anterior de respaldo) y se guardó una copia en `Blender with claude/piezas-threejs/` con su
+  modelo anterior de respaldo) y se guardó una copia en `Modelado 3D/piezas-threejs/` con su
   fila en `CATALOGO_COMPONENTES.md`: `base.js`, `sensores.js` (13 sensores con medidas de ficha),
   `electronica.js` (ESP32 30P/38P, placas GVS, TB6612, A4988/TMC2208, PCA9685, fuentes, bucks, hub,
   NEMA17, servos…), `carro.js`, `pista.js`, `linea_monedas.js`, `linea_vasos.js`, `estructura.js`

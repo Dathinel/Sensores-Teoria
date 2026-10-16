@@ -80,7 +80,7 @@ tocarlo al agregar un módulo nuevo.
 ## Copia fuera del repositorio
 
 Cada módulo terminado se copia tal cual (con `base.js`) a
-`D:\cosas uni\Micros\Blender with claude\piezas-threejs\` y se agrega
+`D:\cosas uni\Modelado 3D\piezas-threejs\` y se agrega
 su fila en `CATALOGO_COMPONENTES.md`, sección "Piezas Three.js": función, qué es, medidas
 (y de dónde salen), origen y anclas.
 

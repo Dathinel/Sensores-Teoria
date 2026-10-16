@@ -441,7 +441,7 @@ y un índice de `docs/` (`docs/README.md`).
     visor3d/                    visor 3D en Three.js (vendor/ local, sin CDN; demo/ grabada); inventario en docs/interfaz-visor.md
       index.html, visor.js      página y escena: cámara, render, optimización, animación
       interfaz.js, estilo.css   el panel (pestañas, avisos, controles de prueba en un solo lugar) y su diseño
-      piezas/                   piezas reutilizables (una por módulo; copia en Blender with claude/piezas-threejs)
+      piezas/                   piezas reutilizables (una por módulo; copia en Modelado 3D/piezas-threejs)
     dashboard/                  aplicación Streamlit (streamlit run app/dashboard/inicio.py); inventario en docs/interfaz-dashboard.md
       inicio.py                 entrada: cabecera, barra lateral y 9 pestañas (solo se dibuja la abierta)
       estilo.py                 sistema de diseño (el del visor): colores, CSS, tarjetas, chips, avisos, tema de Plotly
