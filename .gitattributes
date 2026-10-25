@@ -21,3 +21,14 @@ proyecto-final/app/visor3d/demo/*.json linguist-generated
 
 # Librerías de terceros copiadas tal cual (Three.js y OrbitControls), no código propio.
 proyecto-final/app/visor3d/vendor/** linguist-vendored
+
+# --- Binarios de las piezas impresas (2026-10-24) --------------------------------------------
+# Sin esto git trataba los PDF de reportlab como texto y les cambiaría los fines de línea al clonar
+# en Windows (autocrlf): quedarían corruptos. STL, 3MF y GLB son generados por los exportadores.
+*.pdf binary
+*.stl binary linguist-generated
+*.3mf binary linguist-generated
+*.glb binary linguist-generated
+proyecto-final/maqueta_impresa/estructura_gen.scad linguist-generated
+proyecto-final/maqueta_impresa/piezas.json linguist-generated
+proyecto-final/chasis_impreso/piezas.json linguist-generated
