@@ -350,7 +350,8 @@ flowchart LR
 
 ### El recorrido de una moneda
 
-La cinta de monedas es negra mate, con separadores cada 40 mm que forman casillas. Un motor paso a
+La cinta de monedas es negra mate, con separadores cada ~41 mm que forman casillas (15 en la banda cerrada; la
+simulación y el visor usan 40). Un motor paso a
 paso la avanza exactamente una casilla (600 ms) y la detiene 1000 ms: en esa pausa cada estación lee
 y decide. Pusimos tiempos lentos a propósito, porque el montaje real tiene que verificar con calma:
 el ciclo es de 1,6 s, unas 37,5 piezas por minuto si el carrusel del almacén ya tiene el tubo
@@ -528,10 +529,11 @@ en el montaje real. Estas son las decisiones que más pesan:
   escape de dos dedos con un solo servo suelta un vaso a la vez.
 - **Prensa de leva.** La tapa sella a presión: su reborde salta sobre el labio del vaso, y eso pide
   del orden de 30 a 50 N (valor provisional hasta medirlo); apretar más solo deforma el vaso. Por eso
-  la leva (6,5 mm de excentricidad, movida por un MG996R) apunta a **60 N** (la tapa más dura × 1,2),
-  que el servo da con margen de ×2,8. El servo sabe su ángulo:
-  no hace falta sensor de posición ni puente H. Un resorte limita la fuerza, así que un objeto
-  extraño no rompe nada.
+  la leva (7 mm de excentricidad, movida por un MG996R) apunta a **60 N** (la tapa más dura × 1,2),
+  que el servo da con margen de ×2,6. El servo sabe su ángulo:
+  no hace falta sensor de posición ni puente H. No hay resorte limitador: la fuerza sale del apriete
+  de 0,5 mm al final de la carrera contra lo que cede la estructura, más suplementos impresos de 0,5
+  o 1 mm bajo el plato que se eligen al medir la tapa (el resorte del vástago solo lo devuelve arriba).
 - **Cortina de un solo sensor.** Llegamos a tener tres VL53L0X a distintas alturas. Nos quedamos
   con uno a media altura, 65 mm sobre la cinta, con el eje a 85 mm del de la cinta para que su cono
   real no toque vasos, tapa ni prensa. No es un equipo certificado de seguridad: lo que buscamos es
@@ -687,20 +689,20 @@ Hicimos una **simulación eléctrica** (`sim/electrica.py`): recorre un ciclo re
 viaje del carro cada 10 ms (qué motor o servo se mueve en cada instante) y calcula la corriente de
 cada riel, la caída de tensión en cada cable, el margen del fusible y el calor de cada regulador. Con
 la fuente de 5 A y el buck de 5 A los márgenes bajan, pero todo cabe: el pico del buck de los servos
-(3,9 A, la prensa apretando la tapa) solo cabe porque prensa y empujador nunca arrancan a la vez (lo
+(3,5 A, la prensa apretando la tapa) solo cabe porque prensa y empujador nunca arrancan a la vez (lo
 impide el firmware de la placa):
 
 | Riel | Promedio | Pico | Límite |
 |---|---:|---:|---:|
-| 12 V de la fuente (detrás del fusible de 5 A) | 1,57 A | 3,35 A | 5 A |
-| 6 V de los servos | 0,70 A | 3,92 A | 5 A |
-| 5 V de la caja | 1,36 A | 1,40 A | 3 A |
+| 12 V de la fuente (detrás del fusible de 5 A) | 1,38 A | 2,93 A | 5 A |
+| 6 V de los servos | 0,76 A | 3,47 A | 5 A |
+| 5 V de la caja (el panel de luz detrás de su resistencia de 3,3 Ω) | 0,92 A | 0,96 A | 3 A |
 | 3,3 V del ESP32 fijo | 0,18 A | 0,32 A | 0,6 A |
 | 5 V del USB del ESP32 fijo (cada webcam en su puerto) | 0,19 A | 0,32 A | 0,5 A |
 | Batería del carro | 0,34 A | 0,70 A | 3 A |
 | 5 V del carro | 0,24 A | 0,37 A | 1 A |
 
-Desde la red consume unos **24 W** de promedio, y la batería del carro dura unas **6 horas andando**.
+Desde la red consume unos **21 W** de promedio, y la batería del carro dura unas **6 horas andando**.
 
 ![Corriente de cada riel durante un ciclo de la planta](docs/capturas/electrica-ciclo-planta.png)
 
@@ -989,42 +991,42 @@ La historia completa, sesión por sesión, está en la [bitácora](docs/bitacora
 
 ## Costo y peso
 
-**Costo: $1.392.143 COP** en total, sin el portátil (que es del grupo), con precios consultados el
+**Costo: $1.586.033 COP** en total, sin el portátil (que es del grupo), con precios consultados el
 2026-09-27 en Ferretrónica, Electronilab, Didácticas Electrónicas y Mercado Libre. Antes de los ahorros
-aprobados el 2026-10-24 eran $1.998.921 (se ahorraron $606.778: la estructura impresa, la fuente y el
+aprobados el 2026-10-24 eran $2.177.921 (se ahorraron $591.888: la estructura impresa, la fuente y el
 buck de 5 A, empalmes en vez de bornera y optoacopladores, sin hub USB, bridas y un solo fusible). El
-49 % son estimados: banda de las cintas, piezas impresas, la fuente de 5 A y el buck no tienen un
-producto igual publicado.
+55 % son estimados: banda de las cintas, piezas impresas, la fuente de 5 A, el buck y lo que el manual de la maqueta
+manda comprar (rodamientos, acoples, barra Ø8, pegamentos, gabinete) no tienen un producto igual publicado.
 
 | Subsistema | Costo | % |
 |---|---:|---:|
-| Cinta de monedas | $292.937 | 21 % |
-| Cinta de vasos | $351.656 | 25 % |
-| Canaleta y muelle | $55.283 | 4 % |
-| Carro | $253.036 | 18 % |
-| Control y potencia | $202.152 | 15 % |
-| Estructura | $237.079 | 17 % |
+| Cinta de monedas | $306.259 | 19 % |
+| Cinta de vasos | $360.076 | 23 % |
+| Canaleta y muelle | $56.768 | 4 % |
+| Carro | $253.036 | 16 % |
+| Control y potencia | $267.152 | 17 % |
+| Estructura | $342.742 | 22 % |
 
 La **estructura 3D** es la maqueta impresa (sin perfil de aluminio, escuadras, pies, acrílico ni MDF):
-**$306.197** en total.
+**$341.087** en total.
 
 | Parte | Qué lleva | Costo |
 |---|---|---:|
-| Maqueta impresa | 539 piezas con los remaches, 2,68 kg de PLA y unas 81 h de impresora (filamento + energía) | $285.459 |
+| Maqueta impresa | 565 piezas con los remaches, 2,98 kg de PLA y unas 91 h de impresora (filamento + energía; Creality Print da 2,95 kg y 101 h al laminar) | $317.299 |
 | Piezas impresas del carro y de la caja | 11 piezas, 83 g de PLA | $8.588 |
-| Tornillería | los NEMA 17, los rodamientos KFL08 y las piezas del carro y de la caja, más 10 % de repuesto | $12.150 |
+| Tornillería | lo que no va remachado (NEMA 17, KFL08, 28BYJ, FC-51, GY-530, pernos y tensores) y las piezas del carro y de la caja, más 10 % de repuesto | $15.200 |
 
-**Peso: 7,86 kg** todo el montaje, sin el portátil (el 86 % es estimado por material × volumen:
+**Peso: 8,08 kg** todo el montaje, sin el portátil (el 87 % es estimado por material × volumen:
 hay que pesarlo cuando esté armado).
 
 | Subsistema | Peso |
 |---|---:|
-| Cinta de monedas | 1,06 kg |
-| Almacén | 0,21 kg |
-| Cinta de vasos | 1,40 kg |
-| Pórtico | 0,42 kg |
-| Canaleta y muelle | 0,25 kg |
-| Estructura impresa | 1,31 kg |
+| Cinta de monedas | 1,16 kg |
+| Almacén | 0,26 kg |
+| Cinta de vasos | 1,42 kg |
+| Pórtico | 0,39 kg |
+| Canaleta y muelle | 0,27 kg |
+| Estructura impresa | 1,38 kg |
 | Carro | 0,51 kg (0,64 kg con un vaso lleno) |
 | Caja de control | 1,80 kg |
 | Pista | 0,89 kg |
@@ -1033,18 +1035,20 @@ Con esas masas revisamos que cada motor dé al menos el doble de lo que se le pi
 
 | Motor | Margen |
 |---|---:|
-| NEMA 17 de la cinta de monedas | ×9,3 |
-| NEMA 17 de la cinta de vasos (5 vasos llenos) | ×2,3 |
-| MG996R de la prensa (60 N para asentar una tapa a presión) | ×2,8 |
+| NEMA 17 de la cinta de monedas | ×10,2 |
+| NEMA 17 de la cinta de vasos (5 vasos llenos) | ×2,2 |
+| MG996R de la prensa (60 N para asentar una tapa a presión) | ×2,6 |
 | MG996R del empujador | ×39 |
 | Motores TT del carro (arranque con el vaso lleno) | ×5,9 |
 
 El vaso lleno pesa, en el peor caso, 133 g (vaso 25 g + tapa 8 g + 10 monedas de 10 g). La tapa sella
 a presión, con su reborde saltando sobre el labio del vaso: eso pide entre 30 y 50 N, y por eso la
-prensa apunta a 60 N con un resorte que no deja pasar de ahí. No hay celda de carga: el peso que
+prensa apunta a 60 N. No lleva resorte limitador: la fuerza la da el apriete de 0,5 mm al final de la
+carrera contra lo que cede la estructura, y si la tapa real pide más se pegan suplementos impresos de
+0,5 o 1 mm bajo el plato (el resorte del vástago solo la devuelve arriba). No hay celda de carga: el peso que
 muestra el dashboard es la suma de las masas nominales de las monedas reconocidas.
 
-Todo el detalle, con las fórmulas: [`docs/costos.md`](docs/costos.md) (con siete propuestas para
+Todo el detalle, con las fórmulas: [`docs/costos.md`](docs/costos.md) (con cinco propuestas para
 abaratar, ninguna aplicada sin aprobarla) y [`docs/peso.md`](docs/peso.md).
 
 ## Estado del proyecto: lo hecho y lo que falta
@@ -1066,8 +1070,10 @@ abaratar, ninguna aplicada sin aprobarla) y [`docs/peso.md`](docs/peso.md).
   armado con conexiones hilo por hilo y visor 3D del carro armado. Ya impreso y armado (2026-10-24).
 - **La maqueta completa impresa** ([`maqueta_impresa/`](maqueta_impresa/README.md)): toda la planta
   en PLA (sin perfil de aluminio): estructura de tubos y nodos, almacén, cintas, mecanismos y canaleta.
-  Revisada en el ensamble (310 remaches medidos, choques, partes móviles barridas, sin soportes),
-  2,68 kg en 25 tandas, con manual de armado. El visor 3D y la simulación dibujan esta maqueta.
+  Revisada en el ensamble (316 remaches medidos por pata, choques, partes móviles barridas y mecanismos
+  fase por fase, sin soportes capa por capa, primera capa y base de cada pieza), 2,98 kg en 26 tandas cuyos 3MF traen
+  la configuración de Creality Print adentro (laminadas y comprobadas con su línea de comandos), con
+  manual de armado. El visor 3D y la simulación dibujan esta maqueta.
 
 **Falta, en físico:**
 
@@ -1076,8 +1082,9 @@ abaratar, ninguna aplicada sin aprobarla) y [`docs/peso.md`](docs/peso.md).
 - **Construir el resto del montaje**: bandas, motores, sensores, canaleta, pista.
 - **Medir los valores PROVISIONALES**: medidas del vaso y de las tapas, capacidad de los tubos,
   fuerza real para asentar una tapa, alturas de las mesas, trazado real de la pista, tiempos de cada
-  acción y el error real de cada sensor (prueba de banco de 200 pasadas). Todos están listados en
-  [`docs/replicacion.md`](docs/replicacion.md) y en la sección `firmware:` de la configuración.
+  acción y el error real de cada sensor (prueba de banco de 200 pasadas). Están listados en
+  [`docs/replicacion.md`](docs/replicacion.md), en la sección `firmware:` de la configuración y, la
+  fuerza de la tapa (que decide los suplementos de la prensa), en `config/masas.yaml`.
 - **El procesamiento de imagen de la cámara** (fase 5): segmentar la pieza sobre la cinta negra,
   medir su diámetro en milímetros con la calibración, la circularidad, los agujeros y la bandera
   bimetálica con OpenCV. Hoy esas medidas las da la simulación directamente; no depende de tener

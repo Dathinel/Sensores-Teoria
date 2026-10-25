@@ -247,7 +247,7 @@ cabiendo en la tarjeta gracias a la GQA. Si solo existe el modelo base, el asist
   carro o ruta (menos la bitácora, cuyos títulos resumen sesiones enteras), sin excluir las demás: el
   peso multiplica un puntaje que ya existe, así que una pregunta de costos sigue trayendo costos.
 - **Peso del montaje y consumo**: "¿cuánto pesa el montaje?" no es el peso de las monedas; las reglas
-  lo distinguen y le pasan al modelo el total de `docs/peso.md` (7,92 kg desde el 2026-10-24) o el consumo calculado de
+  lo distinguen y le pasan al modelo el total de `docs/peso.md` (8,08 kg desde el 2026-10-25) o el consumo calculado de
   `docs/electrica.md` (24 W promedio), aclarando que son valores calculados, no medidos.
 - **Precarga**: la primera respuesta tarda ~1 minuto si el modelo no está en la GPU;
   `precargar_local()` lo carga en segundo plano al abrir la pestaña Asistente del dashboard y le pide

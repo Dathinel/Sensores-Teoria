@@ -1,0 +1,192 @@
+{
+ "tap_abr_servo": {
+  "islas": 1,
+  "isla_menor_mm2": 7231.1,
+  "agujeros": 1,
+  "chicos": 0,
+  "d_min": 86.4,
+  "finos_mm2": 1.3,
+  "area": 7231.0,
+  "puntaje": 0
+ },
+ "tap_abr_sup": {
+  "islas": 1,
+  "isla_menor_mm2": 6810.3,
+  "agujeros": 1,
+  "chicos": 0,
+  "d_min": 86.4,
+  "finos_mm2": 0.5,
+  "area": 6810.0,
+  "puntaje": 0
+ },
+ "tap_colgante": {
+  "islas": 1,
+  "isla_menor_mm2": 1596.6,
+  "agujeros": 0,
+  "chicos": 0,
+  "d_min": null,
+  "finos_mm2": 0.8,
+  "area": 1597.0,
+  "puntaje": 0
+ },
+ "tap_dedo_a": {
+  "islas": 1,
+  "isla_menor_mm2": 149.7,
+  "agujeros": 0,
+  "chicos": 0,
+  "d_min": null,
+  "finos_mm2": 1.1,
+  "area": 150.0,
+  "puntaje": 0
+ },
+ "tap_dedo_b": {
+  "islas": 1,
+  "isla_menor_mm2": 149.7,
+  "agujeros": 0,
+  "chicos": 0,
+  "d_min": null,
+  "finos_mm2": 1.1,
+  "area": 150.0,
+  "puntaje": 0
+ },
+ "tap_emp_biela": {
+  "islas": 1,
+  "isla_menor_mm2": 156.6,
+  "agujeros": 0,
+  "chicos": 0,
+  "d_min": null,
+  "finos_mm2": 0.5,
+  "area": 157.0,
+  "puntaje": 0
+ },
+ "tap_emp_carro": {
+  "islas": 1,
+  "isla_menor_mm2": 828.0,
+  "agujeros": 0,
+  "chicos": 0,
+  "d_min": null,
+  "finos_mm2": 0.5,
+  "area": 828.0,
+  "puntaje": 0
+ },
+ "tap_emp_manivela": {
+  "islas": 1,
+  "isla_menor_mm2": 231.5,
+  "agujeros": 0,
+  "chicos": 0,
+  "d_min": null,
+  "finos_mm2": 0.5,
+  "area": 232.0,
+  "puntaje": 0
+ },
+ "tap_emp_paleta": {
+  "islas": 1,
+  "isla_menor_mm2": 4572.6,
+  "agujeros": 1,
+  "chicos": 0,
+  "d_min": 29.9,
+  "finos_mm2": 1.2,
+  "area": 4573.0,
+  "puntaje": 0
+ },
+ "tap_emp_placa_servo": {
+  "islas": 1,
+  "isla_menor_mm2": 348.5,
+  "agujeros": 0,
+  "chicos": 0,
+  "d_min": null,
+  "finos_mm2": 0.9,
+  "area": 348.0,
+  "puntaje": 0
+ },
+ "tap_emp_soporte": {
+  "islas": 1,
+  "isla_menor_mm2": 1188.8,
+  "agujeros": 2,
+  "chicos": 0,
+  "d_min": 8.4,
+  "finos_mm2": 0.7,
+  "area": 1189.0,
+  "puntaje": 0
+ },
+ "tap_pre_buje": {
+  "islas": 1,
+  "isla_menor_mm2": 993.6,
+  "agujeros": 1,
+  "chicos": 0,
+  "d_min": 8.4,
+  "finos_mm2": 0.8,
+  "area": 994.0,
+  "puntaje": 0
+ },
+ "tap_pre_horquilla": {
+  "islas": 1,
+  "isla_menor_mm2": 201.6,
+  "agujeros": 1,
+  "chicos": 0,
+  "d_min": 8.2,
+  "finos_mm2": 0.5,
+  "area": 202.0,
+  "puntaje": 0
+ },
+ "tap_pre_leva": {
+  "islas": 1,
+  "isla_menor_mm2": 1514.3,
+  "agujeros": 0,
+  "chicos": 0,
+  "d_min": null,
+  "finos_mm2": 0.0,
+  "area": 1514.0,
+  "puntaje": 0
+ },
+ "tap_pre_placa": {
+  "islas": 1,
+  "isla_menor_mm2": 414.0,
+  "agujeros": 0,
+  "chicos": 0,
+  "d_min": null,
+  "finos_mm2": 0.5,
+  "area": 414.0,
+  "puntaje": 0
+ },
+ "tap_pre_plato": {
+  "islas": 1,
+  "isla_menor_mm2": 3016.9,
+  "agujeros": 0,
+  "chicos": 0,
+  "d_min": null,
+  "finos_mm2": 0.0,
+  "area": 3017.0,
+  "puntaje": 0
+ },
+ "tap_pre_rodillo": {
+  "islas": 1,
+  "isla_menor_mm2": 44.4,
+  "agujeros": 0,
+  "chicos": 0,
+  "d_min": null,
+  "finos_mm2": 0.5,
+  "area": 44.0,
+  "puntaje": 0
+ },
+ "tap_sens_porta": {
+  "islas": 1,
+  "isla_menor_mm2": 1420.8,
+  "agujeros": 0,
+  "chicos": 0,
+  "d_min": null,
+  "finos_mm2": 0.9,
+  "area": 1421.0,
+  "puntaje": 0
+ },
+ "tap_tubo": {
+  "islas": 1,
+  "isla_menor_mm2": 6357.2,
+  "agujeros": 1,
+  "chicos": 0,
+  "d_min": 82.0,
+  "finos_mm2": 0.0,
+  "area": 6357.0,
+  "puntaje": 0
+ }
+}

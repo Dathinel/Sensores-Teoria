@@ -74,7 +74,8 @@ nunca reescribiendo la lógica.
 Cuatro subsistemas.
 
 **Estación de filtrado y conteo.** Una cinta transportadora indexada, de superficie negra
-mate, con separadores cada 40 mm que definen casillas. La mueve un motor paso a paso en
+mate, con separadores cada ~40 mm que definen casillas (15 a L/15 ≈ 41 mm: una banda cerrada solo tiene
+casillas iguales si su largo es N × paso; la simulación y el visor usan 40). La mueve un motor paso a paso en
 modo avanzar y detener: avanza exactamente una casilla, se detiene 1000 ms (`tiempos_ms`), vuelve
 a avanzar. La cámara de cada cinta ve sus separadores y mide, después de cada avance, si la
 cinta quedó en su casilla; si se corrió, se corrige con micropasos en la misma pausa (grupo,
@@ -178,11 +179,13 @@ reproducirla paso a paso.
     La misma cámara confirma que la tapa quedó puesta (sin sensor aparte); si no, se suelta
     otra una vez y si tampoco, el vaso queda inválido. Si el vaso fue retirado o cambiado, no
     se suelta tapa.
-12. Prensa. Una leva excéntrica movida por un servo MG996R (0 → 180 → 0 grados, 6,5 mm de
-    excentricidad) asienta la tapa a presión con la cinta detenida. La tapa sella por snap-fit
-    (su reborde salta sobre el labio del vaso: ~30-50 N, PROVISIONAL); la prensa apunta a
-    **60 N** (la más dura x1,2) y un resorte limita la fuerza a eso, de modo que un objeto
-    extraño no rompe nada (usuario, 2026-09-28: antes decía "≥150 N", que el MG996R con la leva
+12. Prensa. Una leva excéntrica movida por un servo MG996R (0 → 180 → 0 grados, 7 mm de
+    excentricidad: el pistón baja 14 mm) asienta la tapa a presión con la cinta detenida. La tapa
+    sella por snap-fit (su reborde salta sobre el labio del vaso: ~30-50 N, PROVISIONAL); la prensa
+    apunta a **60 N** (la más dura x1,2). No hay resorte limitador: la fuerza sale del apriete de
+    0,5 mm al final de la carrera contra la rigidez del lazo (~10 N) más suplementos impresos de 0,5
+    y 1,0 mm bajo el plato (~40 N con los dos), elegidos al medir la tapa; el resorte del vástago es
+    solo de retorno (2026-10-25, maqueta impresa; usuario, 2026-09-28: antes decía "≥150 N", que el MG996R con la leva
     no sostiene y la tapa no necesita; `config/masas.yaml`, `docs/peso.md`). El servo sabe su
     ángulo: no hay sensor de posición ni puente H. La placa no mueve prensa y empujador a la
     vez (el segundo espera a que el primero vuelva; sección 15).
@@ -900,8 +903,9 @@ flojo), queda ACTIVA con `cortina_sin_lectura`: falla del lado seguro.
   corrección integral. Bus I2C largo (VL53L0X) a `firmware.i2c_bus_largo_hz` (100 kHz).
 - A4988: ENABLE se suelta tras `firmware.a4988_reposo_ms` con las dos cintas quietas (más que las
   pausas normales: con la línea andando no se sueltan) y se vuelve a dar antes del primer paso.
-- Carrusel: un medio paso cada `firmware.carrusel_ms_por_paso` (2 ms) por Timer; media vuelta =
-  `tiempos_ms.carrusel_giro` (4096 ms, derivado; una prueba lo exige). No cabe en el ciclo de
+- Carrusel: un medio paso cada `firmware.carrusel_ms_por_paso` (2 ms) por Timer, con rampa de
+  arranque y parada (`firmware.carrusel_rampa_ms` 6 ms bajando a 2 en `carrusel_rampa_pasos` = 40 medios
+  pasos, 2026-10-25); media vuelta = `tiempos_ms.carrusel_giro` (4223 ms, derivado; una prueba lo exige). No cabe en el ciclo de
   1,6 s: la cinta de monedas espera al carrusel en esos ciclos (`control/tiempos.py`).
 - Cintas: rodillo Ø22 del modelo 3D → `firmware.mm_por_vuelta_cinta` = 69,1 mm (π·22).
 

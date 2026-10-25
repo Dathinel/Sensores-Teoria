@@ -433,8 +433,11 @@ CABLES: list[dict] = [
     _servo("servo_prensa", 3, "Servo prensa (MG996R)"),
     _servo("servo_empujador", 4, "Servo empujador (MG996R)"),
     _servo("servo_canaleta", 5, "Servo escape canaleta"),
-    {"id": "panel_luz", "nombre": "Panel de luz → empalmes de 5 V", "tipo": "cinco", "hilos": [
-        _h("panel_luz.+5V", "e5.J", ROJO, "+5 V"), _h("panel_luz.GND", "e5_gnd.J", NEGRO, "GND")]},
+    # La tira del panel va detras de una resistencia de 3,3 Ω 1 W soldada en linea en su +5 V, del lado de la caja
+    # (con termoencogible): deja las dos tiras en <= 1,5 W para no ablandar la caja de luz de PLA (sim/electrica.py).
+    {"id": "panel_luz", "nombre": "Panel de luz → empalmes de 5 V (resistencia de 3,3 Ω en línea)", "tipo": "cinco", "hilos": [
+        _h("panel_luz.+5V", "e5.J", ROJO, "+5 V por la resistencia de 3,3 Ω 1 W (en línea)"),
+        _h("panel_luz.GND", "e5_gnd.J", NEGRO, "GND")]},
     {"id": "anillo", "nombre": "Anillo de luz → empalmes de 5 V", "tipo": "cinco", "hilos": [
         _h("anillo.+5V", "e5.J", ROJO, "+5 V"), _h("anillo.GND", "e5_gnd.J", NEGRO, "GND")]},
     # Sin hub USB (2026-10-24): cada uno a su puerto del portatil (ninguno pasa de 0,35 A; un

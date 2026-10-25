@@ -257,7 +257,7 @@
     20
    ],
    "tandas": [
-    "est_nodos_1"
+    "est_nodos_2"
    ]
   },
   {
@@ -277,7 +277,7 @@
     20
    ],
    "tandas": [
-    "est_nodos_1"
+    "est_nodos_2"
    ]
   },
   {
@@ -297,7 +297,7 @@
     20
    ],
    "tandas": [
-    "est_nodos_1"
+    "est_nodos_2"
    ]
   },
   {
@@ -317,7 +317,7 @@
     20
    ],
    "tandas": [
-    "est_nodos_1"
+    "est_nodos_2"
    ]
   },
   {
@@ -449,8 +449,8 @@
     16.0,
     16.0
    ],
-   "gramos": 12.3,
-   "minutos": 19.8,
+   "gramos": 13.4,
+   "minutos": 21.3,
    "parametros": [
     0.2,
     4,
@@ -469,8 +469,8 @@
     16.0,
     16.0
    ],
-   "gramos": 7.3,
-   "minutos": 13.1,
+   "gramos": 7.9,
+   "minutos": 14.0,
    "parametros": [
     0.2,
     4,
@@ -489,8 +489,8 @@
     16.0,
     16.0
    ],
-   "gramos": 16.2,
-   "minutos": 25.1,
+   "gramos": 17.6,
+   "minutos": 27.0,
    "parametros": [
     0.2,
     4,
@@ -509,8 +509,8 @@
     16.0,
     16.0
    ],
-   "gramos": 16.2,
-   "minutos": 25.1,
+   "gramos": 17.6,
+   "minutos": 27.0,
    "parametros": [
     0.2,
     4,
@@ -529,8 +529,8 @@
     16.0,
     16.0
    ],
-   "gramos": 7.4,
-   "minutos": 13.3,
+   "gramos": 8.0,
+   "minutos": 14.2,
    "parametros": [
     0.2,
     4,
@@ -549,8 +549,8 @@
     16.0,
     16.0
    ],
-   "gramos": 22.3,
-   "minutos": 33.3,
+   "gramos": 24.3,
+   "minutos": 36.0,
    "parametros": [
     0.2,
     4,
@@ -569,8 +569,8 @@
     16.0,
     16.0
    ],
-   "gramos": 7.4,
-   "minutos": 13.3,
+   "gramos": 8.0,
+   "minutos": 14.2,
    "parametros": [
     0.2,
     4,
@@ -589,8 +589,8 @@
     16.0,
     16.0
    ],
-   "gramos": 11.3,
-   "minutos": 18.5,
+   "gramos": 12.3,
+   "minutos": 19.8,
    "parametros": [
     0.2,
     4,
@@ -609,8 +609,8 @@
     16.0,
     16.0
    ],
-   "gramos": 12.3,
-   "minutos": 19.8,
+   "gramos": 13.4,
+   "minutos": 21.3,
    "parametros": [
     0.2,
     4,
@@ -629,8 +629,8 @@
     16.0,
     16.0
    ],
-   "gramos": 16.7,
-   "minutos": 25.7,
+   "gramos": 18.2,
+   "minutos": 27.7,
    "parametros": [
     0.2,
     4,
@@ -649,8 +649,8 @@
     16.0,
     16.0
    ],
-   "gramos": 15.2,
-   "minutos": 23.8,
+   "gramos": 16.6,
+   "minutos": 25.6,
    "parametros": [
     0.2,
     4,
@@ -669,8 +669,8 @@
     16.0,
     16.0
    ],
-   "gramos": 15.2,
-   "minutos": 23.8,
+   "gramos": 16.6,
+   "minutos": 25.6,
    "parametros": [
     0.2,
     4,
@@ -689,8 +689,8 @@
     16.0,
     16.0
    ],
-   "gramos": 9.6,
-   "minutos": 16.2,
+   "gramos": 10.4,
+   "minutos": 17.3,
    "parametros": [
     0.2,
     4,
@@ -709,8 +709,8 @@
     16.0,
     16.0
    ],
-   "gramos": 12.9,
-   "minutos": 20.7,
+   "gramos": 14.1,
+   "minutos": 22.2,
    "parametros": [
     0.2,
     4,
@@ -729,15 +729,15 @@
     16.0,
     16.0
    ],
-   "gramos": 12.9,
-   "minutos": 20.7,
+   "gramos": 14.1,
+   "minutos": 22.2,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "est_tubos_1"
+    "est_tubos_2"
    ]
   },
   {
@@ -749,15 +749,15 @@
     16.0,
     16.0
    ],
-   "gramos": 9.6,
-   "minutos": 16.2,
+   "gramos": 10.4,
+   "minutos": 17.3,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "est_tubos_1"
+    "est_tubos_2"
    ]
   },
   {
@@ -769,15 +769,15 @@
     16.0,
     16.0
    ],
-   "gramos": 7.9,
-   "minutos": 13.9,
+   "gramos": 8.6,
+   "minutos": 14.9,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "est_tubos_1"
+    "est_tubos_2"
    ]
   },
   {
@@ -789,8 +789,8 @@
     16.0,
     16.0
    ],
-   "gramos": 7.8,
-   "minutos": 13.9,
+   "gramos": 8.5,
+   "minutos": 14.8,
    "parametros": [
     0.2,
     4,
@@ -809,8 +809,8 @@
     16.0,
     16.0
    ],
-   "gramos": 12.8,
-   "minutos": 20.6,
+   "gramos": 14.0,
+   "minutos": 22.2,
    "parametros": [
     0.2,
     4,
@@ -829,8 +829,8 @@
     16.0,
     16.0
    ],
-   "gramos": 25.2,
-   "minutos": 37.2,
+   "gramos": 27.5,
+   "minutos": 40.3,
    "parametros": [
     0.2,
     4,
@@ -849,8 +849,8 @@
     16.0,
     16.0
    ],
-   "gramos": 25.2,
-   "minutos": 37.2,
+   "gramos": 27.5,
+   "minutos": 40.3,
    "parametros": [
     0.2,
     4,
@@ -869,8 +869,8 @@
     16.0,
     16.0
    ],
-   "gramos": 25.2,
-   "minutos": 37.2,
+   "gramos": 27.5,
+   "minutos": 40.3,
    "parametros": [
     0.2,
     4,
@@ -889,8 +889,8 @@
     16.0,
     16.0
    ],
-   "gramos": 25.2,
-   "minutos": 37.2,
+   "gramos": 27.5,
+   "minutos": 40.3,
    "parametros": [
     0.2,
     4,
@@ -909,8 +909,8 @@
     16.0,
     16.0
    ],
-   "gramos": 25.2,
-   "minutos": 37.2,
+   "gramos": 27.4,
+   "minutos": 40.2,
    "parametros": [
     0.2,
     4,
@@ -929,8 +929,8 @@
     16.0,
     16.0
    ],
-   "gramos": 25.2,
-   "minutos": 37.2,
+   "gramos": 27.5,
+   "minutos": 40.3,
    "parametros": [
     0.2,
     4,
@@ -949,8 +949,8 @@
     16.0,
     16.0
    ],
-   "gramos": 27.6,
-   "minutos": 40.4,
+   "gramos": 30.0,
+   "minutos": 43.7,
    "parametros": [
     0.2,
     4,
@@ -969,15 +969,15 @@
     16.0,
     16.0
    ],
-   "gramos": 15.8,
-   "minutos": 24.5,
+   "gramos": 17.2,
+   "minutos": 26.5,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "est_tubos_2"
+    "est_tubos_3"
    ]
   },
   {
@@ -989,15 +989,15 @@
     16.0,
     16.0
    ],
-   "gramos": 15.7,
-   "minutos": 24.4,
+   "gramos": 17.1,
+   "minutos": 26.3,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "est_tubos_2"
+    "est_tubos_3"
    ]
   },
   {
@@ -1009,8 +1009,8 @@
     16.0,
     16.0
    ],
-   "gramos": 21.8,
-   "minutos": 32.6,
+   "gramos": 23.8,
+   "minutos": 35.3,
    "parametros": [
     0.2,
     4,
@@ -1029,8 +1029,8 @@
     16.0,
     16.0
    ],
-   "gramos": 7.7,
-   "minutos": 13.7,
+   "gramos": 8.3,
+   "minutos": 14.6,
    "parametros": [
     0.2,
     4,
@@ -1049,8 +1049,8 @@
     16.0,
     16.0
    ],
-   "gramos": 7.4,
-   "minutos": 13.3,
+   "gramos": 8.0,
+   "minutos": 14.2,
    "parametros": [
     0.2,
     4,
@@ -1069,8 +1069,8 @@
     16.0,
     16.0
    ],
-   "gramos": 5.5,
-   "minutos": 10.7,
+   "gramos": 6.0,
+   "minutos": 11.4,
    "parametros": [
     0.2,
     4,
@@ -1089,8 +1089,8 @@
     16.0,
     16.0
    ],
-   "gramos": 22.7,
-   "minutos": 33.8,
+   "gramos": 24.7,
+   "minutos": 36.5,
    "parametros": [
     0.2,
     4,
@@ -1109,8 +1109,8 @@
     16.0,
     16.0
    ],
-   "gramos": 22.7,
-   "minutos": 33.9,
+   "gramos": 24.8,
+   "minutos": 36.6,
    "parametros": [
     0.2,
     4,
@@ -1129,8 +1129,8 @@
     16.0,
     16.0
    ],
-   "gramos": 22.6,
-   "minutos": 33.7,
+   "gramos": 24.6,
+   "minutos": 36.4,
    "parametros": [
     0.2,
     4,
@@ -1149,8 +1149,8 @@
     16.0,
     16.0
    ],
-   "gramos": 22.6,
-   "minutos": 33.8,
+   "gramos": 24.5,
+   "minutos": 36.3,
    "parametros": [
     0.2,
     4,
@@ -1169,8 +1169,8 @@
     16.0,
     16.0
    ],
-   "gramos": 21.0,
-   "minutos": 31.5,
+   "gramos": 22.9,
+   "minutos": 34.0,
    "parametros": [
     0.2,
     4,
@@ -1189,15 +1189,15 @@
     16.0,
     16.0
    ],
-   "gramos": 20.9,
-   "minutos": 31.4,
+   "gramos": 22.8,
+   "minutos": 33.9,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "est_tubos_3"
+    "est_tubos_4"
    ]
   },
   {
@@ -1209,15 +1209,15 @@
     16.0,
     16.0
    ],
-   "gramos": 12.3,
-   "minutos": 19.8,
+   "gramos": 13.4,
+   "minutos": 21.3,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "est_tubos_3"
+    "est_tubos_4"
    ]
   },
   {
@@ -1229,15 +1229,15 @@
     16.0,
     16.0
    ],
-   "gramos": 12.3,
-   "minutos": 19.8,
+   "gramos": 13.4,
+   "minutos": 21.3,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "est_tubos_3"
+    "est_tubos_4"
    ]
   },
   {
@@ -1249,15 +1249,15 @@
     16.0,
     16.0
    ],
-   "gramos": 12.2,
-   "minutos": 19.8,
+   "gramos": 13.3,
+   "minutos": 21.2,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "est_tubos_3"
+    "est_tubos_4"
    ]
   },
   {
@@ -1269,8 +1269,8 @@
     16.0,
     16.0
    ],
-   "gramos": 19.2,
-   "minutos": 29.2,
+   "gramos": 20.9,
+   "minutos": 31.4,
    "parametros": [
     0.2,
     4,
@@ -1289,8 +1289,8 @@
     16.0,
     16.0
    ],
-   "gramos": 19.2,
-   "minutos": 29.2,
+   "gramos": 20.9,
+   "minutos": 31.5,
    "parametros": [
     0.2,
     4,
@@ -1309,8 +1309,8 @@
     16.0,
     16.0
    ],
-   "gramos": 15.9,
-   "minutos": 24.7,
+   "gramos": 17.3,
+   "minutos": 26.6,
    "parametros": [
     0.2,
     4,
@@ -1329,8 +1329,8 @@
     16.0,
     16.0
    ],
-   "gramos": 15.9,
-   "minutos": 24.7,
+   "gramos": 17.3,
+   "minutos": 26.6,
    "parametros": [
     0.2,
     4,
@@ -1349,8 +1349,8 @@
     16.0,
     16.0
    ],
-   "gramos": 21.1,
-   "minutos": 31.6,
+   "gramos": 22.9,
+   "minutos": 34.2,
    "parametros": [
     0.2,
     4,
@@ -1545,12 +1545,12 @@
    "grupo": "est_uniones",
    "cantidad": 1,
    "medidas": [
-    30.0,
     56.0,
-    19.0
+    19.0,
+    30.0
    ],
-   "gramos": 8.1,
-   "minutos": 14.8,
+   "gramos": 10.6,
+   "minutos": 20.5,
    "parametros": [
     0.2,
     4,
@@ -1565,12 +1565,12 @@
    "grupo": "est_uniones",
    "cantidad": 1,
    "medidas": [
-    30.0,
     56.0,
-    19.0
+    19.0,
+    30.0
    ],
-   "gramos": 8.1,
-   "minutos": 14.8,
+   "gramos": 10.6,
+   "minutos": 20.5,
    "parametros": [
     0.2,
     4,
@@ -1585,12 +1585,12 @@
    "grupo": "alm",
    "cantidad": 1,
    "medidas": [
-    124.0,
-    111.1,
-    12.0
+    131.6,
+    145.1,
+    29.0
    ],
-   "gramos": 29.3,
-   "minutos": 41.8,
+   "gramos": 38.5,
+   "minutos": 57.8,
    "parametros": [
     0.2,
     4,
@@ -1605,19 +1605,19 @@
    "grupo": "alm",
    "cantidad": 1,
    "medidas": [
-    95.9,
+    100.0,
     100.0,
     57.5
    ],
-   "gramos": 55.9,
-   "minutos": 87.1,
+   "gramos": 61.5,
+   "minutos": 94.6,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "alm_1"
+    "alm_2"
    ]
   },
   {
@@ -1637,7 +1637,7 @@
     15
    ],
    "tandas": [
-    "alm_1"
+    "alm_2"
    ]
   },
   {
@@ -1645,12 +1645,12 @@
    "grupo": "alm",
    "cantidad": 1,
    "medidas": [
-    121.0,
-    39.6,
-    9.0
+    124.0,
+    46.6,
+    19.0
    ],
-   "gramos": 5.3,
-   "minutos": 9.0,
+   "gramos": 7.6,
+   "minutos": 14.1,
    "parametros": [
     0.2,
     4,
@@ -1665,19 +1665,19 @@
    "grupo": "alm",
    "cantidad": 1,
    "medidas": [
-    81.0,
-    66.8,
-    36.0
+    66.4,
+    79.7,
+    55.0
    ],
-   "gramos": 24.0,
-   "minutos": 39.7,
+   "gramos": 31.8,
+   "minutos": 54.2,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "alm_2"
+    "alm_3"
    ]
   },
   {
@@ -1685,19 +1685,39 @@
    "grupo": "alm",
    "cantidad": 1,
    "medidas": [
-    50.9,
-    38.5,
-    5.2
+    53.0,
+    56.0,
+    8.0
    ],
-   "gramos": 2.8,
-   "minutos": 4.9,
+   "gramos": 4.0,
+   "minutos": 7.0,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "alm_2"
+    "alm_3"
+   ]
+  },
+  {
+   "pieza": "alm_palanca",
+   "grupo": "alm",
+   "cantidad": 1,
+   "medidas": [
+    16.4,
+    29.7,
+    5.2
+   ],
+   "gramos": 1.1,
+   "minutos": 2.6,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "alm_3"
    ]
   },
   {
@@ -1705,19 +1725,19 @@
    "grupo": "alm",
    "cantidad": 1,
    "medidas": [
-    82.0,
-    49.0,
+    107.0,
+    8.0,
     8.0
    ],
-   "gramos": 6.1,
-   "minutos": 9.9,
+   "gramos": 5.5,
+   "minutos": 9.1,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "alm_2"
+    "alm_3"
    ]
   },
   {
@@ -1725,19 +1745,19 @@
    "grupo": "alm",
    "cantidad": 1,
    "medidas": [
-    82.0,
-    49.0,
+    107.0,
+    27.0,
     8.0
    ],
-   "gramos": 7.0,
-   "minutos": 11.0,
+   "gramos": 6.4,
+   "minutos": 10.3,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "alm_2"
+    "alm_3"
    ]
   },
   {
@@ -1745,12 +1765,12 @@
    "grupo": "alm",
    "cantidad": 1,
    "medidas": [
-    140.0,
+    144.0,
     58.7,
     56.0
    ],
-   "gramos": 25.7,
-   "minutos": 46.1,
+   "gramos": 33.6,
+   "minutos": 56.9,
    "parametros": [
     0.2,
     4,
@@ -1766,10 +1786,10 @@
    "cantidad": 1,
    "medidas": [
     170.5,
-    96.6,
-    6.0
+    64.6,
+    18.0
    ],
-   "gramos": 40.0,
+   "gramos": 38.1,
    "minutos": 55.0,
    "parametros": [
     0.2,
@@ -1786,11 +1806,11 @@
    "cantidad": 1,
    "medidas": [
     170.5,
-    20.5,
-    8.0
+    10.0,
+    20.5
    ],
-   "gramos": 8.6,
-   "minutos": 13.2,
+   "gramos": 11.4,
+   "minutos": 19.6,
    "parametros": [
     0.2,
     4,
@@ -1806,11 +1826,11 @@
    "cantidad": 1,
    "medidas": [
     170.5,
-    20.5,
-    8.0
+    10.0,
+    20.5
    ],
-   "gramos": 7.8,
-   "minutos": 12.1,
+   "gramos": 10.5,
+   "minutos": 18.3,
    "parametros": [
     0.2,
     4,
@@ -1827,10 +1847,10 @@
    "medidas": [
     36.0,
     48.0,
-    3.0
+    12.0
    ],
-   "gramos": 4.8,
-   "minutos": 7.0,
+   "gramos": 6.6,
+   "minutos": 11.4,
    "parametros": [
     0.2,
     4,
@@ -1847,10 +1867,10 @@
    "medidas": [
     36.0,
     48.0,
-    3.0
+    12.0
    ],
-   "gramos": 4.8,
-   "minutos": 7.0,
+   "gramos": 6.6,
+   "minutos": 11.4,
    "parametros": [
     0.2,
     4,
@@ -1865,12 +1885,12 @@
    "grupo": "mon",
    "cantidad": 1,
    "medidas": [
-    30.0,
+    120.0,
     23.5,
     50.0
    ],
-   "gramos": 9.4,
-   "minutos": 23.1,
+   "gramos": 20.9,
+   "minutos": 38.5,
    "parametros": [
     0.2,
     4,
@@ -1885,19 +1905,59 @@
    "grupo": "mon",
    "cantidad": 1,
    "medidas": [
-    50.0,
+    130.0,
     63.0,
     50.0
    ],
-   "gramos": 31.0,
-   "minutos": 52.0,
+   "gramos": 41.9,
+   "minutos": 66.7,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "mon_1"
+    "mon_2"
+   ]
+  },
+  {
+   "pieza": "mon_casq_a_m",
+   "grupo": "mon",
+   "cantidad": 1,
+   "medidas": [
+    14.0,
+    18.8,
+    14.0
+   ],
+   "gramos": 2.1,
+   "minutos": 5.8,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "mon_2"
+   ]
+  },
+  {
+   "pieza": "mon_casq_a_p",
+   "grupo": "mon",
+   "cantidad": 1,
+   "medidas": [
+    14.0,
+    18.8,
+    14.0
+   ],
+   "gramos": 2.1,
+   "minutos": 5.8,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "mon_2"
    ]
   },
   {
@@ -1905,12 +1965,12 @@
    "grupo": "mon",
    "cantidad": 1,
    "medidas": [
-    30.0,
+    34.0,
     23.5,
-    46.3
+    45.3
    ],
-   "gramos": 7.4,
-   "minutos": 19.5,
+   "gramos": 7.7,
+   "minutos": 19.8,
    "parametros": [
     0.2,
     4,
@@ -1925,52 +1985,12 @@
    "grupo": "mon",
    "cantidad": 1,
    "medidas": [
-    30.0,
+    34.0,
     23.5,
-    46.3
+    45.3
    ],
-   "gramos": 7.4,
-   "minutos": 19.5,
-   "parametros": [
-    0.2,
-    4,
-    15
-   ],
-   "tandas": [
-    "mon_2"
-   ]
-  },
-  {
-   "pieza": "mon_ret_a_m",
-   "grupo": "mon",
-   "cantidad": 1,
-   "medidas": [
-    30.0,
-    106.8,
-    2.6
-   ],
-   "gramos": 4.9,
-   "minutos": 7.1,
-   "parametros": [
-    0.2,
-    4,
-    15
-   ],
-   "tandas": [
-    "mon_2"
-   ]
-  },
-  {
-   "pieza": "mon_ret_a_p",
-   "grupo": "mon",
-   "cantidad": 1,
-   "medidas": [
-    30.0,
-    106.8,
-    2.6
-   ],
-   "gramos": 4.9,
-   "minutos": 7.1,
+   "gramos": 7.7,
+   "minutos": 19.8,
    "parametros": [
     0.2,
     4,
@@ -1985,12 +2005,12 @@
    "grupo": "mon",
    "cantidad": 1,
    "medidas": [
-    19.0,
-    106.8,
+    28.0,
+    95.0,
     2.6
    ],
-   "gramos": 5.3,
-   "minutos": 7.7,
+   "gramos": 5.6,
+   "minutos": 8.1,
    "parametros": [
     0.2,
     4,
@@ -2005,52 +2025,12 @@
    "grupo": "mon",
    "cantidad": 1,
    "medidas": [
-    56.0,
+    60.0,
     106.8,
-    2.6
+    17.3
    ],
-   "gramos": 5.2,
-   "minutos": 7.5,
-   "parametros": [
-    0.2,
-    4,
-    15
-   ],
-   "tandas": [
-    "mon_2"
-   ]
-  },
-  {
-   "pieza": "mon_ret_c_m",
-   "grupo": "mon",
-   "cantidad": 1,
-   "medidas": [
-    21.5,
-    31.5,
-    2.6
-   ],
-   "gramos": 1.1,
-   "minutos": 2.0,
-   "parametros": [
-    0.2,
-    4,
-    15
-   ],
-   "tandas": [
-    "mon_2"
-   ]
-  },
-  {
-   "pieza": "mon_ret_c_p",
-   "grupo": "mon",
-   "cantidad": 1,
-   "medidas": [
-    21.5,
-    31.5,
-    2.6
-   ],
-   "gramos": 1.1,
-   "minutos": 2.0,
+   "gramos": 6.7,
+   "minutos": 12.7,
    "parametros": [
     0.2,
     4,
@@ -2065,12 +2045,12 @@
    "grupo": "mon",
    "cantidad": 1,
    "medidas": [
-    25.1,
-    59.5,
+    27.1,
+    68.0,
     111.0
    ],
-   "gramos": 11.3,
-   "minutos": 38.3,
+   "gramos": 15.1,
+   "minutos": 43.4,
    "parametros": [
     0.2,
     4,
@@ -2089,8 +2069,8 @@
     27.0,
     49.7
    ],
-   "gramos": 10.7,
-   "minutos": 24.8,
+   "gramos": 10.6,
+   "minutos": 24.6,
    "parametros": [
     0.2,
     4,
@@ -2106,11 +2086,11 @@
    "cantidad": 1,
    "medidas": [
     48.6,
-    115.0,
+    111.4,
     198.5
    ],
-   "gramos": 39.6,
-   "minutos": 94.5,
+   "gramos": 46.5,
+   "minutos": 103.8,
    "parametros": [
     0.2,
     4,
@@ -2125,12 +2105,12 @@
    "grupo": "mon",
    "cantidad": 1,
    "medidas": [
-    19.5,
-    7.0,
-    26.4
+    31.1,
+    8.4,
+    25.2
    ],
-   "gramos": 1.5,
-   "minutos": 7.5,
+   "gramos": 1.6,
+   "minutos": 7.4,
    "parametros": [
     0.2,
     4,
@@ -2206,11 +2186,11 @@
    "cantidad": 1,
    "medidas": [
     235.9,
-    64.0,
-    32.8
+    36.8,
+    64.0
    ],
-   "gramos": 47.4,
-   "minutos": 70.5,
+   "gramos": 55.7,
+   "minutos": 88.3,
    "parametros": [
     0.2,
     4,
@@ -2226,11 +2206,11 @@
    "cantidad": 1,
    "medidas": [
     214.9,
-    52.5,
-    8.0
+    10.0,
+    50.5
    ],
-   "gramos": 27.5,
-   "minutos": 38.7,
+   "gramos": 29.3,
+   "minutos": 49.9,
    "parametros": [
     0.2,
     4,
@@ -2246,11 +2226,11 @@
    "cantidad": 1,
    "medidas": [
     214.9,
-    52.5,
-    10.8
+    10.8,
+    50.5
    ],
-   "gramos": 30.3,
-   "minutos": 43.0,
+   "gramos": 31.5,
+   "minutos": 52.8,
    "parametros": [
     0.2,
     4,
@@ -2266,18 +2246,18 @@
    "cantidad": 1,
    "medidas": [
     214.9,
-    52.5,
-    10.8
+    10.8,
+    50.5
    ],
-   "gramos": 30.3,
-   "minutos": 43.0,
+   "gramos": 32.1,
+   "minutos": 53.7,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "vas_2"
+    "vas_1"
    ]
   },
   {
@@ -2289,15 +2269,15 @@
     80.6,
     15.9
    ],
-   "gramos": 45.0,
-   "minutos": 63.8,
+   "gramos": 43.4,
+   "minutos": 61.6,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "vas_2"
+    "vas_1"
    ]
   },
   {
@@ -2305,12 +2285,12 @@
    "grupo": "vas",
    "cantidad": 1,
    "medidas": [
-    236.9,
+    232.9,
     80.6,
     15.9
    ],
-   "gramos": 74.1,
-   "minutos": 103.0,
+   "gramos": 71.3,
+   "minutos": 99.1,
    "parametros": [
     0.2,
     4,
@@ -2326,11 +2306,11 @@
    "cantidad": 1,
    "medidas": [
     68.0,
-    46.0,
-    5.0
+    5.0,
+    46.0
    ],
-   "gramos": 10.4,
-   "minutos": 15.0,
+   "gramos": 10.3,
+   "minutos": 23.5,
    "parametros": [
     0.2,
     4,
@@ -2345,19 +2325,19 @@
    "grupo": "vas",
    "cantidad": 1,
    "medidas": [
-    21.9,
+    21.7,
     44.0,
     10.0
    ],
-   "gramos": 4.1,
-   "minutos": 7.5,
+   "gramos": 3.6,
+   "minutos": 6.9,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "vas_3"
+    "vas_2"
    ]
   },
   {
@@ -2365,19 +2345,19 @@
    "grupo": "vas",
    "cantidad": 1,
    "medidas": [
-    21.9,
+    21.7,
     44.0,
     10.0
    ],
-   "gramos": 4.1,
-   "minutos": 7.5,
+   "gramos": 3.6,
+   "minutos": 6.9,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "vas_3"
+    "vas_2"
    ]
   },
   {
@@ -2385,19 +2365,19 @@
    "grupo": "vas",
    "cantidad": 1,
    "medidas": [
-    21.9,
+    21.7,
     44.0,
     10.0
    ],
-   "gramos": 4.1,
-   "minutos": 7.5,
+   "gramos": 3.6,
+   "minutos": 6.9,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "vas_3"
+    "vas_2"
    ]
   },
   {
@@ -2405,19 +2385,19 @@
    "grupo": "vas",
    "cantidad": 1,
    "medidas": [
-    21.9,
+    21.7,
     44.0,
     10.0
    ],
-   "gramos": 4.1,
-   "minutos": 7.5,
+   "gramos": 3.6,
+   "minutos": 6.9,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "vas_3"
+    "vas_2"
    ]
   },
   {
@@ -2425,19 +2405,19 @@
    "grupo": "vas",
    "cantidad": 1,
    "medidas": [
-    21.9,
+    21.7,
     44.0,
     10.0
    ],
-   "gramos": 4.1,
-   "minutos": 7.5,
+   "gramos": 3.6,
+   "minutos": 6.9,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "vas_3"
+    "vas_2"
    ]
   },
   {
@@ -2445,19 +2425,19 @@
    "grupo": "vas",
    "cantidad": 1,
    "medidas": [
-    21.9,
+    21.7,
     44.0,
     10.0
    ],
-   "gramos": 4.1,
-   "minutos": 7.5,
+   "gramos": 3.6,
+   "minutos": 6.9,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "vas_3"
+    "vas_2"
    ]
   },
   {
@@ -2465,19 +2445,19 @@
    "grupo": "vas",
    "cantidad": 1,
    "medidas": [
-    21.9,
+    21.7,
     44.0,
     10.0
    ],
-   "gramos": 4.1,
-   "minutos": 7.5,
+   "gramos": 3.6,
+   "minutos": 6.9,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "vas_3"
+    "vas_2"
    ]
   },
   {
@@ -2485,19 +2465,19 @@
    "grupo": "vas",
    "cantidad": 1,
    "medidas": [
-    21.9,
+    21.7,
     44.0,
     10.0
    ],
-   "gramos": 4.1,
-   "minutos": 7.5,
+   "gramos": 3.6,
+   "minutos": 6.9,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "vas_3"
+    "vas_2"
    ]
   },
   {
@@ -2505,19 +2485,19 @@
    "grupo": "vas",
    "cantidad": 1,
    "medidas": [
-    21.9,
+    21.7,
     44.0,
     10.0
    ],
-   "gramos": 4.1,
-   "minutos": 7.5,
+   "gramos": 3.6,
+   "minutos": 6.9,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "vas_3"
+    "vas_2"
    ]
   },
   {
@@ -2525,19 +2505,19 @@
    "grupo": "vas",
    "cantidad": 1,
    "medidas": [
-    21.9,
+    21.7,
     44.0,
     10.0
    ],
-   "gramos": 4.1,
-   "minutos": 7.5,
+   "gramos": 3.6,
+   "minutos": 6.9,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "vas_3"
+    "vas_2"
    ]
   },
   {
@@ -2545,19 +2525,19 @@
    "grupo": "vas",
    "cantidad": 1,
    "medidas": [
-    21.9,
+    21.7,
     44.0,
     10.0
    ],
-   "gramos": 4.1,
-   "minutos": 7.5,
+   "gramos": 3.6,
+   "minutos": 6.9,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "vas_3"
+    "vas_2"
    ]
   },
   {
@@ -2565,19 +2545,19 @@
    "grupo": "vas",
    "cantidad": 1,
    "medidas": [
-    21.9,
+    21.7,
     44.0,
     10.0
    ],
-   "gramos": 4.1,
-   "minutos": 7.5,
+   "gramos": 3.6,
+   "minutos": 6.9,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "vas_3"
+    "vas_2"
    ]
   },
   {
@@ -2585,12 +2565,92 @@
    "grupo": "vas",
    "cantidad": 1,
    "medidas": [
-    21.9,
+    21.7,
     44.0,
     10.0
    ],
-   "gramos": 4.1,
-   "minutos": 7.5,
+   "gramos": 3.6,
+   "minutos": 6.9,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_2"
+   ]
+  },
+  {
+   "pieza": "vas_taco_7_b",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    21.7,
+    44.0,
+    10.0
+   ],
+   "gramos": 3.6,
+   "minutos": 6.9,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_2"
+   ]
+  },
+  {
+   "pieza": "vas_taco_8_a",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    21.7,
+    44.0,
+    10.0
+   ],
+   "gramos": 3.6,
+   "minutos": 6.9,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_2"
+   ]
+  },
+  {
+   "pieza": "vas_taco_8_b",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    21.7,
+    44.0,
+    10.0
+   ],
+   "gramos": 3.6,
+   "minutos": 6.9,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_2"
+   ]
+  },
+  {
+   "pieza": "vas_taco_9_a",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    21.7,
+    44.0,
+    10.0
+   ],
+   "gramos": 3.6,
+   "minutos": 6.9,
    "parametros": [
     0.2,
     4,
@@ -2601,16 +2661,96 @@
    ]
   },
   {
-   "pieza": "vas_taco_7_b",
+   "pieza": "vas_taco_9_b",
    "grupo": "vas",
    "cantidad": 1,
    "medidas": [
-    21.9,
+    21.7,
     44.0,
     10.0
    ],
-   "gramos": 4.1,
-   "minutos": 7.5,
+   "gramos": 3.6,
+   "minutos": 6.9,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_3"
+   ]
+  },
+  {
+   "pieza": "vas_taco_10_a",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    21.7,
+    44.0,
+    10.0
+   ],
+   "gramos": 3.6,
+   "minutos": 6.9,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_3"
+   ]
+  },
+  {
+   "pieza": "vas_taco_10_b",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    21.7,
+    44.0,
+    10.0
+   ],
+   "gramos": 3.6,
+   "minutos": 6.9,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_3"
+   ]
+  },
+  {
+   "pieza": "vas_taco_11_a",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    21.7,
+    44.0,
+    10.0
+   ],
+   "gramos": 3.6,
+   "minutos": 6.9,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_3"
+   ]
+  },
+  {
+   "pieza": "vas_taco_11_b",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    21.7,
+    44.0,
+    10.0
+   ],
+   "gramos": 3.6,
+   "minutos": 6.9,
    "parametros": [
     0.2,
     4,
@@ -2626,11 +2766,11 @@
    "cantidad": 1,
    "medidas": [
     207.9,
-    97.0,
-    11.3
+    11.3,
+    97.0
    ],
-   "gramos": 50.2,
-   "minutos": 69.8,
+   "gramos": 58.2,
+   "minutos": 98.4,
    "parametros": [
     0.2,
     4,
@@ -2646,18 +2786,18 @@
    "cantidad": 1,
    "medidas": [
     172.9,
-    97.0,
-    11.3
+    11.3,
+    97.0
    ],
-   "gramos": 47.2,
-   "minutos": 65.8,
+   "gramos": 53.0,
+   "minutos": 91.4,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "vas_4"
+    "vas_3"
    ]
   },
   {
@@ -2677,7 +2817,7 @@
     15
    ],
    "tandas": [
-    "vas_4"
+    "vas_3"
    ]
   },
   {
@@ -2697,7 +2837,7 @@
     15
    ],
    "tandas": [
-    "vas_4"
+    "vas_3"
    ]
   },
   {
@@ -2709,15 +2849,15 @@
     115.8,
     97.6
    ],
-   "gramos": 78.5,
-   "minutos": 125.8,
+   "gramos": 85.5,
+   "minutos": 135.2,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "vas_5"
+    "vas_4"
    ]
   },
   {
@@ -2726,11 +2866,11 @@
    "cantidad": 1,
    "medidas": [
     90.0,
-    90.0,
+    96.5,
     75.0
    ],
-   "gramos": 51.9,
-   "minutos": 85.4,
+   "gramos": 54.2,
+   "minutos": 88.4,
    "parametros": [
     0.2,
     4,
@@ -2747,10 +2887,10 @@
    "medidas": [
     92.4,
     127.3,
-    16.3
+    18.5
    ],
-   "gramos": 18.0,
-   "minutos": 27.5,
+   "gramos": 19.9,
+   "minutos": 30.6,
    "parametros": [
     0.2,
     4,
@@ -2785,19 +2925,19 @@
    "grupo": "tap",
    "cantidad": 1,
    "medidas": [
-    32.0,
-    164.5,
+    33.4,
+    150.3,
     20.0
    ],
-   "gramos": 14.5,
-   "minutos": 23.7,
+   "gramos": 13.1,
+   "minutos": 21.8,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "tap_1"
+    "tap_2"
    ]
   },
   {
@@ -2817,7 +2957,7 @@
     15
    ],
    "tandas": [
-    "tap_1"
+    "tap_2"
    ]
   },
   {
@@ -2827,10 +2967,10 @@
    "medidas": [
     10.0,
     24.5,
-    2.4
+    1.6
    ],
-   "gramos": 0.5,
-   "minutos": 1.1,
+   "gramos": 0.3,
+   "minutos": 0.7,
    "parametros": [
     0.2,
     4,
@@ -2845,12 +2985,12 @@
    "grupo": "tap",
    "cantidad": 1,
    "medidas": [
-    69.0,
-    149.0,
-    29.5
+    88.0,
+    29.5,
+    149.0
    ],
-   "gramos": 30.2,
-   "minutos": 46.7,
+   "gramos": 52.7,
+   "minutos": 101.9,
    "parametros": [
     0.2,
     4,
@@ -2865,12 +3005,12 @@
    "grupo": "tap",
    "cantidad": 1,
    "medidas": [
-    44.0,
-    44.0,
+    45.0,
+    45.0,
     8.0
    ],
-   "gramos": 7.0,
-   "minutos": 11.1,
+   "gramos": 7.2,
+   "minutos": 11.3,
    "parametros": [
     0.2,
     4,
@@ -2886,11 +3026,11 @@
    "cantidad": 1,
    "medidas": [
     44.0,
-    16.0,
-    55.1
+    55.1,
+    16.0
    ],
    "gramos": 8.8,
-   "minutos": 23.3,
+   "minutos": 15.2,
    "parametros": [
     0.2,
     4,
@@ -2927,10 +3067,10 @@
    "medidas": [
     14.0,
     14.4,
-    19.0
+    23.0
    ],
-   "gramos": 2.1,
-   "minutos": 6.8,
+   "gramos": 2.4,
+   "minutos": 8.0,
    "parametros": [
     0.2,
     4,
@@ -2950,7 +3090,7 @@
     8.0
    ],
    "gramos": 0.8,
-   "minutos": 2.7,
+   "minutos": 2.8,
    "parametros": [
     0.2,
     4,
@@ -2958,6 +3098,46 @@
    ],
    "tandas": [
     "tap_2"
+   ]
+  },
+  {
+   "pieza": "tap_pre_suplemento_05",
+   "grupo": "tap",
+   "cantidad": 1,
+   "medidas": [
+    62.0,
+    62.0,
+    0.5
+   ],
+   "gramos": 1.8,
+   "minutos": 2.6,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "tap_2"
+   ]
+  },
+  {
+   "pieza": "tap_pre_suplemento_10",
+   "grupo": "tap",
+   "cantidad": 1,
+   "medidas": [
+    62.0,
+    62.0,
+    1.0
+   ],
+   "gramos": 3.7,
+   "minutos": 5.1,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "tap_3"
    ]
   },
   {
@@ -2965,19 +3145,19 @@
    "grupo": "tap",
    "cantidad": 1,
    "medidas": [
+    58.8,
     78.0,
-    16.0,
-    58.8
+    20.5
    ],
-   "gramos": 10.4,
-   "minutos": 26.2,
+   "gramos": 13.1,
+   "minutos": 21.9,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "tap_2"
+    "tap_3"
    ]
   },
   {
@@ -2985,19 +3165,19 @@
    "grupo": "tap",
    "cantidad": 1,
    "medidas": [
-    70.6,
+    72.5,
     30.1,
-    25.0
+    23.8
    ],
-   "gramos": 6.2,
-   "minutos": 13.5,
+   "gramos": 5.1,
+   "minutos": 11.8,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "tap_2"
+    "tap_3"
    ]
   },
   {
@@ -3007,17 +3187,17 @@
    "medidas": [
     46.0,
     18.0,
-    32.0
+    42.0
    ],
-   "gramos": 8.0,
-   "minutos": 17.4,
+   "gramos": 8.8,
+   "minutos": 20.6,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "tap_2"
+    "tap_3"
    ]
   },
   {
@@ -3026,11 +3206,11 @@
    "cantidad": 1,
    "medidas": [
     56.0,
-    113.8,
-    4.0
+    115.8,
+    9.0
    ],
-   "gramos": 12.7,
-   "minutos": 18.0,
+   "gramos": 14.5,
+   "minutos": 21.3,
    "parametros": [
     0.2,
     4,
@@ -3045,12 +3225,12 @@
    "grupo": "tap",
    "cantidad": 1,
    "medidas": [
-    22.0,
-    49.8,
-    5.0
+    5.0,
+    50.2,
+    10.0
    ],
-   "gramos": 2.9,
-   "minutos": 4.9,
+   "gramos": 2.3,
+   "minutos": 5.1,
    "parametros": [
     0.2,
     4,
@@ -3065,12 +3245,12 @@
    "grupo": "tap",
    "cantidad": 1,
    "medidas": [
-    9.0,
+    3.0,
     59.0,
-    3.0
+    9.0
    ],
    "gramos": 1.8,
-   "minutos": 3.0,
+   "minutos": 4.3,
    "parametros": [
     0.2,
     4,
@@ -3087,17 +3267,57 @@
    "medidas": [
     162.0,
     79.8,
-    11.8
+    17.0
    ],
-   "gramos": 9.6,
-   "minutos": 15.3,
+   "gramos": 10.0,
+   "minutos": 17.0,
    "parametros": [
     0.2,
     4,
     15
    ],
    "tandas": [
-    "tap_3"
+    "tap_4"
+   ]
+  },
+  {
+   "pieza": "tap_puntal_inf",
+   "grupo": "tap",
+   "cantidad": 1,
+   "medidas": [
+    215.8,
+    20.2,
+    16.0
+   ],
+   "gramos": 28.0,
+   "minutos": 41.0,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "tap_4"
+   ]
+  },
+  {
+   "pieza": "tap_puntal_sup",
+   "grupo": "tap",
+   "cantidad": 1,
+   "medidas": [
+    216.0,
+    24.4,
+    16.0
+   ],
+   "gramos": 29.7,
+   "minutos": 43.3,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "tap_4"
    ]
   },
   {
@@ -3265,12 +3485,12 @@
    "grupo": "can",
    "cantidad": 1,
    "medidas": [
-    90.2,
+    14.6,
     42.0,
-    14.6
+    90.2
    ],
-   "gramos": 14.2,
-   "minutos": 22.1,
+   "gramos": 14.4,
+   "minutos": 38.2,
    "parametros": [
     0.2,
     4,
@@ -3285,12 +3505,12 @@
    "grupo": "can",
    "cantidad": 1,
    "medidas": [
-    84.5,
-    38.6,
-    5.0
+    81.0,
+    5.0,
+    24.0
    ],
-   "gramos": 3.7,
-   "minutos": 6.0,
+   "gramos": 3.6,
+   "minutos": 9.8,
    "parametros": [
     0.2,
     4,
@@ -3357,7 +3577,7 @@
     15
    ],
    "tandas": [
-    "can_1"
+    "can_2"
    ]
   },
   {
@@ -3401,14 +3621,76 @@
    ]
   },
   {
-   "pieza": "rem_3_4",
+   "pieza": "can_amarre",
+   "grupo": "can",
+   "cantidad": 1,
+   "medidas": [
+    33.5,
+    42.6,
+    30.0
+   ],
+   "gramos": 8.1,
+   "minutos": 17.1,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "can_2"
+   ]
+  },
+  {
+   "pieza": "can_plantilla",
+   "grupo": "can",
+   "cantidad": 1,
+   "medidas": [
+    84.0,
+    12.0,
+    8.0
+   ],
+   "gramos": 5.4,
+   "minutos": 8.9,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "can_3"
+   ]
+  },
+  {
+   "pieza": "rem_3_6",
    "grupo": "rem",
    "cantidad": 4,
    "usados": 2,
-   "agarre": 3.4,
+   "agarre": 3.6,
    "medidas": [
     8.0,
-    7.8,
+    8.0,
+    3.2
+   ],
+   "gramos": 0.1,
+   "minutos": 1.2,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_1"
+   ]
+  },
+  {
+   "pieza": "rem_4_4",
+   "grupo": "rem",
+   "cantidad": 203,
+   "usados": 184,
+   "agarre": 4.4,
+   "medidas": [
+    8.0,
+    8.8,
     3.2
    ],
    "gramos": 0.11,
@@ -3423,61 +3705,17 @@
    ]
   },
   {
-   "pieza": "rem_4_2",
-   "grupo": "rem",
-   "cantidad": 192,
-   "usados": 174,
-   "agarre": 4.2,
-   "medidas": [
-    8.0,
-    8.6,
-    3.2
-   ],
-   "gramos": 0.12,
-   "minutos": 1.3,
-   "parametros": [
-    0.12,
-    4,
-    100
-   ],
-   "tandas": [
-    "rem_1"
-   ]
-  },
-  {
-   "pieza": "rem_4_4",
-   "grupo": "rem",
-   "cantidad": 14,
-   "usados": 12,
-   "agarre": 4.4,
-   "medidas": [
-    8.0,
-    8.8,
-    3.2
-   ],
-   "gramos": 0.12,
-   "minutos": 1.3,
-   "parametros": [
-    0.12,
-    4,
-    100
-   ],
-   "tandas": [
-    "rem_1"
-   ]
-  },
-  {
    "pieza": "rem_4_6",
    "grupo": "rem",
-   "cantidad": 25,
-   "usados": 22,
+   "cantidad": 27,
+   "usados": 24,
    "agarre": 4.6,
    "medidas": [
     8.0,
     9.0,
     3.2
    ],
-   "gramos": 0.12,
+   "gramos": 0.11,
    "minutos": 1.3,
    "parametros": [
     0.12,
@@ -3485,20 +3723,42 @@
     100
    ],
    "tandas": [
-    "rem_2"
+    "rem_1"
    ]
   },
   {
    "pieza": "rem_4_8",
    "grupo": "rem",
-   "cantidad": 12,
-   "usados": 10,
+   "cantidad": 4,
+   "usados": 2,
    "agarre": 4.8,
    "medidas": [
     8.0,
     9.2,
     3.2
    ],
+   "gramos": 0.11,
+   "minutos": 1.3,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_1"
+   ]
+  },
+  {
+   "pieza": "rem_5_0",
+   "grupo": "rem",
+   "cantidad": 10,
+   "usados": 8,
+   "agarre": 5.0,
+   "medidas": [
+    8.0,
+    9.4,
+    3.2
+   ],
    "gramos": 0.12,
    "minutos": 1.3,
    "parametros": [
@@ -3507,65 +3767,21 @@
     100
    ],
    "tandas": [
-    "rem_2"
-   ]
-  },
-  {
-   "pieza": "rem_5_0",
-   "grupo": "rem",
-   "cantidad": 4,
-   "usados": 2,
-   "agarre": 5.0,
-   "medidas": [
-    8.0,
-    9.4,
-    3.2
-   ],
-   "gramos": 0.13,
-   "minutos": 1.3,
-   "parametros": [
-    0.12,
-    4,
-    100
-   ],
-   "tandas": [
-    "rem_2"
-   ]
-  },
-  {
-   "pieza": "rem_5_5",
-   "grupo": "rem",
-   "cantidad": 6,
-   "usados": 4,
-   "agarre": 5.5,
-   "medidas": [
-    8.0,
-    9.9,
-    3.2
-   ],
-   "gramos": 0.13,
-   "minutos": 1.3,
-   "parametros": [
-    0.12,
-    4,
-    100
-   ],
-   "tandas": [
-    "rem_2"
+    "rem_1"
    ]
   },
   {
    "pieza": "rem_5_6",
    "grupo": "rem",
-   "cantidad": 14,
-   "usados": 12,
+   "cantidad": 18,
+   "usados": 16,
    "agarre": 5.6,
    "medidas": [
     8.0,
     10.0,
     3.2
    ],
-   "gramos": 0.13,
+   "gramos": 0.12,
    "minutos": 1.3,
    "parametros": [
     0.12,
@@ -3573,18 +3789,40 @@
     100
    ],
    "tandas": [
-    "rem_2"
+    "rem_1"
    ]
   },
   {
    "pieza": "rem_5_8",
    "grupo": "rem",
-   "cantidad": 13,
-   "usados": 11,
+   "cantidad": 14,
+   "usados": 12,
    "agarre": 5.8,
    "medidas": [
     8.0,
     10.2,
+    3.2
+   ],
+   "gramos": 0.12,
+   "minutos": 1.3,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_1"
+   ]
+  },
+  {
+   "pieza": "rem_6_2",
+   "grupo": "rem",
+   "cantidad": 6,
+   "usados": 4,
+   "agarre": 6.2,
+   "medidas": [
+    8.0,
+    10.6,
     3.2
    ],
    "gramos": 0.13,
@@ -3595,18 +3833,85 @@
     100
    ],
    "tandas": [
+    "rem_1"
+   ]
+  },
+  {
+   "pieza": "rem_6_8",
+   "grupo": "rem",
+   "cantidad": 4,
+   "usados": 2,
+   "agarre": 6.8,
+   "medidas": [
+    8.0,
+    11.2,
+    3.2
+   ],
+   "gramos": 0.13,
+   "minutos": 1.3,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_1"
+   ]
+  },
+  {
+   "pieza": "rem_7_2",
+   "grupo": "rem",
+   "cantidad": 6,
+   "usados": 4,
+   "agarre": 7.2,
+   "medidas": [
+    8.0,
+    11.6,
+    3.2
+   ],
+   "gramos": 0.14,
+   "minutos": 1.3,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_1"
+   ]
+  },
+  {
+   "pieza": "rem_7_4",
+   "grupo": "rem",
+   "cantidad": 13,
+   "usados": 11,
+   "agarre": 7.4,
+   "medidas": [
+    8.0,
+    11.8,
+    3.2
+   ],
+   "gramos": 0.14,
+   "minutos": 1.3,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_1",
     "rem_2"
    ]
   },
   {
-   "pieza": "rem_6_0",
+   "pieza": "rem_7_8",
    "grupo": "rem",
    "cantidad": 11,
    "usados": 9,
-   "agarre": 6.0,
+   "agarre": 7.8,
    "medidas": [
     8.0,
-    10.4,
+    12.2,
     3.2
    ],
    "gramos": 0.14,
@@ -3621,17 +3926,17 @@
    ]
   },
   {
-   "pieza": "rem_7_0",
+   "pieza": "rem_9_4",
    "grupo": "rem",
-   "cantidad": 8,
-   "usados": 6,
-   "agarre": 7.0,
+   "cantidad": 6,
+   "usados": 4,
+   "agarre": 9.4,
    "medidas": [
     8.0,
-    11.4,
+    13.8,
     3.2
    ],
-   "gramos": 0.15,
+   "gramos": 0.17,
    "minutos": 1.3,
    "parametros": [
     0.12,
@@ -3643,83 +3948,17 @@
    ]
   },
   {
-   "pieza": "rem_7_2",
-   "grupo": "rem",
-   "cantidad": 17,
-   "usados": 15,
-   "agarre": 7.2,
-   "medidas": [
-    8.0,
-    11.6,
-    3.2
-   ],
-   "gramos": 0.15,
-   "minutos": 1.3,
-   "parametros": [
-    0.12,
-    4,
-    100
-   ],
-   "tandas": [
-    "rem_2"
-   ]
-  },
-  {
-   "pieza": "rem_7_8",
-   "grupo": "rem",
-   "cantidad": 7,
-   "usados": 5,
-   "agarre": 7.8,
-   "medidas": [
-    8.0,
-    12.2,
-    3.2
-   ],
-   "gramos": 0.16,
-   "minutos": 1.3,
-   "parametros": [
-    0.12,
-    4,
-    100
-   ],
-   "tandas": [
-    "rem_2"
-   ]
-  },
-  {
-   "pieza": "rem_8_0",
-   "grupo": "rem",
-   "cantidad": 8,
-   "usados": 6,
-   "agarre": 8.0,
-   "medidas": [
-    8.0,
-    12.4,
-    3.2
-   ],
-   "gramos": 0.16,
-   "minutos": 1.3,
-   "parametros": [
-    0.12,
-    4,
-    100
-   ],
-   "tandas": [
-    "rem_2"
-   ]
-  },
-  {
-   "pieza": "rem_8_2",
+   "pieza": "rem_9_6",
    "grupo": "rem",
    "cantidad": 4,
    "usados": 2,
-   "agarre": 8.2,
+   "agarre": 9.6,
    "medidas": [
     8.0,
-    12.6,
+    14.0,
     3.2
    ],
-   "gramos": 0.16,
+   "gramos": 0.17,
    "minutos": 1.3,
    "parametros": [
     0.12,
@@ -3742,6 +3981,28 @@
     3.2
    ],
    "gramos": 0.18,
+   "minutos": 1.4,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_2"
+   ]
+  },
+  {
+   "pieza": "rem_11_2",
+   "grupo": "rem",
+   "cantidad": 11,
+   "usados": 9,
+   "agarre": 11.2,
+   "medidas": [
+    8.0,
+    15.6,
+    3.2
+   ],
+   "gramos": 0.19,
    "minutos": 1.4,
    "parametros": [
     0.12,
@@ -3819,6 +4080,72 @@
    ]
   },
   {
+   "pieza": "rem_14_6",
+   "grupo": "rem",
+   "cantidad": 4,
+   "usados": 2,
+   "agarre": 14.6,
+   "medidas": [
+    8.0,
+    19.0,
+    3.2
+   ],
+   "gramos": 0.23,
+   "minutos": 1.4,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_2"
+   ]
+  },
+  {
+   "pieza": "rem_15_0",
+   "grupo": "rem",
+   "cantidad": 3,
+   "usados": 1,
+   "agarre": 15.0,
+   "medidas": [
+    8.0,
+    19.4,
+    3.2
+   ],
+   "gramos": 0.23,
+   "minutos": 1.4,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_2"
+   ]
+  },
+  {
+   "pieza": "rem_15_3",
+   "grupo": "rem",
+   "cantidad": 4,
+   "usados": 2,
+   "agarre": 15.3,
+   "medidas": [
+    8.0,
+    19.7,
+    3.2
+   ],
+   "gramos": 0.23,
+   "minutos": 1.4,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_2"
+   ]
+  },
+  {
    "pieza": "rem_18_4",
    "grupo": "rem",
    "cantidad": 6,
@@ -3867,179 +4194,186 @@
   {
    "tanda": "alm_1",
    "grupo": "Almacén de monedas",
-   "piezas": 3,
-   "gramos": 102,
-   "horas": 2.6
+   "piezas": 1,
+   "gramos": 38,
+   "horas": 1.0
   },
   {
    "tanda": "alm_2",
    "grupo": "Almacén de monedas",
-   "piezas": 5,
-   "gramos": 45,
-   "horas": 1.2
+   "piezas": 3,
+   "gramos": 86,
+   "horas": 2.2
   },
   {
    "tanda": "alm_3",
    "grupo": "Almacén de monedas",
-   "piezas": 1,
-   "gramos": 26,
-   "horas": 0.8
+   "piezas": 6,
+   "gramos": 82,
+   "horas": 2.3
   },
   {
    "tanda": "can_1",
    "grupo": "Canaleta y muelle",
-   "piezas": 13,
-   "gramos": 136,
-   "horas": 4.5
+   "piezas": 12,
+   "gramos": 115,
+   "horas": 4.2
   },
   {
    "tanda": "can_2",
    "grupo": "Canaleta y muelle",
-   "piezas": 2,
-   "gramos": 45,
-   "horas": 1.1
+   "piezas": 4,
+   "gramos": 74,
+   "horas": 1.9
+  },
+  {
+   "tanda": "can_3",
+   "grupo": "Canaleta y muelle",
+   "piezas": 1,
+   "gramos": 5,
+   "horas": 0.1
   },
   {
    "tanda": "est_nodos_1",
    "grupo": "Estructura: nodos",
-   "piezas": 16,
-   "gramos": 297,
-   "horas": 8.9
+   "piezas": 12,
+   "gramos": 229,
+   "horas": 6.9
   },
   {
    "tanda": "est_nodos_2",
    "grupo": "Estructura: nodos",
-   "piezas": 6,
-   "gramos": 104,
-   "horas": 3.2
+   "piezas": 10,
+   "gramos": 171,
+   "horas": 5.1
   },
   {
    "tanda": "est_tubos_1",
    "grupo": "Estructura: tubos",
-   "piezas": 17,
-   "gramos": 213,
-   "horas": 5.7
+   "piezas": 14,
+   "gramos": 198,
+   "horas": 5.2
   },
   {
    "tanda": "est_tubos_2",
    "grupo": "Estructura: tubos",
-   "piezas": 11,
-   "gramos": 231,
-   "horas": 5.8
+   "piezas": 12,
+   "gramos": 250,
+   "horas": 6.3
   },
   {
    "tanda": "est_tubos_3",
    "grupo": "Estructura: tubos",
-   "piezas": 13,
-   "gramos": 212,
-   "horas": 5.5
+   "piezas": 11,
+   "gramos": 202,
+   "horas": 5.1
   },
   {
    "tanda": "est_tubos_4",
    "grupo": "Estructura: tubos",
-   "piezas": 5,
-   "gramos": 91,
-   "horas": 2.3
+   "piezas": 9,
+   "gramos": 162,
+   "horas": 4.1
   },
   {
    "tanda": "est_uniones_1",
    "grupo": "Estructura: empalmes y tacos",
    "piezas": 11,
-   "gramos": 114,
-   "horas": 3.4
+   "gramos": 119,
+   "horas": 3.6
   },
   {
    "tanda": "mon_1",
    "grupo": "Cinta de monedas",
-   "piezas": 7,
-   "gramos": 106,
-   "horas": 2.8
+   "piezas": 6,
+   "gramos": 94,
+   "horas": 2.6
   },
   {
    "tanda": "mon_2",
    "grupo": "Cinta de monedas",
-   "piezas": 10,
-   "gramos": 59,
-   "horas": 2.3
+   "piezas": 9,
+   "gramos": 99,
+   "horas": 3.4
   },
   {
    "tanda": "mon_3",
    "grupo": "Cinta de monedas",
    "piezas": 5,
-   "gramos": 118,
-   "horas": 3.8
+   "gramos": 125,
+   "horas": 3.9
   },
   {
    "tanda": "rem_1",
    "grupo": "Remaches",
-   "piezas": 210,
-   "gramos": 25,
-   "horas": 4.6
+   "piezas": 299,
+   "gramos": 34,
+   "horas": 6.5
   },
   {
    "tanda": "rem_2",
    "grupo": "Remaches",
-   "piezas": 159,
-   "gramos": 24,
-   "horas": 3.5
+   "piezas": 83,
+   "gramos": 16,
+   "horas": 1.9
   },
   {
    "tanda": "tap_1",
    "grupo": "Tapas, prensa y empujador",
-   "piezas": 5,
-   "gramos": 95,
-   "horas": 2.6
+   "piezas": 3,
+   "gramos": 84,
+   "horas": 2.2
   },
   {
    "tanda": "tap_2",
    "grupo": "Tapas, prensa y empujador",
    "piezas": 10,
-   "gramos": 86,
-   "horas": 2.8
+   "gramos": 100,
+   "horas": 3.1
   },
   {
    "tanda": "tap_3",
    "grupo": "Tapas, prensa y empujador",
-   "piezas": 4,
-   "gramos": 27,
-   "horas": 0.7
+   "piezas": 7,
+   "gramos": 49,
+   "horas": 1.5
+  },
+  {
+   "tanda": "tap_4",
+   "grupo": "Tapas, prensa y empujador",
+   "piezas": 3,
+   "gramos": 68,
+   "horas": 1.7
   },
   {
    "tanda": "vas_1",
    "grupo": "Cinta de vasos",
-   "piezas": 3,
-   "gramos": 105,
-   "horas": 2.5
+   "piezas": 5,
+   "gramos": 192,
+   "horas": 5.1
   },
   {
    "tanda": "vas_2",
    "grupo": "Cinta de vasos",
-   "piezas": 4,
-   "gramos": 160,
-   "horas": 3.7
+   "piezas": 18,
+   "gramos": 139,
+   "horas": 3.9
   },
   {
    "tanda": "vas_3",
    "grupo": "Cinta de vasos",
-   "piezas": 15,
-   "gramos": 108,
-   "horas": 2.9
+   "piezas": 10,
+   "gramos": 159,
+   "horas": 4.6
   },
   {
    "tanda": "vas_4",
    "grupo": "Cinta de vasos",
-   "piezas": 3,
-   "gramos": 73,
-   "horas": 1.9
-  },
-  {
-   "tanda": "vas_5",
-   "grupo": "Cinta de vasos",
    "piezas": 1,
-   "gramos": 78,
-   "horas": 2.1
+   "gramos": 86,
+   "horas": 2.3
   }
  ],
- "total_gramos": 2681,
- "total_horas": 81.0
+ "total_gramos": 2979,
+ "total_horas": 91.0
 }

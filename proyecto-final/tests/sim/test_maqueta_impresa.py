@@ -138,13 +138,18 @@ def test_lo_funcional_de_la_maqueta_fisica_es_lo_de_la_simulacion(F, geo):
     assert not malas, "no coinciden (tolerancia 0,5 mm):\n" + "\n".join(malas)
 
 
-def test_el_glb_tiene_las_piezas_de_maqueta_scad(glb):
+@pytest.fixture(scope="module")
+def lista():
+    """Salida (echo) de maqueta.scad en modo "lista": una linea PIEZA por pieza y una REM por remache."""
     if not OPENSCAD.exists() and not shutil.which("openscad"):
         pytest.skip("sin OpenSCAD en este PC")
     exe = str(OPENSCAD if OPENSCAD.exists() else shutil.which("openscad"))
-    eco = Path(subprocess.run([exe, "-D", 'modo="lista"', "-o", "-", "--export-format", "echo",
-                               str(MAQUETA / "maqueta.scad")], capture_output=True, text=True).stdout)
-    piezas = re.findall(r'ECHO: PIEZA = "([^"]+)"', str(eco))
+    return subprocess.run([exe, "-D", 'modo="lista"', "-o", "-", "--export-format", "echo",
+                           str(MAQUETA / "maqueta.scad")], capture_output=True, text=True).stdout
+
+
+def test_el_glb_tiene_las_piezas_de_maqueta_scad(glb, lista):
+    piezas = re.findall(r'ECHO: PIEZA = "([^"]+)"', lista)
     assert piezas, "OpenSCAD no listo piezas"
     en_glb = [n["name"] for n in glb["nodes"] if n["extras"]["tipo"] == "impresa"]
     assert sorted(en_glb) == sorted(piezas), (
@@ -182,12 +187,15 @@ def test_cada_malla_del_glb_es_su_stl(glb):
     assert not malas, "GLB viejo respecto de los STL (correr python maqueta_impresa/modelo_3d.py):\n" + "\n".join(malas[:10])
 
 
-def test_el_glb_trae_los_310_remaches_en_rojo(glb, F):
+def test_el_glb_trae_todos_los_remaches_en_rojo(glb, F, lista):
     """Usuario (2026-10-24): los remaches son parte de como se vera la maqueta; el visor los muestra con la
-    casilla "Remaches". Un nodo por subsistema, con cuantos trae, y entre todos los de REM_TODOS."""
+    casilla "Remaches". Un nodo por subsistema, con cuantos trae, y entre todos los de REM_TODOS (los que
+    maqueta.scad lista hoy: la cuenta cambia cuando se agrega o quita uno, por eso no va escrita aqui)."""
     rem = [n for n in glb["nodes"] if n["extras"]["tipo"] == "remache"]
     assert sorted(n["extras"]["grupo"] for n in rem) == ["alm", "can", "estructura", "mon", "tap", "vas"]
-    assert sum(n["extras"]["cantidad"] for n in rem) == sum(F["n_remaches"]) == glb["scenes"][0]["extras"]["remaches"] == 310
+    n_scad = len(re.findall(r"ECHO: REM = ", lista))
+    assert n_scad > 0, "OpenSCAD no listo remaches"
+    assert sum(n["extras"]["cantidad"] for n in rem) == sum(F["n_remaches"]) == glb["scenes"][0]["extras"]["remaches"] == n_scad
     for n in rem:
         prim = glb["meshes"][n["mesh"]]["primitives"][0]
         assert glb["accessors"][prim["indices"]]["count"] >= n["extras"]["cantidad"] * 3 * 20, n["name"]
@@ -198,11 +206,39 @@ def test_el_glb_trae_los_310_remaches_en_rojo(glb, F):
 def test_las_partes_moviles_traen_su_pivote(glb, F):
     mov = {n["name"]: n["extras"] for n in glb["nodes"] if "movil" in n["extras"]}
     # lo que el visor anima con las piezas impresas (MOVILES_* de cada .scad)
-    assert {"alm_disco", "alm_tambor", "alm_obturador", "mon_aleta", "tap_dedo_a", "tap_dedo_b", "tap_pre_leva",
+    assert {"alm_disco", "alm_tambor", "alm_obturador", "alm_palanca", "mon_aleta", "tap_dedo_a", "tap_dedo_b", "tap_pre_leva",
             "tap_pre_plato", "tap_emp_paleta", "tap_emp_manivela", "tap_emp_biela", "can_balancin"} <= set(mov)
-    assert sum(1 for n in mov if n.startswith("vas_taco_")) == 14
+    assert sum(1 for n in mov if n.startswith("vas_taco_")) == 22      # 11 separadores a L/11, dos medios tacos c/u
     assert _mm(mov["alm_disco"]["pivote"])[:2] == pytest.approx(F["alm_C"], abs=0.01)
-    assert _mm(mov["alm_obturador"]["pivote"])[:2] == pytest.approx(F["alm_P"], abs=0.01)
-    assert mov["alm_obturador"]["eje"] == [0, 0, 1] and mov["alm_obturador"]["recorrido"] == [0, 70]
+    # Obturador (almacen.scad, 2026-10-25): corredera enrasada que corre 30 mm (alm_cie_s) hacia los 300 grados,
+    # llevada por la palanca del SG90, que gira alm_abre (90) grados en sentido horario visto desde arriba sobre
+    # alm_P. El visor cuelga las dos del obturador y mueve cada una con su movimiento (visor.js, montarMaqueta).
+    assert mov["alm_obturador"]["movil"] == mov["alm_palanca"]["movil"] == "obturador"
+    assert mov["alm_obturador"]["movimiento"] == "lineal" and mov["alm_obturador"]["recorrido"] == [0, 30]
+    assert mov["alm_obturador"]["eje"] == pytest.approx([math.cos(math.radians(300)), math.sin(math.radians(300)), 0], abs=1e-5)
+    assert mov["alm_palanca"]["movimiento"] == "giro" and mov["alm_palanca"]["eje"] == [0, 0, -1]
+    assert _mm(mov["alm_palanca"]["pivote"])[:2] == pytest.approx(F["alm_P"], abs=0.01)
+    assert mov["alm_palanca"]["recorrido"] == [0, F["alm_abre"]] == [0, 90]
     assert _mm(mov["mon_aleta"]["pivote"]) == pytest.approx([105, 0, 418], abs=0.01)
     assert _mm(mov["can_balancin"]["pivote"]) == pytest.approx(F["can_piv"], abs=0.01)
+
+
+def test_los_angulos_del_firmware_son_los_recorridos_de_las_piezas(glb, F):
+    """Cada pieza va directo en la estria o en el cuerno de su servo, asi que activo - reposo de
+    firmware.servos (config/parametros.yaml) tiene que ser el recorrido de la pieza impresa. Auditoria del
+    2026-10-25: eran 30/60/120/45 y con eso el escape de tapas se trababa, el de la canaleta pegaba en el carro
+    y el empujador no sacaba el vaso de la banda."""
+    mov = {n["name"]: n["extras"] for n in glb["nodes"] if "movil" in n["extras"]}
+
+    def rec(n):
+        return mov[n]["recorrido"][1] - mov[n]["recorrido"][0]
+
+    fisico = {"desvio": rec("mon_aleta"), "obturador": rec("alm_palanca"), "prensa": rec("tap_pre_leva"),
+              "empujador": rec("tap_emp_manivela"), "canaleta": rec("can_balancin"),
+              # los pernos del cuerno de tapas van a 12,4 mm del eje (tapas_prensa_empujador.scad, tap_pinA/B)
+              "tapas": 2 * math.degrees(math.asin(F["tap_carrera_dedo"] / (2 * 12.4)))}
+    servos = configuracion.cargar_parametros()["firmware"]["servos"]
+    malos = {k: (abs(servos[k]["activo"] - servos[k]["reposo"]), round(v, 2)) for k, v in fisico.items()
+             if abs(abs(servos[k]["activo"] - servos[k]["reposo"]) - v) > 1}
+    assert set(fisico) == set(servos)
+    assert not malos, f"firmware contra pieza impresa (grados): {malos}"

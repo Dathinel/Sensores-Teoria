@@ -344,18 +344,22 @@ COMPONENTES = [
     {"id": "servo_obturador", "categoria": "Actuadores", "nombre": "Servo del obturador del almacén",
      "cantidad": 1, "modelo": "SG90",
      "funcion": "Abre el único agujero de la placa fija (sobre el vaso de llenado) para soltar el lote del "
-                "tubo que el carrusel puso encima; cerrado, el carrusel puede girar sin que se caiga nada.",
+                "tubo que el carrusel puso encima: con una palanca en su estría (90°) corre 30 mm una corredera "
+                "enrasada con el piso. Cerrado, el carrusel puede girar sin que se caiga nada ni quede un escalón.",
      "estado": "simulado", "zona": "almacen"},
     {"id": "servo_tapas", "categoria": "Actuadores", "nombre": "Servo del escape de tapas",
      "cantidad": 1, "modelo": "SG90", "funcion": "Suelta una tapa del tubo vertical sobre el vaso.",
      "estado": "simulado", "zona": "tapa"},
     {"id": "motor_prensa", "categoria": "Actuadores", "nombre": "Servo de la prensa",
-     "cantidad": 1, "modelo": "MG996R (~10 kg·cm) con leva excéntrica de 6,5 mm y resorte",
-     "funcion": "Gira la leva 0 → 180 → 0 grados: el pistón baja 13 mm y asienta la tapa. Con 6,5 mm de "
-                "excentricidad apunta a 60 N: la tapa sella a presión (snap-fit) y pide ~30-50 N, PROVISIONAL "
-                "hasta medirla; 60 N es la más dura con margen x1,2 y el resorte limitador no deja pasar de ahí "
-                "(el MG996R la sostiene con margen >x2 a 6 V; ver docs/peso.md). Al ser servo, sabe en qué ángulo quedó: no hace falta sensor de "
-                "posición ni puente H.",
+     "cantidad": 1, "modelo": "MG996R (~10 kg·cm) con leva excéntrica de 7 mm (sin resorte limitador)",
+     "funcion": "Gira la leva 0 → 180 → 0 grados: el pistón baja 14 mm y el plato aprieta 0,5 mm el ala de la "
+                "tapa asentada. No hay resorte limitador (la maqueta impresa no lo lleva): la fuerza la da ese "
+                "apriete contra la rigidez del lazo de la prensa (estimada ~0,05 mm/N con la placa con costillas "
+                "y remachada a la columna: ~10 N). La tapa sella a presión (snap-fit) y pide ~30-50 N, PROVISIONAL: "
+                "MEDIR la tapa y el lazo con una balanza y pegar bajo el plato los suplementos impresos que hagan "
+                "falta (0,5 y 1,0 mm, apilables: ~40 N con los dos). El MG996R sostiene hasta 60 N (la más dura x1,2) con margen >x2 "
+                "a 6 V (docs/peso.md). Resorte de retorno de compresión Ø15, libre ≥ 38 mm, a bloque ≤ 15 mm. "
+                "Al ser servo, sabe en qué ángulo quedó: no hace falta sensor de posición ni puente H.",
      "estado": "simulado", "zona": "tapa"},
     {"id": "servo_empujador", "categoria": "Actuadores", "nombre": "Servo del empujador de descarga",
      "cantidad": 1, "modelo": "MG996R (el vaso lleno pesa más)",
@@ -393,14 +397,15 @@ COMPONENTES = [
      "estado": "solo visual", "zona": "control"},
     {"id": "fusibles", "categoria": "Control y potencia", "nombre": "Fusible principal",
      "cantidad": 1, "modelo": "Portafusible de 1 via con fusible de 5 A lento, en el +12 V a la salida de la fuente",
-     "funcion": "Protege todo el +12 V (antes 4 fusibles, uno por rama): el pico simulado del ciclo es ~3,3 A y "
-                "el de los peores casos ~4,2 A; un corto o un motor trabado de forma sostenida lo abre.",
+     "funcion": "Protege todo el +12 V (antes 4 fusibles, uno por rama): el pico simulado del ciclo es ~2,9 A y "
+                "el de los peores casos ~3,9 A; un corto o un motor trabado de forma sostenida lo abre.",
      "estado": "solo visual", "zona": "control"},
     {"id": "empalmes", "categoria": "Control y potencia", "nombre": "Empalmes soldados",
-     "cantidad": 1, "modelo": "Empalmes con termoencogible (hasta 5 hilos c/u), 2 diodos BAT85, 2 pull-ups de 10 kOhm y 2 de 2,2 kOhm",
+     "cantidad": 1, "modelo": "Empalmes con termoencogible (hasta 5 hilos c/u), 2 diodos BAT85, 2 pull-ups de 10 kOhm y 2 de 2,2 kOhm, y la resistencia de 3,3 Ohm 1 W del panel de luz",
      "funcion": "Reparten +12 V, +5 V y la tierra en estrella (en lugar de la bornera X2), pasan las salidas NPN "
-                "de los M18 al ESP32 (en lugar de los optoacopladores) y juntan el bus I2C 1 de los dos VL53L0X "
-                "(en lugar de la placa de reparto).", "estado": "efecto simulado", "zona": "control"},
+                "de los M18 al ESP32 (en lugar de los optoacopladores), juntan el bus I2C 1 de los dos VL53L0X "
+                "(en lugar de la placa de reparto) y bajan la tira del panel de luz a <= 1,5 W (la caja de luz es "
+                "de PLA: docs/electrica.md).", "estado": "efecto simulado", "zona": "control"},
     {"id": "cable_red", "categoria": "Control y potencia", "nombre": "Cable de poder de la fuente",
      "cantidad": 1, "modelo": "Cable de 3 hilos con enchufe (1,5 m), a una multitoma con interruptor",
      "funcion": "Entrada de 110 V a la fuente (sin conector IEC): el interruptor de la multitoma es el general. "
@@ -421,14 +426,14 @@ COMPONENTES = [
      "zona": "control"},
     # ---------------------------------------------------------------- estructura
     {"id": "cinta_monedas", "categoria": "Estructura", "nombre": "Cinta de monedas y su mesa",
-     "cantidad": 1, "modelo": "Banda negra mate de 55 mm, separadores cada 40 mm, mesa de 43 cm (PROVISIONAL)",
-     "funcion": "Lleva cada elemento por las 7 estaciones.", "estado": "simulado", "zona": "monedas"},
+     "cantidad": 1, "modelo": "Banda negra mate de 55 mm, 15 separadores a L/15 (~41 mm: la banda cerrada mide ~615), mesa de 43 cm (PROVISIONAL)",
+     "funcion": "Lleva cada elemento por las 4 estaciones.", "estado": "simulado", "zona": "monedas"},
     {"id": "cinta_vasos", "categoria": "Estructura", "nombre": "Cinta de vasos y su mesa",
-     "cantidad": 1, "modelo": "Banda de 75 mm, casillas de 80 mm, mesa de 10 cm (PROVISIONAL)",
+     "cantidad": 1, "modelo": "Banda de 75 mm, 11 separadores a L/11 (~79,6 mm: la banda cerrada mide ~875), mesa de 10 cm (PROVISIONAL)",
      "funcion": "Lleva los vasos por verificación, llenado, tapa, prensa y descarga.", "estado": "simulado",
      "zona": "vasos"},
     {"id": "canaletas_rechazo", "categoria": "Estructura", "nombre": "Bandeja de rechazo de monedas",
-     "cantidad": 1, "modelo": "Impresión 3D / acrílico",
+     "cantidad": 1, "modelo": "Impresa en la maqueta (mon_bandeja)",
      "funcion": "La única salida de rechazo (grupo, 2026-09-25: filtro total): recibe desde la compuerta de "
                 "desvío todo lo que no es una moneda aceptada. La causa de cada rechazo queda registrada.",
      "estado": "simulado", "zona": "monedas"},
@@ -452,14 +457,14 @@ COMPONENTES = [
                 "nada queda colgando en el aire.",
      "estado": "solo visual", "zona": "vasos"},
     {"id": "panel_luz", "categoria": "Estructura", "nombre": "Panel de luz de la cámara de vasos",
-     "cantidad": 1, "modelo": "Panel LED difuso 5 V (o tira LED detrás de acrílico opalino), ~33 x 11 cm",
+     "cantidad": 1, "modelo": "Tira LED 5 V en una caja de luz de PLA blanco (su frente de 1,6 mm es el difusor), ~33 x 11 cm",
      "funcion": "Contraluz detrás de verificación, llenado, tapa y prensa: la cámara de vasos ve siluetas "
                 "nítidas y las monedas en el fondo del vaso translúcido. También cierra por detrás la zona de "
                 "tapa y prensa (una mano solo entra por el lado del operador).",
      "estado": "solo visual", "zona": "vasos"},
     {"id": "canal_e7", "categoria": "Estructura", "nombre": "Embudo y canales de la descarga",
-     "cantidad": 1, "modelo": "Embudo y dos canales cortos impresos (~60° de inclinación)",
-     "funcion": "Recibe la moneda que cae por el extremo de la cinta; la compuerta de desvío la manda por un "
+     "cantidad": 1, "modelo": "Embudo y dos canales cortos impresos (al almacén ~57°, al rechazo ~73°)",
+     "funcion": "Recibe la moneda que cae por el extremo de la cinta; la aleta de desvío (±45°, dentro del embudo) la manda por un "
                 "canal corto a la boca del tubo del carrusel o por el otro a la bandeja de rechazo.",
      "estado": "simulado", "zona": "monedas"},
     {"id": "canaleta_entrega", "categoria": "Estructura", "nombre": "Canaleta de entrega",

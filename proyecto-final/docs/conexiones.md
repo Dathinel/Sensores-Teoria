@@ -268,11 +268,11 @@ Convenciones: placas GVS con el jumper en 3,3 V (**G** = GND, **V** = 3,3 V, **S
 | <span style="color:#d23a2a">■</span> | Servo escape canaleta (SG90) · **CABLE** | PCA9685 (servos) · **V+5** | 6 V |
 | <span style="color:#6b3a1f">■</span> | Servo escape canaleta (SG90) · **CABLE** | PCA9685 (servos) · **GND5** | GND |
 
-### Panel de luz → empalmes de 5 V
+### Panel de luz → empalmes de 5 V (resistencia de 3,3 Ω en línea)
 
 | Hilo | De | A | Función |
 |---|---|---|---|
-| <span style="color:#d23a2a">■</span> | Panel de luz 5 V · **+5V** | Empalme +5 V · **J** | +5 V |
+| <span style="color:#d23a2a">■</span> | Panel de luz 5 V · **+5V** | Empalme +5 V · **J** | +5 V por la resistencia de 3,3 Ω 1 W (en línea) |
 | <span style="color:#1a1a1a">■</span> | Panel de luz 5 V · **GND** | Empalme GND de 5 V · **J** | GND |
 
 ### Anillo de luz → empalmes de 5 V

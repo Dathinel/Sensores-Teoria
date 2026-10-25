@@ -1,0 +1,184 @@
+[
+ {
+  "tanda": "alm_1",
+  "problemas": [],
+  "tiempo": "1h 16m 51s",
+  "gramos": 34.72,
+  "retracciones_capa1": 94
+ },
+ {
+  "tanda": "alm_2",
+  "problemas": [],
+  "tiempo": "2h 38m 12s",
+  "gramos": 73.87,
+  "retracciones_capa1": 135
+ },
+ {
+  "tanda": "alm_3",
+  "problemas": [],
+  "tiempo": "3h 1m 57s",
+  "gramos": 84.51,
+  "retracciones_capa1": 90
+ },
+ {
+  "tanda": "can_1",
+  "problemas": [],
+  "tiempo": "5h 11m 24s",
+  "gramos": 127.5,
+  "retracciones_capa1": 37
+ },
+ {
+  "tanda": "can_2",
+  "problemas": [],
+  "tiempo": "2h 16m 10s",
+  "gramos": 80.54,
+  "retracciones_capa1": 28
+ },
+ {
+  "tanda": "can_3",
+  "problemas": [],
+  "tiempo": "12m 24s",
+  "gramos": 5.44,
+  "retracciones_capa1": 1
+ },
+ {
+  "tanda": "est_nodos_1",
+  "problemas": [],
+  "tiempo": "7h 9m 26s",
+  "gramos": 229.75,
+  "retracciones_capa1": 56
+ },
+ {
+  "tanda": "est_nodos_2",
+  "problemas": [],
+  "tiempo": "5h 19m 4s",
+  "gramos": 171.69,
+  "retracciones_capa1": 41
+ },
+ {
+  "tanda": "est_tubos_1",
+  "problemas": [],
+  "tiempo": "5h 50m 53s",
+  "gramos": 187.59,
+  "retracciones_capa1": 39
+ },
+ {
+  "tanda": "est_tubos_2",
+  "problemas": [],
+  "tiempo": "7h 5m 51s",
+  "gramos": 236.54,
+  "retracciones_capa1": 39
+ },
+ {
+  "tanda": "est_tubos_3",
+  "problemas": [],
+  "tiempo": "6h 4m 36s",
+  "gramos": 190.77,
+  "retracciones_capa1": 44
+ },
+ {
+  "tanda": "est_tubos_4",
+  "problemas": [],
+  "tiempo": "4h 42m 14s",
+  "gramos": 153.2,
+  "retracciones_capa1": 27
+ },
+ {
+  "tanda": "est_uniones_1",
+  "problemas": [],
+  "tiempo": "3h 57m 27s",
+  "gramos": 122.01,
+  "retracciones_capa1": 31
+ },
+ {
+  "tanda": "mon_1",
+  "problemas": [],
+  "tiempo": "3h 17m 16s",
+  "gramos": 92.89,
+  "retracciones_capa1": 34
+ },
+ {
+  "tanda": "mon_2",
+  "problemas": [],
+  "tiempo": "4h 23m 7s",
+  "gramos": 105.05,
+  "retracciones_capa1": 95
+ },
+ {
+  "tanda": "mon_3",
+  "problemas": [],
+  "tiempo": "5h 6m 50s",
+  "gramos": 114.82,
+  "retracciones_capa1": 30
+ },
+ {
+  "tanda": "rem_1",
+  "problemas": [],
+  "tiempo": "4h 24m 57s",
+  "gramos": 30.59,
+  "retracciones_capa1": 597
+ },
+ {
+  "tanda": "rem_2",
+  "problemas": [],
+  "tiempo": "1h 31m 59s",
+  "gramos": 14.64,
+  "retracciones_capa1": 131
+ },
+ {
+  "tanda": "tap_1",
+  "problemas": [],
+  "tiempo": "2h 13m 8s",
+  "gramos": 80.12,
+  "retracciones_capa1": 31
+ },
+ {
+  "tanda": "tap_2",
+  "problemas": [],
+  "tiempo": "4h 20m 30s",
+  "gramos": 111.7,
+  "retracciones_capa1": 81
+ },
+ {
+  "tanda": "tap_3",
+  "problemas": [],
+  "tiempo": "2h 1m 55s",
+  "gramos": 52.2,
+  "retracciones_capa1": 44
+ },
+ {
+  "tanda": "tap_4",
+  "problemas": [],
+  "tiempo": "2h 1m 43s",
+  "gramos": 65.71,
+  "retracciones_capa1": 25
+ },
+ {
+  "tanda": "vas_1",
+  "problemas": [],
+  "tiempo": "6h 39m 38s",
+  "gramos": 220.87,
+  "retracciones_capa1": 23
+ },
+ {
+  "tanda": "vas_2",
+  "problemas": [],
+  "tiempo": "4h 7m 58s",
+  "gramos": 137.3,
+  "retracciones_capa1": 64
+ },
+ {
+  "tanda": "vas_3",
+  "problemas": [],
+  "tiempo": "4h 13m 46s",
+  "gramos": 143.55,
+  "retracciones_capa1": 38
+ },
+ {
+  "tanda": "vas_4",
+  "problemas": [],
+  "tiempo": "2h 15m 0s",
+  "gramos": 78.3,
+  "retracciones_capa1": 1
+ }
+]

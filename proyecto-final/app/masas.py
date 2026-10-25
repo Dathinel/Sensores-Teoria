@@ -214,7 +214,7 @@ def comprobaciones(datos: dict | None = None, precios: dict | None = None, param
     # justo cuando la tapa asienta) sen(θ) → 0 y la misma fuerza pide mucho menos par.
     prensa = []
     for etiqueta, f in (("tapa (máx. provisional)", max(mg["fuerza_tapa_n"])),
-                        ("objetivo de la prensa (lo limita el resorte)", mg["fuerza_prensa_objetivo_n"])):
+                        ("objetivo de la prensa (tope de diseño)", mg["fuerza_prensa_objetivo_n"])):
         t = (f + m_piston * g) * e
         prensa.append({"caso": etiqueta, "fuerza_n": f, "par_nm": t, "margen_6v": mg["par_bloqueo_nm_6v"] / t,
                        "margen_4v8": mg["par_bloqueo_nm_4v8"] / t})
@@ -379,8 +379,13 @@ def generar_md() -> str:
     obj = co["prensa"][1]
     L += ["", f"La tapa sella a presión (snap-fit: el reborde de la tapa salta sobre el labio del vaso), lo que pide "
           f"{mg['fuerza_tapa_n'][0]}-{mg['fuerza_tapa_n'][1]} N (PROVISIONAL hasta medirla); pasado el salto, apretar "
-          f"más solo deforma el vaso. Por eso la prensa apunta a **{obj['fuerza_n']} N** (la tapa más dura x1,2) y el "
-          f"resorte limitador del plato se elige para no pasar de ahí al final de la carrera. A 90° de la leva (el "
+          f"más solo deforma el vaso. Por eso la prensa apunta a **{obj['fuerza_n']} N** (la tapa más dura x1,2) como "
+          f"tope de diseño para el servo. La maqueta impresa no lleva resorte limitador: la fuerza la da el apriete "
+          f"de 0,5 mm al final de la carrera (leva de {_num(mg['excentricidad_m'] * 1000, 1)} mm, el pistón baja {_num(2 * mg['excentricidad_m'] * 1000, 0)} mm) "
+          f"más los suplementos impresos de 0,5 y 1,0 mm que se pegan bajo el plato, contra la rigidez del lazo de "
+          f"la prensa (estimada ~0,05 mm/N con la placa con costillas y remachada a la columna: ~10 N con 0,5 mm y "
+          f"~40 N con los dos suplementos): hay que medir la tapa y el lazo con una balanza y elegir el suplemento. "
+          f"A 90° de la leva (el "
           f"peor punto) eso pide {_num(obj['par_nm'], 2)} N·m, el {obj['par_nm'] * 100 / mg['par_bloqueo_nm_6v']:.0f} % "
           "del bloqueo a 6 V. (Antes el catálogo decía \"≥150 N\": el MG996R con esta leva no lo sostiene en toda "
           "la carrera y la tapa no lo necesita.)", "",

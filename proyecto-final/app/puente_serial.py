@@ -71,15 +71,18 @@ class HardwareEmulado:
 
     def carrusel_a(self, tubo, lugar="carga"):
         # El giro tarda lo que en la placa (2026-09-28): medio paso cada 2 ms,
-        # 4096 medios pasos por vuelta, por el camino corto (hasta media vuelta =
-        # 4,1 s). El agujero esta 210 grados despues de la carga.
+        # 4096 medios pasos por vuelta, por el camino corto, mas la rampa de
+        # arranque y parada (2026-10-25: 127 ms en cualquier giro de 30 grados o
+        # mas, que son todos; media vuelta = tiempos_ms.carrusel_giro = 4223 ms).
+        # El agujero esta 210 grados despues de la carga.
         def grados(k, l):
             # Angulo del disco (como control/carrusel.py y firmware/fijo/hw.py): el
             # tubo k llega a la carga girando -60 k; al agujero, 210 grados mas.
             return (-k * 60 + (210 if l == "agujero" else 0)) % 360
 
         dif = abs((grados(tubo, lugar) - grados(self.carrusel, self.carrusel_lugar) + 180) % 360 - 180)
-        self.carrusel_fin = self.t_ms + round(dif / 360 * 4096) * 2
+        pasos = round(dif / 360 * 4096)
+        self.carrusel_fin = self.t_ms + (pasos * 2 + 127 if pasos else 0)
         self.carrusel = tubo
         self.carrusel_lugar = lugar
 

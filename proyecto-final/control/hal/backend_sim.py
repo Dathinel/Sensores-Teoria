@@ -8,7 +8,7 @@ para la logica de control pura -- `linea.py`, `embalaje.py`, `reglas.py`,
 `registro.py`, `monedas.py` -- no para el backend que la conecta con un
 mundo concreto).
 
-`EstacionBackendSim` agrupa los sensores y actuadores de las 7 estaciones
+`EstacionBackendSim` agrupa los sensores y actuadores de las 4 estaciones
 de la cinta de monedas y las 5 de la cinta de vasos sobre una escena ya
 construida. Quien la usa es la planta (`sim/planta.py`), que la
 conecta con `control/linea.py` y `control/embalaje.py` sin que ninguno de

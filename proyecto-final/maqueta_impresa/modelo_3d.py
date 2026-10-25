@@ -1,12 +1,12 @@
 """Maqueta impresa en 3D para el visor: app/visor3d/maqueta_impresa.glb.
 
-Un nodo por pieza impresa (las 170 de maqueta.scad, modo "lista"), EN SU LUGAR del ensamble: metros y el
+Un nodo por pieza impresa (todas las de maqueta.scad, modo "lista"), EN SU LUGAR del ensamble: metros y el
 marco del visor (sim (x, y, z) -> glTF/three (x, z, -y)). Las partes que se mueven son nodos separados con
 `extras.movil` = de que conjunto movil son y `extras.pivote` / `extras.eje` / `extras.recorrido` (marco de la
 simulacion, metros y grados): el visor las cuelga del objeto que ya anima (carrusel, obturador, aleta E4,
 dedos de tapas, leva y piston de la prensa, empujador, escape de la canaleta, tacos de la banda de vasos).
 Lo comprado (motores, servos, bandas, sensores...) NO va: lo sigue dibujando el visor.
-Los 310 remaches impresos van en su lugar como un nodo por subsistema (`rem_<sub>`, extras.tipo "remache", rojo
+Los remaches impresos (los de REM_TODOS) van en su lugar como un nodo por subsistema (`rem_<sub>`, extras.tipo "remache", rojo
 #d1001f como en los manuales): el visor los muestra u oculta con la casilla "Remaches" (usuario, 2026-10-24).
 
 En las extras de la escena va `funcional_mm`: las medidas funcionales tal como las define cada .scad
@@ -18,7 +18,6 @@ import json
 import re
 import struct
 import subprocess
-import sys
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -48,7 +47,7 @@ ECO = {
     "vas_bandeja_c": "vas_bandeja_c", "vas_recorte_sep": "vas_recorte_sep", "vas_sep": "vas_sep",
     "alm_C": "alm_C", "alm_Rt": "alm_Rt", "alm_angs": "alm_angs", "alm_H": "alm_H", "alm_L": "alm_L",
     "alm_r_int": "alm_r_int", "alm_z_fondo": "alm_z_fondo", "alm_z_boca": "alm_z_boca", "alm_hall": "alm_hall",
-    "alm_P": "alm_P", "alm_abre": "alm_abre", "alm_z_aleta": "alm_z_aleta", "alm_byj_c": "alm_byj_c",
+    "alm_P": "alm_P", "alm_abre": "alm_abre", "alm_cie_s": "alm_cie_s", "alm_byj_c": "alm_byj_c",
     "alm_emb_z0": "alm_emb_z0", "alm_tolva_z_r": "[[230, alm_tol_r(230)], [262, alm_tol_r(262)]]",
     "alm_sg": "[alm_P[0], alm_P[1], alm_z_sg, alm_v]",
     "tap_tubo_c": "tap_tubo_c", "tap_z_cab": "tap_z_cab", "tap_pre_c": "tap_pre_c", "tap_z_plato": "tap_z_plato",
@@ -62,7 +61,7 @@ ECO = {
 
 def leer_eco():
     """Valores de ECO evaluados por OpenSCAD con todo maqueta.scad incluido (nada se copia a mano)."""
-    with tempfile.TemporaryDirectory() as t:
+    with tempfile.TemporaryDirectory(dir=R.CACHE) as t:       # en C: OpenSCAD daba avisos falsos (como revisar.scad)
         scad, eco = Path(t) / "eco.scad", Path(t) / "eco.echo"
         scad.write_text(f'include <{(AQUI / "maqueta.scad").as_posix()}>\n'
                         + "".join(f"echo({k} = {v});\n" for k, v in ECO.items()))
@@ -91,7 +90,7 @@ def stl_remaches(sub, lista, tmp):
     return stl
 
 
-def moviles(F):
+def moviles(F, piezas):
     """Cada parte que se mueve: a que objeto del visor sigue y su movimiento (marco sim, m y grados)."""
     C, P = F["alm_C"], F["alm_P"]
     x_emp, ys_emp = F["tap_emp"][0], F["tap_emp"][1]
@@ -100,8 +99,10 @@ def moviles(F):
     d = {
         "alm_disco": ("carrusel", "giro", [C[0], C[1], 0], [0, 0, 1], [0, 360]),
         "alm_tambor": ("carrusel", "giro", [C[0], C[1], 0], [0, 0, 1], [0, 360]),
-        # gira en horizontal sobre el eje del SG90 (antes, en el visor, bajaba)
-        "alm_obturador": ("obturador", "giro", [P[0], P[1], 0], [0, 0, 1], [0, F["alm_abre"]]),
+        # obturador corredera (2026-10-25): la corredera corre alm_cie_s mm hacia 300 grados (radial desde el agujero) y
+        # la palanca del SG90 gira alm_abre grados (horario visto desde arriba) sobre su eje
+        "alm_obturador": ("obturador", "lineal", [0, 0, 0], [0.5, -0.8660254, 0], [0, F["alm_cie_s"]]),
+        "alm_palanca": ("obturador", "giro", [P[0], P[1], 0], [0, 0, -1], [0, F["alm_abre"]]),
         "mon_aleta": ("desvio", "giro", F["mon_piv"], [1, 0, 0], [-F["mon_reposo"], F["mon_reposo"]]),
         "tap_dedo_a": ("dedo_a", "lineal", [0, 0, 0], [0, -1, 0], [0, F["tap_carrera_dedo"]]),
         "tap_dedo_b": ("dedo_b", "lineal", [0, 0, 0], [0, 1, 0], [0, F["tap_carrera_dedo"]]),
@@ -115,9 +116,12 @@ def moviles(F):
         "tap_emp_biela": ("biela", "biela", [x_emp, ys_emp, 0], [0, 0, -1], [0, 180]),
         "can_balancin": ("escape", "giro", F["can_piv"], eje_escape, [-np.degrees(np.arcsin(7 / 38)), np.degrees(np.arcsin(7 / 38))]),
     }
-    for i in range(1, 8):
-        for m in "ab":
-            d[f"vas_taco_{i}_{m}"] = ("banda_vasos", "banda", [0, 0, 0], [1, 0, 0], [0, F["vas_paso"]])
+    # Tacos de la banda de vasos: los que haya en cinta_vasos.scad (11 pares desde 2026-10-25, uno por separador a L/11;
+    # los del ramal de abajo corren hacia -x: el visor los cuelga de su separador de abajo). El paso de la animacion
+    # queda en vas_paso (80): la casilla real mide 79,6 (diferencia < 1,2 mm por casilla, la corrige la camara).
+    for n in piezas:
+        if n.startswith("vas_taco_"):
+            d[n] = ("banda_vasos", "banda", [0, 0, 0], [1, 0, 0], [0, F["vas_paso"]])
     out = {}
     for n, (sigue, tipo, piv, eje, rec) in d.items():
         out[n] = {"movil": sigue, "movimiento": tipo, "pivote": mm_a_m(piv) if tipo != "lineal" else [0, 0, 0],
@@ -211,16 +215,14 @@ def vertices_mm(ruta, nombre):
 
 def main():
     piezas, rem, _ = R.listas()
-    faltan = [n for n in piezas if not (ENS / f"{n}.stl").exists()]
-    if faltan:
-        raise SystemExit(f"faltan {len(faltan)} STL en _cache/ens ({faltan[:5]}...): correr antes python revisar.py")
-    viejo = max(f.stat().st_mtime for f in AQUI.glob("*.scad"))
-    viejas = [n for n in piezas if (ENS / f"{n}.stl").stat().st_mtime < viejo]
+    # el visor tiene que ser lo fisico: con un STL que falta o que se dibujo con otros .scad no se escribe nada
+    # (2026-10-25: antes solo avisaba, por fecha, y seguia)
+    viejas = [r.stem for r in R.viejos([ENS / f"{n}.stl" for n in piezas])]
     if viejas:
-        print(f"AVISO: {len(viejas)} STL son mas viejos que el ultimo .scad editado ({viejas[:4]}...): "
-              "correr python revisar.py si cambio algo", file=sys.stderr)
+        raise SystemExit(f"{len(viejas)} STL de _cache/ens faltan o se dibujaron con otros .scad ({viejas[:5]}...): "
+                         "correr antes python revisar.py")
     F = leer_eco()
-    mov = moviles(F)
+    mov = moviles(F, piezas)
     objetos, cajas = [], {}
     for n in piezas:
         v, i, tri = malla(ENS / f"{n}.stl")
@@ -230,7 +232,7 @@ def main():
         p = tri.reshape(-1, 3)
         cajas[n] = [np.round(p.min(0), 2).tolist(), np.round(p.max(0), 2).tolist()]
     assert sum(F["n_remaches"]) == len(rem), f"REM_TODOS tiene {len(rem)} remaches y las listas suman {sum(F['n_remaches'])}"
-    with tempfile.TemporaryDirectory() as t, ThreadPoolExecutor(R.HILOS) as ej:
+    with tempfile.TemporaryDirectory(dir=R.CACHE) as t, ThreadPoolExecutor(R.HILOS) as ej:
         stls = list(ej.map(lambda s: stl_remaches(s[0], s[1], t), REM_SUB.items()))
         for sub, n_rem, stl in zip(REM_SUB, F["n_remaches"], stls):
             v, i, _ = malla(stl)

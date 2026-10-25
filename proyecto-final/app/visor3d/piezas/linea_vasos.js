@@ -9,8 +9,9 @@
 //
 // De donde salen las medidas:
 // - config/parametros.yaml (vasos): vaso de 62 mm x 90 mm (PROVISIONAL), pestana del reborde de
-//   8 mm (boca de 78 mm), casillas de 80 mm, separador de 15 mm; prensa con leva de 6,5 mm de
-//   excentricidad en un MG996R (carrera 13 mm); tapa que cae ~13 mm desde el tubo.
+//   8 mm (boca de 78 mm), casillas de 80 mm, separador de 15 mm; tapa que cae ~13 mm desde el tubo.
+// - maqueta_impresa/tapas_prensa_empujador.scad: prensa con leva de 7 mm de excentricidad en un
+//   MG996R (carrera 14 mm, tap_exc), dedos del escape de tapas y sus ranuras.
 // - sim/geometria.py y visor.js: posiciones de estaciones, tubo, prensa, empujador y sensores.
 // - Servos y NEMA17: piezas/electronica.js (fichas TowerPro SG90/MG996R, 17HS4401).
 // - Lo que no esta en ninguna parte (espesores de pared, tapon de la tapa, largo de la biela,
@@ -189,7 +190,9 @@ export function crearTapa(o = {}) {
 export function crearTacoCasilla(o = {}) {
   const paso = (o.paso ?? 0.08) / MM, R = (o.rBase ?? 0.02666) / MM + 0.8;
   const w = Math.min(o.medioAncho ?? 22, R - 2), alto = o.alto ?? 10, c = paso / 2;
-  const xr = (y) => c - Math.sqrt(R * R - y * y);
+  // Del lado -y (la canaleta) la cara es plana: el empujador saca el vaso sin que el arco lo trabe
+  // (cinta_vasos.scad, vas_taco_local).
+  const xr = (y) => c - (y < 0 ? R : Math.sqrt(R * R - y * y));
   const N = 14, pts = [];
   for (let i = 0; i <= N; i++) { const y = w - 2 * w * i / N; pts.push([xr(y), y]); }
   for (let i = 0; i <= N; i++) { const y = -w + 2 * w * i / N; pts.push([-xr(y), y]); }
@@ -229,7 +232,8 @@ export function crearTuboTapas(o = {}) {
   tubo.name = 'tubo';
   g.add(tubo);
   const xDedo = 12, yRanura = -Math.sqrt(rCab * rCab - xDedo * xDedo);
-  for (const [x, z0, z1] of [[xDedo, 3, 7], [-xDedo, 9.6, 13]]) cjL(g, x - 3.5, x + 3.5, yRanura - 0.6, yRanura + 0.4, z0, z1, 0x0b0d10);
+  // Ranuras con 0,2 de juego sobre cada dedo (tapas_prensa_empujador.scad: A z 228,3-231,7; B 235,3-237,3).
+  for (const [x, z0, z1] of [[xDedo, 3.3, 6.7], [-xDedo, 10.3, 12.3]]) cjL(g, x - 3.5, x + 3.5, yRanura - 0.6, yRanura + 0.4, z0, z1, 0x0b0d10);
   // Abrazaderas: la de arriba (aluminio, al colgante) y la del servo (impresa).
   const abrSup = torno(g, [[rEx, H - 8], [rEx + 4, H - 8], [rEx + 4, H], [rEx, H], [rEx, H - 8]], mat(COLOR.aluminio, ALU), 56, 'abrazadera_sup');
   const abrServo = torno(g, [[rEx, 26], [rEx + 4, 26], [rEx + 4, 36], [rEx, 36], [rEx, 26]], matImp(), 56, 'abrazadera_servo');
@@ -278,7 +282,7 @@ export function crearTuboTapas(o = {}) {
     escape.add(d);
     return d;
   };
-  const dedoA = dedo('dedo_a', xDedo, 3.5, 6.5), dedoB = dedo('dedo_b', -xDedo, 10.1, 12.5);
+  const dedoA = dedo('dedo_a', xDedo, 3.5, 6.5), dedoB = dedo('dedo_b', -xDedo, 10.5, 12.1);   // B de 1,6 mm
   g.add(escape);
   const poner = (u) => {
     const a = a0 * (1 - 2 * u);
@@ -300,19 +304,21 @@ export function crearTuboTapas(o = {}) {
 // Placa de montaje de aluminio de 6 mm atornillada a la viga del portico (cara +y de la placa
 // contra la cara -y de la viga). El MG996R pasa por una ventana de la placa y se atornilla, con
 // dos separadores impresos de 17 mm, con el eje hacia -y: su cuerno de disco lleva la LEVA
-// (disco de Ø44 x 8 mm, excentricidad 6,5 mm). Debajo, el piston: rodillo seguidor (Ø12) en una
+// (disco de Ø45 x 8 mm, excentricidad 7 mm). Debajo, el piston: rodillo seguidor (Ø12) en una
 // horquilla, vastago de acero Ø8 guiado por un buje impreso con casquillo de bronce, collar,
 // resorte de retorno (entre el buje y el collar: devuelve el piston contra la leva) y, abajo,
-// el plato de aluminio (Ø62) con un resorte LIMITADOR entre el vastago y el plato (un objeto
-// extrano no rompe nada) y una almohadilla de neopreno de 0,5 mm. Con la leva a 0 grados el
-// rodillo toca la leva; a 180 grados el piston bajo 2 x 6,5 = 13 mm y la almohadilla toca la
-// tapa. Todo sale de las mismas cuentas que animan visor.js (piston.position.y).
+// el plato (Ø62). Con la leva a 0 grados el rodillo toca la leva; a 180 grados el piston bajo
+// 2 x 7 = 14 mm y el plato aprieta 0,5 mm el ala de la tapa asentada. SIN resorte limitador ni
+// neopreno (la maqueta impresa no los lleva, tapas_prensa_empujador.scad): la fuerza la da ese
+// apriete contra la rigidez de la estructura (MEDIR con la tapa real). La copa, el resorte y el
+// neopreno que siguen dibujados aqui son del modelo de antes: con la maqueta impresa el visor los
+// saca. Todo sale de las mismas cuentas que animan visor.js (piston.position.y).
 // Origen: eje del piston en la cara de abajo del plato con el piston ARRIBA (z = zPiston de
 // visor.js). opciones (m): exc, zEje (eje del servo sobre el origen), rLeva, rPlato, yPlaca
 // (cara -y de la placa, desde el eje), zPlaca0/zPlaca1 (borde de abajo / arriba de la placa).
 // Nodos: piston (se mueve en z), leva (gira con rotation.z), servo_prensa.
 export function crearPrensaLeva(o = {}) {
-  const exc = (o.exc ?? 0.0065) / MM, zE = (o.zEje ?? 0.1105) / MM, R = (o.rLeva ?? 0.022) / MM;
+  const exc = (o.exc ?? 0.007) / MM, zE = (o.zEje ?? 0.1105) / MM, R = (o.rLeva ?? 0.0225) / MM;
   const rPl = (o.rPlato ?? 0.031) / MM, yPl = (o.yPlaca ?? 0.039) / MM;
   const zP0 = (o.zPlaca0 ?? 0.016) / MM, zP1 = (o.zPlaca1 ?? 0.181) / MM;
   const g = new THREE.Group();
@@ -480,7 +486,7 @@ export function crearEmpujador(o = {}) {
 // Accionamiento de la cinta: NEMA17 directo al rodillo (acople flexible)
 // ==================================================================
 // NEMA17 17HS4401 con el eje a lo ancho de la cinta, en una placa impresa sostenida por 4
-// separadores de 20 mm desde la placa lateral del bastidor; acople flexible de aluminio
+// postes impresos de 33 mm desde la placa lateral del bastidor (en el GLB); acople flexible de aluminio
 // 5 -> 8 mm (Ø19 x 25) entre el eje del motor y el del rodillo, que gira en un rodamiento
 // con brida (KFL08) atornillado a la placa lateral.
 // Origen: eje del rodillo en la cara EXTERIOR de la placa lateral; el motor queda hacia -y.
@@ -488,10 +494,11 @@ export function crearEmpujador(o = {}) {
 export function crearAccionamientoCinta(o = {}) {
   const g = new THREE.Group();
   g.name = 'accionamiento_cinta';
-  // Rodamiento con brida de 2 agujeros.
-  cjL(g, -24, 24, -3, 0, -7, 7, 0x8c939c, METAL);
+  // Rodamiento con brida de 2 agujeros, VERTICAL (cinta_vasos.scad, vas_comprados: brida de 14 x 48 con sus tornillos
+  // en z +-18, los agujeros de vas_lat_s_a; segunda opinion 2026-10-25: antes se dibujaba acostada).
+  cjL(g, -7, 7, -3, 0, -24, 24, 0x8c939c, METAL);
   ci(g, 10, 5, 0x6d737b, 0, -4.5, 0, METAL, 28, 'y');
-  for (const x of [-18, 18]) ci(g, 2.4, 1.6, 0xb8bec6, x, -3.8, 0, METAL, 12, 'y');
+  for (const z of [-18, 18]) ci(g, 2.4, 1.6, 0xb8bec6, 0, -3.8, z, METAL, 12, 'y');
   ci(g, 4, 14, ACERO, 0, -9, 0, METAL, 16, 'y');                                              // eje del rodillo
   // Acople flexible (helicoidal): cuerpo con dos ranuras.
   const acople = new THREE.Group();
@@ -499,14 +506,17 @@ export function crearAccionamientoCinta(o = {}) {
   ci(acople, 9.5, 20, 0xb9c0c9, 0, -17, 0, METAL, 28, 'y');
   for (const y of [-13, -21]) ci(acople, 9.6, 0.8, 0x2b2f36, 0, y, 0, {}, 28, 'y');
   g.add(acople);
-  // Placa del motor (la cara del motor apoya en ella) y separadores a la placa lateral.
-  const yM = -34;
+  // Placa del motor (la cara del motor apoya en ella); los 4 postes que la unen a la placa lateral son impresos (vas_lat_s_a,
+  // en (+-25,4; 96/126): vienen en el GLB de la maqueta; los 4 cilindros de antes en (+-20, +-20) se cruzaban con ellos). La placa va en
+  // y -182,5..-177,5 del mundo (vas_y_placa_motor de cinta_vasos.scad; la cara de afuera de la lateral, el
+  // origen, en -144,5): asi la punta del eje del motor queda en el medio del acople, a 1 mm del eje Ø8.
+  const yM = -38;
   cjL(g, -24, 24, yM, yM + 5, -24, 24, IMPRESO, PLASTICO);
-  for (const [x, z] of [[20, 20], [-20, 20], [20, -20], [-20, -20]]) ci(g, 2.5, -yM - 5, 0xb8bec6, x, (yM + 5) / 2, z, METAL, 10, 'y');
   for (const [x, z] of [[15.5, 15.5], [-15.5, 15.5], [15.5, -15.5], [-15.5, -15.5]]) ci(g, 2.6, 1.6, 0xb8bec6, x, yM + 5.8, z, METAL, 12, 'y');
   const nema = crearNEMA17({ id: o.id ?? 'motor_vasos', idComponente: o.idComponente });
   nema.rotation.x = -Math.PI / 2;                   // eje (+z de la pieza) -> +y
-  nema.position.copy(Pm(0, yM, 0));
+  // Separadores de nailon de 3 mm entre la placa y la cara del motor (cinta_vasos.scad, vas_comprados).
+  nema.position.copy(Pm(0, yM - 3, 0));
   g.add(nema);
   terminar(g, { datos: datos(o) });
   g.userData.nema = nema;

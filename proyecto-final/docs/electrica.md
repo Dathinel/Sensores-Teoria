@@ -45,7 +45,7 @@ flowchart LR
 ## 3. Cómo se simuló
 
 - **Paso de 10 ms.** Un fusible necesita cientos de ms de sobrecorriente para abrir; un regulador reacciona en ~0,1 ms (eso lo cubren los condensadores, sección 7). 10 ms basta para ver cada arranque de servo.
-- **Planta**: las dos cintas a la vez, con los tiempos de `tiempos_ms`: cinta de monedas cada 600 + 1000 ms (desvío en una de cada dos piezas, carrusel un tubo en cada pausa); cinta de vasos: avance, tapa y prensa 0→180→0 (la leva aprieta la tapa 0,2 s contra el resorte: el servo casi trabado), y **después** el empujador (la regla de diseño: prensa y empujador nunca a la vez). En la ventana se suelta además un lote (carrusel media vuelta + obturador) y la canaleta le suelta un vaso al carro.
+- **Planta**: las dos cintas a la vez, con los tiempos de `tiempos_ms`: cinta de monedas cada 600 + 1000 ms (desvío en una de cada dos piezas, carrusel un tubo en cada pausa); cinta de vasos: avance, tapa y prensa 0→180→0 (la leva aprieta la tapa 0,2 s con los 0,5 mm de apriete del final de la carrera, sin resorte limitador: el servo casi trabado), y **después** el empujador (la regla de diseño: prensa y empujador nunca a la vez). En la ventana se suelta además un lote (carrusel media vuelta + obturador) y la canaleta le suelta un vaso al carro.
 - **Servos**: al arrancar piden su corriente de trabado ~30 ms (el motor parte de cero y nada limita la corriente), después la de movimiento y al llegar la de reposo.
 - **Paso a paso**: el A4988 es un *chopper*: saca de 12 V solo la POTENCIA (cobre I²·R = 1,50 W, driver 0,75 W, más el trabajo mecánico), no 1 A por fase. Quieto sigue a corriente plena (el A4988 no la reduce solo).
 - **Carro**: modelo de motor DC (V = I·R + Ke·ω, par = Kt·I·η de la caja) con los datos típicos del TT 1:48 (R ≈ 5,0 Ω, 0,15 A sin carga, Ke ≈ 0,251 V·s/rad en la rueda); PWM necesario D = (I·R + Ke·ω)/V_batería y corriente de batería = D·I. Perfil del recorrido a partir de la pista y de las velocidades del control (arranque con rampa de 1 m/s², rectas a 0,40 m/s, curvas, 3 evasiones con giros sobre su eje, meta, media vuelta, vuelta y entrada de reversa contra el tope con PWM 35 %).
@@ -59,7 +59,7 @@ Cargas usadas (corriente en su propio riel):
 | nema17 | 12 V de la fuente | 190 mA | 300 mA | 450 mA | 17HS4401 (1,5 Ω/fase) a 1 A/fase con A4988: ver modelo del paso a paso |
 | sensor_m18 | 12 V de la fuente | 8 mA | 8 mA | 15 mA | LJC18A3 / LJ18A3-8: consumo sin carga ≤ 10-15 mA |
 | byj48 | 5 V de la caja | 0 | 150 mA | 240 mA | 28BYJ-48 5 V: 50 Ω/bobina → 0,1 A por bobina; medio paso = 1 o 2 bobinas; + LEDs del ULN2003 |
-| panel | 5 V de la caja | 800 mA | 800 mA | 850 mA | Panel LED difuso ~33 × 11 cm: 2 tiras 2835 de 20 LED a ~20 mA (PROVISIONAL) |
+| panel | 5 V de la caja | 364 mA | 364 mA | 381 mA | Panel LED difuso ~33 × 11 cm: 2 tiras 2835 de 20 LED (0,80 A a 5 V) detrás de una resistencia de 3,3 Ω en serie: ≤ 1,5 W en las tiras (PROVISIONAL) |
 | anillo | 5 V de la caja | 350 mA | 350 mA | 400 mA | Anillo de luz difusa 5 V para webcam (PROVISIONAL) |
 | ventilador | 5 V de la caja | 100 mA | 100 mA | 150 mA | Ventilador 4010 5 V: 0,1 A (conexiones.py) |
 | esp32 | 3,3 V del ESP32 fijo | 100 mA | 110 mA | 240 mA | ESP32 con la radio encendida (ESP-NOW escuchando ~100 mA; transmitiendo ~240 mA) |
@@ -87,31 +87,31 @@ Los picos del riel de 6 V son los arranques de los servos y la prensa apretando 
 
 | Riel | Promedio | Pico | Límite | Uso en el pico | Margen |
 |---|---|---|---|---|---|
-| 12 V de la fuente | 1,57 A | 3,35 A | 5,00 A | 67 % | 33 % |
-| 6 V de los servos | 704 mA | 3,92 A | 5,00 A | 78 % | 22 % |
-| 5 V de la caja | 1,36 A | 1,40 A | 3,00 A | 47 % | 53 % |
+| 12 V de la fuente | 1,38 A | 2,93 A | 5,00 A | 59 % | 41 % |
+| 6 V de los servos | 760 mA | 3,47 A | 5,00 A | 69 % | 31 % |
+| 5 V de la caja | 930 mA | 964 mA | 3,00 A | 32 % | 68 % |
 | 3,3 V del ESP32 fijo | 181 mA | 315 mA | 0,60 A | 53 % | 47 % |
 | 5 V del USB del ESP32 fijo | 186 mA | 320 mA | 0,50 A | 64 % | 36 % |
 | Batería 2S del carro | 336 mA | 702 mA | 3,00 A | 23 % | 77 % |
 | 5 V del carro | 238 mA | 372 mA | 1,00 A | 37 % | 63 % |
 
-**Consumo desde la red**: 24,0 W promedio y 50,0 W de pico (fuente al 82 % de rendimiento a esta carga baja, más 1,00 W en vacío) → 0,40 A promedio a 110 V (factor de potencia ~0,55: una fuente de 60 W no tiene PFC). Sin contar el portátil.
+**Consumo desde la red**: 21,2 W promedio y 43,8 W de pico (fuente al 82 % de rendimiento a esta carga baja, más 1,00 W en vacío) → 0,35 A promedio a 110 V (factor de potencia ~0,55: una fuente de 60 W no tiene PFC). Sin contar el portátil.
 
 ### Fusibles
 
-Desde el 2026-10-24 hay **un solo fusible** en el +12 V, a la salida de la fuente (antes eran cuatro, uno por rama). Un fusible lento aguanta su corriente nominal indefinidamente y abre con ~2 veces en segundos: los picos de 30 ms de un servo no lo abren; lo que protege es un corto o un motor trabado de forma sostenida. Se dimensionó con esta simulación: el pico del ciclo es 3,35 A y el peor caso posible del +12 V (el XL4015 en su límite de corriente de 4,5 A más el pico de las otras ramas) es 4,13 A: un fusible lento de **5 A** no abre en ninguno de los dos y queda bajo los 7 A que aguanta el 18 AWG de la caja.
+Desde el 2026-10-24 hay **un solo fusible** en el +12 V, a la salida de la fuente (antes eran cuatro, uno por rama). Un fusible lento aguanta su corriente nominal indefinidamente y abre con ~2 veces en segundos: los picos de 30 ms de un servo no lo abren; lo que protege es un corto o un motor trabado de forma sostenida. Se dimensionó con esta simulación: el pico del ciclo es 2,93 A y el peor caso posible del +12 V (el XL4015 en su límite de corriente de 4,5 A más el pico de las otras ramas) es 3,91 A: un fusible lento de **5 A** no abre en ninguno de los dos y queda bajo los 7 A que aguanta el 18 AWG de la caja.
 
 | Fusible | Protege | Promedio | Pico en el ciclo | Margen en el pico |
 |---|---|---|---|---|
-| Fusible principal (5 A) | todo el +12 V: los dos buck, los drivers y los sensores M18 | 1,57 A | 3,35 A | 33 % |
+| Fusible principal (5 A) | todo el +12 V: los dos buck, los drivers y los sensores M18 | 1,38 A | 2,93 A | 41 % |
 | F carro (3 A) | todo el carro (después del interruptor) | 336 mA | 702 mA | 77 % |
 
 ### Reguladores: rendimiento y calor
 
 | Regulador | Potencia que entrega (prom. / pico) | Rendimiento | Calor (prom. / pico) |
 |---|---|---|---|
-| XL4015 (6 V) | 4,22 / 23,53 W | 88 % | 0,58 / 3,21 W |
-| LM2596 (5 V) | 6,80 / 7,00 W | 82 % | 1,49 / 1,54 W |
+| XL4015 (6 V) | 4,56 / 20,83 W | 88 % | 0,62 / 2,84 W |
+| LM2596 (5 V) | 4,65 / 4,82 W | 82 % | 1,02 / 1,06 W |
 | AMS1117-3.3 (ESP32 fijo) | 0,60 / 1,04 W | 66 % | 0,31 / 0,54 W |
 | 5 V lineal del carro (8,4 V, batería llena) | 1,19 / 1,86 W | 60 % | 0,81 / 1,26 W |
 | 5 V lineal del carro (7,4 V) | 1,19 / 1,86 W | 68 % | 0,57 / 0,89 W |
@@ -120,8 +120,8 @@ Desde el 2026-10-24 hay **un solo fusible** en el +12 V, a la salida de la fuent
 
 | Caso | Riel | Corriente | Límite | Fusible |
 |---|---|---|---|---|
-| Los 6 servos trabados a la vez (sin la regla prensa/empujador) | 6 V | 7,80 A ✘ | 5,00 A | principal: 4,13 A de 5 A (el XL4015 se queda en su límite de 4,5 A y el riel de 6 V se hunde: los servos se frenan, nada se quema) |
-| Prensa trabada + los 4 SG90 trabados en los mismos 30 ms (respetando la regla) | 6 V | 5,30 A ✘ | 5,00 A | principal: 4,13 A de 5 A (igual que arriba: el XL4015 lo corta en 4,5 A unos ms) |
+| Los 6 servos trabados a la vez (sin la regla prensa/empujador) | 6 V | 7,80 A ✘ | 5,00 A | principal: 3,91 A de 5 A (el XL4015 se queda en su límite de 4,5 A y el riel de 6 V se hunde: los servos se frenan, nada se quema) |
+| Prensa trabada + los 4 SG90 trabados en los mismos 30 ms (respetando la regla) | 6 V | 5,30 A ✘ | 5,00 A | principal: 3,91 A de 5 A (igual que arriba: el XL4015 lo corta en 4,5 A unos ms) |
 | Un motor TT trabado con PWM 100 % y batería llena (8,4 V) | TB6612 (por canal) | 1,53 A ✘ | 1,20 A | 2 motores: 3,45 A de 3 A |
 | Un motor TT trabado con PWM limitado a 70 % | TB6612 (por canal) | 1,07 A ✔ | 1,20 A | 2 motores: 1,90 A de 3 A (batería) |
 
@@ -140,26 +140,26 @@ Una fila por hilo de `sim/conexiones.py` (la misma lista que dibuja el visor 3D 
 
 | # | Cable | De → A | Señal | Voltaje | I nom / pico | Cable | Largo | Caída | Protección |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | p_red | `cable_red.L` → `fuente.L` | fase | 110 V AC | 397 mA / 826 mA | 18 AWG (0,021 Ω/m) | 0,40 m | 7 mV | fusible interno de entrada de la fuente (y el de la multitoma, si trae) |
-| 2 | p_red | `cable_red.N` → `fuente.N` | neutro | neutro (≈0 V) | 397 mA / 826 mA | 18 AWG (0,021 Ω/m) | 0,40 m | 7 mV | fusible interno de entrada de la fuente (y el de la multitoma, si trae) |
+| 1 | p_red | `cable_red.L` → `fuente.L` | fase | 110 V AC | 350 mA / 724 mA | 18 AWG (0,021 Ω/m) | 0,40 m | 6 mV | fusible interno de entrada de la fuente (y el de la multitoma, si trae) |
+| 2 | p_red | `cable_red.N` → `fuente.N` | neutro | neutro (≈0 V) | 350 mA / 724 mA | 18 AWG (0,021 Ω/m) | 0,40 m | 6 mV | fusible interno de entrada de la fuente (y el de la multitoma, si trae) |
 | 3 | p_red | `cable_red.PE` → `fuente.PE` | tierra | tierra de protección (PE) | 0 / 0 | 18 AWG (0,021 Ω/m) | 0,40 m | 0 mV | — |
-| 4 | p_12 | `fuente.+V1` → `fusible.IN` | +12 V | +12 V DC | 1,57 A / 3,35 A | 18 AWG (0,021 Ω/m) | 0,40 m | 28 mV | límite de la fuente (5 A), antes del fusible |
-| 5 | p_12 | `fuente.-V1` → `egnd.J` | GND (estrella) | 0 V (retorno) | 1,56 A / 3,33 A | 18 AWG (0,021 Ω/m) | 0,40 m | 28 mV | fusible principal 5 A |
+| 4 | p_12 | `fuente.+V1` → `fusible.IN` | +12 V | +12 V DC | 1,38 A / 2,93 A | 18 AWG (0,021 Ω/m) | 0,40 m | 25 mV | límite de la fuente (5 A), antes del fusible |
+| 5 | p_12 | `fuente.-V1` → `egnd.J` | GND (estrella) | 0 V (retorno) | 1,36 A / 2,91 A | 18 AWG (0,021 Ω/m) | 0,40 m | 24 mV | fusible principal 5 A |
 | 6 | p_12 | `fuente.-V2` → `egnd_s.J` | GND (estrella) | 0 V (retorno) | 16 mA / 16 mA | 18 AWG (0,021 Ω/m) | 0,40 m | 0 mV | fusible principal 5 A |
-| 7 | p_e12 | `fusible.OUT` → `e12.J` | +12 V | +12 V DC | 1,57 A / 3,35 A | 18 AWG (0,021 Ω/m) | 0,40 m | 28 mV | fusible principal 5 A |
+| 7 | p_e12 | `fusible.OUT` → `e12.J` | +12 V | +12 V DC | 1,38 A / 2,93 A | 18 AWG (0,021 Ω/m) | 0,40 m | 25 mV | fusible principal 5 A |
 | 8 | p_e12 | `e12.J` → `e12s.J` | +12 V sensores | +12 V DC | 16 mA / 16 mA | 18 AWG (0,021 Ω/m) | 0,40 m | 0 mV | fusible principal 5 A |
-| 9 | p_buck6 | `e12.J` → `buck6.IN+` | +12 V | +12 V DC | 408 mA / 2,24 A | 18 AWG (0,021 Ω/m) | 0,40 m | 19 mV | fusible principal 5 A |
-| 10 | p_buck6 | `buck6.IN-` → `egnd.J` | GND | 0 V (retorno) | 408 mA / 2,24 A | 18 AWG (0,021 Ω/m) | 0,40 m | 19 mV | fusible principal 5 A |
-| 11 | p_pca | `buck6.OUT+` → `pca9685.T.V+` | +6 V (18 AWG) | +6 V DC | 704 mA / 3,92 A | 18 AWG (0,021 Ω/m) | 0,40 m | 33 mV | límite de corriente del XL4015 (4,5 A) + fusible principal 5 A |
-| 12 | p_pca | `buck6.OUT-` → `pca9685.T.GND` | GND (18 AWG) | 0 V (retorno) | 704 mA / 3,92 A | 18 AWG (0,021 Ω/m) | 0,40 m | 33 mV | límite de corriente del XL4015 (4,5 A) + fusible principal 5 A |
-| 13 | p_buck5 | `e12.J` → `buck5.IN+` | +12 V | +12 V DC | 699 mA / 719 mA | 18 AWG (0,021 Ω/m) | 0,40 m | 6 mV | fusible principal 5 A |
-| 14 | p_buck5 | `buck5.IN-` → `egnd.J` | GND | 0 V (retorno) | 699 mA / 719 mA | 18 AWG (0,021 Ω/m) | 0,40 m | 6 mV | fusible principal 5 A |
-| 15 | p_buck5 | `buck5.OUT+` → `e5.J` | +5 V | +5 V DC | 1,36 A / 1,40 A | 18 AWG (0,021 Ω/m) | 0,40 m | 12 mV | fusible principal 5 A (del lado de 12 V) |
-| 16 | p_buck5 | `buck5.OUT-` → `e5_gnd.J` | GND | 0 V (retorno) | 1,36 A / 1,40 A | 18 AWG (0,021 Ω/m) | 0,40 m | 12 mV | fusible principal 5 A (del lado de 12 V) |
-| 17 | p_drv | `e12.J` → `drivers.VMOT` | +12 V | +12 V DC | 449 mA / 835 mA | 18 AWG (0,021 Ω/m) | 0,40 m | 7 mV | fusible principal 5 A |
-| 18 | p_drv | `drivers.GNDP` → `egnd.J` | GND | 0 V (retorno) | 449 mA / 835 mA | 18 AWG (0,021 Ω/m) | 0,40 m | 7 mV | fusible principal 5 A |
-| 19 | p_uln | `e5.J` → `uln2003.+` | +5 V | +5 V DC | 110 mA / 150 mA | 18 AWG (0,021 Ω/m) | 0,40 m | 1 mV | fusible principal 5 A (del lado de 12 V) |
-| 20 | p_uln | `e5_gnd.J` → `uln2003.−` | GND | 0 V (retorno) | 110 mA / 150 mA | 18 AWG (0,021 Ω/m) | 0,40 m | 1 mV | fusible principal 5 A (del lado de 12 V) |
+| 9 | p_buck6 | `e12.J` → `buck6.IN+` | +12 V | +12 V DC | 440 mA / 1,98 A | 18 AWG (0,021 Ω/m) | 0,40 m | 17 mV | fusible principal 5 A |
+| 10 | p_buck6 | `buck6.IN-` → `egnd.J` | GND | 0 V (retorno) | 440 mA / 1,98 A | 18 AWG (0,021 Ω/m) | 0,40 m | 17 mV | fusible principal 5 A |
+| 11 | p_pca | `buck6.OUT+` → `pca9685.T.V+` | +6 V (18 AWG) | +6 V DC | 760 mA / 3,47 A | 18 AWG (0,021 Ω/m) | 0,40 m | 29 mV | límite de corriente del XL4015 (4,5 A) + fusible principal 5 A |
+| 12 | p_pca | `buck6.OUT-` → `pca9685.T.GND` | GND (18 AWG) | 0 V (retorno) | 760 mA / 3,47 A | 18 AWG (0,021 Ω/m) | 0,40 m | 29 mV | límite de corriente del XL4015 (4,5 A) + fusible principal 5 A |
+| 13 | p_buck5 | `e12.J` → `buck5.IN+` | +12 V | +12 V DC | 481 mA / 498 mA | 18 AWG (0,021 Ω/m) | 0,40 m | 4 mV | fusible principal 5 A |
+| 14 | p_buck5 | `buck5.IN-` → `egnd.J` | GND | 0 V (retorno) | 481 mA / 498 mA | 18 AWG (0,021 Ω/m) | 0,40 m | 4 mV | fusible principal 5 A |
+| 15 | p_buck5 | `buck5.OUT+` → `e5.J` | +5 V | +5 V DC | 930 mA / 964 mA | 18 AWG (0,021 Ω/m) | 0,40 m | 8 mV | fusible principal 5 A (del lado de 12 V) |
+| 16 | p_buck5 | `buck5.OUT-` → `e5_gnd.J` | GND | 0 V (retorno) | 930 mA / 964 mA | 18 AWG (0,021 Ω/m) | 0,40 m | 8 mV | fusible principal 5 A (del lado de 12 V) |
+| 17 | p_drv | `e12.J` → `drivers.VMOT` | +12 V | +12 V DC | 443 mA / 835 mA | 18 AWG (0,021 Ω/m) | 0,40 m | 7 mV | fusible principal 5 A |
+| 18 | p_drv | `drivers.GNDP` → `egnd.J` | GND | 0 V (retorno) | 443 mA / 835 mA | 18 AWG (0,021 Ω/m) | 0,40 m | 7 mV | fusible principal 5 A |
+| 19 | p_uln | `e5.J` → `uln2003.+` | +5 V | +5 V DC | 116 mA / 150 mA | 18 AWG (0,021 Ω/m) | 0,40 m | 1 mV | fusible principal 5 A (del lado de 12 V) |
+| 20 | p_uln | `e5_gnd.J` → `uln2003.−` | GND | 0 V (retorno) | 116 mA / 150 mA | 18 AWG (0,021 Ω/m) | 0,40 m | 1 mV | fusible principal 5 A (del lado de 12 V) |
 | 21 | p_vent | `e5.J` → `ventilador.+5V` | +5 V ventilador | +5 V DC | 100 mA / 100 mA | 18 AWG (0,021 Ω/m) | 0,40 m | 1 mV | fusible principal 5 A (del lado de 12 V) |
 | 22 | p_vent | `e5_gnd.J` → `ventilador.GND` | GND ventilador | 0 V (retorno) | 100 mA / 100 mA | 18 AWG (0,021 Ω/m) | 0,40 m | 1 mV | fusible principal 5 A (del lado de 12 V) |
 | 23 | p_gnd | `esp32_fijo.GND.1` → `egnd.J` | GND común | 0 V (une el GND del USB con el de la fuente) | 5 mA / 20 mA | 18 AWG (0,021 Ω/m) | 0,40 m | 0 mV | — (solo retornos de señal) |
@@ -224,25 +224,25 @@ Una fila por hilo de `sim/conexiones.py` (la misma lista que dibuja el visor 3D 
 | 82 | motor_carrusel | `motor_carrusel.CABLE` → `uln2003.MOTOR` | bobina 4 | 5 V / 0 V (el ULN2003 la lleva a GND) | 50 mA / 100 mA | 26 AWG (0,134 Ω/m) | 0,94 m | 13 mV | fusible principal 5 A |
 | 83 | motor_carrusel | `motor_carrusel.CABLE` → `uln2003.MOTOR` | +5 V común | +5 V común de las bobinas | 150 mA / 240 mA | 26 AWG (0,134 Ω/m) | 0,94 m | 30 mV | fusible principal 5 A |
 | 84 | servo_0 | `servo_desvio.CABLE` → `pca9685.PWM0` | señal PWM | PWM 50 Hz, 0,5-2,5 ms, 0/3,3 V (del PCA9685) | 50 µA / 100 µA | 22 AWG (0,053 Ω/m) | 0,63 m | 0 mV | — |
-| 85 | servo_0 | `servo_desvio.CABLE` → `pca9685.V+0` | 6 V | +6 V DC | 23 mA / 700 mA | 22 AWG (0,053 Ω/m) | 0,63 m | 23 mV | límite del XL4015 (4,5 A) |
-| 86 | servo_0 | `servo_desvio.CABLE` → `pca9685.GND0` | GND | 0 V (retorno) | 23 mA / 700 mA | 22 AWG (0,053 Ω/m) | 0,63 m | 23 mV | límite del XL4015 (4,5 A) |
+| 85 | servo_0 | `servo_desvio.CABLE` → `pca9685.V+0` | 6 V | +6 V DC | 37 mA / 700 mA | 22 AWG (0,053 Ω/m) | 0,63 m | 23 mV | límite del XL4015 (4,5 A) |
+| 86 | servo_0 | `servo_desvio.CABLE` → `pca9685.GND0` | GND | 0 V (retorno) | 37 mA / 700 mA | 22 AWG (0,053 Ω/m) | 0,63 m | 23 mV | límite del XL4015 (4,5 A) |
 | 87 | servo_1 | `servo_obturador.CABLE` → `pca9685.PWM1` | señal PWM | PWM 50 Hz, 0,5-2,5 ms, 0/3,3 V (del PCA9685) | 50 µA / 100 µA | 22 AWG (0,053 Ω/m) | 1,19 m | 0 mV | — |
 | 88 | servo_1 | `servo_obturador.CABLE` → `pca9685.V+1` | 6 V | +6 V DC | 11 mA / 700 mA | 22 AWG (0,053 Ω/m) | 1,19 m | 44 mV | límite del XL4015 (4,5 A) |
 | 89 | servo_1 | `servo_obturador.CABLE` → `pca9685.GND1` | GND | 0 V (retorno) | 11 mA / 700 mA | 22 AWG (0,053 Ω/m) | 1,19 m | 44 mV | límite del XL4015 (4,5 A) |
 | 90 | servo_2 | `servo_tapas.CABLE` → `pca9685.PWM2` | señal PWM | PWM 50 Hz, 0,5-2,5 ms, 0/3,3 V (del PCA9685) | 50 µA / 100 µA | 22 AWG (0,053 Ω/m) | 1,11 m | 0 mV | — |
-| 91 | servo_2 | `servo_tapas.CABLE` → `pca9685.V+2` | 6 V | +6 V DC | 31 mA / 700 mA | 22 AWG (0,053 Ω/m) | 1,11 m | 41 mV | límite del XL4015 (4,5 A) |
-| 92 | servo_2 | `servo_tapas.CABLE` → `pca9685.GND2` | GND | 0 V (retorno) | 31 mA / 700 mA | 22 AWG (0,053 Ω/m) | 1,11 m | 41 mV | límite del XL4015 (4,5 A) |
+| 91 | servo_2 | `servo_tapas.CABLE` → `pca9685.V+2` | 6 V | +6 V DC | 21 mA / 700 mA | 22 AWG (0,053 Ω/m) | 1,11 m | 41 mV | límite del XL4015 (4,5 A) |
+| 92 | servo_2 | `servo_tapas.CABLE` → `pca9685.GND2` | GND | 0 V (retorno) | 21 mA / 700 mA | 22 AWG (0,053 Ω/m) | 1,11 m | 41 mV | límite del XL4015 (4,5 A) |
 | 93 | servo_3 | `servo_prensa.CABLE` → `pca9685.PWM3` | señal PWM | PWM 50 Hz, 0,5-2,5 ms, 0/3,3 V (del PCA9685) | 50 µA / 100 µA | 22 AWG (0,053 Ω/m) | 0,59 m | 0 mV | — |
-| 94 | servo_3 | `servo_prensa.CABLE` → `pca9685.V+3` | 6 V | +6 V DC | 417 mA / 2,50 A | 22 AWG (0,053 Ω/m) | 0,59 m | 78 mV | límite del XL4015 (4,5 A) |
-| 95 | servo_3 | `servo_prensa.CABLE` → `pca9685.GND3` | GND | 0 V (retorno) | 417 mA / 2,50 A | 22 AWG (0,053 Ω/m) | 0,59 m | 78 mV | límite del XL4015 (4,5 A) |
+| 94 | servo_3 | `servo_prensa.CABLE` → `pca9685.V+3` | 6 V | +6 V DC | 397 mA / 2,50 A | 22 AWG (0,053 Ω/m) | 0,59 m | 78 mV | límite del XL4015 (4,5 A) |
+| 95 | servo_3 | `servo_prensa.CABLE` → `pca9685.GND3` | GND | 0 V (retorno) | 397 mA / 2,50 A | 22 AWG (0,053 Ω/m) | 0,59 m | 78 mV | límite del XL4015 (4,5 A) |
 | 96 | servo_4 | `servo_empujador.CABLE` → `pca9685.PWM4` | señal PWM | PWM 50 Hz, 0,5-2,5 ms, 0/3,3 V (del PCA9685) | 50 µA / 100 µA | 22 AWG (0,053 Ω/m) | 0,26 m | 0 mV | — |
-| 97 | servo_4 | `servo_empujador.CABLE` → `pca9685.V+4` | 6 V | +6 V DC | 213 mA / 2,50 A | 22 AWG (0,053 Ω/m) | 0,26 m | 34 mV | límite del XL4015 (4,5 A) |
-| 98 | servo_4 | `servo_empujador.CABLE` → `pca9685.GND4` | GND | 0 V (retorno) | 213 mA / 2,50 A | 22 AWG (0,053 Ω/m) | 0,26 m | 34 mV | límite del XL4015 (4,5 A) |
+| 97 | servo_4 | `servo_empujador.CABLE` → `pca9685.V+4` | 6 V | +6 V DC | 286 mA / 2,50 A | 22 AWG (0,053 Ω/m) | 0,26 m | 34 mV | límite del XL4015 (4,5 A) |
+| 98 | servo_4 | `servo_empujador.CABLE` → `pca9685.GND4` | GND | 0 V (retorno) | 286 mA / 2,50 A | 22 AWG (0,053 Ω/m) | 0,26 m | 34 mV | límite del XL4015 (4,5 A) |
 | 99 | servo_5 | `servo_canaleta.CABLE` → `pca9685.PWM5` | señal PWM | PWM 50 Hz, 0,5-2,5 ms, 0/3,3 V (del PCA9685) | 50 µA / 100 µA | 22 AWG (0,053 Ω/m) | 0,70 m | 0 mV | — |
 | 100 | servo_5 | `servo_canaleta.CABLE` → `pca9685.V+5` | 6 V | +6 V DC | 9 mA / 700 mA | 22 AWG (0,053 Ω/m) | 0,70 m | 26 mV | límite del XL4015 (4,5 A) |
 | 101 | servo_5 | `servo_canaleta.CABLE` → `pca9685.GND5` | GND | 0 V (retorno) | 9 mA / 700 mA | 22 AWG (0,053 Ω/m) | 0,70 m | 26 mV | límite del XL4015 (4,5 A) |
-| 102 | panel_luz | `panel_luz.+5V` → `e5.J` | +5 V | +5 V DC | 800 mA / 800 mA | 22 AWG (0,053 Ω/m) | 0,29 m | 12 mV | fusible principal 5 A (del lado de 12 V) |
-| 103 | panel_luz | `panel_luz.GND` → `e5_gnd.J` | GND | 0 V (retorno) | 800 mA / 800 mA | 22 AWG (0,053 Ω/m) | 0,29 m | 12 mV | fusible principal 5 A (del lado de 12 V) |
+| 102 | panel_luz | `panel_luz.+5V` → `e5.J` | +5 V por la resistencia de 3,3 Ω 1 W (en línea) | +5 V DC (~3,8 V en las tiras, detrás de la resistencia de 3,3 Ω) | 364 mA / 364 mA | 22 AWG (0,053 Ω/m) | 0,29 m | 6 mV | fusible principal 5 A (del lado de 12 V) |
+| 103 | panel_luz | `panel_luz.GND` → `e5_gnd.J` | GND | 0 V (retorno) | 364 mA / 364 mA | 22 AWG (0,053 Ω/m) | 0,29 m | 6 mV | fusible principal 5 A (del lado de 12 V) |
 | 104 | anillo | `anillo.+5V` → `e5.J` | +5 V | +5 V DC | 350 mA / 350 mA | 22 AWG (0,053 Ω/m) | 1,03 m | 19 mV | fusible principal 5 A (del lado de 12 V) |
 | 105 | anillo | `anillo.GND` → `e5_gnd.J` | GND | 0 V (retorno) | 350 mA / 350 mA | 22 AWG (0,053 Ω/m) | 1,03 m | 19 mV | fusible principal 5 A (del lado de 12 V) |
 | 106 | usb_cenital | `cam_cenital.USB` → `pc.USB1` | USB | USB 2.0: VBUS 5 V + datos diferenciales | 250 mA / 350 mA | 28 AWG (0,213 Ω/m) | 1,78 m | 133 mV | limitador del puerto del portátil (0,5 A en USB 2.0) |
@@ -295,10 +295,10 @@ Una fila por hilo de `sim/conexiones.py` (la misma lista que dibuja el visor 3D 
 
 | Carga | Nominal | Caída total en el pico | Le llega | Mínimo que acepta |
 |---|---|---|---|---|
-| Servo prensa (MG996R) → PCA9685 canal 3 | 6,0 V | 222 mV | 5,78 V ✔ | 4,80 V |
-| Servo empujador (MG996R) → PCA9685 canal 4 | 6,0 V | 135 mV | 5,87 V ✔ | 4,80 V |
-| Servo obturador → PCA9685 canal 1 | 6,0 V | 154 mV | 5,85 V ✔ | 4,80 V |
-| Panel de luz → empalmes de 5 V | 5,0 V | 25 mV | 4,98 V ✔ | 4,50 V |
+| Servo prensa (MG996R) → PCA9685 canal 3 | 6,0 V | 215 mV | 5,79 V ✔ | 4,80 V |
+| Servo empujador (MG996R) → PCA9685 canal 4 | 6,0 V | 127 mV | 5,87 V ✔ | 4,80 V |
+| Servo obturador → PCA9685 canal 1 | 6,0 V | 147 mV | 5,85 V ✔ | 4,80 V |
+| Panel de luz → empalmes de 5 V (resistencia de 3,3 Ω en línea) | 5,0 V | 1212 mV | 3,79 V ✔ | 2,80 V |
 | Anillo de luz → empalmes de 5 V | 5,0 V | 38 mV | 4,96 V ✔ | 4,50 V |
 | Capacitivo → su diodo (G35) y empalmes de 12 V | 12,0 V | 2 mV | 12,00 V ✔ | 10,00 V |
 | Hall KY-003 → ESP32 G39 | 3,3 V | 1 mV | 3,30 V ✔ | 3,00 V |
@@ -317,7 +317,7 @@ Una fila por hilo de `sim/conexiones.py` (la misma lista que dibuja el visor 3D 
 | 0,068 Ω | **0,544 V** |
 | 0,100 Ω | **0,800 V** |
 
-Se mide con el multímetro entre el potenciómetro del módulo y GND, con el driver alimentado y sin pasos. 1 A (el motor admite 1,7 A) deja el motor tibio (1,5 W de cobre) y al A4988 sin disipador forzado.
+Se mide con el multímetro entre el potenciómetro del módulo y GND, con el driver alimentado y sin pasos. 1 A (el motor admite 1,7 A) deja el motor tibio y al A4988 sin disipador forzado. Con micropaso los dos devanados siguen seno y coseno: el cobre disipa I² · R = 1² · 1,5 Ω = **1,5 W continuos mientras la línea anda**, porque los drivers no se sueltan entre casillas (`a4988_reposo_ms` = 3000 ms, más que las pausas de 1000 y 1400 ms); solo se sueltan en las esperas largas. Con 7-9 °C/W de la carcasa son ~36-39 °C a 25 °C de ambiente (cumple con los separadores de nailon; si en la prueba de banco pasa de 45 °C, Vref para 0,8 A).
 
 **Divisor del ECHO del HC-SR04 (1 kΩ arriba, 2 kΩ abajo).** V_GPIO = 5 V · 2k/(1k+2k) = **3,33 V** (< 3,6 V máximo del pin y > 2,47 V que el ESP32 lee como 1). Si el ECHO de un clon sale con 4,5 V: 3,00 V, sigue siendo 1. Consume 1,67 mA solo mientras ECHO está alto; la resistencia vista es 667 Ω y con ~20 pF el retardo es 13 ns (despreciable: 1 mm de distancia son 5,8 µs).
 
@@ -335,6 +335,8 @@ Se mide con el multímetro entre el potenciómetro del módulo y GND, con el dri
 | 1N4148 | 0,55 V (de silicio: ~0,5 V a 0,1 mA y ~0,62 V a 1 mA) | 0,85 V ✘ | -25 mV | 3,30 V |
 
 Con un 1N4148 el 0 queda en el borde (cualquier ruido o un sensor con más V_ce lo lee como 1): por eso va un **Schottky BAT85** (mismo precio). La lógica no cambia: sigue **activa en bajo** (`firmware.activo_bajo`: capacitivo e inductivo en `true`, igual que con el PC817). La pull-up gasta 0,27 mA mientras el sensor detecta. Lo que se pierde frente al optoacoplador es el aislamiento: un cable de 12 V pelado tocando el negro llegaría al diodo, no al pin (el diodo lo bloquea).
+
+**Resistencia de 3,3 Ω 1 W en serie con el panel de luz (en línea en su +5 V, del lado de la caja).** Las 2 tiras 2835 de 20 LED piden 0,80 A a 5 V: 4,0 W dentro de la caja de luz de PLA, que llegaría a ~65 °C (esfuerzos.md; la Tg del PLA es 55-60 °C). Cada tira se modela como la rodilla de los LED blancos (2,8 V) más la resistencia que trae cada LED: las dos en paralelo son 2,75 Ω. Con la resistencia: I = (5 − 2,8) / (2,75 + 3,3) = **0,36 A**, 3,80 V en las tiras y **1,38 W** en ellas (máximo 1,5 W); la resistencia disipa 0,44 W (por eso de 1 W, y fuera del PLA). Con una rodilla de 2,6 o 3,0 V quedan 1,43 y 1,33 W. Equivale a 6,8 Ω por tira. No va un MOSFET con PWM: el ESP32 fijo no tiene GPIO libres fuera de los de arranque y el PCA9685 trabaja a 50 Hz (los servos), que la cámara de vasos vería como parpadeo en el contraluz. Se comprueba midiendo la corriente del panel ya armado: I · V_tiras ≤ 1,5 W; si pasa, 4,7 Ω.
 
 **1000 µF en la bornera V+ del PCA9685.** Cuando la prensa arranca pide 2,5 A de golpe; el buck tarda ~100 µs en reaccionar y mientras tanto la corriente sale del condensador: ΔV = I·Δt/C = 2,5 A · 100 µs / 1000 µF = **0,25 V** (sin él, el pico viaja por el cable y el voltaje se hunde lo suficiente para reiniciar un servo). Voltaje nominal ≥ 10 V (16 V recomendado).
 
@@ -356,29 +358,29 @@ Con el límite fijo de ~70 % el motor nunca pasa de 5,9 V (batería llena) y, tr
 
 | Qué | Calor |
 |---|---|
-| Fuente 12 V 5 A (pérdidas) | 5,14 W |
+| Fuente 12 V 5 A (pérdidas) | 4,63 W |
 | 2 × A4988 (1 A por fase) | 1,50 W |
-| XL4015 (6 V) | 0,58 W |
-| LM2596 (5 V) | 1,49 W |
+| XL4015 (6 V) | 0,62 W |
+| LM2596 (5 V) | 1,02 W |
 | AMS1117 del ESP32 | 0,31 W |
-| **Total** | **9,02 W** → **+8 °C** sin ventilador |
+| **Total** | **8,08 W** → **+8 °C** sin ventilador |
 
 **Se deja el ventilador** (0,1 A, ~6 000 COP): los A4988 van a 1,0 A por fase, que es justo el límite que da la hoja para usarlos sin disipador ni aire forzado, y esa cifra es a temperatura de laboratorio; con la caja cerrada el aire de adentro sube ~8 °C. Sin aire el driver se protege solo (se apaga por temperatura a 165 °C), pero la cinta se detendría en plena sustentación. Quitarlo exigiría bajar la corriente a ~0,8 A (menos par) o probarlo en el montaje.
 
 ## 8. Conclusiones (honestas)
 
 - En el ciclo simulado **7 de 7 rieles** quedan bajo su límite en el pico.
-- **Fuente de 12 V 5 A (ahorro 2026-10-24, antes 10 A):** en el ciclo llega a 3,35 A (67 % en el pico) y el peor caso posible (4,1 A: el XL4015 en su límite de 4,5 A + el pico de lo demás) también cabe. Los 10 A de antes se habían elegido para los 6 servos trabados a la vez (7,8 A en 6 V), que con el buck de 5 A ya no pueden llegar a la fuente.
-- **Buck de servos XL4015 de 5 A (antes XL4016 de 9 A):** el riel de 6 V llega a 3,92 A (la prensa apretando la tapa): 22 % de margen. Cabe porque prensa y empujador nunca arrancan a la vez: en esta simulación nunca piden corriente juntos y en la placa lo impide `firmware/fijo/estacion.py` (`EXCLUYENTES = {"prensa": "empujador", "empujador": "prensa"}`: el segundo espera a que el primero vuelva a reposo; lo prueba `tests/firmware/test_firmware.py`, `test_prensa_y_empujador_nunca_se_mueven_a_la_vez`). Los peores casos con todo trabado a la vez (5,3 A con la regla) pasan los 5 A unos ms: el trimmer de corriente del XL4015 en 4,5 A los corta, el riel de 6 V se hunde y los servos se frenan; nada se quema.
+- **Fuente de 12 V 5 A (ahorro 2026-10-24, antes 10 A):** en el ciclo llega a 2,93 A (59 % en el pico) y el peor caso posible (3,9 A: el XL4015 en su límite de 4,5 A + el pico de lo demás) también cabe. Los 10 A de antes se habían elegido para los 6 servos trabados a la vez (7,8 A en 6 V), que con el buck de 5 A ya no pueden llegar a la fuente.
+- **Buck de servos XL4015 de 5 A (antes XL4016 de 9 A):** el riel de 6 V llega a 3,47 A (la prensa apretando la tapa): 31 % de margen. Cabe porque prensa y empujador nunca arrancan a la vez: en esta simulación nunca piden corriente juntos y en la placa lo impide `firmware/fijo/estacion.py` (`EXCLUYENTES = {"prensa": "empujador", "empujador": "prensa"}`: el segundo espera a que el primero vuelva a reposo; lo prueba `tests/firmware/test_firmware.py`, `test_prensa_y_empujador_nunca_se_mueven_a_la_vez`). Los peores casos con todo trabado a la vez (5,3 A con la regla) pasan los 5 A unos ms: el trimmer de corriente del XL4015 en 4,5 A los corta, el riel de 6 V se hunde y los servos se frenan; nada se quema.
 - Los NEMA17 consumen casi lo mismo quietos que andando (~0,2 A cada uno de 12 V): el A4988 mantiene la corriente plena mientras ENABLE esté activo (no tiene corriente de reposo reducida propia). El firmware suelta ENABLE (G13 en 1) cuando las dos cintas llevan 3000 ms quietas: más que las pausas normales, así que con la línea andando nunca se sueltan (este ciclo no cambia); ahorra en las esperas largas. La cinta indexada no tiene carga que la arrastre y la cámara re-sincroniza igual.
-- El LM2596 disipa 1,54 W en el pico con el panel y el anillo prendidos: tibio-caliente sin disipador; queda en el flujo del ventilador de la caja, que es donde debe ir (el ventilador se queda: ver el calor de la caja en la sección 7).
+- El LM2596 disipa 1,06 W en el pico con el panel y el anillo prendidos: tibio-caliente sin disipador; queda en el flujo del ventilador de la caja, que es donde debe ir (el ventilador se queda: ver el calor de la caja en la sección 7).
 - **Sin optoacopladores:** el capacitivo y el inductivo van al GPIO con un diodo BAT85 y una pull-up de 10 kΩ: el pin queda en 0,57 V al detectar (255 mV bajo el 0 del ESP32) y nunca ve los 12 V. Sigue activo en bajo (no cambia nada en el firmware ni en la simulación). Con un 1N4148 el margen no alcanza: por eso es Schottky.
 - El regulador del ESP32 fijo carga con toda la lógica de 3,3 V (315 mA de pico, 0,31 W de calor): bien, pero no conviene colgarle más sensores de 3,3 V.
 - **Carro, regulador de 5 V: queda justo.** `sim/conexiones.py` lleva la batería al jack de la placa GVS (regulador lineal), mientras `docs/revision-final.md` §4 habla de un buck de 5 V. Con el lineal y la batería llena disipa 0,81 W promedio y 1,26 W en los picos de la radio: cerca del límite de un SOT-223. Recomendado: el mini-buck (MP1584 o similar) que dice la revisión, o comprobar la temperatura en el montaje.
 - **Límite de PWM de los motores TT:** `firmware/carro/hw.py` recorta el PWM a 0,70 (`firmware.carro_pwm_max`) también después de la corrección integral (antes podía llegar a 1,0: trabado, 1,53 A por motor, más que los 1,2 A continuos del TB6612). Con el tope quedan 1,07 A por motor. En el recorrido normal el control pide 70 % con 7,4 V: con la batería a medio cargar el carro va apenas más lento que `velocidad_linea_m_s`.
 - **Bus I2C largo:** `firmware/fijo/hw.py` crea el `SoftI2C` del bus largo (I2C 1) a 100 kHz (`firmware.i2c_bus_largo_hz`), como dice la revisión final. Con 2,2 kΩ y 170 pF la subida es de 317 ns: cumple a 100 kHz (1000 ns); a 400 kHz (300 ns) no cumpliría.
-- **Tiempo del carrusel:** el firmware da un medio paso cada 2 ms con un Timer (500 Hz, bajo los 600 Hz de arranque de la hoja de datos) → un tubo (60°) tarda 1,37 s y media vuelta 4,10 s; `tiempos_ms.carrusel_giro` ya dice eso (4096 ms). Eléctricamente no cambia nada (0,24 A). En `control/tiempos.py` los dos chequeos del carrusel quedan en NO CABE a propósito: la cinta de monedas espera al carrusel en esos ciclos (~2,5 s de más al girar al tubo opuesto y ~7 s una vez por lote).
-- Caídas en los cables: la peor es Webcam cenital (cable USB) con 265 mV en su pico; todas las cargas reciben más de su mínimo. Sin hub (2026-10-24) cada webcam y el ESP32 van a su propio puerto del portátil: ninguno pide más de 0,35 A (un USB 2.0 da 0,5 A). El cable de cada webcam es más largo que al hub (1,78 m la cenital y 2,09 m la de vasos, con holgura): la de vasos necesita su extensión USB de 1 m y la cenital también si su cable trae solo 1,5 m. Con los hilos de 28 AWG les llegan ~4,7 V: sobre los 4,40 V que la norma USB 2.0 exige que acepte el aparato.
+- **Tiempo del carrusel:** el firmware da un medio paso cada 2 ms con un Timer (500 Hz), con una rampa de arranque y parada (6 ms bajando a 2 en 40 medios pasos: los 600 Hz de la hoja de datos son en vacío) → un tubo (60°) tarda 1,49 s y media vuelta 4,22 s; `tiempos_ms.carrusel_giro` ya dice eso (4223 ms). Eléctricamente no cambia nada (0,24 A). En `control/tiempos.py` los dos chequeos del carrusel quedan en NO CABE a propósito: la cinta de monedas espera al carrusel en esos ciclos (~2,5 s de más al girar al tubo opuesto y ~7 s una vez por lote).
+- Caídas en los cables: la peor es Panel de luz → empalmes de 5 V (resistencia de 3,3 Ω en línea) con 1212 mV en su pico; todas las cargas reciben más de su mínimo. Sin hub (2026-10-24) cada webcam y el ESP32 van a su propio puerto del portátil: ninguno pide más de 0,35 A (un USB 2.0 da 0,5 A). El cable de cada webcam es más largo que al hub (1,78 m la cenital y 2,09 m la de vasos, con holgura): la de vasos necesita su extensión USB de 1 m y la cenital también si su cable trae solo 1,5 m. Con los hilos de 28 AWG les llegan ~4,7 V: sobre los 4,40 V que la norma USB 2.0 exige que acepte el aparato.
 - Carro: con 2 × 18650 de 2500 mAh hay 6,3 h de marcha; la batería no es un problema para la sustentación.
 - Todo esto está calculado con corrientes de hoja de datos: son cotas razonables, no mediciones. Los números que más pueden moverse son el panel de luz, el anillo y la corriente real de los servos con su carga.
 

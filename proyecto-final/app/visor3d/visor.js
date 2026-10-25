@@ -42,6 +42,11 @@ const BASE = EN_ARCHIVO ? URL_VIVO : './';
 
 const V = (p) => new THREE.Vector3(p[0], p[2], -p[1]);
 const Vxyz = (x, y, z) => new THREE.Vector3(x, z, -y);
+// Eje de los rodillos Ø22 de las DOS cintas, bajo la superficie: la banda de 2 mm pasa por encima
+// (cinta_monedas.scad mon_z_rod 439, cinta_vasos.scad vas_z_rod 109; antes 11 y la banda no cerraba).
+const Z_EJE_RODILLO = 0.013;
+// Medio recorrido de la aleta de desvio (cinta_monedas.scad mon_reposo 45: +45 = rechazo, -45 = almacen).
+const ANG_DESVIO = Math.PI / 4;
 
 const COLOR = {
   ambar: 0xf2b134, verde: 0x3fb68b, rojo: 0xe5534b, azul: 0x539bf5, morado: 0xb083f0,
@@ -764,7 +769,7 @@ function conosSensor(origen, dir, alcance, semiNominal, semiError, color = COLOR
 
 // Cinta indexada: bancada, banda, rodillos y separadores que SI avanzan
 // una casilla en cada paso (y reaparecen por la cola, como una banda real).
-function construirBanda(grupo, nombre, { x0, x1, y, zs, ancho, paso, altoSep, ventanas = [], insertos = true, fabricaRodillo = null, recorteSep = 0 }) {
+function construirBanda(grupo, nombre, { x0, x1, y, zs, ancho, paso, altoSep, ventanas = [], insertos = true, fabricaRodillo = null, recorteSep = 0, retorno = false }) {
   const zb = zs - G.altura_superficie;
   const largo = x1 - x0, xc = (x0 + x1) / 2;
   // Bancada (la cama sobre la que desliza la banda): termina 2 mm antes de
@@ -793,6 +798,9 @@ function construirBanda(grupo, nombre, { x0, x1, y, zs, ancho, paso, altoSep, ve
   const banda = caja(largo, ancho, 0.002, COLOR.cinta, Vxyz(xc, y, zs - 0.001), { roughness: 0.95 });
   banda.receiveShadow = true;
   grupo.add(banda);
+  // Ramal de abajo (cinta de vasos, segunda opinion 2026-10-25: el lazo es cerrado y 5 de sus 11 separadores van
+  // abajo): la misma banda reflejada en el eje de los rodillos, cara de afuera en zs - 2 Z_EJE_RODILLO.
+  if (retorno) grupo.add(caja(largo, ancho, 0.002, COLOR.cinta, Vxyz(xc, y, zs - 2 * Z_EJE_RODILLO + 0.001), { roughness: 0.95 }));
   const rodillos = [];
   [x0, x1].forEach((x, i) => {
     // `fabricaRodillo(x, i)` (opcional) devuelve un rodillo detallado ya
@@ -802,13 +810,13 @@ function construirBanda(grupo, nombre, { x0, x1, y, zs, ancho, paso, altoSep, ve
       try { r = fabricaRodillo(x, i); } catch (e) { console.warn('rodillo detallado: se usa el simple', e); }
     }
     if (!r) {
-      r = cilindro(0.011, ancho + 0.004, 0x5d646e, Vxyz(x, y, zs - 0.011), { metalness: 0.7 });
+      r = cilindro(0.011, ancho + 0.004, 0x5d646e, Vxyz(x, y, zs - Z_EJE_RODILLO), { metalness: 0.7 });
       r.rotation.x = Math.PI / 2;
     }
-    // La banda abraza media vuelta del rodillo (el lado de afuera de la cinta).
-    const banda = new THREE.Mesh(new THREE.CylinderGeometry(0.0115, 0.0115, ancho, 40, 1, true, i === 0 ? Math.PI : 0, Math.PI),
+    // La banda abraza media vuelta del rodillo (el lado de afuera de la cinta): su linea media (r 12).
+    const banda = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, ancho, 40, 1, true, i === 0 ? Math.PI : 0, Math.PI),
       mat(COLOR.cinta, { roughness: 0.95, side: THREE.DoubleSide }));
-    banda.position.copy(Vxyz(x, y, zs - 0.011));
+    banda.position.copy(Vxyz(x, y, zs - Z_EJE_RODILLO));
     banda.rotation.x = Math.PI / 2;
     grupo.add(r, banda);
     rodillos.push(r);
@@ -822,18 +830,21 @@ function construirBanda(grupo, nombre, { x0, x1, y, zs, ancho, paso, altoSep, ve
     grupo.add(s);
     seps.push(s); base.push(x);
   }
-  CINTAS[nombre] = { seps, base, paso, xmin: x0, xmax: x1, rodillos, moviendo: false };
+  // abajo / baseAbajo: separadores del ramal de abajo (los pone montarMaqueta, uno por par de tacos de abajo); corren
+  // hacia -x. zAbajo: cara de afuera del ramal de abajo, y zEje: eje de los rodillos (Three: y).
+  CINTAS[nombre] = { seps, base, paso, xmin: x0, xmax: x1, rodillos, moviendo: false, abajo: [], baseAbajo: [],
+    grupo, y, ancho, altoSep, recorteSep, zAbajo: zs - 2 * Z_EJE_RODILLO, zEje: zs - Z_EJE_RODILLO };
 }
 
 function moverCinta(nombre, segundos) {
   const c = CINTAS[nombre];
   if (!c || c.moviendo) return;
   c.moviendo = true;
-  const poner = (off) => c.seps.forEach((m, i) => {
-    const x = c.base[i] + off;
+  const poner = (off) => [[c.seps, c.base, 1], [c.abajo, c.baseAbajo, -1]].forEach(([ms, bs, s]) => ms.forEach((m, i) => {
+    const x = bs[i] + s * off;                 // el ramal de abajo vuelve hacia la cola (-x)
     m.position.x = x;
     m.visible = x >= c.xmin - 1e-4 && x <= c.xmax + 1e-4;
-  });
+  }));
   animar(segundos, (u) => {
     const off = suave(u) * c.paso;
     poner(off);
@@ -892,12 +903,13 @@ function construirCintaMonedas() {
   // MOTRIZ (goma ranurada, eje largo hacia +y hasta el acople del NEMA17); el
   // de la cabeza (x1) es el tensor. Ejes de Ø8 en rodamientos 608ZZ montados
   // en bloques impresos a los costados de los rieles.
-  const ejeLado = yRiel + 0.01 + 0.012;               // cara de afuera del riel + bloque + 3 mm
+  // cara de afuera del riel + bloque + 3 mm; con la maqueta, hasta y +-57,5 (mon_comprados)
+  const ejeLado = MAQ ? 0.0575 : yRiel + 0.01 + 0.012;
   const yAcople = yRiel + 0.01 + 0.009 + 0.001 + 0.0125;   // centro del acople flexible (Ø19 × 25)
   const fabricaRodillo = (x, i) => {
     const r = LM.crearRodilloCinta({ largo: ancho + 0.004, motriz: i === 0, ejeMas: i === 0 ? yAcople : ejeLado,
       ejeMenos: ejeLado, idComponente: 'cinta_monedas' });
-    r.position.copy(Vxyz(x, y, zs - 0.011));
+    r.position.copy(Vxyz(x, y, zs - Z_EJE_RODILLO));
     r.rotation.x = Math.PI / 2;
     return r;
   };
@@ -927,12 +939,31 @@ function construirCintaMonedas() {
   reemplazar(...rieles);
   // Cojinetes 608ZZ de los dos rodillos, a los dos lados (el de la cabeza
   // es tensor: colisos y tornillo que lo empuja hacia afuera).
-  try {
+  // Con la maqueta impresa los bloques son mon_rod_* (sin M4 ni colisos): aqui quedan solo los 608 en su
+  // lugar (|y| 48,7-55,7) y el M3 x 16 de empuje de cada tensor (mon_ten_tor de cinta_monedas.scad: entra por
+  // arriba del bloque en (77; +-52,2; 456), inclinado 12 grados hacia +x, y empuja el aro del 608 al tope de x 90).
+  if (MAQ) {
+    const d = Vxyz(Math.sin(THREE.MathUtils.degToRad(168)), 0, Math.cos(THREE.MathUtils.degToRad(168)));
+    for (const l of [-1, 1]) {
+      for (const x of [x0, x1]) {
+        const b = cilindro(0.011, 0.007, 0xc9ccd1, Vxyz(x, y + l * 0.0522, zs - Z_EJE_RODILLO), { metalness: 0.8 });
+        b.rotation.x = Math.PI / 2;
+        grupo.add(b);
+        registrar('cinta_monedas', b);
+      }
+      const e = Vxyz(x1 - 0.013, y + l * 0.0522, zs + 0.004);
+      const p = (k) => e.clone().addScaledVector(d, k / 1000);
+      const m3 = [barra(p(-3), p(13), 0.00125, COLOR.acero, { metalness: 0.8 }),
+        barra(p(-6), p(-3), 0.00275, COLOR.acero, { metalness: 0.8 })];
+      grupo.add(...m3);
+      registrar('cinta_monedas', ...m3);
+    }
+  } else try {
     const cojs = [];
     for (const [x, tensor, fuera] of [[x0, false, -1], [x1, true, 1]]) {
       for (const l of [-1, 1]) {
         const c = LM.crearCojinete608({ lado: l, tensor, haciaFuera: fuera, idComponente: 'cinta_monedas' });
-        c.position.copy(Vxyz(x, y + l * (yRiel + 0.01), zs - 0.011));
+        c.position.copy(Vxyz(x, y + l * (yRiel + 0.01), zs - Z_EJE_RODILLO));
         cojs.push(c);
       }
     }
@@ -979,18 +1010,22 @@ function construirCintaMonedas() {
   // Retorno de la banda (revision de solapes, 2026-09-27). Con rodillos de Ø22 el retorno iria
   // derecho a ~429 mm y atravesaria el capacitivo y el inductivo M18, que cuelgan 50-60 mm bajo
   // E1/E2 (sus cables salen de lado a ~345-354 mm). Como en una cinta real, el retorno BAJA por
-  // debajo de ellos con rodillos de desvio: sale por abajo del rodillo de cabeza, pasa SOBRE un
-  // rodillo que la tensa (C), baja envolviendo por debajo el rodillo B (a la derecha del
-  // inductivo, antes de la pata de ese extremo), corre 11 cm bajo la cara de la cinta y sube por
-  // el rodillo A, junto al de cola. Los tres son como los de la cinta: tubo de Ø22 sobre dos
-  // 608ZZ y eje de Ø8, colgados de los rieles 2020 con dos placas impresas de 3 mm. La cara de
-  // arriba de la cinta y las estaciones no cambian (la simulacion mueve casillas, no la banda).
-  // El camino se calcula con las tangentes reales entre rodillos (no a ojo).
+  // debajo de ellos con rodillos de desvio: sale por abajo del rodillo de cabeza, baja envolviendo
+  // por debajo el rodillo B (a la derecha del inductivo, antes de la pata de ese extremo), corre
+  // 11 cm bajo la cara de la cinta y sube por el rodillo A, junto al de cola. Los dos son como los de
+  // la cinta: tubo de Ø22 sobre dos 608ZZ y eje de Ø8, colgados de los rieles 2020 con dos placas
+  // impresas de 3 mm. La cara de arriba de la cinta y las estaciones no cambian (la simulacion mueve
+  // casillas, no la banda). El camino se calcula con las tangentes reales entre rodillos (no a ojo).
+  // Sin rodillo C (segunda opinion, 2026-10-25): quedaba 6,3 mm DENTRO del lazo tenso (la banda es
+  // el casco de motriz, tensor, A y B), no la tocaba, y el visor la hacia pasar por encima de el.
   const R_ROD = 0.011, R_BANDA = R_ROD + 0.001;        // radio del rodillo y de la linea media de la banda
-  const rodIdler = (x, z) => {
+  // yMas / yMenos: hasta donde llega el eje a cada lado (mon_comprados de cinta_monedas.scad): B en
+  // -32,3 y sigue hasta su colgante exterior (y 52 mm); el de A cuelga de las
+  // bajadas de los bloques del motriz, por fuera de los rieles (y +-57 mm: ya no tiene placas colgantes).
+  const rodIdler = (x, z, yMas = (ancho + 0.013) / 2, yMenos = (ancho + 0.013) / 2) => {
     const r = cilindro(R_ROD, ancho + 0.004, 0x5d646e, Vxyz(x, y, z), { metalness: 0.7 });
     r.rotation.x = Math.PI / 2;
-    const eje = cilindro(0.004, ancho + 0.013, COLOR.acero, Vxyz(x, y, z), { metalness: 0.8 });
+    const eje = cilindro(0.004, yMas + yMenos, COLOR.acero, Vxyz(x, y + (yMas - yMenos) / 2, z), { metalness: 0.8 });
     eje.rotation.x = Math.PI / 2;
     // Placas impresas (14 x 3 mm) desde la cara de abajo de los rieles hasta 9 mm bajo el eje.
     const zTop = zs - 0.022, zBot = z - 0.009;
@@ -1002,16 +1037,15 @@ function construirCintaMonedas() {
     reemplazar(...placas);                     // mon_ret_*
   };
   const zAB = zs - 0.108;                              // eje de A y B: la banda pasa ~10-12 mm bajo los cables
-  const xA = x0 - 0.003, xB = est[1][0] + 0.021, xC = est[1][0] + 0.075, zC = zs - 0.0332;   // C: 2 mm antes del brazo del embudo de E4
-  rodIdler(xA, zAB); rodIdler(xB, zAB); rodIdler(xC, zC);
+  const xA = x0 - 0.003, xB = est[1][0] + 0.021;
+  rodIdler(xA, zAB, 0.057, 0.057); rodIdler(xB, zAB, 0.052, 0.0323);
   // Recorrido (sentido de avance del retorno: de cabeza a cola). s = +1: el rodillo queda a la
   // izquierda de la banda (la banda lo rodea antihorario en el plano x-z); s = -1: a la derecha.
   const ruedas = [
-    { c: [x1, zs - R_ROD], r: R_BANDA, s: -1 },         // cabeza: la banda sale por abajo
-    { c: [xC, zC], r: R_BANDA, s: 1 },                   // C: pasa por encima
+    { c: [x1, zs - Z_EJE_RODILLO], r: R_BANDA, s: -1 }, // cabeza: la banda sale por abajo
     { c: [xB, zAB], r: R_BANDA, s: -1 },                 // B: por debajo
     { c: [xA, zAB], r: R_BANDA, s: -1 },                 // A: por debajo
-    { c: [x0, zs - R_ROD], r: R_BANDA, s: -1 },          // cola: sube por su lado de afuera
+    { c: [x0, zs - Z_EJE_RODILLO], r: R_BANDA, s: -1 },  // cola: sube por su lado de afuera
   ];
   const tangente = (A, B) => {
     const Dx = B.c[0] - A.c[0], Dz = B.c[1] - A.c[1], L = Math.hypot(Dx, Dz);
@@ -1072,7 +1106,7 @@ function construirCintaMonedas() {
     { metalness: 0.5, transparent: true, opacity: 0.55, depthWrite: false });
   const desvio = new THREE.Group();
   desvio.position.copy(Vxyz(fx, y, zEmbAbajo - 0.002));
-  desvio.rotation.x = 0.5;   // reposo: hacia el rechazo
+  desvio.rotation.x = ANG_DESVIO;   // reposo: hacia el rechazo (la aleta impresa, mon_aleta, se cuelga de aqui)
   // Compuerta detallada: la bisagra (eje x) ES el eje del SG90, que va
   // acostado detras del embudo con el cuerno de disco hacia la aleta; asi el
   // giro que anima moverDesvio es exactamente el del servo (antes el servo
@@ -1081,8 +1115,13 @@ function construirCintaMonedas() {
   try {
     desvio.add(LM.crearCompuertaDesvio({ alCuerno: 0.018, idComponente: 'servo_desvio_e7' }));
     servoDesvio = PIEZAS_ELECTRONICA.crearServoSG90({ id: 'servo_desvio', cuerno: 'disco', idComponente: 'servo_desvio_e7' });
-    servoDesvio.position.copy(Vxyz(fx + 0.033, y, zEmbAbajo - 0.002));
-    servoDesvio.rotation.z = Math.PI / 2;               // eje del servo (+z local) hacia -x; cuerpo hacia abajo
+    // Como en cinta_monedas.scad (mon_comprados, segunda opinion 2026-10-25): acostado, con el largo de la caja a lo
+    // ancho (y) y las alas en y contra la brida de x 133,85: primero se gira 90 grados sobre su propio eje y despues el
+    // eje (+z local) a -x. Antes iba parado (cuerpo hacia abajo, alas en z) y 4,55 mm mas hacia +x: las alas se metian
+    // en la pared de mon_e4 y el cuerno en mon_aleta.
+    servoDesvio.position.copy(Vxyz(fx + 0.033 - 0.00455, y, zEmbAbajo - 0.002));
+    servoDesvio.rotation.set(0, Math.PI / 2, Math.PI / 2, 'ZYX');
+    reemplazar(servoDesvio.getObjectByName('cuerno'));   // con la maqueta el cubo de mon_aleta va directo a la estria
     desvioDetallado = true;
   } catch (e) {
     console.warn('compuerta de desvio: se usa el modelo simple', e);
@@ -1200,16 +1239,18 @@ function construirCintaMonedas() {
   // (sim/catalogos.py, drivers_cintas), no al lado del motor.
   let motor;
   try {
-    const yCara = yAcople + 0.024;                     // cara de montaje del motor
+    // Separadores de nailon de 3 mm entre la placa (cara en y 97) y el motor (cinta_monedas.scad,
+    // mon_sep_nema): la cara del motor queda en y 100 y la jaula se queda en la placa.
+    const yPlaca = yAcople + 0.024, yCara = yPlaca + 0.003;
     motor = PIEZAS_ELECTRONICA.crearNEMA17({ id: 'motor_monedas', idComponente: 'motor_cinta_monedas' });
-    motor.position.copy(Vxyz(x0, y + yCara, zs - 0.011));
+    motor.position.copy(Vxyz(x0, y + yCara, zs - Z_EJE_RODILLO));
     motor.rotation.x = Math.PI / 2;                    // eje (+z local) hacia -y, al rodillo
     motor.userData.conector = motor.getObjectByName('pin_motor_monedas_JST').position.clone();
-    const jaula = LM.crearSoporteNEMA17({ distancia: yCara - (yRiel + 0.01), idComponente: 'estructura' });
-    jaula.position.copy(motor.position);
+    const jaula = LM.crearSoporteNEMA17({ distancia: yPlaca - (yRiel + 0.01), idComponente: 'estructura' });
+    jaula.position.copy(Vxyz(x0, y + yPlaca, zs - Z_EJE_RODILLO));
     jaula.rotation.x = Math.PI / 2;
     const acople = LM.crearAcople({ tipo: 'flexible', idComponente: 'cinta_monedas' });
-    acople.position.copy(Vxyz(x0, y + yAcople, zs - 0.011));
+    acople.position.copy(Vxyz(x0, y + yAcople, zs - Z_EJE_RODILLO));
     acople.rotation.x = Math.PI / 2;
     grupo.add(jaula, acople);
     registrar('estructura', jaula);
@@ -1221,7 +1262,7 @@ function construirCintaMonedas() {
     if (ejeMotor) CINTAS.monedas.rodillos.push(ejeMotor);
   } catch (e) {
     console.warn('NEMA17 de la cinta de monedas: se usa el modelo simple', e);
-    motor = nema17(Vxyz(x0, y + yRiel + 0.01 + 0.019, zs - 0.011));
+    motor = nema17(Vxyz(x0, y + yRiel + 0.01 + 0.019, zs - Z_EJE_RODILLO));
     motor.rotation.y = Math.PI;   // eje hacia -y, al rodillo
   }
   P.nemaMonedas = motor;
@@ -1244,7 +1285,9 @@ function construirCintaVasos() {
   const grupo = new THREE.Group();
 
   // Maqueta impresa: los separadores van recortados 3 mm del lado -y (cinta_vasos.scad, vas_recorte_sep).
-  construirBanda(grupo, 'vasos', { x0, x1, y, zs, ancho, paso, altoSep: 0.015, recorteSep: MAQ ? 0.003 : 0 });
+  // El paso de la animacion queda en 80 mm: los 11 separadores reales van a L/11 = 79,6 (diferencia < 1,2 mm por
+  // casilla, la corrige la resincronizacion por camara); la simulacion tambien mueve casillas de 80.
+  construirBanda(grupo, 'vasos', { x0, x1, y, zs, ancho, paso, altoSep: 0.015, recorteSep: MAQ ? 0.003 : 0, retorno: true });
   // Casillas que encajan la base del vaso: un taco impreso con dos caras concavas pegado a cada
   // separador (avanza con el); abierto hacia los lados para el empujador y la caida al final.
   try {
@@ -1408,18 +1451,22 @@ function construirCintaVasos() {
   }
 
   // Prensa (punto 9): servo MG996R con una leva excentrica en su eje; al
-  // girar 0 -> 180 grados la leva empuja un piston guiado que baja 13 mm
-  // (2 x excentricidad) sobre la tapa, y vuelve. Un resorte limita la
-  // fuerza. El servo sabe en que angulo quedo: no hace falta sensor.
+  // girar 0 -> 180 grados la leva empuja un piston guiado que baja 14 mm
+  // (2 x excentricidad de 7) sobre la tapa, y vuelve. Sin resorte limitador
+  // (tapas_prensa_empujador.scad): la fuerza la da el apriete de 0,5 mm al
+  // final de la carrera contra la rigidez de la estructura (MEDIR la tapa real).
+  // El servo sabe en que angulo quedo: no hace falta sensor.
   const xpz = est[3][0];
   const zPiston = zs + hV + 0.005 + 0.012;   // 12 mm sobre la tapa: el vaso pasa por debajo
-  const exc = 0.0065;
-  const zEje = zPiston + 0.012 + 0.07 + 0.022 + exc;
+  const exc = 0.007, rLeva = 0.0225;         // tap_exc y tap_r_leva
+  // Con el piston arriba el rodillo llega a 95 mm sobre el plato (z 324) y la leva lo toca ahi:
+  // eje del servo en z 339,5 (tap_z_leva).
+  const zEje = zPiston + 0.095 + rLeva - exc;
   try {
     // Placa de aluminio atornillada a la viga, MG996R con la leva, piston guiado con rodillo,
-    // resorte de retorno y limitador, plato Ø62 con neopreno (piezas/linea_vasos.js). El plato
+    // resorte de retorno, plato Ø62 (piezas/linea_vasos.js). El plato
     // es de Ø62 (no Ø78): asienta el tapon y no choca con el cabezal del tubo de tapas vecino.
-    const pr = PIEZAS_VASOS.crearPrensaLeva({ exc, zEje: zEje - zPiston, rLeva: 0.022, rPlato: 0.031,
+    const pr = PIEZAS_VASOS.crearPrensaLeva({ exc, zEje: zEje - zPiston, rLeva, rPlato: 0.031,
       yPlaca: yP - 0.01 - 0.006 - y, zPlaca0: 0.016, zPlaca1: zViga + 0.01 - zPiston, idServo: 'servo_prensa', idComponente: 'motor_prensa' });
     pr.position.copy(Vxyz(xpz, y, zPiston));
     grupo.add(pr);
@@ -1428,12 +1475,12 @@ function construirCintaVasos() {
     registrar('estructura', ...ud.fijas);
     // tap_pre_placa (con los separadores), buje, leva, plato, horquilla y rodillo; quedan servo,
     // vastago, collar, resortes y el eje del rodillo.
-    // El limitador y el collar no van en la fisica (tapas_prensa_empujador.scad): del piston quedan
-    // el vastago, el neopreno y el eje del rodillo.
+    // El limitador, el collar y el neopreno no van en la fisica (tapas_prensa_empujador.scad): del
+    // piston quedan el vastago y el eje del rodillo.
     reemplazar(...ud.fijas, ...ud.leva.children);
     reemplazarImpreso(pr);
     for (const o of ud.piston.children) {
-      const queda = o.name === 'vastago' || (o.isMesh && (o.material.color.getHex() === 0x151515 || o.geometry.parameters?.radiusTop === 0.0015));
+      const queda = o.name === 'vastago' || (o.isMesh && o.geometry.parameters?.radiusTop === 0.0015);
       if (!queda) reemplazar(o);
     }
     P.prensa = { piston: ud.piston, leva: ud.leva, zPiston: ud.zPiston, exc: ud.exc };
@@ -1562,7 +1609,7 @@ function construirCintaVasos() {
     // NEMA17 con acople flexible al eje del rodillo, en una placa con separadores desde la placa
     // lateral del bastidor (piezas/linea_vasos.js).
     const ac = PIEZAS_VASOS.crearAccionamientoCinta({ id: 'motor_vasos', idComponente: 'motor_cinta_vasos' });
-    ac.position.copy(Vxyz(x0, yLadoMenos - 0.002, zs - 0.011));
+    ac.position.copy(Vxyz(x0, yLadoMenos - 0.002, zs - Z_EJE_RODILLO));
     grupo.add(ac);
     const nema = ac.userData.nema;
     nema.userData.conector = nema.getObjectByName('pin_motor_vasos_JST').position.clone();
@@ -1571,10 +1618,18 @@ function construirCintaVasos() {
     reemplazarImpreso(ac);                       // vas_placa_motor y los postes de vas_lat_s_a
   } catch (e) {
     console.warn('motor de la cinta de vasos: se usa el modelo simple', e);
-    const motor = nema17(Vxyz(x0, y - ancho / 2 - 0.024, zs - 0.011));
+    const motor = nema17(Vxyz(x0, y - ancho / 2 - 0.024, zs - Z_EJE_RODILLO));
     P.nemaVasos = motor;
     grupo.add(motor);
     registrar('motor_cinta_vasos', motor);
+  }
+  // Tensor del rodillo de x 400 (maqueta impresa, cinta_vasos.scad): un prisionero M3 x 10 por lateral, a lo
+  // largo de x, 2 mm bajo el eje y 1,5 mm afuera de cada lateral; tensado, su punta empuja el aro del 608 al fin
+  // de la corredera (x 400): x 379,2 a 389,2 del mundo.
+  if (MAQ) {
+    const pris = [-1, 1].map((l) => barra(Vxyz(x1 - 0.0208, y + l * 0.046, zs - Z_EJE_RODILLO - 0.002),
+      Vxyz(x1 - 0.0108, y + l * 0.046, zs - Z_EJE_RODILLO - 0.002), 0.0015, COLOR.acero, { metalness: 0.8 }));
+    grupo.add(...pris);
   }
   registrar('cinta_vasos', ...grupo.children.filter((o) => !o.userData.parte && !o.isSprite));
 
@@ -1638,8 +1693,10 @@ function construirAlmacen(grupo) {
     servoObt = PIEZAS_ELECTRONICA.crearServoSG90({ id: 'servo_obturador', cuerno: 'brazo', angulo: 180, idComponente: 'servo_obturador' });
     servoObt.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(arriba, h, arriba.clone().cross(h)));
     servoObt.position.copy(obturador.position).addScaledVector(h, -t0);
-    // El cuerno gira con la aleta (animarEmbalado solo mueve el obturador).
+    // El cuerno gira con la aleta (animarEmbalado solo mueve el obturador). Con la maqueta no hay cuerno: la palanca
+    // impresa (alm_palanca) va directo a la estria (almacen.scad; segunda opinion 2026-10-25).
     const cuerno = servoObt.getObjectByName('cuerno');
+    reemplazar(cuerno);
     const base = cuerno.rotation.y;
     aleta.getObjectByName('aleta').onBeforeRender = () => { cuerno.rotation.y = base + obturador.rotation.x; };
     // Brida en las pestanas y un liston impreso desde su punta de arriba
@@ -1739,13 +1796,14 @@ function construirAlmacen(grupo) {
   grupo.add(obturador, servoObt, tolva);
   registrar('servo_obturador', obturador, servoObt);
   registrar('almacen', tolva);
-  // Maqueta impresa: aleta alm_obturador (gira en horizontal, ver montarMaqueta) y tolva alm_tolva con el
-  // bolsillo del SG90. El SG90 pasa a su lugar fisico: eje vertical hacia arriba en alm_P, cara de abajo
-  // de las alas a z 253,2, la caja hacia los 150 grados (almacen.scad: alm_en_servo).
+  // Maqueta impresa: corredera alm_obturador enrasada con la placa fija y su palanca alm_palanca en la
+  // estria del SG90 (ver montarMaqueta), y tolva alm_tolva con el bolsillo del SG90. El SG90 pasa a su
+  // lugar fisico: eje vertical hacia arriba en alm_P y la caja hacia alm_v (almacen.scad: alm_en_servo,
+  // alm_sg de las extras del GLB).
   reemplazar(...obturador.children, tolva);
   if (MAQ && servoObt && servoObt.getObjectByName('pin_servo_obturador_CABLE')) {
     const F = MAQ.extras.funcional_mm, [px, py, zsg, v] = F.alm_sg;
-    servoObt.quaternion.copy(yaw(v + 180));       // la caja va hacia -x del servo: -x -> 150 grados
+    servoObt.quaternion.copy(yaw(v + 180));       // la caja va hacia -x del servo: -x -> alm_v grados
     servoObt.position.copy(Vxyz(px / 1000, py / 1000, (zsg + 15.9) / 1000));
     servoObt.updateMatrixWorld(true);
     const pin = servoObt.getObjectByName('pin_servo_obturador_CABLE').getWorldPosition(new THREE.Vector3());
@@ -2030,7 +2088,8 @@ function animarEmbalado(e) {
   const marca = anotarEnAire();
   tubo.vaciarEn = Infinity;             // la pila no baja antes de abrir
   if (v) v.llenando = true;
-  // k = 0 cerrado, 1 abierto: el obturador viejo bajaba girando; el impreso gira en horizontal.
+  // k = 0 cerrado, 1 abierto: el obturador viejo bajaba girando; el impreso es una corredera que
+  // corre en horizontal, llevada por la palanca del SG90.
   const ponerObt = (k) => { o.rotation.x = -1.3 * k; if (P.obturadorImpreso) P.obturadorImpreso(k); };
   const soltar = () => {
     animar(abrir, (u) => ponerObt(suave(u)), { dueno: o });
@@ -4001,8 +4060,8 @@ function construirCables() {
   siFalta('cam_cenital.USB', SENS.camara.rutaCable[0]);
   siFalta('cam_vasos.USB', SENS.camara_vasos.rutaCable[0]);
   const conectorNema = (m) => (m && m.userData.conector ? m.localToWorld(m.userData.conector.clone()) : null);
-  siFalta('motor_monedas.JST', conectorNema(P.nemaMonedas) || Vxyz(-0.1356, 0.133, 0.441), new THREE.Vector3(-1, 0, 0), 'jst');
-  siFalta('motor_vasos.JST', conectorNema(P.nemaVasos) || Vxyz(-0.0256, -0.2145, 0.111), new THREE.Vector3(-1, 0, 0), 'jst');
+  siFalta('motor_monedas.JST', conectorNema(P.nemaMonedas) || Vxyz(-0.1356, 0.136, 0.439), new THREE.Vector3(-1, 0, 0), 'jst');
+  siFalta('motor_vasos.JST', conectorNema(P.nemaVasos) || Vxyz(-0.0256, -0.2215, 0.109), new THREE.Vector3(-1, 0, 0), 'jst');
   const [cxa, cya] = G.almacen.centro;
   siFalta('motor_carrusel.CABLE', Vxyz(cxa + 0.007, cya, G.almacen.tubo_z_arriba + 0.03), new THREE.Vector3(-1, 0, 0));
   const zp = G.cinta_vasos.estaciones[0].posicion[2] + 0.02;
@@ -4059,6 +4118,13 @@ function construirCables() {
     return [[x, a[1] - 0.01, z], [x, a[1], z], [x, d[1], z], [x, yDentroF, z]];
   };
   const antesDe = (i, zp, ox = 0) => [glandula(i).afuera[0] + ox, glandula(i).afuera[1] - 0.022, zp];
+  // Maqueta impresa (segunda opinion 2026-10-25): los tubos del piso (16 x 16, cara de arriba a 18,6 mm) cierran el
+  // paso a la caja; un cable de piso que cruza uno lo pasa POR ENCIMA, lejos de los nodos (antes lo atravesaba).
+  // Cruce de un tubo a lo largo de x en `yTubo`, yendo hacia +y, a la altura x.
+  const sobreTubo = (x, yTubo, zp, r) => {
+    const zt = 0.0186 + r + 0.0006;
+    return [[x, yTubo - 0.022, zp], [x, yTubo - 0.012, zt], [x, yTubo + 0.012, zt], [x, yTubo + 0.022, zp]];
+  };
 
   // Mazo del portico (atado con amarras a la viga y a la columna derecha) hasta el PG16 (G1).
   // - Lado -y de la viga (x < 0,19): alli llegan los sensores y motores de la cinta de monedas y
@@ -4112,10 +4178,14 @@ function construirCables() {
     // Motor de la cinta de monedas: del conector (cara -x) baja junto al motor, pasa por debajo
     // de la cinta y sube a la viga junto a la columna izquierda.
     motor_monedas: () => [nm, [nm[0] - 0.008, nm[1], nm[2]], [nm[0] - 0.008, nm[1], 0.412], [-0.09, nm[1], 0.412],
-      [-0.09, nm[1], 0.37], [-0.09, 0.02, 0.365], [-0.06, 0.02, 0.365], ...subir('motor_monedas', -0.06, 0.02, 0.365).slice(1)],
+      [-0.09, nm[1], 0.37], [-0.09, 0.02, 0.365], [-0.063, 0.02, 0.365], ...subir('motor_monedas', -0.063, 0.02, 0.365).slice(1)],
     // M18: su cable integrado termina abajo (anclas pin_<id>_AZUL, a ~350 mm); de ahi sale DE LADO
     // 5 mm mas abajo, ~10 mm por encima del retorno de la banda (cara de arriba a ~333 mm), y sube.
-    capacitivo: () => { const p0 = S(PIN['capacitivo.AZUL'].tip); return [p0, ...subir('capacitivo', p0[0], p0[1], p0[2] - 0.005)]; },
+    // (el capacitivo esta sobre la columna impresa de x -50: su cable va 12,5 mm a su lado, no por dentro)
+    capacitivo: () => {
+      const p0 = S(PIN['capacitivo.AZUL'].tip);
+      return [p0, [p0[0], p0[1], p0[2] - 0.005], ...subir('capacitivo', p0[0] + 0.0125, p0[1], p0[2] - 0.005)];
+    },
     inductivo: () => { const p0 = S(PIN['inductivo.AZUL'].tip); return [p0, ...subir('inductivo', p0[0], p0[1], p0[2] - 0.005)]; },
     // Presencia: llega por encima de la columna izquierda (su brazo) y baja a la fila de arriba de su capa.
     presencia: () => {
@@ -4123,7 +4193,12 @@ function construirCables() {
       const u = r[r.length - 1];
       return [...r, [u[0], yM(MAZO.presencia[0]), u[2]], ...porViga('presencia', u[0])];
     },
-    hall: () => { const r = SENS.hall_carrusel.rutaCable.map(S); return [r[0], r[1], ...subir('hall', r[1][0], r[1][1], r[1][2])]; },
+    // Hall: con la maqueta el KY-003 queda bajo la placa del puente (z 352-357, hasta x 183): el cable sale de lado
+    // hacia +x, sube por afuera del borde del puente y entra en su fila (antes subia atravesando la placa).
+    hall: () => {
+      const p = S(PIN['hall.S'].tip), x = 0.1865;
+      return [p, [x, p[1], p[2]], [x, p[1], zR(MAZO.hall[1])], ...porViga('hall', x)];
+    },
     vl53_interior: () => { const r = SENS.sensor_interior.rutaCable.map(S); return [r[0], r[1], ...subir('vl53_interior', r[1][0], r[1][1], r[1][2])]; },
     motor_carrusel: () => [mc, ...subir('motor_carrusel', mc[0] - 0.006, mc[1], mc[2])],
     // Tapas: sale del servo hacia -x, sube por encima de la boca del tubo de tapas hasta el colgador
@@ -4134,7 +4209,8 @@ function construirCables() {
       const [s0, u] = [r[0], r[r.length - 1]];
       const x = u[0] + 0.0085, zv = P.portico.z - 0.016, zt = s0[2] + 0.046;
       const [c, i] = AFUERA.servo_2;
-      return [s0, [s0[0] - 0.006, s0[1], s0[2]], [s0[0] - 0.006, s0[1], zt], [x, u[1] - 0.003, zt], [x, u[1] - 0.003, zv],
+      // (la placa fija del almacen llega hasta y -165,5 justo encima del servo: el cable la rodea por -y)
+      return [s0, [s0[0], -0.170, s0[2]], [s0[0], -0.170, zt], [x, u[1] - 0.003, zt], [x, u[1] - 0.003, zv],
         [x, yL(c), zv], [x, yL(c), zR(0)], ...bajarColumna(c, i, zR(0))];
     },
     // Obturador: el conector de su coleta queda parado junto al servo, a la altura de la placa; la
@@ -4144,13 +4220,13 @@ function construirCables() {
     servo_1: () => {
       const r = P.rutasServo.servo_obturador.map(S);
       const z = G.cinta_vasos.estaciones[0].posicion[2] + G.vaso.altura + 0.0335;
-      return [r[0], r[1], [0.1445, r[1][1], r[1][2]], [0.1445, r[1][1], z], [0.1445, -0.07, z], [0.1445, -0.048, z],
-        ...sumarse('servo_1', z)];
+      // (por y -24: del lado +y de la abrazadera, el colgante y el puntal del tubo de tapas, que llegan a y -28,3)
+      return [r[0], r[1], [0.1445, r[1][1], r[1][2]], [0.1445, r[1][1], z], [0.1445, -0.024, z], ...sumarse('servo_1', z, -0.024)];
     },
     // Prensa: del servo hacia -x 6 mm, a +y (fuera de la placa de la prensa) y a la columna.
     servo_3: () => {
       const s0 = S(PIN['servo_prensa.CABLE'].tip);
-      return [s0, [s0[0] - 0.006, s0[1], s0[2]], [s0[0] - 0.006, -0.043, s0[2]], ...sumarse('servo_3', s0[2], -0.043)];
+      return [s0, [s0[0] - 0.006, s0[1], s0[2]], [s0[0] - 0.006, -0.025, s0[2]], ...sumarse('servo_3', s0[2], -0.025)];   // y -25: fuera del puntal (y <= -28,3)
     },
     panel_luz: () => {
       const zp = PIN['panel_luz.+5V'].tip.y - 0.004;
@@ -4175,27 +4251,34 @@ function construirCables() {
     // poste 2020 del escape (P.rutasServo: 12,5 mm al lado de su eje, pegado a su cara) y BAJA
     // por el poste; a 2 cm del piso se aparta 12 mm (el pie nivelador mide Ø26), va por el piso
     // por fuera de la mesa de vasos y entra por el prensaestopas 4.
+    // Con la maqueta: baja hasta 21,5 mm (sobre la guia recta impresa, que llega a z 18,6 e y -342,5), sigue por encima
+    // hasta pasarla, va por el piso y rodea la bandeja de rechazo de vasos (x 422-518, y -158 a -42) por -y y por -x.
     servo_5: () => {
       const r = P.rutasServo.servo_compuerta_canaleta.map(S);
       const zp = zPiso('servo');
       const [xp, yp] = r[3];
-      const yS = yp + Math.sign(-0.05 - yp || 1) * 0.012;
-      return [r[0], r[1], r[2], r[3], [xp, yp, 0.02], [xp, yS, zp], [xp, -0.05, zp], [antesDe(4, zp)[0], -0.05, zp],
-        antesDe(4, zp), ...entrarFrente(4)];
+      const yG = -0.3385, yB = -0.162, xB = 0.418;
+      return [r[0], r[1], r[2], r[3], [xp, yp, 0.0215], [xp, yG, 0.0215], [xp, yG + 0.004, zp], [xp, yB, zp], [xB, yB, zp],
+        [xB, -0.05, zp], [antesDe(4, zp)[0], -0.05, zp], antesDe(4, zp), ...entrarFrente(4)];
     },
-    // Motor de la cinta de vasos: baja junto al motor, esquiva el pie izquierdo del portico por
-    // +x y va por el piso (a 2,8 cm del frente de la caja, sin cruzar ningun otro) hasta G2.
+    // Motor de la cinta de vasos: baja junto al motor, va por el piso bajo el motor hasta x 100 y al norte, pasando por
+    // encima de los tubos (V2-K0, y -152,5) y (F6-F5, y -40,5) entre nodos, y por el piso (a 2,8 cm del frente de la
+    // caja, sin cruzar ningun otro) hasta G2. Antes subia por x -18 y atravesaba los nodos F4 y F6.
     motor_vasos: () => {
       const v = S(PIN['motor_vasos.JST'].tip);
-      const zp = zPiso('paso');
-      return [v, [v[0] - 0.008, v[1], v[2]], [v[0] - 0.008, v[1], 0.03], [0.009 - 0.027, v[1], zp], [-0.018, -0.028, zp],
-        [antesDe(1, zp)[0], -0.028, zp], antesDe(1, zp), ...entrarFrente(1)];
+      const zp = zPiso('paso'), r = TIPOS_CABLE.paso.r, x = 0.1;
+      return [v, [v[0] - 0.008, v[1], v[2]], [v[0] - 0.008, v[1], 0.03], [v[0] - 0.004, v[1], zp], [x, v[1], zp],
+        ...sobreTubo(x, -0.1525, zp, r), ...sobreTubo(x, -0.0405, zp, r).slice(0, 3),
+        [x + 0.012, -0.028, zp], [antesDe(1, zp)[0], -0.028, zp], antesDe(1, zp), ...entrarFrente(1)];
     },
+    // Cortina: sale de los pines (en el hueco de la escuadra de vas_cortina, x 317-327), baja derecho por x 325, por
+    // fuera del brazo y del poste impresos (x <= 320), y va por el piso por fuera (+x) de los nodos V4 y F5 (x <= 328,8)
+    // hasta el frente de la caja. Antes bajaba por dentro del tubo (315, -152,5) y cruzaba V4 y F5 (segunda opinion
+    // 2026-10-25).
     vl53_cortina: () => {
-      const r = SENS.cortina.rutaCable.map(S);
-      const u = r[r.length - 1];
-      const zp = zPiso('i2c');
-      return [...r, [u[0], u[1] - 0.004, zp], [antesDe(2, zp)[0], u[1] - 0.004, zp], antesDe(2, zp), ...entrarFrente(2)];
+      const p0 = SENS.cortina.rutaCable.map(S)[0];
+      const zp = zPiso('i2c'), x = 0.3325, y = antesDe(2, zp)[1];
+      return [p0, [0.325, p0[1], p0[2]], [0.325, p0[1], zp], [x, p0[1], zp], [x, y, zp], antesDe(2, zp), ...entrarFrente(2)];
     },
     // Anillo de luz: de sus pads sube 5 mm, va al poste de la camara y baja pegado a el (junto al
     // USB de la camara), pasa a la cara +y de la pata de la mesa, baja por ella y va por el piso al
@@ -4206,6 +4289,14 @@ function construirCables() {
       const pie = SENS.camara.rutaCable.map(S).slice(-1)[0];          // pie del poste, sobre el riel
       const { afuera: a, adentro: d } = glandula(7);
       const zp = zPiso('cinco');
+      if (MAQ) {
+        // Maqueta impresa: el poste es el tubo (30, 40,5) con el nodo T3 a z 440 (brazos en x hasta 62,6, de y 29,9 a
+        // 54,3): el par rodea el poste por +x (x 42) y baja por fuera del nodo (y 57) derecho al piso. Antes cruzaba
+        // el tubo y la punta de abajo del nodo (segunda opinion 2026-10-25).
+        const xa = 0.042, ya = 0.057;
+        return [m, [m[0], 0.026, m[2]], [xa, 0.026, m[2]], [xa, ya, m[2]], [xa, ya, 0.025], [xa, a[1], zp], [a[0] - 0.03, a[1], zp],
+          [a[0] - 0.012, a[1], a[2]], a, d, [d[0] + 0.004, d[1], d[2]]];
+      }
       const x = PATA.x1 - 0.004, y = PATA.y1 + 0.0016;
       return [m, [m[0], PATA.y1 - 0.006, m[2]], [pie[0] - 0.0002, PATA.y1 - 0.006, m[2]], [pie[0] - 0.0002, pie[1] - 0.006, m[2] - 0.006], [pie[0] - 0.0002, pie[1] - 0.006, pie[2] - 0.015],
         [x, y, pie[2] - 0.03], [x, y, 0.025], [x, a[1], zp], [a[0] - 0.03, a[1], zp], [a[0] - 0.012, a[1], a[2]], a, d, [d[0] + 0.004, d[1], d[2]]];
@@ -4273,7 +4364,7 @@ function construirCables() {
       const e = enchufe('pc.USB3', 'A');
       const xL = e[0] - 0.02, yFrente = yAtras + 0.035;
       return [c0, [c0[0] + 0.008, c0[1], c0[2]], [c0[0] + 0.008, c0[1], c0[2] - 0.02], [xp, yp, c0[2] - 0.04], [xp, yp, 0.02],
-        [xp, yS, zU], [-0.168, yS, zU], [-0.168, yFrente, zU], [xL, yFrente, zU], [xL, e[1], zU], [e[0] - 0.006, e[1], e[2]], e];
+        [xp, yS, zU], [-0.186, yS, zU], [-0.186, yFrente, zU], [xL, yFrente, zU], [xL, e[1], zU], [e[0] - 0.006, e[1], e[2]], e];   // x -186: por fuera de F1, F2 y su tubo
     },
     // Webcam cenital: baja por el poste hasta su pie (rutaCable), pasa a la cara +y de la pata de la
     // mesa de monedas, baja por ella y va por el piso a su carril.
@@ -4628,8 +4719,8 @@ function construirSensores() {
       const pie = caja(0.016, 0.004, 0.016, 0x30363d, new THREE.Vector3(xPoste.x, zBrazo, yBorde + 0.002));
       obj.objetos.push(escuadra, poste, brazo, pie);
       reemplazar(escuadra, poste, brazo, pie);      // vas_cortina
-      obj.rutaCable = [PIN['vl53_cortina.SDA'].tip.clone().addScaledVector(dir, -0.012), new THREE.Vector3(xPoste.x + 0.007, a.y - 0.004, xPoste.z),
-        new THREE.Vector3(xPoste.x + 0.007, zBrazo - 0.007, xPoste.z), new THREE.Vector3(xPoste.x + 0.007, zBrazo - 0.007, yBorde)];
+      // (de ahi el cable baja por fuera del soporte impreso: RUTAS.vl53_cortina en construirCables)
+      obj.rutaCable = [PIN['vl53_cortina.SDA'].tip.clone().addScaledVector(dir, -0.012)];
       obj.ancla = a.clone().add(new THREE.Vector3(0, 0.022, 0));
     } else if (g && g.tipo === 'camara') {
       const p = V(g.posicion);
@@ -4752,18 +4843,24 @@ function construirSensores() {
         // en sim/geometria.py). En crearM18 la distancia de la tuerca se mide
         // desde el final de la cabeza (6 mm la del capacitivo, 8 la del
         // inductivo), no desde la cara.
+        // Maqueta impresa: la platina es de PLA (mon_platina_e1/e2, de z 436 a 439, sin arandela ni
+        // contratuerca), asi que el sensor lleva sus DOS tuercas: una arriba de la placa (centro en
+        // 441, 8,5 mm bajo la cara) y la contratuerca abajo (centro en 434, 15,5 mm bajo la cara).
         const cap = s.id === 'capacitivo';
         try {
           const cabeza = cap ? 6 : 8;
           const crear = cap ? PIEZAS_SENSORES_CARRO.crearCapacitivoLJC18A3 : PIEZAS_SENSORES_CARRO.crearInductivoLJ18A3;
           // Cola de cable corta (8 mm): los hilos terminan ~12 mm mas arriba y la funda sale de lado
           // por encima del retorno de la banda (su cara de arriba, a ~333 mm), sin tocarlo.
-          modulo = crear({ id: s.id, sensorId: s.id, tuercas: [10.5 - cabeza], cable: 8 });
-          // La arandela dentada de la pieza queda del lado de la cara (sobre
-          // la tuerca, en el aire): aqui la arandela es la de la platina.
-          const t0 = modulo.getObjectByName('tuerca_0');
-          const ar = modulo.children[modulo.children.indexOf(t0) + 1];
-          if (ar && !ar.name) modulo.remove(ar);
+          const tuercas = MAQ ? [8.5 - cabeza, 15.5 - cabeza] : [10.5 - cabeza];
+          modulo = crear({ id: s.id, sensorId: s.id, tuercas, cable: 8 });
+          // La arandela dentada de cada tuerca queda en el aire (del lado de afuera): aqui apoya
+          // en la platina.
+          tuercas.forEach((_, i) => {
+            const t = modulo.getObjectByName(`tuerca_${i}`);
+            const ar = modulo.children[modulo.children.indexOf(t) + 1];
+            if (ar && !ar.name) modulo.remove(ar);
+          });
           modulo.position.copy(p);
           modulo.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), mira);
         } catch (e) {
@@ -4856,8 +4953,9 @@ function construirSensores() {
         const alPortico = new THREE.Vector3(colgar.x + (s.id === 'hall_carrusel' ? 0.008 : 0), zVarilla, -P.portico.y);
         obj.objetos.push(barra(colgar, arriba, 0.002, MAT_ALU), barra(arriba, alPortico, 0.002, MAT_ALU));
         reemplazar(...obj.objetos.slice(-2));
-        // El cable sale de los pines y sube pegado a la varilla (4 mm al lado).
-        const lado = new THREE.Vector3(0.006, 0, 0);
+        // El cable sale de los pines y sube pegado a la varilla (4 mm al lado); el del VL53L0X interior a 12 mm, por fuera
+        // de la columna 1 del almacen (x 41-49), que con la maqueta queda justo ahi (segunda opinion 2026-10-25).
+        const lado = new THREE.Vector3(s.id === 'hall_carrusel' ? 0.006 : 0.012, 0, 0);
         const pines = s.id === 'hall_carrusel' ? PIN['hall.S'] : PIN['vl53_interior.SCL'];
         obj.rutaCable = [pines.tip.clone().add(new THREE.Vector3(0, 0.012, 0)), arriba.clone().add(lado).add(new THREE.Vector3(0, -0.02, 0)),
           arriba.clone().add(lado), alPortico.clone().add(lado)];
@@ -5100,7 +5198,7 @@ function sincronizarFichas() {
 function moverDesvio(haciaAlmacen, retraso = 0) {
   if (!P.desvio) return;
   cancelar(P.desvio);
-  const ang = 0.5;
+  const ang = ANG_DESVIO;
   const hasta = haciaAlmacen ? -ang : ang;
   let desde = P.desvio.rotation.x;
   animar(0.15, (u) => { if (u === 0) desde = P.desvio.rotation.x; P.desvio.rotation.x = desde + (hasta - desde) * suave(u); },
@@ -5908,7 +6006,7 @@ function mostrarRemaches(si) {
 // Componente (pestana Componentes, resaltado) de cada pieza impresa, por su nombre.
 function componenteDePieza(n) {
   const reglas = [[/^tap_pre/, 'motor_prensa'], [/^tap_emp/, 'servo_empujador'], [/^tap_dedo/, 'servo_tapas'],
-    [/^tap_(tubo|abr|colgante)/, 'tubo_tapas'], [/^alm_obturador/, 'servo_obturador'], [/^alm_embudo/, 'canal_e7'],
+    [/^tap_(tubo|abr|colgante)/, 'tubo_tapas'], [/^alm_(obturador|palanca)/, 'servo_obturador'], [/^alm_embudo/, 'canal_e7'],
     [/^alm_(disco|tambor|placa_fija|tolva)/, 'almacen'], [/^mon_(e4|aleta)/, 'canal_e7'],
     [/^mon_(canal_b|bandeja|soporte_b)/, 'canaletas_rechazo'], [/^vas_bandeja/, 'bandeja_rechazo_vasos'],
     [/^vas_panel/, 'panel_luz'], [/^vas_taco/, 'cinta_vasos'], [/^can_(cabezal|prisionero)/, 'canaleta_entrega'],
@@ -5918,9 +6016,11 @@ function componenteDePieza(n) {
 
 // Pone la maqueta en la escena: lo quieto queda tal cual (ya viene en su lugar); cada parte que se
 // mueve se cuelga (attach: no cambia donde se ve) del objeto que el visor ya anima, que gira o se
-// corre sobre el mismo pivote que la pieza fisica (extras del GLB). El obturador es la excepcion:
-// el impreso gira 70 grados en horizontal sobre el eje del SG90 (P.obturadorImpreso). Al final se
-// saca de la escena todo lo que la maqueta reemplaza (REEMPLAZADAS).
+// corre sobre el mismo pivote que la pieza fisica (extras del GLB). El obturador es la excepcion
+// (P.obturadorImpreso): la corredera alm_obturador corre en horizontal (movimiento "lineal" a lo largo
+// de su eje) y la palanca alm_palanca gira sobre el eje del SG90 (movimiento "giro"); un GLB viejo
+// trae una sola aleta que gira. Al final se saca de la escena todo lo que la maqueta reemplaza
+// (REEMPLAZADAS).
 function montarMaqueta() {
   if (!MAQ) return;
   escena.add(MAQ.grupo);
@@ -5941,25 +6041,50 @@ function montarMaqueta() {
     if (!mov) continue;
     let padre = destino[mov];
     if (mov === 'obturador') {
-      const piv = new THREE.Group();
-      piv.name = 'pivote_obturador_impreso';
-      piv.position.copy(V(m.userData.pivote));
+      // k = 0 cerrado, 1 abierto. Lineal: el grupo se corre recorrido[1] mm a lo largo de `eje`.
+      // Giro: gira recorrido[1] grados sobre `eje` (vertical) por `pivote`, y el cuerno del SG90 con el.
+      const ud = m.userData, piv = new THREE.Group(), eje = V(ud.eje), fin = ud.recorrido[1];
+      piv.name = `obturador_impreso_${m.name}`;
       escena.add(piv);
+      let poner;
+      if (ud.movimiento === 'lineal') {
+        poner = (k) => piv.position.copy(eje).multiplyScalar(fin / 1000 * k);
+      } else {
+        piv.position.copy(V(ud.pivote));
+        const giro = THREE.MathUtils.degToRad(fin) * Math.sign(eje.y);   // +z de la simulacion = +y de Three
+        const cuerno = P.servoObturador && P.servoObturador.getObjectByName('cuerno');
+        const base = cuerno ? cuerno.rotation.y : 0;
+        poner = (k) => { piv.rotation.y = giro * k; if (cuerno) cuerno.rotation.y = base + giro * k; };
+        P.pivoteObturador = piv;
+      }
       piv.updateMatrixWorld(true);
-      const abre = THREE.MathUtils.degToRad(m.userData.recorrido[1]);
-      const cuerno = P.servoObturador && P.servoObturador.getObjectByName('cuerno');
-      const base = cuerno ? cuerno.rotation.y : 0;
-      P.obturadorImpreso = (k) => { piv.rotation.y = abre * k; if (cuerno) cuerno.rotation.y = base + abre * k; };
-      P.pivoteObturador = piv;
+      const antes = P.obturadorImpreso;
+      P.obturadorImpreso = (k) => { if (antes) antes(k); poner(k); };
       padre = piv;
     } else if (mov === 'banda_vasos' && CINTAS.vasos) {
-      // cada mitad de taco va pegada al separador mas cercano (avanza y reaparece con el)
-      // (el par que va en la vuelta de abajo de la banda queda quieto: el visor no dibuja separadores ahi)
-      const c = centro(m);
-      const dx = (s) => Math.abs(s.getWorldPosition(new THREE.Vector3()).x - c.x);
-      const sep = CINTAS.vasos.seps.reduce((a, b) => (dx(b) < dx(a) ? b : a));
-      padre = dx(sep) < 0.03 && c.y > sep.getWorldPosition(new THREE.Vector3()).y - 0.01 ? sep : null;
-      if (!padre) continue;
+      // cada mitad de taco va pegada al separador mas cercano (avanza y reaparece con el). Los del ramal de abajo
+      // (bajo el eje de los rodillos) cuelgan de un separador de abajo en el medio de su par (a y b van a cada
+      // lado), que se crea aqui y corre hacia -x con la banda.
+      const cv = CINTAS.vasos, c = centro(m);
+      if (c.y < cv.zEje) {
+        const otra = MAQ.piezas.get(m.name.replace(/_([ab])$/, (_, l) => (l === 'a' ? '_b' : '_a')));
+        const x = otra ? (c.x + centro(otra).x) / 2 : c.x;
+        let i = cv.baseAbajo.findIndex((b) => Math.abs(b - x) < 0.006);
+        if (i < 0) {
+          const s = caja(0.003, cv.ancho - cv.recorteSep, cv.altoSep, COLOR.separador,
+            Vxyz(x, cv.y + cv.recorteSep / 2, cv.zAbajo - cv.altoSep / 2));
+          cv.grupo.add(s);
+          registrar('cinta_vasos', s);
+          cv.abajo.push(s); cv.baseAbajo.push(x);
+          i = cv.abajo.length - 1;
+        }
+        padre = cv.abajo[i];
+      } else {
+        const dx = (s) => Math.abs(s.getWorldPosition(new THREE.Vector3()).x - c.x);
+        const sep = cv.seps.reduce((a, b) => (dx(b) < dx(a) ? b : a));
+        padre = dx(sep) < 0.03 && c.y > sep.getWorldPosition(new THREE.Vector3()).y - 0.01 ? sep : null;
+        if (!padre) { console.warn(`maqueta impresa: ${m.name} sin separador cerca: queda quieto`); continue; }
+      }
     }
     if (padre) padre.attach(m);
     else console.warn(`maqueta impresa: ${m.name} queda quieta (no esta ${mov} en el visor)`);

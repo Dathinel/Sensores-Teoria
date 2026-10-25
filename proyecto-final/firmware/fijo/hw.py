@@ -3,8 +3,8 @@
 # misma fuente que dibuja los cables en el visor 3D): nunca se escriben aca.
 #
 # Motores paso a paso (A4988): los pasos los genera el PWM del ESP32 en el pin
-# STEP (frecuencia = pasos por segundo) y se corta cuando pasa el tiempo
-# justo. Un bucle de Python no alcanza a dar un paso cada ~0,2 ms con
+# STEP (frecuencia = pasos por segundo, con una rampa al arrancar y al parar)
+# y se corta cuando pasa el tiempo justo. Un bucle de Python no alcanza a dar un paso cada ~0,2 ms con
 # precision; el PWM es hardware y si. Puede sobrar o faltar algun paso: por
 # eso la camara de cada cinta mide donde quedaron los separadores y corrige
 # (desfase_corregido, ya decidido en el diseno).
@@ -37,46 +37,93 @@ class PCA9685:
 
 
 class Cinta:
+    """Avance con rampa trapezoidal: la frecuencia de los pasos sube en linea recta
+    de `arranque` x la de crucero a la de crucero en `rampa_ms` y baja igual al
+    final (firmware.cinta_rampa_ms: arrancar y parar de golpe hacia vibrar el poste
+    de la camara y el almacen). Con el mismo tiempo y los mismos pasos: el area
+    del trapecio es f_crucero * (ms - (1 - arranque) * rampa), de ahi la de crucero.
+    La frecuencia se cambia en `actualizar()` (cada vuelta del bucle, 3-5 ms): en
+    la subida la que queda puesta es algo menor que la ideal y en la bajada algo
+    mayor, asi que lo que se pierde al subir se recupera al bajar."""
+
     def __init__(self, pin_step, pin_dir, cfg):
         self.step = PWM(Pin(pin_step), freq=1000, duty=0)
         self.dir = Pin(pin_dir, Pin.OUT, value=1)
         self.pasos_por_mm = cfg["pasos_por_vuelta"] * cfg["micropasos"] / cfg["mm_por_vuelta"]
+        self.rampa_ms = cfg.get("rampa_ms", 0)
+        self.arranque = cfg.get("arranque", 1.0)
         self.fin = None
 
     def avanzar(self, mm, ms):
         pasos = mm * self.pasos_por_mm
-        self.step.freq(max(1, int(pasos * 1000 / ms)))
+        self.ms = ms
+        self.r = min(self.rampa_ms, ms // 2)
+        self.f_crucero = pasos * 1000 / (ms - (1 - self.arranque) * self.r)
+        self.inicio = time.ticks_ms()
+        self.fin = time.ticks_add(self.inicio, ms)
+        self.f = None
+        self._poner_frecuencia(0)
         self.step.duty(512)                          # 50 %: un paso por periodo
-        self.fin = time.ticks_add(time.ticks_ms(), ms)
+
+    def frecuencia(self, t):
+        """Pasos por segundo `t` ms despues de empezar el avance."""
+        if self.r <= 0:
+            return self.f_crucero
+        u = min(t, self.ms - t, self.r) / self.r      # 0 al borde, 1 en el tramo de crucero
+        return self.f_crucero * (self.arranque + (1 - self.arranque) * max(0, u))
+
+    def _poner_frecuencia(self, t):
+        f = max(1, int(self.frecuencia(t)))
+        if f != self.f:                              # el PWM se reconfigura solo si cambia
+            self.step.freq(f)
+            self.f = f
 
     def detener(self):
         self.step.duty(0)
         self.fin = None
 
     def actualizar(self):
-        if self.fin is not None and time.ticks_diff(time.ticks_ms(), self.fin) >= 0:
+        if self.fin is None:
+            return
+        t = time.ticks_diff(time.ticks_ms(), self.inicio)
+        if t >= self.ms:
             self.detener()
+        else:
+            self._poner_frecuencia(t)
 
     def moviendose(self):
         return self.fin is not None
 
 
 class Carrusel:
-    """28BYJ-48 + ULN2003: un medio paso cada `ms_por_paso`, dado por un Timer.
+    """28BYJ-48 + ULN2003: medios pasos dados por un Timer, con rampa.
 
     Antes el paso lo daba el bucle principal (`leer()` en cada vuelta), pero
     cada vuelta del bucle ya duerme 2 ms y ademas lee I2C, arma JSON y drena
     el USB: el paso real quedaba en 3-5 ms y el carrusel tardaba mas de lo
-    que dice la configuracion. Con un Timer periodico el paso sale cada
-    `ms_por_paso` exactos y `tiempos_ms.carrusel_giro` (2048 medios pasos x
-    ms_por_paso = media vuelta) es el tiempo de verdad. La callback solo
-    cambia 4 pines y dos enteros: corta, sin esperas."""
+    que dice la configuracion. Con un Timer periodico el paso sale a tiempo
+    y `tiempos_ms.carrusel_giro` (media vuelta) es el tiempo de verdad.
+
+    Rampa (segunda opinion, 2026-10-25): arrancar a 500 Hz de golpe con el
+    tambor lleno (unos 4,5e-4 kg m2 y 10 mN m de roce) puede perder pasos; la
+    frecuencia de arranque sin perder pasos de la hoja de datos (600 Hz) es EN
+    VACIO. Los primeros y ultimos `carrusel_rampa_pasos` medios pasos van mas
+    lentos: de `carrusel_rampa_ms` (6 ms, ~170 Hz) bajando en linea recta a
+    `carrusel_ms_por_paso` (2 ms). Por eso el Timer late cada 1 ms y cuenta los
+    ms hasta el proximo medio paso. Cada giro tarda lo mismo de mas (~0,13 s):
+    `carrusel_giro` ya lo incluye. La callback solo cambia 4 pines y unos
+    enteros: corta, sin esperas."""
 
     def __init__(self, cfg, hall_activo):
         self.bobinas = [Pin(p, Pin.OUT, value=0) for p in (pines.ULN2003_IN1, pines.ULN2003_IN2,
                                                             pines.ULN2003_IN3, pines.ULN2003_IN4)]
         self.por_vuelta = cfg["carrusel_pasos_por_vuelta"]
         self.ms_por_paso = cfg["carrusel_ms_por_paso"]
+        self.rampa_ms = cfg["carrusel_rampa_ms"]
+        self.rampa_pasos = max(1, cfg["carrusel_rampa_pasos"])
+        self.hechos = 0                              # medios pasos dados en este giro (para la rampa)
+        self._espera = 0                             # ms (latidos del Timer) hasta el proximo medio paso
+        self._sentido = 0
         # El agujero de la placa esta `carrusel_agujero_grados` (210) antihorario
         # desde la carga (sim/mundo.py): en medios pasos, redondeado.
         self.agujero_pasos = (cfg.get("carrusel_agujero_grados", 210) * self.por_vuelta + 180) // 360
@@ -86,7 +133,7 @@ class Carrusel:
         self.buscando = False
         self.fase = 0
         self._timer = Timer(0)
-        self._timer.init(period=self.ms_por_paso, mode=Timer.PERIODIC, callback=self._paso)
+        self._timer.init(period=1, mode=Timer.PERIODIC, callback=self._paso)   # 1 ms: la rampa va de a 1 ms
 
     def a_tubo(self, tubo, lugar="carga"):
         # El tubo k queda bajo la CARGA en k * por_vuelta / 6 (la posicion crece
@@ -115,19 +162,37 @@ class Carrusel:
         self.buscando = False
         self.objetivo = self.posicion
 
+    def _ms_hasta_el_proximo(self, faltan):
+        """ms entre este medio paso y el siguiente: `rampa_ms` en los bordes del giro y
+        `ms_por_paso` desde `rampa_pasos` medios pasos para adentro (igual al arrancar y al parar)."""
+        k = max(0, min(self.hechos, faltan) - 1)     # medios pasos desde el borde mas cercano
+        extra = (self.rampa_ms - self.ms_por_paso) * max(0, self.rampa_pasos - k) // self.rampa_pasos
+        return self.ms_por_paso + extra
+
     def _paso(self, _timer):
         if self.buscando and self.hall_activo():
             self.buscando = False
             self.posicion = self.objetivo = 0
         if self.posicion == self.objetivo:
+            self.hechos = self._espera = 0
             for b in self.bobinas:                   # sin corriente quieto (no calienta)
                 b.value(0)
             return
+        if self._espera > 1:
+            self._espera -= 1
+            return
         sentido = 1 if self.objetivo > self.posicion else -1
+        if sentido != self._sentido:                 # un pedido que da la vuelta arranca de nuevo con la rampa
+            self.hechos, self._sentido = 0, sentido
         self.posicion += sentido
         self.fase = (self.fase + sentido) % 8
         for b, v in zip(self.bobinas, _SECUENCIA_28BYJ[self.fase]):
             b.value(v)
+        self.hechos += 1
+        faltan = abs(self.objetivo - self.posicion)
+        self._espera = self._ms_hasta_el_proximo(faltan)
+        if not faltan:                               # llego: un pedido nuevo arranca con rampa aunque llegue ya
+            self.hechos = 0
 
 
 class Hardware:
@@ -158,7 +223,8 @@ class Hardware:
         self.reposo_ms = cfg["a4988_reposo_ms"]
         self._quietas_desde = time.ticks_ms()
         mc = {"micropasos": cfg["micropasos"], "mm_por_vuelta": cfg["mm_por_vuelta_cinta"],
-              "pasos_por_vuelta": cfg["pasos_por_vuelta_motor"]}
+              "pasos_por_vuelta": cfg["pasos_por_vuelta_motor"],
+              "rampa_ms": cfg.get("cinta_rampa_ms", 0), "arranque": cfg.get("cinta_arranque", 1.0)}
         self.cintas = {"monedas": Cinta(pines.DRIVERS_M_STEP, pines.DRIVERS_M_DIR, mc),
                        "vasos": Cinta(pines.DRIVERS_V_STEP, pines.DRIVERS_V_DIR, mc)}
         self.entradas = {"presencia": Pin(pines.PRESENCIA_OUT, Pin.IN),

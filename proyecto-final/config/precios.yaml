@@ -11,7 +11,10 @@
 consultado: "2026-09-27"
 moneda: COP
 # Total antes de los ahorros aprobados el 2026-10-24 (para comprobar que cada ahorro aplicado esta en el total).
-total_antes_de_ahorros: 1998921
+# 2026-10-25: + 34 000 de los rodamientos (8 x 608ZZ y el KFL08), que hacian falta antes y despues y no estaban contados.
+# 2026-10-25 (segunda opinion): + 145 000 de lo que el manual manda comprar y no tenia precio (acoples, barra Ø8,
+# resorte, pegamentos y espuma, gabinete y los 2 rodillos de retorno de la cinta de monedas); tambien antes hacia falta.
+total_antes_de_ahorros: 2177921
 
 tiendas:
   ferretronica: {nombre: Ferretrónica (Tunja, envíos a todo el país), url: "https://www.ferretronica.com"}
@@ -34,7 +37,9 @@ items:
   # ------------------------------------------------------------------ cinta de vasos y embalaje
   motor_cinta_vasos: {subsistema: Cinta de vasos, precio: 59000, tienda: mercadolibre, fuente: tienda, producto: "Motor NEMA 17 17HS4401 1,7 A"}
   camara_vasos: {subsistema: Cinta de vasos, precio: 45000, tienda: mercadolibre, fuente: estimado, producto: "Webcam USB 720p"}
-  panel_luz: {subsistema: Cinta de vasos, precio: 35000, tienda: mercadolibre, fuente: estimado, producto: "Tira LED 5 V blanca 1 m + acrílico opalino 33 x 11 cm"}
+  # La caja de luz es de PLA blanco (maqueta impresa, vas_panel_a/b: su frente de 1,6 mm es el difusor): ya no se
+  # compra el acrílico opalino (~20 000, ahora dentro del ahorro maqueta_impresa). Solo la tira (VERIFICAR el precio).
+  panel_luz: {subsistema: Cinta de vasos, precio: 15000, tienda: mercadolibre, fuente: estimado, producto: "Tira LED 5 V blanca 1 m (va en la caja de luz impresa, detrás de una resistencia de 3,3 Ω 1 W en su +5 V: ≤ 1,5 W)"}
   sensor_interior: {subsistema: Cinta de vasos, precio: 25000, tienda: ferretronica, fuente: tienda, producto: "Sensor de distancia VL53L0X"}
   cortina: {subsistema: Cinta de vasos, precio: 25000, tienda: ferretronica, fuente: tienda, producto: "Sensor de distancia VL53L0X"}
   servo_tapas: {subsistema: Cinta de vasos, precio: 11000, tienda: ferretronica, fuente: tienda, producto: "Servomotor SG90"}
@@ -71,7 +76,7 @@ items:
   empalmes: {subsistema: Control y potencia, precio: 1000, tienda: ferretronica, fuente: estimado, producto: "2 diodos Schottky BAT85 + 2 resistencias de 10 kΩ + 2 de 2,2 kΩ (el estaño y el termoencogible van en Cables)"}
   cable_red: {subsistema: Control y potencia, precio: 6000, tienda: mercadolibre, fuente: estimado, producto: "Cable de poder de 3 hilos con enchufe, 1,5 m (o el de un aparato viejo); va a una multitoma con interruptor del grupo"}
   uln2003: {subsistema: Control y potencia, precio: 0, fuente: tienda, producto: "Viene con el 28BYJ-48 (ya contado en el motor del carrusel)"}
-  bridas_caja: {subsistema: Control y potencia, precio: 19000, tienda: mercadolibre, fuente: estimado, producto: "100 bridas de 10 cm (~4 000) + 10 bases adhesivas (~4 000) + ventilador 4010 de 5 V (~6 000) + 8 separadores de nailon de 3 mm para los NEMA 17, cinta de aluminio y resistencia o dimmer de la tira LED (~5 000; esfuerzos.md: calor)"}
+  bridas_caja: {subsistema: Control y potencia, precio: 19000, tienda: mercadolibre, fuente: estimado, producto: "100 bridas de 10 cm (~4 000) + 10 bases adhesivas (~4 000) + ventilador 4010 de 5 V (~6 000) + 8 separadores de nailon de 3 mm para los NEMA 17, cinta de aluminio y la resistencia de 3,3 Ω 1 W en línea de la tira LED (~5 000; esfuerzos.md y electrica.md: calor)"}
   pc: {subsistema: Control y potencia, precio: 0, fuente: tienda, producto: "El portátil del grupo (no se compra)"}
   # ------------------------------------------------------------------ estructura
   # Desde el 2026-10-24 la estructura es la maqueta impresa (maqueta_impresa/, sin perfil 2020,
@@ -79,7 +84,9 @@ items:
   # + energia). Esta fila es la estructura (tubos, nodos, empalmes y remaches); las piezas impresas de
   # cada subsistema van a la fila "Maqueta impresa" de su subsistema.
   estructura: {subsistema: Estructura, calculado: maqueta, fuente: estimado, producto: "Maqueta impresa: tubos, nodos, empalmes y remaches de PLA"}
-  cinta_monedas: {subsistema: Estructura, precio: 40000, tienda: mercadolibre, fuente: estimado, producto: "Banda de caucho negra mate 55 mm + 2 rodillos"}
+  # 4 rodillos Ø22 (2026-10-25): motriz y tensor (los de la banda) y los retornos A y B (Ø22 x 59, ~5 000 c/u, sus ejes
+  # salen de la barra Ø8 de `extras`); el retorno C se quito (quedaba dentro del lazo y no tocaba la banda).
+  cinta_monedas: {subsistema: Estructura, precio: 50000, tienda: mercadolibre, fuente: estimado, producto: "Banda de caucho negra mate 55 mm + 4 rodillos Ø22 (motriz, tensor y retornos A y B)"}
   cinta_vasos: {subsistema: Estructura, precio: 45000, tienda: mercadolibre, fuente: estimado, producto: "Banda de caucho 75 mm + 2 rodillos"}
   almacen: {subsistema: Estructura, precio: 0, incluido: maqueta, fuente: estimado, producto: "Impreso en la maqueta (tubos, disco, placa, obturador y embudo: ya no hay acrílico)"}
   tubo_tapas: {subsistema: Estructura, precio: 0, incluido: maqueta, fuente: estimado, producto: "Impreso en la maqueta (ya no es de acrílico)"}
@@ -91,6 +98,19 @@ items:
   muelle_carga: {subsistema: Canaleta y muelle, precio: 0, incluido: maqueta, fuente: estimado, producto: "Impreso en la maqueta: guías en V y topes (fila Maqueta impresa de la canaleta)"}
 
 extras:
+  # Rodamientos de las cintas y del carrusel (no tenían precio; 2026-10-25): 608ZZ en los bloques de la cinta de
+  # monedas (4), en las laterales de la de vasos (3) y en la placa fija del almacén (1); un KFL08 con brida en la
+  # lateral -y de la de vasos (el eje motriz; antes decía 4). Precios estimados como el 623 del carro: VERIFICAR.
+  rodamientos_608: {subsistema: Estructura, precio: 3000, cantidad: 8, tienda: mercadolibre, fuente: estimado, producto: "Rodamiento 608ZZ (8 x 22 x 7)"}
+  rodamiento_kfl08: {subsistema: Cinta de vasos, precio: 10000, cantidad: 1, tienda: mercadolibre, fuente: estimado, producto: "Rodamiento con brida KFL08 (eje de 8 mm)"}
+  # Lo que el manual de armado (maqueta_impresa/manual_maqueta.pdf, "Lleva comprado") manda comprar y no tenia precio
+  # (segunda opinion, 2026-10-25). Precios estimados: VERIFICAR.
+  acoples_flexibles: {subsistema: Estructura, precio: 8000, cantidad: 2, tienda: mercadolibre, fuente: estimado, producto: "Acople flexible de aluminio de 5 a 8 mm (NEMA 17 → rodillo motriz: Ø19 x 25 en monedas, Ø19 x 20 en vasos)"}
+  acople_rigido_carrusel: {subsistema: Cinta de monedas, precio: 6000, cantidad: 1, tienda: mercadolibre, fuente: estimado, producto: "Acople rígido de 5 a 8 mm Ø12 x 16 (28BYJ-48 → eje del carrusel)"}
+  barra_acero_8: {subsistema: Estructura, precio: 15000, cantidad: 2, tienda: mercadolibre, fuente: estimado, producto: "Barra de acero calibrado Ø8 x 1 m (~1,2 m de cortes: ejes de los rodillos de vasos 109 y 97,5, de los retornos A 114 y B 84,3, del carrusel 76,5, vástago de la prensa 79 y 2 guías del empujador 102,5)"}
+  resorte_prensa: {subsistema: Cinta de vasos, precio: 3000, cantidad: 1, tienda: mercadolibre, fuente: estimado, producto: "Resorte de compresión Ø15 x 38, k 0,15-0,3 N/mm (vástago de la prensa)"}
+  pegamentos_espuma: {subsistema: Estructura, precio: 15000, cantidad: 1, tienda: mercadolibre, fuente: estimado, producto: "Cianoacrilato 20 g (~6 000) + cinta doble faz fina (~5 000: GY-530 de la cortina, suplementos) + lámina de espuma EVA de 6 mm (~4 000: topes)"}
+  gabinete: {subsistema: Control y potencia, precio: 65000, cantidad: 1, tienda: mercadolibre, fuente: estimado, producto: "Gabinete de la caja de control: acrílico de 3 mm cortado a medida, 360 x 240 x 80 mm con tapa (~0,27 m²)"}
   rueda_loca: {subsistema: Carro, precio: 9500, tienda: ferretronica, fuente: tienda, producto: "Rueda loca de bola de acero 3/4\""}
   cables: {subsistema: Control y potencia, precio: 30000, fuente: estimado, producto: "Cables dupont, cable 18 AWG, termoencogible, conectores JST"}
 
@@ -168,17 +188,37 @@ estructura_3d:
     repuesto: 0.10
     tipos:
       m5x10: {nombre: "Tornillo M5 x 10 cabeza Allen", precio: 350, masa_g: 3, fuente: estimado, tienda: ferretronica}
-      m5x16: {nombre: "Tornillo M5 x 16 cabeza Allen (rodamientos KFL08)", precio: 400, masa_g: 3.5, fuente: estimado, tienda: ferretronica}
+      m4x16: {nombre: "Tornillo M4 x 16 (rodamiento KFL08: brida de 37 mm entre agujeros contra Ø5,5 a 36 en la lateral)", precio: 300, masa_g: 2.5, fuente: estimado, tienda: ferretronica}
+      tornillo_1_4: {nombre: "Tornillo 1/4\"-20 x 12 mm (rosca de trípode de las webcams)", precio: 1000, masa_g: 3, fuente: estimado, tienda: ferretronica}
       tuerca_m5: {nombre: "Tuerca M5", precio: 100, masa_g: 1.2, fuente: estimado, tienda: ferretronica}
       m4x12: {nombre: "Tornillo M4 x 12", precio: 250, masa_g: 2, fuente: estimado, tienda: ferretronica}
       tuerca_m4: {nombre: "Tuerca M4", precio: 80, masa_g: 0.8, fuente: estimado, tienda: ferretronica}
       m3x10: {nombre: "Tornillo M3 x 10", precio: 150, masa_g: 1, fuente: estimado, tienda: ferretronica}
+      m3x12: {nombre: "Tornillo M3 x 12 (NEMA 17: placa + separador de nailon de 3 mm)", precio: 160, masa_g: 1.1, fuente: estimado, tienda: ferretronica}
+      m4_autorroscante: {nombre: "Tornillo M4 autorroscante corto (28BYJ-48: oreja + agujero ciego de 3,6 mm, MEDIR el largo)", precio: 150, masa_g: 1, fuente: estimado, tienda: ferretronica}
+      perno_m4: {nombre: "Tornillo M4 x 20 de perno de la biela del empujador", precio: 300, masa_g: 2.5, fuente: estimado, tienda: ferretronica}
+      pasador_2: {nombre: "Pasador de acero Ø2 x 17 (pernos del cuerno del escape de tapas)", precio: 200, masa_g: 0.4, fuente: estimado, tienda: ferretronica}
       m3x30: {nombre: "Tornillo M3 x 30", precio: 250, masa_g: 2, fuente: estimado, tienda: ferretronica}
       tuerca_m3: {nombre: "Tuerca M3", precio: 50, masa_g: 0.4, fuente: estimado, tienda: ferretronica}
       m2x8: {nombre: "Tornillo M2 x 8 autorroscante (servos, placas)", precio: 100, masa_g: 0.3, fuente: estimado, tienda: ferretronica}
+      m3x16_autorroscante: {nombre: "Tornillo M3 x 16 autorroscante (empuje del tensor de la cinta de monedas; agujero de 2,6 mm en PLA, MEDIR)", precio: 150, masa_g: 1.2, fuente: estimado, tienda: ferretronica}
+      prisionero_m3x10: {nombre: "Prisionero M3 x 10 punta de copa (tensor de la cinta de vasos; rosca en un agujero de 2,5 mm en PLA, MEDIR)", precio: 200, masa_g: 0.5, fuente: estimado, tienda: ferretronica}
     uniones:
-      - {zona: Cinta de monedas, nombre: "NEMA 17 de la cinta de monedas a su jaula impresa (agujeros de 3,4 mm a 31 mm)", tornillos: {m3x10: 4}}
-      - {zona: Cinta de vasos, nombre: "NEMA 17 de la cinta de vasos a su placa (4 M3) y 4 rodamientos KFL08 (2 M5 con tuerca c/u)", tornillos: {m3x10: 4, m5x16: 8, tuerca_m5: 8}}
+      # Los NEMA 17 van con separadores de nailon de 3 mm entre la placa y el motor: con M3 x 10 quedaban 2 (vasos,
+      # placa de 5) y 3 mm (monedas, placa de 4) de rosca; con M3 x 12, 4 y 5 mm (MEDIR el hondo de la rosca del motor).
+      - {zona: Cinta de monedas, nombre: "NEMA 17 de la cinta de monedas a su jaula impresa (agujeros de 3,4 mm a 31 mm, con separadores de 3 mm)", tornillos: {m3x12: 4}}
+      - {zona: Cinta de monedas, nombre: "Placa del FC-51 a la bandera de mon_fc51", tornillos: {m3x10: 1, tuerca_m3: 1}}
+      # Tensores (auditoria 2026-10-25): cada 608 del rodillo de cabeza corre en una ranura de mon_rod_ten_m/_p (x 86 a
+      # 90) y lo empuja al tope un M3 autorroscante que entra por arriba del bloque, inclinado 12 grados; en la de vasos
+      # el 608 de x 400 corre de 396 a 400 empujado por un prisionero M3 roscado en un tope de cada lateral.
+      - {zona: Cinta de monedas, nombre: "Tensor del rodillo de cabeza: 2 M3 x 16 autorroscantes de empuje (uno por bloque)", tornillos: {m3x16_autorroscante: 2}}
+      - {zona: Cinta de vasos, nombre: "NEMA 17 de la cinta de vasos a su placa (4 M3, con separadores de 3 mm) y el rodamiento KFL08 (2 M4 con tuerca)", tornillos: {m3x12: 4, m4x16: 2, tuerca_m4: 2}}
+      - {zona: Cinta de monedas, nombre: "Webcam cenital a mon_camara (su rosca de 1/4\")", tornillos: {tornillo_1_4: 1}}
+      - {zona: Cinta de vasos, nombre: "Webcam de vasos a vas_placa_camara (su rosca de 1/4\")", tornillos: {tornillo_1_4: 1}}
+      - {zona: Cinta de vasos, nombre: "Tensor del rodillo de x 400: 2 prisioneros M3 x 10 (uno por lateral, a lo largo de x)", tornillos: {prisionero_m3x10: 2}}
+      - {zona: Almacén, nombre: "28BYJ-48 al puente del almacén (agujeros ciegos, sin remaches)", tornillos: {m4_autorroscante: 2}}
+      - {zona: Pórtico, nombre: "Placa GY-530 del VL53L0X interior a su porta", tornillos: {m2x8: 2}}
+      - {zona: Pórtico, nombre: "Pernos del empujador (manivela-biela y carro-biela) y del escape de tapas (cuerno-dedos)", tornillos: {perno_m4: 2, pasador_2: 2}}
 
 # Dónde abaratar (PROPUESTAS: el diseño NO se cambia sin que el grupo lo apruebe). `aplicado: true` =
 # ya está en el diseño y en el total (aprobado por el usuario el 2026-10-24).
@@ -198,10 +238,10 @@ ahorros:
     titulo: "Estructura impresa (maqueta_impresa/) en vez de perfil 2020, escuadras, pies, placas de aluminio, acrílico y MDF"
     # ahorro = antes - (maqueta + tornillería de hoy): lo calcula app/costos.py con piezas.json (no escribirlo a mano:
     # cambia cada vez que la maqueta se aligera)
-    antes: 793087
+    antes: 813087
     riesgo: medio
     aplicado: true
-    detalle: "Antes: 7 barras de V-Slot (398 300), tornillería con 24 escuadras, 15 pies y tuercas en T (219 280), las piezas impresas sueltas de la planta (90 507), tubos de acrílico (45 000) y tablero MDF (40 000) = 793 087. Ahora: la maqueta impresa (los gramos y horas de maqueta_impresa/piezas.json, a precio de PLA + energía) y la tornillería que no va remachada (12 150). Lo funcional no cambia; los remaches se prueban al imprimir (maqueta_impresa/README.md)."
+    detalle: "Antes: 7 barras de V-Slot (398 300), tornillería con 24 escuadras, 15 pies y tuercas en T (219 280), las piezas impresas sueltas de la planta (90 507), tubos de acrílico (45 000), tablero MDF (40 000) y el acrílico opalino del panel de luz (20 000, ahora la caja de luz impresa) = 813 087. Ahora: la maqueta impresa (los gramos y horas de maqueta_impresa/piezas.json, a precio de PLA + energía) y la tornillería que no va remachada (15 200). Lo funcional no cambia; los remaches se prueban al imprimir (maqueta_impresa/README.md)."
   - id: pca9685_directo
     titulo: "Servos directo al PWM del ESP32 (sin PCA9685)"
     ahorro: 29500
@@ -212,13 +252,13 @@ ahorros:
     ahorro: 16900
     riesgo: medio
     aplicado: true
-    detalle: "Pico simulado del riel de 6 V: 3,9 A (prensa apretando la tapa). Prensa y empujador nunca arrancan a la vez (firmware/fijo/estacion.py, EXCLUYENTES, con su prueba). Medir el pico real en el montaje."
+    detalle: "Pico simulado del riel de 6 V: 3,5 A (prensa apretando la tapa). Prensa y empujador nunca arrancan a la vez (firmware/fijo/estacion.py, EXCLUYENTES, con su prueba). Medir el pico real en el montaje."
   - id: fuente_5a
     titulo: "Fuente de 12 V 5 A en vez de 10 A"
     ahorro: 31000
     riesgo: bajo
     aplicado: true
-    detalle: "Pico simulado del +12 V: 3,3 A; peor caso con el XL4015 en su límite de corriente: 4,1 A. El precio de la de 5 A es estimado."
+    detalle: "Pico simulado del +12 V: 2,9 A; peor caso con el XL4015 en su límite de corriente: 3,9 A. El precio de la de 5 A es estimado."
   - id: empalmes
     titulo: "Empalmes soldados en vez de la bornera X2, los optoacopladores y el reparto I2C"
     ahorro: 27000
@@ -236,13 +276,13 @@ ahorros:
     ahorro: 6000
     riesgo: bajo
     aplicado: true
-    detalle: "25 000 de canaleta y prensaestopas contra 19 000 de bridas, bases, el ventilador (que antes no estaba contado) y lo térmico de esfuerzos.md (separadores de nailon de los NEMA 17, cinta de aluminio y dimmer de la tira LED). El ventilador se queda: los A4988 van a 1 A por fase, el límite sin aire forzado (docs/electrica.md)."
+    detalle: "25 000 de canaleta y prensaestopas contra 19 000 de bridas, bases, el ventilador (que antes no estaba contado) y lo térmico de esfuerzos.md (separadores de nailon de los NEMA 17, cinta de aluminio y la resistencia en serie de la tira LED). El ventilador se queda: los A4988 van a 1 A por fase, el límite sin aire forzado (docs/electrica.md)."
   - id: un_fusible
     titulo: "Un fusible principal y cable de poder a una multitoma con interruptor (sin IEC ni 4 portafusibles)"
     ahorro: 6900
     riesgo: bajo
     aplicado: true
-    detalle: "9 200 de 4 portafusibles + 6 000 de la entrada IEC contra 2 300 de un portafusible + 6 000 del cable con enchufe. El fusible de 5 A cubre el pico simulado del +12 V (3,3 A) y el peor caso (4,1 A)."
+    detalle: "9 200 de 4 portafusibles + 6 000 de la entrada IEC contra 2 300 de un portafusible + 6 000 del cable con enchufe. El fusible de 5 A cubre el pico simulado del +12 V (2,9 A) y el peor caso (3,9 A)."
   - id: una_camara
     titulo: "Webcam de 720p también en la cámara cenital"
     ahorro: 15000

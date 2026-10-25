@@ -42,16 +42,17 @@
     </inertial>
 
     <!-- Maqueta impresa (2026-10-24, maqueta_impresa/cinta_vasos.scad): bancada de PLA (dos mitades,
-         vas_bancada_a/b) de x 13 a 387 mm del mundo, entre las dos laterales (y -140,3 a -59,7) y de
+         vas_bancada_a/b) de x 13 a 383 mm del mundo (2026-10-25: termina 4 mm antes para que el rodillo
+         de x 400 corra en su tensor hasta x 396), entre las dos laterales (y -140,3 a -59,7) y de
          z 104 a 119,9 (dentro del lazo de la banda). Antes 400 x 80 x 20 (inventario 19.3). -->
     <visual>
-      <geometry><box size="0.374 0.0806 0.0159"/></geometry>
-      <origin xyz="0 0 0.01195" rpy="0 0 0"/>
+      <geometry><box size="0.370 0.0806 0.0159"/></geometry>
+      <origin xyz="-0.002 0 0.01195" rpy="0 0 0"/>
       <material name="azul_bancada"/>
     </visual>
     <collision>
-      <geometry><box size="0.374 0.0806 0.0159"/></geometry>
-      <origin xyz="0 0 0.01195" rpy="0 0 0"/>
+      <geometry><box size="0.370 0.0806 0.0159"/></geometry>
+      <origin xyz="-0.002 0 0.01195" rpy="0 0 0"/>
     </collision>
     <!-- Placas laterales impresas (vas_lat_s, vas_lat_n; antes aluminio): 4 mm, z 72 a 120. -->
     <visual><geometry><box size="0.43 0.004 0.048"/></geometry><origin xyz="0 -0.0425 -0.004" rpy="0 0 0"/><material name="azul_bancada"/></visual>
@@ -81,7 +82,8 @@
     <visual><geometry><box size="0.016 0.016 0.408"/></geometry><origin xyz="-0.25 0.0595 0.104" rpy="0 0 0"/><material name="azul_bancada"/></visual>
     <visual><geometry><box size="0.381 0.016 0.016"/></geometry><origin xyz="-0.0675 0.0595 0.30" rpy="0 0 0"/><material name="azul_bancada"/></visual>
 
-    <!-- Separadores: 6 delimitan las 5 casillas/estaciones, de x=-0.20 a x=0.20. Maqueta impresa:
+    <!-- Separadores: 6 delimitan las 5 casillas/estaciones, de x=-0.20 a x=0.20 (la banda real lleva 11 a L/11 =
+         79,6 mm, 5 en el ramal de abajo, que aqui no se dibuja; cada 80: < 1,2 mm de diferencia). Maqueta impresa:
          75 mm (el ancho de la banda) menos 3 recortados del lado -y (vas_recorte_sep): 72 mm.
          Visual-only a proposito: un separador con colision chocaria con la
          base del vaso cada vez que sim/mundo.py lo reposiciona. -->
@@ -124,17 +126,24 @@
     </visual>
 
     <!-- Prensa sobre la estacion de prensa (x=0.08), maqueta impresa (tap_pre_*): placa de PLA en
-         la cara -y de la viga (x 235-304, y -54,7 a -48,7, z 245-406 del mundo), leva de 44 mm en el
-         eje del MG996R (z 339,5) y plato de 62 mm abajo en z 229 (piston arriba) con su vastago de
-         8 mm. Antes: columna + plato r 28 en z 0,285 (inventario 19.6). -->
+         la cara -y de la viga (x 235-304, y -54,7 a -48,7, z 257-406 del mundo) que sigue hasta x 323
+         (z 257-367) frente a la columna t_F5-P2_2, a la que va remachada; los separadores del MG996R
+         siguen como costillas (x 240-248,95 y 290,05-299, y -78,2 a -54,7, desde z 330 hasta 393 la
+         de -x y 385 la de +x). Leva de 45 mm con 7 de excentricidad (tap_exc: el piston baja 14, sin
+         resorte limitador) en el eje del MG996R (z 339,5; dibujada a 0 grados, centro en 346,5) y
+         plato de 62 mm abajo en z 229 (piston arriba) con su vastago de 8 mm. Antes: columna + plato
+         r 28 en z 0,285 (inventario 19.6). -->
     <visual>
-      <geometry><box size="0.069 0.006 0.161"/></geometry>
-      <origin xyz="0.0695 0.0483 0.2255" rpy="0 0 0"/>
+      <geometry><box size="0.069 0.006 0.149"/></geometry>
+      <origin xyz="0.0695 0.0483 0.2315" rpy="0 0 0"/>
       <material name="acero_prensa"/>
     </visual>
+    <visual><geometry><box size="0.019 0.006 0.110"/></geometry><origin xyz="0.1135 0.0483 0.212" rpy="0 0 0"/><material name="acero_prensa"/></visual>
+    <visual><geometry><box size="0.00895 0.0235 0.063"/></geometry><origin xyz="0.044475 0.03355 0.2615" rpy="0 0 0"/><material name="acero_prensa"/></visual>
+    <visual><geometry><box size="0.00895 0.0235 0.055"/></geometry><origin xyz="0.094525 0.03355 0.2575" rpy="0 0 0"/><material name="acero_prensa"/></visual>
     <visual>
-      <geometry><cylinder radius="0.022" length="0.008"/></geometry>
-      <origin xyz="0.08 0 0.246" rpy="1.5708 0 0"/>
+      <geometry><cylinder radius="0.0225" length="0.008"/></geometry>
+      <origin xyz="0.08 0 0.2465" rpy="1.5708 0 0"/>
       <material name="acero_prensa"/>
     </visual>
     <visual>

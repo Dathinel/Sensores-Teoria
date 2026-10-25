@@ -62,12 +62,12 @@ def test_un_solo_fusible_principal_que_cubre_el_pico_simulado(R):
     f = R["fusibles"]["Fusible principal"]
     assert f["pico"] == pytest.approx(R["rieles"]["12V"]["pico"])      # protege TODO el riel de 12 V
     assert f["pico"] < f["amperios"] and R["peor_12v"] < f["amperios"] <= el.RIELES["12V"].limite_a
-    assert 3.0 < f["pico"] < 3.6                                      # ~3,3 A (docs/electrica.md)
+    assert 2.7 < f["pico"] < 3.6                                      # ~2,9 A (docs/electrica.md)
 
 
 def test_buck_de_5a_alcanza_porque_prensa_y_empujador_no_arrancan_juntos(R):
     sp = R["planta"]["series"]
-    assert el.RIELES["6V"].limite_a == 5.0 and R["rieles"]["6V"]["pico"] < 4.0     # ~3,9 A
+    assert el.RIELES["6V"].limite_a == 5.0 and R["rieles"]["6V"]["pico"] < 4.0     # ~3,5 A
     # Si arrancaran juntos los dos MG996R (2,5 A cada uno) ya no cabria.
     assert 2 * el.CARGAS["MG996R"][3] >= 5.0
     assert not ((sp["servo_prensa"] > 0.1) & (sp["servo_empujador"] > 0.1)).any()
@@ -116,6 +116,19 @@ def test_pasivos():
     assert not el.entrada_npn("1N4148")["lee_cero"]
     assert el.pullup_hall()["v_bajo"] < el.VIL_MAX
     assert el.pwm_motor_tt()[8.4] == pytest.approx(0.714, abs=0.01)
+
+
+def test_panel_de_luz_con_su_resistencia_no_pasa_de_15_w():
+    """Auditoria 2026-10-25 (esfuerzos.md): sin nada, las 2 tiras son 4 W y la caja de luz de PLA llegaria a
+    ~65 °C. La resistencia en serie (en linea en su +5 V, fuera del PLA) las deja en <= 1,5 W aunque la rodilla
+    de los LED sea otra, y la simulacion usa esa corriente."""
+    assert 5.0 * el.PANEL_TIRAS * el.PANEL_I_TIRA_5V == pytest.approx(4.0)        # sin resistencia
+    for v in (2.6, 2.8, 3.0):
+        pl = el.panel_luz(v_rodilla=v)
+        assert pl["p_tiras"] <= el.PANEL_P_MAX_W and pl["p_resistencia"] < 0.5 * 1.0   # resistencia de 1 W
+    assert el.CARGAS["panel"][2] == pytest.approx(el.panel_luz()["i"], abs=1e-3)
+    mas = next(h for c in cx.CABLES if c["id"] == "panel_luz" for h in c["hilos"] if h["de"] == "panel_luz.+5V")
+    assert "3,3 Ω" in mas["funcion"]
 
 
 def test_markdown_se_genera_sin_graficas():

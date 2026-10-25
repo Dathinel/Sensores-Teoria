@@ -122,8 +122,12 @@ def test_ahorros_aplicados_son_la_diferencia_con_el_total_anterior():
 def test_tornilleria_contada():
     datos = costos.cargar()
     t = costos.conteo_tornilleria(datos)
-    # La maqueta va remachada: solo los NEMA 17 (4 M3 c/u) y los 4 KFL08 (2 M5 con tuerca c/u).
-    assert t["m5x16"]["contados"] == t["tuerca_m5"]["contados"] == 8
+    # La maqueta va remachada: se atornillan los NEMA 17 (4 M3 x 12 c/u, con los separadores de 3 mm), el UNICO
+    # KFL08 (2 M4 con tuerca: cinta_vasos.scad, Ø5,5 a 36 para su brida de 37), el 28BYJ-48, la placa del FC-51, la
+    # GY-530 del VL53L0X interior y las dos webcams (1/4").
+    assert t["m4x16"]["contados"] == 2 and t["tuerca_m4"]["contados"] == 2 + 4    # + los 4 tacos de la tapa de la caja
+    assert t["tornillo_1_4"]["contados"] == 2
+    assert t["m3x12"]["contados"] == 8 and t["m4_autorroscante"]["contados"] == 2
     for d in t.values():
         if d["contados"]:
             assert d["comprar"] >= d["contados"] and d["subtotal"] == d["comprar"] * d["precio"] > 0

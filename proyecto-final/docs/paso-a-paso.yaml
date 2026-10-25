@@ -138,7 +138,7 @@ pasos:
     que_pasa: >
       Es la última casilla de la cinta de monedas. En el siguiente avance la pieza cae por el
       extremo de la cinta (sobre el rodillo) a un embudo; abajo, una compuerta de desvío con servo
-      A PRUEBA DE FALLAS la manda por uno de dos canales cortos y empinados (~60°): al carrusel del
+      A PRUEBA DE FALLAS la manda por uno de dos canales cortos y empinados (~57° y ~73°): al carrusel del
       almacén o a la ÚNICA bandeja de rechazo. En reposo apunta al rechazo; solo se mueve hacia el
       almacén para una moneda registrada y aceptada. Ya no hay expulsores a mitad de la cinta:
       "todo lo que no pase se saca y todo lo que sí pase se deja" (filtro total).
@@ -158,7 +158,8 @@ pasos:
       comunicación o el ESP32 se reinicia, el desvío queda en reposo: nada desconocido entra al
       almacén.
     replicacion: >
-      Desvío: servo SG90, ~30°, 150 ms, se mueve mientras la cinta trae la pieza (hay 600 ms). El
+      Desvío: servo SG90, 90° (la aleta impresa va de +45° a -45°, dentro del embudo), 200 ms, se
+      mueve mientras la cinta trae la pieza (hay 600 ms). El
       embudo va justo después del rodillo de cabeza; los dos canales, impresos en U, con más de
       45° para que la moneda no se frene. Bandeja de rechazo en el piso, del lado opuesto al
       almacén.
@@ -199,10 +200,12 @@ pasos:
     replicacion: >
       Motor 28BYJ-48 (5 V, con reducción) y driver ULN2003; al encender gira hasta que el sensor
       Hall ve el imán del carrusel (homing) y desde ahí cuenta pasos, un medio paso cada 2 ms
-      por temporizador (bajo el límite de arranque del motor). Media vuelta tarda ~4,1 s y un tubo
-      vecino ~1,37 s: NO cabe en el ciclo de la cinta (1,6 s), así que la cinta de monedas espera al
+      por temporizador, con una rampa al arrancar y al parar (los primeros y últimos 40 medios
+      pasos, de 6 ms bajando a 2: los 600 Hz de arranque de la hoja de datos son en vacío). Media
+      vuelta tarda ~4,2 s y un tubo vecino ~1,5 s: NO cabe en el ciclo de la cinta (1,6 s), así que la cinta de monedas espera al
       carrusel cuando la moneda va a un tubo lejano (decisión del grupo, 2026-09-28: se acepta). Tubos de 29 mm interior
-      (entra la de $1.000, 26,7 mm). Placa fija de acrílico o impresión lisa; obturador SG90.
+      (entra la de $1.000, 26,7 mm). Placa fija impresa y lisa; obturador de corredera enrasada con el
+      piso (sin escalón), que un SG90 corre 30 mm con una palanca en su estría (90°).
     revision: aprobado
     nota_revision: >
       Aprobado por el usuario (2026-09-26): almacén tipo revólver (un motor paso a paso + un servo
@@ -242,8 +245,9 @@ pasos:
       PROVISIONALES en config/parametros.yaml. La simulación tiene el sabotaje "Cambiar por un
       vaso igual" (dashboard y visor) y el desfase de la cinta (errores_actuadores.cinta.desfase).
     replicacion: >
-      Panel LED difuso (panel pequeño o tira LED detrás de acrílico opalino) detrás de las 4
-      primeras casillas, desde la cinta hasta ~2,5 cm sobre el borde del vaso. Cámara al costado, a
+      Panel de luz: tira LED de 5 V en una caja de luz de PLA blanco (su frente de 1,6 mm es el difusor) detrás de las 4
+      primeras casillas, con una resistencia de 3,3 Ω 1 W en línea en su +5 V, del lado de la caja (deja las tiras
+      en ≤ 1,5 W para que el PLA no se ablande: docs/electrica.md), desde la cinta hasta ~2,5 cm sobre el borde del vaso. Cámara al costado, a
       ~30 cm y a la altura de la boca del vaso, viendo verificación, llenado, tapa y prensa a la vez
       (el almacén y el tubo de tapas ocupan el espacio de arriba). Cinta de papel mate alrededor del
       vaso, de 2 cm de alto, con el mismo ArUco 4x4 (diccionario 4x4_50) de 18 x 18 mm impreso 6
@@ -355,8 +359,10 @@ pasos:
     sensores: [7]
     que_pasa: >
       Con la cinta quieta, un servo MG996R gira una leva excéntrica de 0 a 180 grados y la
-      devuelve: el pistón baja 13 mm (2 × 6,5 mm de excentricidad) y asienta la tapa a presión. Un
-      resorte en el vástago limita la fuerza, así que un objeto extraño no rompe nada. Antes de
+      devuelve: el pistón baja 14 mm (2 × 7 mm de excentricidad) y asienta la tapa a presión. No
+      hay resorte limitador: la fuerza la da el apriete de 0,5 mm al final de la carrera (más los
+      suplementos impresos que se pegan bajo el plato) contra la rigidez de la estructura
+      (maqueta_impresa/tapas_prensa_empujador.scad). Antes de
       prensar, la cámara de vasos (que también ve esta casilla) revisa que el vaso siga ahí, que
       sea el mismo y que tenga tapa.
     entra: Estado del vaso (tapada) + lo que ve la cámara en la casilla de prensa.
@@ -367,15 +373,20 @@ pasos:
     mensaje: '{"t":"cmd","id":45,"dst":"vasos","act":"prensar"}'
     como_esta_hoy: >
       Fuerza: la tapa sella a presión (su reborde salta sobre el labio del vaso), lo que pide del
-      orden de 30-50 N (PROVISIONAL); apretar más solo deforma el vaso. La leva (6,5 mm de
-      excentricidad, MG996R) apunta a 60 N (la tapa más dura x 1,2) con un resorte limitador, y el
-      servo lo da con margen x2,8 (docs/peso.md): no hace falta motorreductor, puente H ni sensor de
+      orden de 30-50 N (PROVISIONAL); apretar más solo deforma el vaso. La leva (7 mm de
+      excentricidad, MG996R) baja el plato hasta 0,5 mm por debajo del ala de la tapa asentada, sin
+      resorte limitador: la fuerza es ese apriete contra la rigidez del lazo de la prensa (estimada
+      ~0,05 mm/N con la placa con costillas y remachada a la columna: ~10 N; MEDIR). Para llegar a
+      la tapa se pegan bajo el plato suplementos impresos de 0,5 y 1,0 mm (apilables: ~40 N con los
+      dos). El servo sostiene hasta 60 N (la tapa más dura
+      x 1,2) con margen x2,6 (docs/peso.md): no hace falta motorreductor, puente H ni sensor de
       posición (el servo sabe en qué ángulo quedó y siempre vuelve arriba antes de que avance la
       cinta). La placa nunca mueve prensa y empujador a la vez.
     replicacion: >
       Medir la fuerza real para asentar una tapa (empujarla sobre una báscula de cocina: kg × 9,8
-      = N) y confirmar que sobra margen con el MG996R. Resorte que empiece a ceder un poco por
-      encima de esa fuerza. Cronometrar el ciclo (tiempos_ms.prensa_ciclo, hoy 1400 ms).
+      = N) y confirmar que sobra margen con el MG996R. Medir la rigidez del lazo con la tapa asentada
+      sobre la balanza y la leva a 180° (c = 0,5 mm / lectura en N) y pegar bajo el plato el
+      suplemento que pida (t ≥ 1,2·F·c − 0,5: 0,5, 1,0 o los dos; manual_maqueta.py). Cronometrar el ciclo (tiempos_ms.prensa_ciclo, hoy 1400 ms).
     revision: aprobado
     nota_revision: >
       Aprobado por el grupo (2026-09-25): el actuador depende de la fuerza que se necesite; con el

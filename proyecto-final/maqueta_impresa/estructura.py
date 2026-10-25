@@ -1,19 +1,22 @@
 """Estructura impresa de la maqueta (usuario, 2026-10-24: "todo impreso, sin perfil"; la forma puede cambiar).
 
 Reemplaza los 6,1 m de perfil 2020, las 24 escuadras, los 15 pies niveladores y las tuercas en T por:
-  - TUBOS de 20 x 20 impresos acostados (hueco con techo a 45 grados), lisos en las dos puntas;
+  - TUBOS de 16 x 16, pared 1,6, impresos acostados y lisos en las dos puntas. El hueco es un octogono (chaflanes de 3
+    en las cuatro esquinas): su techo es un puente de 6,8 gire como gire el tubo, y al imprimir cada tubo se gira
+    sobre su eje para que la cara con agujeros de remache quede de lado (la que apoya en la cama, lisa);
   - NODOS: cada brazo es una cajera donde entra el tubo entero 22 mm. Un nodo se imprime en una sola
     orientacion (tal cual o dado vuelta) y el techo de 45 grados de cada cajera horizontal mira hacia arriba
     EN LA CAMA: nada queda en el aire. Si por un nodo pasa un montante de largo (arriba y abajo), el nodo es
     un COLLAR que abraza el tubo pasante;
-  - EMPALMES: manguito de 44 mm que une dos tramos cuando un tubo pasa de largo_max;
+  - EMPALMES: manguito de 48 mm (4 de tope al medio) que une dos tramos cuando un tubo pasa de largo_max;
   - TACOS: separador entre el riel de la mesa de monedas y la viga del portico (placa con remaches);
-  - REMACHES impresos, todos de agarre corto (pared de nodo 2,4 + holgura 0,2 + pared de tubo 2): la una abre
-    dentro del hueco del tubo. revisar.py los MIDE en el ensamble.
+  - REMACHES impresos, todos de agarre corto (pared de nodo 2,4 + 2 holguras de 0,2 + pared de tubo 1,6 = 4,4: el tubo
+    puede correrse 0,4 dentro de la cajera): la una abre dentro del hueco del tubo. revisar.py los MIDE en el ensamble.
 
-Con un piso de tubos (z de 0 a 20) que amarra todo: la maqueta es UNA sola estructura (antes eran mesas
-sueltas sobre el MDF). Las posiciones salen del inventario de sim/mundo.py y del visor; lo funcional
-(alturas de bandas, carrusel, canaleta) no se mueve, lo de soporte si se movio para que entre.
+Con un piso de tubos (los nodos del piso van de z 0 a 21,2) que amarra todo: la maqueta es UNA sola
+estructura (antes eran mesas sueltas sobre el MDF; ya no hay tablero). Las posiciones salen del inventario de
+sim/mundo.py y del visor; lo funcional (alturas de bandas, carrusel, canaleta) no se mueve, lo de soporte si se
+movio para que entre.
 
 Uso: python estructura.py -> estructura_gen.scad (lo incluye maqueta.scad) y un resumen con largos,
 masa estimada y las comprobaciones (espacio entre nodos, zonas libres, flechas por carga).
@@ -30,7 +33,7 @@ LADO = 16.0
 PARED = 1.6
 TOL = 0.2
 PARED_NODO = 2.4
-CAJERA = LADO + 2 * TOL                       # 20,4
+CAJERA = LADO + 2 * TOL                       # 16,4
 BRAZO_ANCHO = CAJERA + 2 * PARED_NODO         # 21,2
 HONDO = 22.0                                  # lo que entra el tubo en cada cajera
 ALERO = (LADO / 2 + TOL) - 5.0                # alto del alero de 45 grados sobre la cajera (comun.scad: cajera_2d)
@@ -38,7 +41,9 @@ BRAZO = BRAZO_ANCHO / 2 + HONDO               # centro -> punta de cada brazo (3
                                               # termina la pared de la cajera perpendicular (12,6 del centro)
 LARGO_MAX = 240.0
 EMPALME = 2 * HONDO + 4.0                     # manguito de 48 mm (4 de tope al medio)
-AGARRE = PARED_NODO + TOL + PARED             # 4,6
+AGARRE = PARED_NODO + 2 * TOL + PARED         # 4,4 (2,4 + 0,4 + 1,6): el tubo puede correrse 0,4 dentro de la cajera y
+                                              # el cono de la una lo empuja lejos de la cabeza (2026-10-25: con 4,2 el
+                                              # hombro quedaba a ras de la cara de adentro, margen 0)
 PLA = 1.24                                    # g/cm3
 
 # ----------------------------------------------------------------- nodos (mm, marco del mundo)
@@ -94,7 +99,12 @@ TACOS_X = [20.0, 58.0]
 
 # Zonas que la estructura NO puede ocupar (mecanismos, bandas, carro...), (x0, x1, y0, y1, z0, z1) en mm.
 ZONAS_LIBRES = {
-    "banda de monedas (arriba)": (-124, 101, -29.5, 29.5, 428, 456),
+    # banda de 55 (+-27,5) con separadores de 4: tramo de arriba (cara de abajo en 450) y sus vueltas en los rodillos
+    # (ejes en z 439, r 11 + 2 + 4 = 17; el tensor corre de x 86 a 90). Antes era una sola caja de z 428 a 456 a todo lo
+    # largo, y bajo el tramo de arriba no hay banda: las cabezas de r_e_T1-L_1 (y -28,3, z 438-442) caian adentro
+    "banda de monedas (arriba)": (-124, 101, -29.5, 29.5, 446, 456),
+    "vuelta de la banda de monedas en el motriz": (-127, -93, -29.5, 29.5, 422, 456),
+    "vuelta de la banda de monedas en el tensor": (69, 107, -29.5, 29.5, 422, 456),
     "retorno de la banda de monedas": (-124, 76, -29.5, 29.5, 333, 360),
     "subida del retorno (rodillo C)": (0, 101, -29.5, 29.5, 333, 456),
     "motor de la cinta de monedas": (-131, -89, 51, 137, 420, 462),
@@ -275,6 +285,16 @@ def comprobar(nodos, tubos, empalmes, tacos, rem):
                 lo = np.minimum(lo, lo + voltear * ALERO)
                 hi = np.maximum(hi, hi + voltear * ALERO)
             cajas.append((f"nodo {n}", lo, hi))
+    # empalmes (manguito de 21,2 con su alero), tacos y cabezas de remache (2026-10-25: no se cruzaban con las zonas)
+    for en, c, d, arr in empalmes:
+        lo, hi = caja_de(c - d * EMPALME / 2, c + d * EMPALME / 2, BRAZO_ANCHO)
+        cajas.append((f"empalme {en}", np.minimum(lo, lo + arr * ALERO), np.maximum(hi, hi + arr * ALERO)))
+    for n, x in tacos:
+        cajas.append((n, v((x - 15, Y_A - LADO / 2 - 3, Z_VIGA - LADO / 2)), v((x + 15, Y_A + LADO / 2, Z_RIEL + LADO / 2))))
+    for n, _, cab, eje in rem:      # cabeza de 8 x 3,2 x 1,6 detras de la cara (de mas: 8 x 8 a lo ancho)
+        d = unit(eje)
+        lado = (1 - np.abs(d)) * 4.0
+        cajas.append((f"cabeza de {n}", np.minimum(cab, cab - 1.6 * d) - lado, np.maximum(cab, cab - 1.6 * d) + lado))
     for nombre, (x0, x1, y0, y1, z0, z1) in ZONAS_LIBRES.items():
         zlo, zhi = v((x0, y0, z0)), v((x1, y1, z1))
         for quien, lo, hi in cajas:
@@ -349,9 +369,12 @@ def resumen(nodos, tubos, empalmes, tacos):
     """estructura_resumen.md: para quien monte algo sobre la estructura (los subsistemas)."""
     f = lambda q: "(" + ", ".join(f"{c:.1f}" for c in q) + ")"
     L = ["# Estructura impresa: dónde está cada cosa (GENERADO por estructura.py)", "",
-         f"Tubo de {LADO:g} x {LADO:g} mm, pared {PARED:g} mm, hueco de {LADO - 2 * PARED:g} mm (con chaflanes de 3 mm",
-         "arriba). Coordenadas del mundo en mm. Un remache que sujeta algo a un tubo atraviesa la pieza y UNA pared",
-         f"del tubo: agarre = espesor de la pieza + {PARED:g} (+0,2 si hay holgura de encaje); la una abre dentro del",
+         f"Tubo de {LADO:g} x {LADO:g} mm, pared {PARED:g} mm, hueco octogonal de {LADO - 2 * PARED:g} mm con chaflanes de 3 mm en",
+         "las CUATRO esquinas (el tubo se gira al imprimir): si las patas de un remache se abren a lo ancho de una cara (la",
+         "cabeza atravesada al tubo), el remache va a no más de ~0,75 mm del eje del tubo (3,4 - 2,45 - 0,2); si no, una pata",
+         "pega en el chaflán por dentro (el revisor lo marca). Coordenadas del mundo en mm. Un remache que sujeta algo a un tubo atraviesa la pieza y UNA pared",
+         f"del tubo: agarre = espesor de la pieza + {PARED:g} (+ los huecos de la pila, y +0,2 más si la pieza de adentro",
+         "puede correrse dentro de una cajera o U; el revisor acepta la cara de salida de agarre - 0,3 a agarre + 0,15); la una abre dentro del",
          "hueco del tubo. No remachar a menos de 5 mm de la boca de un nodo, de un empalme ni de la punta de un tubo,",
          "ni donde ya hay un remache de la estructura (ver REM_ESTRUCTURA en estructura_gen.scad).", "",
          "## Tubos (eje de p0 a p1; la sección es un cuadrado de 16 centrado en el eje)", "",

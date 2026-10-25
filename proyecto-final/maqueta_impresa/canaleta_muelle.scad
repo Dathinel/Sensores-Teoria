@@ -40,7 +40,15 @@ can_y_ret = can_y_primero - 17 * can_c;
 // Vasos quietos: entregado, a mitad de camino y segundo de la fila (el retenido por A no se dibuja quieto:
 // tapa el pasillo de los remaches de la viga de topes, que se meten antes de cargar vasos; su posicion la
 // cubre el barrido del vaso).
-can_vasos = [-187.05, -255, can_y_ret + 82 * can_c];
+// Vasos quietos de la fila: el segundo (82 del retenido) y otro mas arriba con las pestanas Ø78 juntas (78 por el riel;
+// antes estaban a 64 y se pisaban). can_y_entra: donde el vaso ya salio de la banda de vasos (en -187 su fondo la tocaba);
+// de ahi arranca el barrido del vaso que baja.
+can_vasos = [can_y_ret + 160 * can_c, can_y_ret + 82 * can_c];
+can_y_entra = -193;
+// Donde APOYA de verdad cada vaso contra su dedo (medido corriendolos por los rieles hasta tocar, 2026-10-25):
+// contra A 1,8 mas abajo que can_y_ret, contra B 9,85 mas abajo que can_y_ret + 76 (el dibujo del visor no cambia).
+can_y_en_A = can_y_ret - 1.8 * can_c;
+can_y_en_B = can_y_ret + (76 - 9.85) * can_c;
 can_y_fin_barrido = -417.5;   // hasta que el centro llega al fin de los rieles (sigue en la cuna del carro)
 
 // ----------------------------------------------------------------- cabezales (lado -x; el +x es su espejo)
@@ -99,12 +107,16 @@ can_th0 = asin(7 / 38);          // dedo 7 mm adentro / afuera (visor.js:2112)
 can_th_ret = -can_th0;           // retener: dedo A (aguas abajo) adentro
 
 // Balancin: barra de 82 x 6 x 5 con los dedos de 5 x 5 a +-38, 21 mm hacia el eje de la canaleta (visor: 23;
-// con 23 el dedo A, al soltar, pasa 1 mm detras de la cola del carro y toca la pared de la cuna).
+// con 23 el dedo A, al soltar, pasa 1 mm detras de la cola del carro y toca la pared de la cuna). El cubo del
+// pivote se recorta a la cara de abajo de la barra: se imprime parado sobre esa cara (82 x 5, maciza, sin
+// agujeros: primera capa), con los dedos hacia arriba y los agujeros del pivote y del brazo horizontales.
 // Va sobre el brazo simple del SG90 (MEDIR: agujeros del brazo a 8 y 13 mm del eje, tornillos del kit).
 module can_bal_parte(k) {
-  if (k == 0) translate([-41, -2.5, -3]) cube([82, 5, 6]);
-  if (k == 1) rotate([-90, 0, 0]) translate([0, 0, -2.5]) cylinder(r = 6, h = 5);
-  if (k >= 2) translate([(k == 2 ? 38 : -38) - 2.5, -2.5, 0]) cube([5, 5, 21]);
+  if (k == 0) translate([-40.5, -2.5, -3]) cube([81, 5, 6]);   // 81 (no 82): en el extremo del giro la punta entraba 0,36 en el carro estacionado
+  if (k == 1) intersection() { rotate([-90, 0, 0]) translate([0, 0, -2.5]) cylinder(r = 6, h = 5); translate([-6, -2.5, -3]) cube([12, 5, 9]); }
+  // dedo A (k 2) de 4,5 de ancho: su cara de aguas abajo, al soltar, entraba 0,36 en la pared del carro estacionado; el
+  // vaso apoya en la cara de aguas arriba (x 35,5), que no se mueve
+  if (k >= 2) translate([(k == 2 ? 38 : -38) - 2.5, -2.5, 0]) cube([k == 2 ? 4.5 : 5, 5, 21]);
 }
 module can_balancin_loc() difference() {
   union() for (k = [0:3]) can_bal_parte(k);
@@ -116,24 +128,19 @@ module can_sg90_loc() {
   translate([-16.65, -30.2, -5.9]) cube([22.5, 22.7, 11.8]);
   translate([-21.5, -14.5, -5.9]) cube([32.2, 2.5, 11.8]);
   rotate([-90, 0, 0]) translate([0, 0, -7.5]) cylinder(r = 5.9, h = 3);
-  rotate([0, can_th_ret, 0]) {   // brazo simple (del kit)
-    rotate([-90, 0, 0]) translate([0, 0, -4.5]) cylinder(r = 3.5, h = 2);
-    translate([0, -4, -2.5]) cube([15, 1.5, 5]);
-  }
+  rotate([0, can_th_ret, 0]) can_brazo_sg90();   // brazo simple (del kit)
 }
 // Soporte del SG90: cuna inclinada (las orejas apoyan arriba y se atornillan con los tornillos del kit) unida
-// con un casco a una base remachada a la cara -x del tubo C4-M2 (entre los nodos, 2 remaches). El tunel
-// deja meter los remaches. Se imprime acostado sobre la cara x = 401.5.
+// con un casco a una base maciza apoyada en el piso y remachada a la cara -x del tubo C4-M2 (entre los nodos,
+// 2 remaches de 14,6 que atraviesan la base entera, con la cabeza en la cara x 401.5). Se imprime parado sobre
+// la base (primera capa maciza de 12,8 x 19,5; el casco sube a 20 grados de la vertical).
 module can_soporte_escape() difference() {
   union() {
     hull() {
       multmatrix(CAN_ME) translate([-23.5, -33, -6.1]) cube([36.2, 18.5, 14.6]);
       translate([401.5, -361.8, 14.1]) cube([7.5, 19.3, 4.5]);
     }
-    difference() {
-      translate([401.5, -362, 0]) cube([12.8, 19.5, 18.6]);
-      translate([395, -363, 7.1]) cube([16.3, 22, 7]);
-    }
+    translate([401.5, -362, 0]) cube([12.8, 19.5, 18.6]);
   }
   multmatrix(CAN_ME) {
     translate([-16.85, -30.4, -10]) cube([22.9, 31, 16.1]);
@@ -175,21 +182,71 @@ module can_guia_v() union() {
   linear_extrude(4) can_cola_2d();
 }
 
+// ----------------------------------------------------------------- amarre del marco y plantilla (2026-10-25)
+// El marco de la canaleta (nodos C1..C4, M1, M2 y sus tubos) estaba suelto: ningun remache lo unia al resto, y el
+// carro, al atracar, empuja los topes. El amarre es un puntal en Z entre el poste t_C1-L (297,5; -211,1) y el
+// t_V4-L (315; -152,5): ala contra la cara +y de C1-L, alma a lo largo de y por x 302,5..309 (fuera del pasillo de
+// las cabezas) y ala contra la cara -y de V4-L. z 48..78: sobre los nodos (43,2) y bajo el brazo de la cortina
+// (z 86); lejos del vaso que baja (x >= 321), de la banda de vasos (y >= -144,5) y del carro (y <= -417).
+// Se imprime como esta: es un prisma en z, la cara de abajo es el mismo perfil (maciza) y los agujeros van en los
+// costados. Remaches sobre el eje de cada cara (las patas la cruzan en x): ala 4 + pared 1,6 = 5,6.
+module can_amarre() translate([0, 0, 48]) linear_extrude(30) polygon([[289.5, -203.1], [309, -203.1], [309, -164.5],
+  [323, -164.5], [323, -160.5], [302.5, -160.5], [302.5, -199.1], [289.5, -199.1]]);
+// Plantilla de 69 mm: se apoya sobre las dos varillas (muescas hacia abajo, a lo ancho de los rieles) junto a cada
+// par de cabezales y las deja a 69 entre ejes antes de remachar las fundas y apretar los prisioneros. Muescas de
+// la cuna de los cabezales (varilla + tol). Pieza suelta: en el ensamble queda guardada en el piso, dentro del
+// marco (entre los brazos de los nodos C1..C4, bajo la canaleta), y se imprime como esta (muescas hacia arriba).
+module can_plantilla() difference() {
+  translate([318, -266, 0]) cube([84, 12, 8]);
+  for (s = [-1, 1]) translate([360 + s * 34.5, -260, 3.5 + can_r_ranura]) {
+    rotate([90, 0, 0]) cylinder(r = can_r_ranura, h = 20, center = true, $fn = 32);
+    translate([-can_r_ranura, -10, 0]) cube([2 * can_r_ranura, 20, 10]);
+  }
+}
+
 // ----------------------------------------------------------------- listas
 PIEZAS_CAN = ["can_cabezal_c1", "can_cabezal_c3", "can_cabezal_c2", "can_cabezal_c4",
   "can_prisionero_c1", "can_prisionero_c3", "can_prisionero_c2", "can_prisionero_c4",
   "can_soporte_escape", "can_balancin", "can_topes",
-  "can_guia_recta_xn", "can_guia_recta_xp", "can_guia_v_xn", "can_guia_v_xp"];
+  "can_guia_recta_xn", "can_guia_recta_xp", "can_guia_v_xn", "can_guia_v_xp",
+  "can_amarre", "can_plantilla"];
 
+// Agarres (2026-10-25): cabezales 2,4 + 0,2 + tubo 1,6 = 4,2 y +0,2 porque el tubo se corre en la U del cabezal;
+// escape 12,8 + 0,2 + 1,6 = 14,6 (la pila con el hueco que esta modelado; revisar acepta de agarre - 0,3 a + 0,15).
 REM_CAN = concat(
   [for (p = can_postes, dz = [8, 17], s = [-1, 1])
-    [str("r_can_cab_", s < 0 ? p[0] : (p[0] == "c1" ? "c2" : "c4"), "_", dz), 4.2, [360 + s * (360 - can_px + 10.6), p[1], p[2] - dz], [-s, 0, 0]]],
-  [for (y = [-347.5, -357.0]) [str("r_can_escape_", -y), 4.8, [411.3, y, 10.6], [1, 0, 0]]],
+    [str("r_can_cab_", s < 0 ? p[0] : (p[0] == "c1" ? "c2" : "c4"), "_", dz), 4.4, [360 + s * (360 - can_px + 10.6), p[1], p[2] - dz], [-s, 0, 0]]],
+  [for (y = [-347.5, -357.0]) [str("r_can_escape_", -y), 14.6, [401.5, y, 10.6], [1, 0, 0]]],
   [for (y = [-347.5, -357.0], s = [-1, 1]) [str("r_can_guia_", s < 0 ? "xn" : "xp", "_", y), 5.8, [360 + s * 74.7, y, 10.6], [-s, 0, 0]]],
-  [for (x = [345, 375]) [str("r_can_topes_", x), 13.0, [x, -395, 30], [0, 0, -1]]]);
+  [for (x = [345, 375]) [str("r_can_topes_", x), 13.0, [x, -395, 30], [0, 0, -1]]],
+  // amarre <-> postes C1-L (cara +y, y -203,1) y V4-L (cara -y, y -160,5): ala 4 + pared 1,6 (se tocan)
+  [for (z = [56, 70]) [str("r_can_amarre_c1_", z), 5.6, [297.5, -199.1, z], [0, -1, 0]]],
+  [for (z = [56, 70]) [str("r_can_amarre_v4_", z), 5.6, [315, -164.5, z], [0, 1, 0]]]);
 
 // lo que se mueve (lista LITERAL: la lee moviles_por_defecto.scad antes que este archivo)
 MOVILES_CAN = [["can_balancin", []], ["can_vaso", ["can_balancin"]]];
+// El escape fase por fase (revisar.py intersecta lado 0 = balancin con lado 1 = vasos en cada paso; los barridos
+// de arriba los excluyen entre si porque el vaso retenido TOCA el dedo A a proposito):
+//   k = 0  retener (dedo A adentro): el vaso baja por la canaleta hasta 0,1 antes de apoyar en A (can_y_en_A);
+//   k = 1  soltar (B adentro, A afuera): el retenido sigue desde A hasta el fin de los rieles sin tocar A, y el
+//          siguiente baja hasta 0,1 antes de apoyar en B (can_y_en_B);
+//   k = 2  el balancin girando de retener a soltar con el retenido quieto contra A y el siguiente de la fila pegado
+//          a el (pestana con pestana: 78 entre centros, el peor caso).
+// revisar.py exige ademas que en cada paso los vasos TOQUEN el dedo (CONTACTOS): que el dibujo este donde apoyan.
+SINCRONOS_CAN = [["can_escape", 2]];
+module can_tramo_vaso(y0, y1) for (p = ["pestana", "cuerpo"]) hull() { can_vaso_en(y0, 0, p); can_vaso_en(y1, 0, p); }
+module can_fase(n, k, lado) if (n == "can_escape") {
+  if (lado == 0) {
+    if (k == 0) multmatrix(CAN_ME) rotate([0, can_th_ret, 0]) can_balancin_loc();
+    if (k == 1) multmatrix(CAN_ME) rotate([0, -can_th_ret, 0]) can_balancin_loc();
+    // hull parte por parte (como can_barrido): el hull del balancin entero rellenaria el hueco entre los dedos
+    if (k == 2) for (q = [0:3], i = [0:5]) hull() for (j = [i, i + 1]) multmatrix(CAN_ME) rotate([0, can_th_ret - 2 * can_th_ret * j / 6, 0]) can_bal_parte(q);
+  } else {
+    if (k == 0) can_tramo_vaso(can_y_entra, can_y_en_A + 0.1 * can_c);
+    if (k == 1) { can_tramo_vaso(can_y_en_A, can_y_fin_barrido); can_tramo_vaso(can_y_entra, can_y_en_B + 0.1 * can_c); }
+    if (k == 2) { can_vaso_en(can_y_en_A + 0.1 * can_c); can_vaso_en(can_y_en_A + 78 * can_c); }
+  }
+}
 
 module can_pieza(n) {
   if (n == "can_cabezal_c1") can_cabezal_izq(-211.1, 175.28);
@@ -207,10 +264,12 @@ module can_pieza(n) {
   else if (n == "can_guia_recta_xn") can_espejo() can_guia_recta();
   else if (n == "can_guia_v_xp") can_guia_v();
   else if (n == "can_guia_v_xn") can_espejo() can_guia_v();
+  else if (n == "can_amarre") can_amarre();
+  else if (n == "can_plantilla") can_plantilla();
 }
 
-// Para imprimir: cabezales y guias como estan; prisionero parado sobre la cabeza; soporte acostado sobre su
-// cara -x; balancin plano; viga de topes sobre su cara -y.
+// Para imprimir: cabezales, guias y soporte del escape como estan (parados); prisionero parado sobre la cabeza;
+// balancin parado sobre la cara de abajo de la barra; viga de topes sobre su cara -y.
 function can_py_pris(n) = (n == "can_prisionero_c1" || n == "can_prisionero_c2") ? -211.1 : -309.5;
 module can_a_cama(n) {
   if (n == "can_prisionero_c1" || n == "can_prisionero_c3")
@@ -218,23 +277,27 @@ module can_a_cama(n) {
   else if (n == "can_prisionero_c2" || n == "can_prisionero_c4")
     rotate([180, 0, 0]) rotate([0, -90, 0]) translate([-can_r_riel, 0, 1.7]) rotate([-15, 0, 0])
       translate(-[720 - can_xr, can_py_pris(n), can_zr(can_py_pris(n))]) children();
-  else if (n == "can_soporte_escape") rotate([0, -90, 0]) children();
-  else if (n == "can_balancin") rotate([90, 0, 0]) multmatrix(can_inv(CAN_ME)) children();
+  else if (n == "can_balancin") rotate([0, -can_th_ret, 0]) multmatrix(can_inv(CAN_ME)) children();
   else if (n == "can_topes") rotate([90, 0, 0]) children();
   else children();
 }
 
 // Barridos: el balancin de soltar a retener (cada parte en pasos, para no rellenar entre los dedos) y el vaso
 // de la entrega hasta la cola del carro (pestana y cuerpo por separado; se restan los 3 vasos quietos).
+// brazo simple del SG90 (del kit): el balancin va montado sobre el y gira con el
+module can_brazo_sg90(e = 0) {   // e: crecido (para restarlo del barrido sin dejar astillas en la cara que se toca)
+  rotate([-90, 0, 0]) translate([0, 0, -4.5 - e]) cylinder(r = 3.5 + e, h = 2 + 2 * e);
+  translate([-e, -4 - e, -2.5 - e]) cube([15 + 2 * e, 1.5 + 2 * e, 5 + 2 * e]);
+}
 module can_barrido(n) {
-  if (n == "can_balancin") {
+  if (n == "can_balancin") difference() {
     N = 6;
     for (k = [0:3], i = [0:N - 1]) hull() for (j = [i, i + 1])
       multmatrix(CAN_ME) rotate([0, -can_th0 + 2 * can_th0 * j / N, 0]) can_bal_parte(k);
-  } else if (n == "can_vaso") difference() {
-    union() for (p = ["pestana", "cuerpo"]) hull() { can_vaso_en(can_vasos[0], 0, p); can_vaso_en(can_y_fin_barrido, 0, p); }
-    for (y = can_vasos) can_vaso_en(y, 0.3);
-  }
+    // el brazo del SG90 gira con el balancin (en lo comprado esta dibujado quieto en retener): se le resta su barrido
+    for (i = [0:N - 1]) hull() for (j = [i, i + 1]) multmatrix(CAN_ME) rotate([0, -can_th0 + 2 * can_th0 * j / N, 0]) can_brazo_sg90(0.1);
+  } else if (n == "can_vaso")
+    for (p = ["pestana", "cuerpo"]) hull() { can_vaso_en(can_y_entra, 0, p); can_vaso_en(can_y_fin_barrido, 0, p); }
 }
 
 // Comprado: varillas, SG90 con su brazo, vasos, espuma de los topes (MEDIR: EVA de 6) y el carro como caja
@@ -242,7 +305,8 @@ module can_barrido(n) {
 module can_comprados() {
   for (s = [-1, 1]) can_varilla(s);
   multmatrix(CAN_ME) can_sg90_loc();
-  for (y = can_vasos) can_vaso_en(y);
+  // los vasos de la fila no se dibujan quietos aqui (2026-10-25): el barrido del que baja no tiene que restarlos y lo que
+  // pasa con ellos en el escape lo revisan las fases (can_fase), con cada vaso donde apoya de verdad
   for (x = [297, 401]) translate([x, -414.5, 22]) cube([22, 6, 22.5]);
   difference() {   // carro: caja simple con el hueco de la cuna (por ahi entra el vaso colgado)
     translate([300, -597.5, 0]) cube([120, 180, 140]);

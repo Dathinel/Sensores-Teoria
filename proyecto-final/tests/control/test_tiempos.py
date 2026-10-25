@@ -31,11 +31,15 @@ def test_los_tiempos_configurados_caben_salvo_el_carrusel():
 
 
 def test_carrusel_giro_es_el_tiempo_real_del_firmware():
-    """Antes: 500 ms en la config y ~4,1 s en la placa. Ahora uno sale del otro."""
+    """Antes: 500 ms en la config y ~4,1 s en la placa. Ahora uno sale del otro: media vuelta a
+    `carrusel_ms_por_paso` mas la rampa de arranque y de parada (2026-10-25; la cuenta de la placa,
+    latido por latido, esta en tests/firmware/test_firmware.py)."""
     p = cargar_parametros()
     fw = p["firmware"]
-    media_vuelta = fw["carrusel_pasos_por_vuelta"] // 2 * fw["carrusel_ms_por_paso"]
-    assert p["tiempos_ms"]["carrusel_giro"] == media_vuelta == 4096
+    ms, r0, r = fw["carrusel_ms_por_paso"], fw["carrusel_rampa_ms"], fw["carrusel_rampa_pasos"]
+    rampa = 2 * sum((r0 - ms) * (r - k) // r for k in range(r)) - 1     # las dos puntas, menos el primer latido
+    media_vuelta = fw["carrusel_pasos_por_vuelta"] // 2 * ms + rampa
+    assert p["tiempos_ms"]["carrusel_giro"] == media_vuelta == 4223
 
 
 def test_con_un_carrusel_que_si_alcanza_todo_cabe():

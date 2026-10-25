@@ -21,7 +21,9 @@ filtrado:
   tolerancia_coherencia_mm: 1.2
 
 cinta_monedas:
-  # Separacion entre casillas de la cinta indexada, en mm.
+  # Separacion entre casillas de la cinta indexada, en mm. La banda real es cerrada (~615 mm: motriz, tensor y
+  # retornos A y B) y lleva 15 separadores a L/15 = ~41 mm (segunda opinion 2026-10-25); la simulacion, el firmware y
+  # el visor siguen con 40: la diferencia (< 1,2 mm por casilla) la corrige la resincronizacion por camara.
   separacion_casilla_mm: 40
   # La pausa tras cada avance esta en tiempos_ms.pausa_casilla_monedas (1000 ms). Aqui habia
   # otra de 300 ms que nadie leia y contradecia esa (auditoria 2026-09-27).
@@ -49,7 +51,9 @@ vasos:
   # la base del vaso con margen; no puede ser la misma de la cinta de
   # monedas (40 mm) porque dos vasos de 62 mm quedarian encimados. Si
   # cambia, regenerar sim/urdf/cinta_vasos.urdf y SEPARACION_CASILLA_VASOS_M
-  # en sim/mundo.py.
+  # en sim/mundo.py. La banda real es cerrada (875,4 mm) y lleva 11 separadores a L/11 = 79,6 mm, 5 de ellos en el
+  # ramal de abajo (cinta_vasos.scad, 2026-10-25); aqui sigue 80: la diferencia (0,4 mm por casilla) la corrige la
+  # resincronizacion por camara.
   separacion_casilla_mm: 80
   # Lineas de medida de la camara de vasos (grupo, 2026-09-25: las 6
   # barreras IR se reemplazaron por vision). En la imagen de cada estacion
@@ -430,30 +434,38 @@ tiempos_ms:
   # se ve es lo que va a pasar. El detalle de los motores de las cintas
   # (pasos, micropasos, rampas) va en su seccion mas adelante.
   # Cinta de monedas: 40 mm por avance.
-  avance_casilla_monedas: 600         # ~70 mm/s con rampas suaves
+  avance_casilla_monedas: 600         # 40 mm: ~67 mm/s de media, con rampas (firmware.cinta_rampa_ms)
   pausa_casilla_monedas: 1000         # todo lo que se verifica en la casilla pasa aqui (lecturas votadas, vision y serial)
   presencia_lectura: 2                # FC-51 (infrarrojo + comparador): respuesta < 1 ms
   material_lectura: 5                 # LJC18A3 / LJ18A3: conmutan a 100-500 Hz
   intervalo_entre_lecturas: 30        # separa las lecturas repetidas (antirrebote, que sean independientes)
   vision_captura_inferencia: 400      # foto + segmentacion + clasificador, con holgura para el portatil
-  desvio: 150                         # compuerta de desvio de la descarga (SG90, ~30 grados)
+  # Compuerta de desvio de la descarga: SG90 de -45 a +45 grados (90 de servo, la aleta de
+  # cinta_monedas.scad). A 6 V sin carga 0,09 s/60 grados = 135 ms; antes 150 con ~30 grados.
+  desvio: 200
   # Carrusel del almacen: hasta 180 grados (el camino mas corto entre dos tubos, o hasta el
-  # agujero). Es el tiempo REAL del firmware: 2048 medios pasos x firmware.carrusel_ms_por_paso
-  # (2 ms) = 4096 ms (un tubo vecino, 60 grados: 1365 ms). Antes decia 500 ms, que el 28BYJ-48
+  # agujero). Es el tiempo REAL del firmware para media vuelta: 2048 medios pasos x
+  # firmware.carrusel_ms_por_paso (2 ms) = 4096 ms, mas 127 ms de la rampa de arranque y parada
+  # (firmware.carrusel_rampa_*, 2026-10-25) = 4223 ms. Antes decia 500 ms, que el 28BYJ-48
   # no puede (~15 rpm como mucho = 2 s por media vuelta). Con esto NO caben dos chequeos de
   # control/tiempos.py: lo que se ajusta es que la cinta de monedas ESPERA al carrusel en esos
   # ciclos (docs/replicacion.md). Una prueba exige que este numero siga al firmware.
-  carrusel_giro: 4096
+  # La simulacion (control/carrusel.py) toma el giro proporcional al angulo: la rampa cuesta lo
+  # mismo en cualquier giro, asi que un tubo vecino (60 grados) en la placa tarda 1493 ms y en la
+  # simulacion 4223 / 3 = 1408 (85 ms menos; en el montaje real el PC espera el `llego` del firmware).
+  carrusel_giro: 4223
   compuerta_tubo: 600                 # abrir el obturador, caer el lote, cerrar
   # Caida de una moneda aceptada desde el borde de la cinta hasta quedar quieta en su tubo
-  # (embudo de la descarga -> compuerta de desvio -> canal corto a ~72 grados -> boca -> fondo).
+  # (embudo de la descarga -> compuerta de desvio -> canal corto a ~57 grados -> boca -> fondo).
+  # (El canal A de cinta_monedas.scad baja 47 mm en 30 de y: atan(47/30) = 57,4 grados; antes decia ~72.)
   # Mientras cae, el carrusel NO puede girar: el siguiente giro sale recien cuando termina
   # (revision visual 2026-09-29: el giro a la siguiente moneda arrancaba en el mismo instante y
   # la moneda caia 15-37 mm fuera de la boca). PROVISIONAL, de la geometria (sim/mundo.py):
   # 180 mm de altura de la cinta (z 452 mm) al fondo de un tubo vacio (z 272 mm); caida libre
   # sqrt(2h/g) = 0,19 s; por tramos (26 mm de embudo en caida libre, 0,08 s; la moneda casi se
-  # frena en la compuerta y resbala 74 mm por compuerta+canal con roce 0,3, 0,13 s; 74 mm mas
-  # hasta el fondo, 0,06 s) = 0,27 s, + ~0,1 s de rebote hasta quedar plana = 0,37 s ->
+  # frena en la compuerta y resbala 74 mm por compuerta+canal con roce 0,3: a 57 grados
+  # g(sen - 0,3 cos) = 6,7 m/s2, 0,15 s (a 72 grados eran 0,13 s); 74 mm mas
+  # hasta el fondo, 0,06 s) = 0,29 s, + ~0,1 s de rebote hasta quedar plana = 0,39 s ->
   # redondeado arriba a 400 ms. COMO SE MIDE: video en camara lenta (240 fps) de 10 monedas de
   # cada tamano, desde que dejan la cinta hasta que la pila deja de moverse; usar el peor caso
   # (tubo vacio). Una prueba exige que sea >= la caida libre y menor que la pausa.
@@ -467,8 +479,13 @@ tiempos_ms:
   camara_vasos_cuadro: 60             # un cuadro de la webcam (30 fps) + silueta + ArUco en el PC
   tapa_caida: 500                     # caida de la tapa por gravedad desde el tubo
   prensa_ciclo: 1400                  # servo MG996R con la leva: 0 -> 180 -> 0 grados (~0,6 s por lado con carga)
-  empujador: 700
-  cortina_lectura: 33                 # VL53L0X (seguridad: esta NO se hace lenta)
+  # Empujador: MG996R de 0 a 180 grados (la manivela de tapas_prensa_empujador.scad) y vuelta. El
+  # firmware lo devuelve a reposo a la MITAD del ciclo; a 6 V sin carga 0,14 s/60 grados = 420 ms
+  # por lado, asi que cada mitad necesita >= 420 ms: 500 deja ~20 % para la carga (antes 700 = 350
+  # por lado: llegaba a ~150 grados y el vaso no salia de la banda). No alarga el ciclo de vasos
+  # (manda la pausa de 1400). El escape de la canaleta usa este mismo ciclo.
+  empujador: 1000
+  cortina_lectura: 33                # VL53L0X (seguridad: esta NO se hace lenta)
   # Comunicaciones.
   serial_ida_vuelta: 20               # 115200 baud: ~80 bytes por linea = ~7 ms por sentido + parseo
   # (esp_now_latencia se quito el 2026-09-28: no la leia nadie. Ningun paso de la
@@ -556,6 +573,15 @@ firmware:
   # casillas: solo en las esperas largas (linea en pausa, parada segura, sin piezas).
   # Ver el porque en firmware/fijo/hw.py (Hardware._revisar_enable).
   a4988_reposo_ms: 3000
+  # Rampa de cada avance de cinta (auditoria 2026-10-25, esfuerzos.md: el poste de la camara cenital y el
+  # almacen tienen frecuencias propias de ~10 Hz y la cinta arrancaba y paraba de golpe cada 1,6 s): la
+  # frecuencia de los pasos sube en linea recta de `cinta_arranque` x la de crucero a la de crucero en
+  # `cinta_rampa_ms` y baja igual al final. El tiempo del avance y los micropasos no cambian: la de crucero
+  # sube para compensar (monedas ~950 Hz en vez de 772, ~82 mm/s; vasos ~1040 Hz en vez de 926). 150 ms es
+  # mas que el periodo de esos modos (~90-100 ms). PROVISIONAL: ver con la camara cenital si la banda
+  # sigue moviendose al empezar la pausa; 0 = sin rampa (como antes).
+  cinta_rampa_ms: 150
+  cinta_arranque: 0.25
   # Perro guardian (machine.WDT) del ESP32 del carro: si el bucle de control se
   # traba mas de este tiempo, la placa se reinicia sola (y al arrancar los motores
   # quedan en 0). El ciclo normal es de 20 ms; 2 s deja margen de sobra para las
@@ -566,25 +592,43 @@ firmware:
   # 2 ms por medio paso = 500 Hz: por debajo de los 600 Hz de arranque sin perder pasos
   # de su hoja de datos ("idle in-traction frequency > 600 Hz", en vacio a 5 V). Mas
   # rapido (1 ms = 1000 Hz, su limite en vacio) no deja margen para la inercia de los
-  # tubos con monedas. Con 2 ms: un tubo (60 grados) = 1,37 s y media vuelta = 4,1 s
-  # (tiempos_ms.carrusel_giro sale de aqui). Los pasos los da un Timer por hardware, no
+  # tubos con monedas. Con 2 ms y la rampa de abajo: un tubo (60 grados) = 1,49 s y media vuelta
+  # = 4,22 s (tiempos_ms.carrusel_giro sale de aqui). Los pasos los da un Timer por hardware, no
   # el bucle principal, para que esos tiempos sean los reales.
   carrusel_pasos_por_vuelta: 4096
   carrusel_ms_por_paso: 2
+  # Rampa del carrusel (segunda opinion 2026-10-25: los 600 Hz de la hoja de datos son EN VACIO y el
+  # tambor lleno tiene inercia y roce): los primeros y ultimos `carrusel_rampa_pasos` medios pasos van
+  # mas lentos, de `carrusel_rampa_ms` bajando en linea recta (de a 1 ms) a carrusel_ms_por_paso.
+  # Suma 127 ms a cada giro (tiempos_ms.carrusel_giro). PROVISIONAL: la prueba de par del manual
+  # (tubos llenos) dice si alcanza; si pierde pasos, subir carrusel_rampa_ms o los pasos de rampa
+  # (y volver a calcular carrusel_giro: la prueba de firmware da el numero).
+  carrusel_rampa_ms: 6
+  carrusel_rampa_pasos: 40
   # Bus I2C largo (I2C 1, SoftI2C en G16/G17: VL53L0X del interior y de la cortina,
   # cables hasta la cinta de vasos, ~170 pF con pull-ups de 2,2 kOhm). A 100 kHz la
   # subida (~317 ns) cumple la norma (1000 ns); a 400 kHz (300 ns) NO. El bus corto I2C 0 (PCA9685,
   # cable corto dentro de la caja) sigue a 400 kHz. docs/revision-final.md, docs/electrica.md.
   i2c_bus_largo_hz: 100000
-  # Servos por el PCA9685 (canal = el del conexionado). Angulos PROVISIONALES:
-  # reposo = posicion segura (la que toma en la parada segura).
+  # Servos por el PCA9685 (canal = el del conexionado). reposo = posicion segura (la que toma en
+  # la parada segura). Cada pieza va directo en la estria o en el cuerno del servo, asi que
+  # activo - reposo ES el recorrido de la pieza impresa (mandan las piezas, maqueta_impresa/*.scad;
+  # el visor anima lo mismo). Antes eran 30/90/60/180/120/45 y con eso el escape de tapas se trababa,
+  # el de la canaleta pegaba en el carro y el empujador no sacaba el vaso de la banda:
+  # - desvio 90: aleta de +45 (rechazo, punta a -y) a -45 (almacen), cinta_monedas.scad mon_reposo;
+  # - obturador 90: palanca que lleva la corredera 30 mm, almacen.scad alm_abre (cerrado en reposo);
+  # - tapas 28: cuerno de +14,2 a -14,2 grados, tapas_prensa_empujador.scad tap_a0;
+  # - prensa 180: leva de 7 mm, el piston baja 14; empujador 180: la manivela entera;
+  # - canaleta 21: balancin +-asin(7/38) = +-10,6 grados, canaleta_muelle.scad can_th0.
+  # Cada cuerno se calza con el servo en reposo; si al montar gira al reves, se calza con
+  # reposo 180 y activo 180 - recorrido.
   servos:
-    desvio:    {canal: 0, reposo: 0,   activo: 30}     # 0 = al rechazo (a prueba de fallas)
-    obturador: {canal: 1, reposo: 0,   activo: 90}
-    tapas:     {canal: 2, reposo: 0,   activo: 60}
+    desvio:    {canal: 0, reposo: 0,   activo: 90}     # 0 = al rechazo (a prueba de fallas)
+    obturador: {canal: 1, reposo: 0,   activo: 90}     # 0 = cerrado
+    tapas:     {canal: 2, reposo: 0,   activo: 28}
     prensa:    {canal: 3, reposo: 0,   activo: 180}    # 0 = arriba
-    empujador: {canal: 4, reposo: 0,   activo: 120}
-    canaleta:  {canal: 5, reposo: 0,   activo: 45}     # escape de dos dedos: 0 = retener
+    empujador: {canal: 4, reposo: 0,   activo: 180}
+    canaleta:  {canal: 5, reposo: 0,   activo: 21}     # escape de dos dedos: 0 = retener
   # Cortina: el umbral (por debajo de esa distancia el VL53L0X ve una mano) YA NO
   # se escribe aqui: es el largo de la zona que vigila, el MISMO que usa la
   # simulacion para el alcance de su cono (sim/sensores_sim.ventana_cortina_mm:

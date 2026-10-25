@@ -387,7 +387,8 @@ def _md_estructura_3d(datos: dict) -> list[str]:
     # Tornillería
     L += ["", "### Tornillería", "",
           "La maqueta va remachada (sin escuadras, pies ni tuercas en T): solo se atornilla lo comprado que lo pide "
-          "(los NEMA 17 y los rodamientos KFL08; los servos traen los tornillos de su kit) y las piezas impresas del "
+          "(los NEMA 17, el rodamiento KFL08, el 28BYJ-48, la placa del FC-51, la GY-530 del VL53L0X interior y los "
+          "pernos del empujador y del escape de tapas; los servos traen los tornillos de su kit) y las piezas impresas del "
           f"carro y de la caja (columna `tornillos` en precios.yaml). Se compra un "
           f"{datos['estructura_3d']['tornilleria']['repuesto']:.0%} de repuesto.", "",
           "| Qué | Contados | A comprar | Precio | Subtotal |", "|---|---:|---:|---:|---:|"]

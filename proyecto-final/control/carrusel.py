@@ -6,8 +6,8 @@ espere a que de la vuelta"): la simulacion guardaba la moneda en su tubo en
 el mismo instante en que llegaba a la descarga, sin girar nada, y el visor
 3D animaba el giro por su cuenta, en una cola que se iba atrasando. El
 carrusel real es un 28BYJ-48 que da un medio paso cada 2 ms: media vuelta
-tarda `tiempos_ms.carrusel_giro` (4096 ms) y un tubo vecino (60 grados)
-1365 ms, mas que el ciclo de la cinta de monedas (1600 ms) menos lo que
+tarda `tiempos_ms.carrusel_giro` (4223 ms, con la rampa) y un tubo vecino (60 grados)
+~1,4 s, mas que el ciclo de la cinta de monedas (1600 ms) menos lo que
 tarda la vision. Este modulo lleva la cuenta de ese giro con el tiempo real
 para que la planta (sim/planta.py) sepa si el tubo YA esta bajo la carga
 antes de soltar la moneda, y si no, cuanto falta.
@@ -29,9 +29,11 @@ Geometria (la misma de sim/mundo.py, que la pasa como argumentos):
   cuenta de medios pasos del firmware.
 
 Tiempo: el firmware (firmware/fijo/hw.py, `Carrusel`) va por el camino mas
-corto a velocidad constante (un medio paso cada `carrusel_ms_por_paso`, sin
-rampas), asi que la duracion de un giro es proporcional al angulo:
-`giro_media_vuelta_ms * |angulo| / 180`. Un pedido nuevo en mitad de un giro
+corto a un medio paso cada `carrusel_ms_por_paso`, con una rampa de arranque y
+parada que suma 127 ms a cada giro (2026-10-25). Aqui la duracion se toma
+proporcional al angulo, `giro_media_vuelta_ms * |angulo| / 180`, exacta en media
+vuelta; en un tubo vecino la placa tarda 85 ms mas (en el montaje real el PC
+espera el aviso `llego` del firmware, no esta cuenta). Un pedido nuevo en mitad de un giro
 arranca desde donde va el disco en ese instante (igual que el firmware, que
 solo cambia su objetivo).
 

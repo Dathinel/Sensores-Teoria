@@ -151,6 +151,32 @@ RIELES = {
                 "ESP32 del carro (VIN) y el HC-SR04; del 3,3 V del ESP32 salen los demás sensores."),
 }
 
+# Panel de luz (auditoria 2026-10-25, maqueta_impresa/esfuerzos.md): 2 tiras 2835 de 20 LED a ~20 mA son 0,40 A
+# por tira a 5 V, 4 W las dos, y el marco de PLA de 1,6 mm de la caja de luz llegaria a ~65 °C (Tg del PLA
+# 55-60 °C). Por eso el +5 V del panel pasa por UNA resistencia en serie, soldada en linea del lado de la caja
+# (lejos del PLA), que deja las tiras en <= 1,5 W (~40 °C). Equivale a 6,8 Ω por tira (las dos en paralelo).
+# No se usa un MOSFET con PWM del ESP32: el fijo no tiene GPIO libres fuera de los de arranque (0, 2, 5, 12,
+# 15; test_sin_pines_de_arranque_ni_de_memoria) y el PCA9685 trabaja a 50 Hz (los servos), que la camara
+# de vasos veria como parpadeo y franjas en el contraluz.
+# Modelo de cada tira: la rodilla de los LED blancos (PANEL_V_RODILLA) mas la resistencia que trae cada LED
+# (las 20 en paralelo), ajustada para que a 5 V pida PANEL_I_TIRA_5V. PROVISIONAL: medir la corriente real.
+PANEL_TIRAS = 2
+PANEL_I_TIRA_5V = 0.40     # A por tira a 5 V, sin resistencia (20 LED x ~20 mA)
+PANEL_V_RODILLA = 2.8      # V: rodilla de un LED blanco 2835 a pocos mA (2,6-3,0 segun el lote)
+PANEL_R_SERIE = 3.3        # Ω, 1 W, en linea en el +5 V del panel
+PANEL_P_MAX_W = 1.5        # potencia maxima en las tiras (esfuerzos.md: <= 40 °C en el marco de PLA)
+
+
+def panel_luz(r_serie: float = PANEL_R_SERIE, v_rodilla: float = PANEL_V_RODILLA) -> dict:
+    """Corriente del panel, voltaje y potencia en las tiras y en la resistencia en serie."""
+    r_tiras = (5.0 - v_rodilla) / PANEL_I_TIRA_5V / PANEL_TIRAS          # las dos tiras en paralelo
+    i = (5.0 - v_rodilla) / (r_tiras + r_serie)
+    v = 5.0 - i * r_serie
+    return {"i": i, "v_tiras": v, "p_tiras": v * i, "p_resistencia": i * i * r_serie, "r_tiras": r_tiras}
+
+
+_I_PANEL = round(panel_luz()["i"], 3)
+
 # Cargas: (riel, reposo A, nominal A, pico A, de donde sale el dato). Corrientes medidas EN
 # SU riel (un servo en el de 6 V, el ESP32 en el de 3,3 V...). Todo es de hoja de datos o
 # de mediciones tipicas publicadas: PROVISIONAL hasta medir con el multimetro en el montaje.
@@ -163,7 +189,9 @@ CARGAS = {
     "sensor_m18": ("12V", 0.008, 0.008, 0.015, "LJC18A3 / LJ18A3-8: consumo sin carga ≤ 10-15 mA"),
     # --- 5 V de la caja ---
     "byj48": ("5V", 0.0, 0.15, 0.24, "28BYJ-48 5 V: 50 Ω/bobina → 0,1 A por bobina; medio paso = 1 o 2 bobinas; + LEDs del ULN2003"),
-    "panel": ("5V", 0.80, 0.80, 0.85, "Panel LED difuso ~33 × 11 cm: 2 tiras 2835 de 20 LED a ~20 mA (PROVISIONAL)"),
+    "panel": ("5V", _I_PANEL, _I_PANEL, round(panel_luz(v_rodilla=2.6)["i"], 3),
+              "Panel LED difuso ~33 × 11 cm: 2 tiras 2835 de 20 LED (0,80 A a 5 V) detrás de una resistencia de "
+              "3,3 Ω en serie: ≤ 1,5 W en las tiras (PROVISIONAL)"),
     "anillo": ("5V", 0.35, 0.35, 0.40, "Anillo de luz difusa 5 V para webcam (PROVISIONAL)"),
     "ventilador": ("5V", 0.10, 0.10, 0.15, "Ventilador 4010 5 V: 0,1 A (conexiones.py)"),
     # --- 3,3 V del ESP32 fijo ---
@@ -281,7 +309,7 @@ def mover_servo(linea: Linea, modelo: str, t0: float, grados: float, *, extra_a:
     linea.tramo(t0, T_ARRANQUE_S, trab)                          # arranque: corriente de trabado
     linea.tramo(t0 + T_ARRANQUE_S, dur - T_ARRANQUE_S, mov + extra_a)
     if trabado_final_s:
-        linea.tramo(t0 + dur, trabado_final_s, trab)             # empujando contra el resorte
+        linea.tramo(t0 + dur, trabado_final_s, trab)             # apretando al final de la carrera (la prensa contra la tapa)
     return dur + trabado_final_s
 
 
@@ -291,8 +319,9 @@ def simular_planta(p: dict | None = None, duracion_s: float = 20.0) -> dict:
     Cinta de monedas (cada `avance + pausa` = 1,6 s): avanza, el desvio se pone para
     una moneda aceptada (una de cada dos), y en la pausa el carrusel gira un tubo (60°).
     Cinta de vasos (avance 1 s): tapa; prensa 0→180→0 con la leva apretando la tapa
-    contra el resorte; DESPUES el empujador (nunca a la vez que la prensa: regla de
-    diseño), asi que su ciclo dura avance + prensa + empujador = 3,1 s. En la ventana
+    (0,5 mm de apriete al final de la carrera, sin resorte limitador); DESPUES el empujador
+    (nunca a la vez que la prensa: regla de diseño), asi que su ciclo dura avance + prensa + empujador = 3,3 s. Cada servo gira su
+    recorrido de firmware.servos (activo - reposo), que es el de su pieza impresa. En la ventana
     ademas se suelta un lote (carrusel media vuelta + obturador) y la canaleta suelta
     un vaso al carro.
     """
@@ -314,19 +343,23 @@ def simular_planta(p: dict | None = None, duracion_s: float = 20.0) -> dict:
     tm = (t["avance_casilla_monedas"] + t["pausa_casilla_monedas"]) / 1000
     av_m = t["avance_casilla_monedas"] / 1000
     fw = p["firmware"]
-    # El carrusel lo mueve el FIRMWARE a un medio paso cada `carrusel_ms_por_paso`: un tubo
-    # (60°) son 4096/6 = 683 medios pasos → 1,37 s; media vuelta 4,1 s.
+    # Grados de cada servo = recorrido de su pieza impresa (firmware.servos: activo - reposo).
+    ang = {s: abs(v["activo"] - v["reposo"]) for s, v in fw["servos"].items()}
+    # El carrusel lo mueve el FIRMWARE a un medio paso cada `carrusel_ms_por_paso`, con una rampa que
+    # suma lo mismo a cada giro (carrusel_giro - media vuelta a velocidad de crucero = 127 ms): un tubo
+    # (60°) son 4096/6 = 683 medios pasos → 1,37 s + 0,13 = 1,49 s; media vuelta 4,22 s.
     s_por_grado = fw["carrusel_pasos_por_vuelta"] / 360 * fw["carrusel_ms_por_paso"] / 1000
+    rampa_carrusel = t["carrusel_giro"] / 1000 - 180 * s_por_grado
     k = 0
     while k * tm < duracion_s:
         t0 = k * tm
         L["nema_m"].tramo(t0, 0.06, corriente_nema_12v("monedas", True, p, arrancando=True), "set")
         L["nema_m"].tramo(t0 + 0.06, av_m - 0.06, corriente_nema_12v("monedas", True, p), "set")
         if k % 2 == 0:                                   # moneda aceptada: desvio al almacen y vuelta
-            d = mover_servo(L["servo_desvio"], "SG90", t0, 30)
-            mover_servo(L["servo_desvio"], "SG90", t0 + av_m + 0.3, 30)
+            d = mover_servo(L["servo_desvio"], "SG90", t0, ang["desvio"])
+            mover_servo(L["servo_desvio"], "SG90", t0 + av_m + 0.3, ang["desvio"])
         if not (6.0 <= t0 < 12.0):                        # (entre 6 y 12 s el carrusel suelta un lote)
-            L["carrusel"].tramo(t0 + av_m, 60 * s_por_grado, CARGAS["byj48"][2])
+            L["carrusel"].tramo(t0 + av_m, 60 * s_por_grado + rampa_carrusel, CARGAS["byj48"][2])
         k += 1
 
     # --- lote: el carrusel lleva el tubo lleno al agujero (hasta 180°) y abre el obturador ---
@@ -334,8 +367,8 @@ def simular_planta(p: dict | None = None, duracion_s: float = 20.0) -> dict:
     giro = 180 * s_por_grado
     L["carrusel"].tramo(t_lote, giro, CARGAS["byj48"][2])
     ob = t_lote + giro
-    mover_servo(L["servo_obturador"], "SG90", ob, 90)
-    mover_servo(L["servo_obturador"], "SG90", ob + t["compuerta_tubo"] / 2000, 90)
+    mover_servo(L["servo_obturador"], "SG90", ob, ang["obturador"])
+    mover_servo(L["servo_obturador"], "SG90", ob + t["compuerta_tubo"] / 2000, ang["obturador"])
 
     # --- cinta de vasos: avance, tapa + prensa, luego empujador (secuencial) ---
     av_v = t["avance_casilla_vasos"] / 1000
@@ -348,20 +381,21 @@ def simular_planta(p: dict | None = None, duracion_s: float = 20.0) -> dict:
         L["nema_v"].tramo(t0, 0.06, corriente_nema_12v("vasos", True, p, arrancando=True), "set")
         L["nema_v"].tramo(t0 + 0.06, av_v - 0.06, corriente_nema_12v("vasos", True, p), "set")
         tp = t0 + av_v
-        mover_servo(L["servo_tapas"], "SG90", tp, 60)
-        mover_servo(L["servo_tapas"], "SG90", tp + t["tapa_caida"] / 2000, 60)
-        # Prensa: baja con la leva (mas lenta con carga), aprieta 0,2 s contra el resorte
-        # (servo casi trabado: es el pico de diseño) y sube sin carga.
-        mover_servo(L["servo_prensa"], "MG996R", tp, 180, factor_vel=1.6, trabado_final_s=0.2)
-        mover_servo(L["servo_prensa"], "MG996R", tp + prensa / 2, 180, extra_a=-0.3)
+        mover_servo(L["servo_tapas"], "SG90", tp, ang["tapas"])
+        mover_servo(L["servo_tapas"], "SG90", tp + t["tapa_caida"] / 2000, ang["tapas"])
+        # Prensa: baja con la leva (mas lenta con carga), aprieta 0,2 s la tapa (0,5 mm de
+        # apriete contra la rigidez de la estructura, sin resorte limitador; servo casi trabado:
+        # es el pico de diseño) y sube sin carga.
+        mover_servo(L["servo_prensa"], "MG996R", tp, ang["prensa"], factor_vel=1.6, trabado_final_s=0.2)
+        mover_servo(L["servo_prensa"], "MG996R", tp + prensa / 2, ang["prensa"], extra_a=-0.3)
         te = tp + prensa                                   # el empujador espera a que la prensa termine
-        mover_servo(L["servo_empujador"], "MG996R", te, 120, extra_a=0.3, factor_vel=1.3)   # empuja el vaso
-        mover_servo(L["servo_empujador"], "MG996R", te + emp / 2, 120, extra_a=-0.3)
+        mover_servo(L["servo_empujador"], "MG996R", te, ang["empujador"], extra_a=0.3, factor_vel=1.3)   # empuja el vaso
+        mover_servo(L["servo_empujador"], "MG996R", te + emp / 2, ang["empujador"], extra_a=-0.3)
         j += 1
 
     # --- canaleta: suelta un vaso al carro ---
-    mover_servo(L["servo_canaleta"], "SG90", 12.5, 45)
-    mover_servo(L["servo_canaleta"], "SG90", 12.5 + t["empujador"] / 2000, 45)
+    mover_servo(L["servo_canaleta"], "SG90", 12.5, ang["canaleta"])
+    mover_servo(L["servo_canaleta"], "SG90", 12.5 + t["empujador"] / 2000, ang["canaleta"])
 
     # --- ESP32 fijo: latido de la radio cada 250 ms (transmite ~5 ms) ---
     periodo = p["protocolo"]["carro_latido_ms"] / 1000
@@ -844,7 +878,10 @@ def electrica_hilo(cable: dict, hilo: dict, R: dict) -> dict:
             return {"v": 3.3, "nivel": "PWM 50 Hz, 0,5-2,5 ms, 0/3,3 V (del PCA9685)", "i": mA(0.05, 0.1), "prot": "—"}
         return gnd_o(6.0, "+6 V DC", _i(serie), f"límite del XL4015 ({_n(LIMITE_CC_XL4015_A, 1)} A)")
     if cid in ("panel_luz", "anillo"):
-        return gnd_o(5.0, "+5 V DC", _i(sp["panel" if cid == "panel_luz" else "anillo"]), FP + " (del lado de 12 V)")
+        nivel = "+5 V DC"
+        if cid == "panel_luz":
+            nivel += f" (~{_n(panel_luz()['v_tiras'], 1)} V en las tiras, detrás de la resistencia de {_n(PANEL_R_SERIE, 1)} Ω)"
+        return gnd_o(5.0, nivel, _i(sp["panel" if cid == "panel_luz" else "anillo"]), FP + " (del lado de 12 V)")
     if cid.startswith("usb_"):
         corr = {"usb_cenital": (0.25, 0.35), "usb_vasos": (0.20, 0.25), "usb_esp": _i(sp["USB_ESP"])}[cid]
         return {"v": 5.0, "nivel": "USB 2.0: VBUS 5 V + datos diferenciales", "i": corr,
@@ -915,7 +952,7 @@ def caidas_por_carga(filas: list[dict]) -> list[dict]:
         por_cable.setdefault(f["cable"], []).append(f)
     out = []
     for cid, v_nom, tol in (("servo_3", 6.0, 4.8), ("servo_4", 6.0, 4.8), ("servo_1", 6.0, 4.8),
-                            ("panel_luz", 5.0, 4.5), ("anillo", 5.0, 4.5), ("capacitivo", 12.0, 10.0),
+                            ("panel_luz", 5.0, PANEL_V_RODILLA), ("anillo", 5.0, 4.5), ("capacitivo", 12.0, 10.0),
                             ("hall", 3.3, 3.0), ("vl53_interior", 3.3, 2.6), ("presencia", 3.3, 3.0)):
         hs = por_cable[cid]
         ida = max(h["caida"] for h in hs if h["v"] > 0 and "señal" not in h["funcion"] and "PWM" not in h["funcion"]
@@ -925,6 +962,9 @@ def caidas_por_carga(filas: list[dict]) -> list[dict]:
         if cid.startswith("servo"):
             # + la bornera V+ del PCA9685 (18 AWG, ida y vuelta) con toda la corriente de 6 V.
             extra = sum(h["caida"] for h in por_cable["p_pca"])
+        elif cid == "panel_luz":
+            # + la resistencia en serie, a proposito (deja las tiras en <= 1,5 W): el minimo es que los LED prendan.
+            extra = max(h["i_pico"] for h in hs) * PANEL_R_SERIE
         out.append({"carga": hs[0]["nombre"], "v_nom": v_nom, "caida": ida + vuelta + extra,
                     "v_carga": v_nom - ida - vuelta - extra, "minimo": tol})
     # Webcams: VBUS + GND del cable USB (28 AWG) de ida y vuelta. USB 2.0: el PUERTO da 4,75-5,25 V y
@@ -1086,7 +1126,7 @@ def generar_markdown(graficas: bool = True) -> str:
     w("- **Planta**: las dos cintas a la vez, con los tiempos de `tiempos_ms`: cinta de monedas cada "
       f"{p['tiempos_ms']['avance_casilla_monedas']} + {p['tiempos_ms']['pausa_casilla_monedas']} ms (desvío en una de cada dos "
       "piezas, carrusel un tubo en cada pausa); cinta de vasos: avance, tapa y prensa 0→180→0 (la leva aprieta la tapa 0,2 s "
-      "contra el resorte: el servo casi trabado), y **después** el empujador (la regla de diseño: prensa y empujador nunca a la "
+      "con los 0,5 mm de apriete del final de la carrera, sin resorte limitador: el servo casi trabado), y **después** el empujador (la regla de diseño: prensa y empujador nunca a la "
       "vez). En la ventana se suelta además un lote (carrusel media vuelta + obturador) y la canaleta le suelta un vaso al carro.")
     w("- **Servos**: al arrancar piden su corriente de trabado ~30 ms (el motor parte de cero y nada limita la corriente), "
       "después la de movimiento y al llegar la de reposo.")
@@ -1197,7 +1237,12 @@ def generar_markdown(graficas: bool = True) -> str:
     for rs, v in vr.items():
         w(f"| {_n(rs,3)} Ω | **{_n(v,3)} V** |")
     w("\nSe mide con el multímetro entre el potenciómetro del módulo y GND, con el driver alimentado y sin pasos. "
-      "1 A (el motor admite 1,7 A) deja el motor tibio (1,5 W de cobre) y al A4988 sin disipador forzado.\n")
+      "1 A (el motor admite 1,7 A) deja el motor tibio y al A4988 sin disipador forzado. Con micropaso los dos "
+      f"devanados siguen seno y coseno: el cobre disipa I² · R = 1² · {_n(NEMA_R_FASE, 1)} Ω = **1,5 W continuos mientras "
+      "la línea anda**, porque los drivers no se sueltan entre casillas (`a4988_reposo_ms` = "
+      f"{cargar_parametros()['firmware']['a4988_reposo_ms']} ms, más que las pausas de 1000 y 1400 ms); solo se "
+      "sueltan en las esperas largas. Con 7-9 °C/W de la carcasa son ~36-39 °C a 25 °C de ambiente (cumple con los "
+      "separadores de nailon; si en la prueba de banco pasa de 45 °C, Vref para 0,8 A).\n")
     d = divisor_echo()
     w(f"**Divisor del ECHO del HC-SR04 (1 kΩ arriba, 2 kΩ abajo).** V_GPIO = 5 V · 2k/(1k+2k) = **{_n(d['v_gpio'])} V** "
       f"(< {_n(V_GPIO_MAX,1)} V máximo del pin y > {_n(VIH_MIN)} V que el ESP32 lee como 1). Si el ECHO de un clon sale "
@@ -1233,6 +1278,20 @@ def generar_markdown(graficas: bool = True) -> str:
       "(`firmware.activo_bajo`: capacitivo e inductivo en `true`, igual que con el PC817). La pull-up gasta "
       f"{_n(e['i_ma'])} mA mientras el sensor detecta. Lo que se pierde frente al optoacoplador es el aislamiento: un "
       "cable de 12 V pelado tocando el negro llegaría al diodo, no al pin (el diodo lo bloquea).\n")
+    pl = panel_luz()
+    w(f"**Resistencia de {_n(PANEL_R_SERIE, 1)} Ω 1 W en serie con el panel de luz (en línea en su +5 V, del lado de la "
+      f"caja).** Las 2 tiras 2835 de 20 LED piden {_n(PANEL_TIRAS * PANEL_I_TIRA_5V)} A a 5 V: "
+      f"{_n(5 * PANEL_TIRAS * PANEL_I_TIRA_5V, 1)} W dentro de la caja de luz de PLA, que llegaría a ~65 °C (esfuerzos.md; "
+      "la Tg del PLA es 55-60 °C). Cada tira se modela como la rodilla de los LED blancos "
+      f"({_n(PANEL_V_RODILLA, 1)} V) más la resistencia que trae cada LED: las dos en paralelo son "
+      f"{_n(pl['r_tiras'])} Ω. Con la resistencia: I = (5 − {_n(PANEL_V_RODILLA, 1)}) / ({_n(pl['r_tiras'])} + "
+      f"{_n(PANEL_R_SERIE, 1)}) = **{_n(pl['i'])} A**, {_n(pl['v_tiras'])} V en las tiras y **{_n(pl['p_tiras'])} W** en "
+      f"ellas (máximo {_n(PANEL_P_MAX_W, 1)} W); la resistencia disipa {_n(pl['p_resistencia'])} W (por eso de 1 W, y "
+      "fuera del PLA). Con una rodilla de 2,6 o 3,0 V quedan "
+      f"{_n(panel_luz(v_rodilla=2.6)['p_tiras'])} y {_n(panel_luz(v_rodilla=3.0)['p_tiras'])} W. Equivale a 6,8 Ω por "
+      "tira. No va un MOSFET con PWM: el ESP32 fijo no tiene GPIO libres fuera de los de arranque y el PCA9685 "
+      "trabaja a 50 Hz (los servos), que la cámara de vasos vería como parpadeo en el contraluz. Se comprueba "
+      "midiendo la corriente del panel ya armado: I · V_tiras ≤ 1,5 W; si pasa, 4,7 Ω.\n")
     cd = condensadores()
     w(f"**1000 µF en la bornera V+ del PCA9685.** Cuando la prensa arranca pide 2,5 A de golpe; el buck tarda ~100 µs "
       f"en reaccionar y mientras tanto la corriente sale del condensador: ΔV = I·Δt/C = 2,5 A · 100 µs / 1000 µF = "
@@ -1342,10 +1401,14 @@ def conclusiones(R: dict, filas: list[dict]) -> list[str]:
              f"2,2 kΩ y 170 pF la subida es de {pullup_i2c()['tr_ns']:.0f} ns: cumple a 100 kHz (1000 ns); a 400 kHz "
              "(300 ns) no cumpliría.")
     fw = cargar_parametros()["firmware"]
+    giro = cargar_parametros()["tiempos_ms"]["carrusel_giro"]
     un_tubo = fw["carrusel_pasos_por_vuelta"] / 6 * fw["carrusel_ms_por_paso"] / 1000
+    rampa = giro / 1000 - 3 * un_tubo                     # lo que la rampa suma a cada giro
     c.append(f"**Tiempo del carrusel:** el firmware da un medio paso cada {fw['carrusel_ms_por_paso']} ms con un Timer "
-             f"(500 Hz, bajo los 600 Hz de arranque de la hoja de datos) → un tubo (60°) tarda {_n(un_tubo)} s y media "
-             f"vuelta {_n(3 * un_tubo)} s; `tiempos_ms.carrusel_giro` ya dice eso ({cargar_parametros()['tiempos_ms']['carrusel_giro']} ms). "
+             f"(500 Hz), con una rampa de arranque y parada ({fw['carrusel_rampa_ms']} ms bajando a "
+             f"{fw['carrusel_ms_por_paso']} en {fw['carrusel_rampa_pasos']} medios pasos: los 600 Hz de la hoja de datos son "
+             f"en vacío) → un tubo (60°) tarda {_n(un_tubo + rampa)} s y media "
+             f"vuelta {_n(3 * un_tubo + rampa)} s; `tiempos_ms.carrusel_giro` ya dice eso ({giro} ms). "
              "Eléctricamente no cambia nada (0,24 A). En `control/tiempos.py` los dos chequeos del carrusel quedan en "
              "NO CABE a propósito: la cinta de monedas espera al carrusel en esos ciclos (~2,5 s de más al girar al "
              "tubo opuesto y ~7 s una vez por lote).")

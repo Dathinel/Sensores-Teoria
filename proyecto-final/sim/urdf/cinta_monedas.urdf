@@ -2,7 +2,8 @@
 <!--
   Cinta indexada de la estacion de filtrado y conteo (docs/especificacion.md, seccion 4 y
   seccion 5, pasos 2 a 8). Modela solo la estructura fisica: bancada y cinta
-  negra mate con separadores cada 40 mm. Grupo (2026-09-25): "filtro total"
+  negra mate con separadores cada 40 mm (la banda real, cerrada, lleva 15 a L/15 = ~41 mm; < 1,2 mm de diferencia
+  por casilla). Grupo (2026-09-25): "filtro total"
   -- 4 estaciones (presencia, material, vision, descarga) y UNA sola salida
   de rechazo, la compuerta de desvio de la descarga; ya no hay expulsores
   laterales. Las estaciones son posiciones fijas a lo largo de esta cinta;
@@ -30,16 +31,20 @@
     <!-- Placa de la bancada: de x=-0.12 a x=0.08 (200 mm): la banda arranca UNA casilla antes de
          E1, como en el visor (revision 2026-09-26: el rodillo de cola a 2 cm de E1 no dejaba
          lugar al capacitivo debajo). Corregido aqui el 2026-09-28 (fisica vs 3D): antes 160 mm. -->
-    <!-- Maqueta impresa (2026-10-24, maqueta_impresa/cinta_monedas.scad, mon_bancada): bancada de PLA
-         de x -97 a 73,5 mm del mundo (170,5 mm), 96,6 de ancho con las pestanas sobre los rieles y
-         6 mm de espesor (z 444-450). Antes 200 x 61 x 20 mm. La banda (abajo) no cambia. -->
+    <!-- Maqueta impresa (2026-10-25, maqueta_impresa/cinta_monedas.scad, mon_bancada): bancada de PLA
+         de x -97 a 73,5 mm del mundo (170,5 mm) ENTRE los rieles (y +-32,3: 64,6 de ancho), piel de
+         2 mm y nervios de 4 debajo (z 444-450); sus pestanas cuelgan por dentro de los rieles hasta
+         z 432 (no se modelan: no tocan nada de la simulacion). Antes 96,6 de ancho, con las pestanas
+         sobre los rieles, y antes de eso 200 x 61 x 20 mm. La banda (abajo) no cambia: sigue en z
+         450-452 sobre la bancada y la cima de los rodillos Ø22 (ejes en z 439, cinta_monedas.scad
+         mon_z_rod; los rodillos no se modelan). -->
     <visual>
-      <geometry><box size="0.1705 0.0966 0.006"/></geometry>
+      <geometry><box size="0.1705 0.0646 0.006"/></geometry>
       <origin xyz="-0.02175 0 0.017" rpy="0 0 0"/>
       <material name="azul_bancada"/>
     </visual>
     <collision>
-      <geometry><box size="0.1705 0.0966 0.006"/></geometry>
+      <geometry><box size="0.1705 0.0646 0.006"/></geometry>
       <origin xyz="-0.02175 0 0.017" rpy="0 0 0"/>
     </collision>
 

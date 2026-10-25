@@ -15,7 +15,7 @@ dice exactamente que ajustar (pausa mas larga, servo mas rapido...).
 
 El carrusel es el caso conocido que NO cabe (2026-09-28): `carrusel_giro` es
 el tiempo real del firmware para media vuelta (28BYJ-48 a 2 ms por medio
-paso = 4,1 s) y no entra en un ciclo de 1,6 s. No se esconde cambiando la
+paso, con rampa = 4,2 s) y no entra en un ciclo de 1,6 s. No se esconde cambiando la
 cuenta: los dos chequeos quedan en NO CABE y su explicacion dice que se
 ajusta (la cinta de monedas espera al carrusel en esos ciclos).
 

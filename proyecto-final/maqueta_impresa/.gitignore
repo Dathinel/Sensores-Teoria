@@ -2,3 +2,5 @@ _cache/
 img/manual/*.scad
 __pycache__/
 img/manual/
+# proyectos guardados desde Creality Print por el usuario (traen su configuracion y la MAC de su impresora)
+3mf/guardados/

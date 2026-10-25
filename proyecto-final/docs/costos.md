@@ -4,22 +4,22 @@
 > Precios consultados el 2026-09-27 en pesos colombianos, sin envío. Cambian:
 > verificarlos antes de comprar.
 
-**Total del proyecto: $1.392.143** (sin el portátil, que es del grupo). De eso, $693.197 (49 %) son **estimados** (materiales sin un producto
+**Total del proyecto: $1.586.033** (sin el portátil, que es del grupo). De eso, $887.087 (55 %) son **estimados** (materiales sin un producto
 igual publicado: banda de las cintas, tornillería, cables, piezas impresas, la fuente de 5 A y el buck XL4015): el resto es precio de tienda.
 
-La **estructura 3D** (la maqueta impresa, las piezas impresas del carro y de la caja y la tornillería) cuesta **$306.197** (22 % del total): detalle más abajo.
+La **estructura 3D** (la maqueta impresa, las piezas impresas del carro y de la caja y la tornillería) cuesta **$341.087** (22 % del total): detalle más abajo.
 
 ## Por subsistema
 
 | Subsistema | Costo | % |
 |---|---:|---:|
-| Cinta de monedas | $292.937 | 21 % |
-| Cinta de vasos | $351.656 | 25 % |
-| Canaleta y muelle | $55.283 | 4 % |
-| Carro | $253.036 | 18 % |
-| Control y potencia | $202.152 | 15 % |
-| Estructura | $237.079 | 17 % |
-| **Total** | **$1.392.143** | **100 %** |
+| Cinta de monedas | $306.259 | 19 % |
+| Cinta de vasos | $360.076 | 23 % |
+| Canaleta y muelle | $56.768 | 4 % |
+| Carro | $253.036 | 16 % |
+| Control y potencia | $267.152 | 17 % |
+| Estructura | $342.742 | 22 % |
+| **Total** | **$1.586.033** | **100 %** |
 
 ## Ahorros ya aplicados (aprobados el 2026-10-24)
 
@@ -27,14 +27,14 @@ La **estructura 3D** (la maqueta impresa, las piezas impresas del carro y de la 
 
 | Cambio | Ahorro | Riesgo | Por qué alcanza |
 |---|---:|---|---|
-| Estructura impresa (maqueta_impresa/) en vez de perfil 2020, escuadras, pies, placas de aluminio, acrílico y MDF | $495.478 | medio | Antes: 7 barras de V-Slot (398 300), tornillería con 24 escuadras, 15 pies y tuercas en T (219 280), las piezas impresas sueltas de la planta (90 507), tubos de acrílico (45 000) y tablero MDF (40 000) = 793 087. Ahora: la maqueta impresa (los gramos y horas de maqueta_impresa/piezas.json, a precio de PLA + energía) y la tornillería que no va remachada (12 150). Lo funcional no cambia; los remaches se prueban al imprimir (maqueta_impresa/README.md). |
-| Fuente de 12 V 5 A en vez de 10 A | $31.000 | bajo | Pico simulado del +12 V: 3,3 A; peor caso con el XL4015 en su límite de corriente: 4,1 A. El precio de la de 5 A es estimado. |
+| Estructura impresa (maqueta_impresa/) en vez de perfil 2020, escuadras, pies, placas de aluminio, acrílico y MDF | $480.588 | medio | Antes: 7 barras de V-Slot (398 300), tornillería con 24 escuadras, 15 pies y tuercas en T (219 280), las piezas impresas sueltas de la planta (90 507), tubos de acrílico (45 000), tablero MDF (40 000) y el acrílico opalino del panel de luz (20 000, ahora la caja de luz impresa) = 813 087. Ahora: la maqueta impresa (los gramos y horas de maqueta_impresa/piezas.json, a precio de PLA + energía) y la tornillería que no va remachada (15 200). Lo funcional no cambia; los remaches se prueban al imprimir (maqueta_impresa/README.md). |
+| Fuente de 12 V 5 A en vez de 10 A | $31.000 | bajo | Pico simulado del +12 V: 2,9 A; peor caso con el XL4015 en su límite de corriente: 3,9 A. El precio de la de 5 A es estimado. |
 | Empalmes soldados en vez de la bornera X2, los optoacopladores y el reparto I2C | $27.000 | bajo | Misma topología (GND en estrella en los bornes -V de la fuente). Los M18 van al GPIO con un diodo BAT85 y una pull-up de 10 kΩ (sigue activo en bajo); el bus I2C 1 con sus dos pull-ups de 2,2 kΩ en línea. Se pierde el aislamiento del optoacoplador y desarmar es con cautín. |
 | Sin hub USB: ESP32 y webcams directo al portátil | $23.500 | bajo | Hacen falta 3 puertos USB libres en el portátil; ninguno pide más de 0,35 A (un USB 2.0 da 0,5 A). |
-| Buck de 5 A (XL4015) en vez del XL4016 de 9 A para los servos | $16.900 | medio | Pico simulado del riel de 6 V: 3,9 A (prensa apretando la tapa). Prensa y empujador nunca arrancan a la vez (firmware/fijo/estacion.py, EXCLUYENTES, con su prueba). Medir el pico real en el montaje. |
-| Un fusible principal y cable de poder a una multitoma con interruptor (sin IEC ni 4 portafusibles) | $6.900 | bajo | 9 200 de 4 portafusibles + 6 000 de la entrada IEC contra 2 300 de un portafusible + 6 000 del cable con enchufe. El fusible de 5 A cubre el pico simulado del +12 V (3,3 A) y el peor caso (4,1 A). |
-| Bridas con bases adhesivas en vez de canaletas ranuradas y prensaestopas | $6.000 | bajo | 25 000 de canaleta y prensaestopas contra 19 000 de bridas, bases, el ventilador (que antes no estaba contado) y lo térmico de esfuerzos.md (separadores de nailon de los NEMA 17, cinta de aluminio y dimmer de la tira LED). El ventilador se queda: los A4988 van a 1 A por fase, el límite sin aire forzado (docs/electrica.md). |
-| **Total ahorrado** | **$606.778** | | |
+| Buck de 5 A (XL4015) en vez del XL4016 de 9 A para los servos | $16.900 | medio | Pico simulado del riel de 6 V: 3,5 A (prensa apretando la tapa). Prensa y empujador nunca arrancan a la vez (firmware/fijo/estacion.py, EXCLUYENTES, con su prueba). Medir el pico real en el montaje. |
+| Un fusible principal y cable de poder a una multitoma con interruptor (sin IEC ni 4 portafusibles) | $6.900 | bajo | 9 200 de 4 portafusibles + 6 000 de la entrada IEC contra 2 300 de un portafusible + 6 000 del cable con enchufe. El fusible de 5 A cubre el pico simulado del +12 V (2,9 A) y el peor caso (3,9 A). |
+| Bridas con bases adhesivas en vez de canaletas ranuradas y prensaestopas | $6.000 | bajo | 25 000 de canaleta y prensaestopas contra 19 000 de bridas, bases, el ventilador (que antes no estaba contado) y lo térmico de esfuerzos.md (separadores de nailon de los NEMA 17, cinta de aluminio y la resistencia en serie de la tira LED). El ventilador se queda: los A4988 van a 1 A por fase, el límite sin aire forzado (docs/electrica.md). |
+| **Total ahorrado** | **$591.888** | | |
 
 ## Dónde abaratar (propuestas, NO aplicadas)
 
@@ -54,10 +54,10 @@ Desde el 2026-10-24 la estructura de la planta es la **maqueta impresa** ([maque
 
 | Parte | Qué es | Costo | % de la estructura 3D |
 |---|---|---:|---:|
-| Maqueta impresa | 539 piezas (con los remaches), 2.681 g de PLA, 81,0 h de impresora | $285.459 | 93 % |
+| Maqueta impresa | 565 piezas (con los remaches), 2.979 g de PLA, 91,0 h de impresora | $317.299 | 93 % |
 | Otras piezas impresas (carro y caja) | 11 piezas, 83 g de PLA, 8,3 h de impresora | $8.588 | 3 % |
-| Tornillería | 77 unidades (con repuesto) | $12.150 | 4 % |
-| **Total estructura 3D** | | **$306.197** | 100 % |
+| Tornillería | 86 unidades (con repuesto) | $15.200 | 4 % |
+| **Total estructura 3D** | | **$341.087** | 100 % |
 
 ### Maqueta impresa por grupo
 
@@ -66,17 +66,17 @@ Gramos y horas del exportador de la maqueta (`maqueta_impresa/piezas.json`, la m
 | Grupo | Subsistema | Piezas | Gramos | Horas | Filamento | Energía | Costo |
 |---|---|---:|---:|---:|---:|---:|---:|
 | Estructura: nodos | Estructura | 22 | 400 | 12,0 | $41.368 | $1.269 | $42.637 |
-| Estructura: tubos de 16 x 16 | Estructura | 46 | 747 | 19,3 | $77.116 | $2.035 | $79.152 |
-| Estructura: empalmes y tacos | Estructura | 11 | 114 | 3,4 | $11.806 | $364 | $12.170 |
-| Remaches impresos | Estructura | 369 | 50 | 8,1 | $5.119 | $851 | $5.970 |
-| Cinta de monedas | Cinta de monedas | 22 | 284 | 8,9 | $29.314 | $936 | $30.250 |
-| Almacén de monedas | Cinta de monedas | 9 | 173 | 4,6 | $17.859 | $482 | $18.341 |
-| Cinta de vasos | Cinta de vasos | 26 | 524 | 13,1 | $54.165 | $1.388 | $55.554 |
-| Tapas, prensa y empujador | Cinta de vasos | 19 | 208 | 6,0 | $21.464 | $638 | $22.102 |
-| Canaleta y muelle | Canaleta y muelle | 15 | 181 | 5,6 | $18.695 | $587 | $19.283 |
-| **Total** | | **539** | **2.681** | **81,0** | **$276.906** | **$8.552** | **$285.458** |
+| Estructura: tubos de 16 x 16 | Estructura | 46 | 813 | 20,8 | $83.975 | $2.193 | $86.168 |
+| Estructura: empalmes y tacos | Estructura | 11 | 119 | 3,6 | $12.322 | $384 | $12.707 |
+| Remaches impresos | Estructura | 382 | 50 | 8,4 | $5.146 | $884 | $6.030 |
+| Cinta de monedas | Cinta de monedas | 20 | 319 | 10,0 | $32.919 | $1.051 | $33.969 |
+| Almacén de monedas | Cinta de monedas | 10 | 207 | 5,5 | $21.360 | $583 | $21.943 |
+| Cinta de vasos | Cinta de vasos | 34 | 576 | 15,9 | $59.454 | $1.674 | $61.128 |
+| Tapas, prensa y empujador | Cinta de vasos | 23 | 301 | 8,5 | $31.049 | $899 | $31.948 |
+| Canaleta y muelle | Canaleta y muelle | 17 | 195 | 6,3 | $20.100 | $668 | $20.768 |
+| **Total** | | **565** | **2.979** | **91,0** | **$307.693** | **$9.605** | **$317.298** |
 
-Filamento de todo lo impreso (maqueta + carro + caja, con el desperdicio): 3,03 kg → **4 rollo(s) de 1 kg**.
+Filamento de todo lo impreso (maqueta + carro + caja, con el desperdicio): 3,36 kg → **4 rollo(s) de 1 kg**.
 
 ### Cómo se calcula una pieza impresa suelta (carro y caja)
 
@@ -113,24 +113,32 @@ costo = gramos x $93.900/kg  +  horas x 0,12 kWh/h x $800/kWh
 
 ### Tornillería
 
-La maqueta va remachada (sin escuadras, pies ni tuercas en T): solo se atornilla lo comprado que lo pide (los NEMA 17 y los rodamientos KFL08; los servos traen los tornillos de su kit) y las piezas impresas del carro y de la caja (columna `tornillos` en precios.yaml). Se compra un 10% de repuesto.
+La maqueta va remachada (sin escuadras, pies ni tuercas en T): solo se atornilla lo comprado que lo pide (los NEMA 17, el rodamiento KFL08, el 28BYJ-48, la placa del FC-51, la GY-530 del VL53L0X interior y los pernos del empujador y del escape de tapas; los servos traen los tornillos de su kit) y las piezas impresas del carro y de la caja (columna `tornillos` en precios.yaml). Se compra un 10% de repuesto.
 
 | Qué | Contados | A comprar | Precio | Subtotal |
 |---|---:|---:|---:|---:|
-| Tornillo M5 x 16 cabeza Allen (rodamientos KFL08) *(estimado)* | 8 | 9 | $400 | $3.600 |
-| Tuerca M5 *(estimado)* | 8 | 9 | $100 | $900 |
+| Tornillo M4 x 16 (rodamiento KFL08: brida de 37 mm entre agujeros contra Ø5,5 a 36 en la lateral) *(estimado)* | 2 | 3 | $300 | $900 |
+| Tornillo 1/4"-20 x 12 mm (rosca de trípode de las webcams) *(estimado)* | 2 | 3 | $1.000 | $3.000 |
 | Tornillo M4 x 12 *(estimado)* | 4 | 5 | $250 | $1.250 |
-| Tuerca M4 *(estimado)* | 4 | 5 | $80 | $400 |
-| Tornillo M3 x 10 *(estimado)* | 24 | 27 | $150 | $4.050 |
+| Tuerca M4 *(estimado)* | 6 | 7 | $80 | $560 |
+| Tornillo M3 x 10 *(estimado)* | 17 | 19 | $150 | $2.850 |
+| Tornillo M3 x 12 (NEMA 17: placa + separador de nailon de 3 mm) *(estimado)* | 8 | 9 | $160 | $1.440 |
+| Tornillo M4 autorroscante corto (28BYJ-48: oreja + agujero ciego de 3,6 mm, MEDIR el largo) *(estimado)* | 2 | 3 | $150 | $450 |
+| Tornillo M4 x 20 de perno de la biela del empujador *(estimado)* | 2 | 3 | $300 | $900 |
+| Pasador de acero Ø2 x 17 (pernos del cuerno del escape de tapas) *(estimado)* | 2 | 3 | $200 | $600 |
 | Tornillo M3 x 30 *(estimado)* | 2 | 3 | $250 | $750 |
-| Tuerca M3 *(estimado)* | 12 | 14 | $50 | $700 |
-| Tornillo M2 x 8 autorroscante (servos, placas) *(estimado)* | 4 | 5 | $100 | $500 |
-| **Total** | **66** | **77** | | **$12.150** |
+| Tuerca M3 *(estimado)* | 13 | 15 | $50 | $750 |
+| Tornillo M2 x 8 autorroscante (servos, placas) *(estimado)* | 6 | 7 | $100 | $700 |
+| Tornillo M3 x 16 autorroscante (empuje del tensor de la cinta de monedas; agujero de 2,6 mm en PLA, MEDIR) *(estimado)* | 2 | 3 | $150 | $450 |
+| Prisionero M3 x 10 punta de copa (tensor de la cinta de vasos; rosca en un agujero de 2,5 mm en PLA, MEDIR) *(estimado)* | 2 | 3 | $200 | $600 |
+| **Total** | **70** | **86** | | **$15.200** |
 
 Por zona (contados, sin repuesto):
 
-- Cinta de monedas: 4 tornillo m3 x 10
-- Cinta de vasos: 4 tornillo m3 x 10, 8 tornillo m5 x 16 cabeza allen, 8 tuerca m5
+- Cinta de monedas: 4 tornillo m3 x 12, 1 tornillo m3 x 10, 1 tuerca m3, 2 tornillo m3 x 16 autorroscante, 1 tornillo 1/4"-20 x 12 mm
+- Cinta de vasos: 4 tornillo m3 x 12, 2 tornillo m4 x 16, 2 tuerca m4, 1 tornillo 1/4"-20 x 12 mm, 2 prisionero m3 x 10 punta de copa
+- Almacén: 2 tornillo m4 autorroscante corto
+- Pórtico: 2 tornillo m2 x 8 autorroscante, 2 tornillo m4 x 20 de perno de la biela del empujador, 2 pasador de acero ø2 x 17
 - Carro: 16 tornillo m3 x 10, 12 tuerca m3, 4 tornillo m2 x 8 autorroscante, 2 tornillo m3 x 30
 - Caja de control: 4 tornillo m4 x 12, 4 tuerca m4
 
@@ -151,8 +159,9 @@ Por zona (contados, sin repuesto):
 | Servo del obturador del almacén | Servomotor SG90 | 1 | $11.000 | $11.000 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
 | Bandeja de rechazo de monedas | Impresa en la maqueta: canal y bandeja (fila Maqueta impresa de la cinta de monedas) *(estimado)* | 1 | $0 | $0 | — |
 | Embudo y canales de la descarga | Impreso en la maqueta: embudo y canales (fila Maqueta impresa de la cinta de monedas) *(estimado)* | 1 | $0 | $0 | — |
-| Maqueta impresa | Piezas de PLA de la maqueta impresa: cinta de monedas (284 g), almacén de monedas (173 g); 13,4 h de impresora *(estimado)* | 1 | $48.591 | $48.591 | [Electronilab (Bogotá)](https://electronilab.co) |
-| **Subtotal** | | | | **$292.937** | |
+| Acople rigido carrusel | Acople rígido de 5 a 8 mm Ø12 x 16 (28BYJ-48 → eje del carrusel) *(estimado)* | 1 | $6.000 | $6.000 | [Mercado Libre Colombia](https://www.mercadolibre.com.co) |
+| Maqueta impresa | Piezas de PLA de la maqueta impresa: cinta de monedas (319 g), almacén de monedas (207 g); 15,5 h de impresora *(estimado)* | 1 | $55.913 | $55.913 | [Electronilab (Bogotá)](https://electronilab.co) |
+| **Subtotal** | | | | **$306.259** | |
 
 ### Cinta de vasos
 
@@ -160,15 +169,17 @@ Por zona (contados, sin repuesto):
 |---|---|---:|---:|---:|---|
 | Motor de la cinta de vasos | Motor NEMA 17 17HS4401 1,7 A | 1 | $59.000 | $59.000 | [Mercado Libre Colombia](https://www.mercadolibre.com.co) |
 | Cámara de vasos (silueta, ArUco y tapa) | Webcam USB 720p *(estimado)* | 1 | $45.000 | $45.000 | [Mercado Libre Colombia](https://www.mercadolibre.com.co) |
-| Panel de luz de la cámara de vasos | Tira LED 5 V blanca 1 m + acrílico opalino 33 x 11 cm *(estimado)* | 1 | $35.000 | $35.000 | [Mercado Libre Colombia](https://www.mercadolibre.com.co) |
+| Panel de luz de la cámara de vasos | Tira LED 5 V blanca 1 m (va en la caja de luz impresa, detrás de una resistencia de 3,3 Ω 1 W en su +5 V: ≤ 1,5 W) *(estimado)* | 1 | $15.000 | $15.000 | [Mercado Libre Colombia](https://www.mercadolibre.com.co) |
 | Sensor del interior del vaso | Sensor de distancia VL53L0X | 1 | $25.000 | $25.000 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
 | Cortina de seguridad | Sensor de distancia VL53L0X | 1 | $25.000 | $25.000 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
 | Servo del escape de tapas | Servomotor SG90 | 1 | $11.000 | $11.000 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
 | Servo de la prensa | Servomotor MG996R | 1 | $37.000 | $37.000 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
 | Servo del empujador de descarga | Servomotor MG996R | 1 | $37.000 | $37.000 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
 | Bandeja de rechazo de vasos | Impresa en la maqueta (fila Maqueta impresa de la cinta de vasos) *(estimado)* | 1 | $0 | $0 | — |
-| Maqueta impresa | Piezas de PLA de la maqueta impresa: cinta de vasos (524 g), tapas, prensa y empujador (208 g); 19,2 h de impresora *(estimado)* | 1 | $77.656 | $77.656 | [Electronilab (Bogotá)](https://electronilab.co) |
-| **Subtotal** | | | | **$351.656** | |
+| Rodamiento kfl08 | Rodamiento con brida KFL08 (eje de 8 mm) *(estimado)* | 1 | $10.000 | $10.000 | [Mercado Libre Colombia](https://www.mercadolibre.com.co) |
+| Resorte prensa | Resorte de compresión Ø15 x 38, k 0,15-0,3 N/mm (vástago de la prensa) *(estimado)* | 1 | $3.000 | $3.000 | [Mercado Libre Colombia](https://www.mercadolibre.com.co) |
+| Maqueta impresa | Piezas de PLA de la maqueta impresa: cinta de vasos (576 g), tapas, prensa y empujador (301 g); 24,4 h de impresora *(estimado)* | 1 | $93.076 | $93.076 | [Electronilab (Bogotá)](https://electronilab.co) |
+| **Subtotal** | | | | **$360.076** | |
 
 ### Canaleta y muelle
 
@@ -177,8 +188,8 @@ Por zona (contados, sin repuesto):
 | Servo del escape de la canaleta | Servomotor SG90 | 1 | $11.000 | $11.000 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
 | Canaleta de entrega | 2 varillas de 4 mm + cinta de PTFE *(estimado)* | 1 | $25.000 | $25.000 | [Mercado Libre Colombia](https://www.mercadolibre.com.co) |
 | Muelle de carga del carro | Impreso en la maqueta: guías en V y topes (fila Maqueta impresa de la canaleta) *(estimado)* | 1 | $0 | $0 | — |
-| Maqueta impresa | Piezas de PLA de la maqueta impresa: canaleta y muelle (181 g); 5,6 h de impresora *(estimado)* | 1 | $19.283 | $19.283 | [Electronilab (Bogotá)](https://electronilab.co) |
-| **Subtotal** | | | | **$55.283** | |
+| Maqueta impresa | Piezas de PLA de la maqueta impresa: canaleta y muelle (195 g); 6,3 h de impresora *(estimado)* | 1 | $20.768 | $20.768 | [Electronilab (Bogotá)](https://electronilab.co) |
+| **Subtotal** | | | | **$56.768** | |
 
 ### Carro
 
@@ -215,28 +226,39 @@ Por zona (contados, sin repuesto):
 | Empalmes soldados | 2 diodos Schottky BAT85 + 2 resistencias de 10 kΩ + 2 de 2,2 kΩ (el estaño y el termoencogible van en Cables) *(estimado)* | 1 | $1.000 | $1.000 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
 | Cable de poder de la fuente | Cable de poder de 3 hilos con enchufe, 1,5 m (o el de un aparato viejo); va a una multitoma con interruptor del grupo *(estimado)* | 1 | $6.000 | $6.000 | [Mercado Libre Colombia](https://www.mercadolibre.com.co) |
 | Driver del carrusel | Viene con el 28BYJ-48 (ya contado en el motor del carrusel) | 1 | $0 | $0 | — |
-| Bridas y ventilador | 100 bridas de 10 cm (~4 000) + 10 bases adhesivas (~4 000) + ventilador 4010 de 5 V (~6 000) + 8 separadores de nailon de 3 mm para los NEMA 17, cinta de aluminio y resistencia o dimmer de la tira LED (~5 000; esfuerzos.md: calor) *(estimado)* | 1 | $19.000 | $19.000 | [Mercado Libre Colombia](https://www.mercadolibre.com.co) |
+| Bridas y ventilador | 100 bridas de 10 cm (~4 000) + 10 bases adhesivas (~4 000) + ventilador 4010 de 5 V (~6 000) + 8 separadores de nailon de 3 mm para los NEMA 17, cinta de aluminio y la resistencia de 3,3 Ω 1 W en línea de la tira LED (~5 000; esfuerzos.md y electrica.md: calor) *(estimado)* | 1 | $19.000 | $19.000 | [Mercado Libre Colombia](https://www.mercadolibre.com.co) |
 | Portátil | El portátil del grupo (no se compra) | 1 | $0 | $0 | — |
+| Gabinete | Gabinete de la caja de control: acrílico de 3 mm cortado a medida, 360 x 240 x 80 mm con tapa (~0,27 m²) *(estimado)* | 1 | $65.000 | $65.000 | [Mercado Libre Colombia](https://www.mercadolibre.com.co) |
 | Cables | Cables dupont, cable 18 AWG, termoencogible, conectores JST *(estimado)* | 1 | $30.000 | $30.000 | — |
 | Otras piezas impresas | 4 piezas en PLA (8 g, 0,8 h de impresora): soportes, bridas, bloques (tabla de piezas impresas) *(estimado)* | 1 | $852 | $852 | [Electronilab (Bogotá)](https://electronilab.co) |
-| **Subtotal** | | | | **$202.152** | |
+| **Subtotal** | | | | **$267.152** | |
 
 ### Estructura
 
 | Componente | Qué se compra | Cant. | Precio | Subtotal | Dónde |
 |---|---|---:|---:|---:|---|
-| Estructura impresa (maqueta_impresa/) | Maqueta impresa: tubos, nodos, empalmes y remaches de PLA: 1.311 g de PLA, 42,8 h de impresora *(estimado)* | 1 | $139.929 | $139.929 | [Electronilab (Bogotá)](https://electronilab.co) |
-| Cinta de monedas y su mesa | Banda de caucho negra mate 55 mm + 2 rodillos *(estimado)* | 1 | $40.000 | $40.000 | [Mercado Libre Colombia](https://www.mercadolibre.com.co) |
+| Estructura impresa (maqueta_impresa/) | Maqueta impresa: tubos, nodos, empalmes y remaches de PLA: 1.383 g de PLA, 44,8 h de impresora *(estimado)* | 1 | $147.542 | $147.542 | [Electronilab (Bogotá)](https://electronilab.co) |
+| Cinta de monedas y su mesa | Banda de caucho negra mate 55 mm + 4 rodillos Ø22 (motriz, tensor y retornos A y B) *(estimado)* | 1 | $50.000 | $50.000 | [Mercado Libre Colombia](https://www.mercadolibre.com.co) |
 | Cinta de vasos y su mesa | Banda de caucho 75 mm + 2 rodillos *(estimado)* | 1 | $45.000 | $45.000 | [Mercado Libre Colombia](https://www.mercadolibre.com.co) |
 | Almacén tipo revólver | Impreso en la maqueta (tubos, disco, placa, obturador y embudo: ya no hay acrílico) *(estimado)* | 1 | $0 | $0 | — |
 | Tubo vertical de tapas | Impreso en la maqueta (ya no es de acrílico) *(estimado)* | 1 | $0 | $0 | — |
-| Tornillo M5 x 16 cabeza Allen (rodamientos KFL08) | 8 contados + 10% de repuesto *(estimado)* | 9 | $400 | $3.600 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
-| Tuerca M5 | 8 contados + 10% de repuesto *(estimado)* | 9 | $100 | $900 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
+| Rodamientos 608 | Rodamiento 608ZZ (8 x 22 x 7) *(estimado)* | 8 | $3.000 | $24.000 | [Mercado Libre Colombia](https://www.mercadolibre.com.co) |
+| Acoples flexibles | Acople flexible de aluminio de 5 a 8 mm (NEMA 17 → rodillo motriz: Ø19 x 25 en monedas, Ø19 x 20 en vasos) *(estimado)* | 2 | $8.000 | $16.000 | [Mercado Libre Colombia](https://www.mercadolibre.com.co) |
+| Barra acero 8 | Barra de acero calibrado Ø8 x 1 m (~1,2 m de cortes: ejes de los rodillos de vasos 109 y 97,5, de los retornos A 114 y B 84,3, del carrusel 76,5, vástago de la prensa 79 y 2 guías del empujador 102,5) *(estimado)* | 2 | $15.000 | $30.000 | [Mercado Libre Colombia](https://www.mercadolibre.com.co) |
+| Pegamentos espuma | Cianoacrilato 20 g (~6 000) + cinta doble faz fina (~5 000: GY-530 de la cortina, suplementos) + lámina de espuma EVA de 6 mm (~4 000: topes) *(estimado)* | 1 | $15.000 | $15.000 | [Mercado Libre Colombia](https://www.mercadolibre.com.co) |
+| Tornillo M4 x 16 (rodamiento KFL08: brida de 37 mm entre agujeros contra Ø5,5 a 36 en la lateral) | 2 contados + 10% de repuesto *(estimado)* | 3 | $300 | $900 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
+| Tornillo 1/4"-20 x 12 mm (rosca de trípode de las webcams) | 2 contados + 10% de repuesto *(estimado)* | 3 | $1.000 | $3.000 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
 | Tornillo M4 x 12 | 4 contados + 10% de repuesto *(estimado)* | 5 | $250 | $1.250 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
-| Tuerca M4 | 4 contados + 10% de repuesto *(estimado)* | 5 | $80 | $400 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
-| Tornillo M3 x 10 | 24 contados + 10% de repuesto *(estimado)* | 27 | $150 | $4.050 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
+| Tuerca M4 | 6 contados + 10% de repuesto *(estimado)* | 7 | $80 | $560 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
+| Tornillo M3 x 10 | 17 contados + 10% de repuesto *(estimado)* | 19 | $150 | $2.850 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
+| Tornillo M3 x 12 (NEMA 17: placa + separador de nailon de 3 mm) | 8 contados + 10% de repuesto *(estimado)* | 9 | $160 | $1.440 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
+| Tornillo M4 autorroscante corto (28BYJ-48: oreja + agujero ciego de 3,6 mm, MEDIR el largo) | 2 contados + 10% de repuesto *(estimado)* | 3 | $150 | $450 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
+| Tornillo M4 x 20 de perno de la biela del empujador | 2 contados + 10% de repuesto *(estimado)* | 3 | $300 | $900 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
+| Pasador de acero Ø2 x 17 (pernos del cuerno del escape de tapas) | 2 contados + 10% de repuesto *(estimado)* | 3 | $200 | $600 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
 | Tornillo M3 x 30 | 2 contados + 10% de repuesto *(estimado)* | 3 | $250 | $750 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
-| Tuerca M3 | 12 contados + 10% de repuesto *(estimado)* | 14 | $50 | $700 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
-| Tornillo M2 x 8 autorroscante (servos, placas) | 4 contados + 10% de repuesto *(estimado)* | 5 | $100 | $500 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
-| **Subtotal** | | | | **$237.079** | |
+| Tuerca M3 | 13 contados + 10% de repuesto *(estimado)* | 15 | $50 | $750 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
+| Tornillo M2 x 8 autorroscante (servos, placas) | 6 contados + 10% de repuesto *(estimado)* | 7 | $100 | $700 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
+| Tornillo M3 x 16 autorroscante (empuje del tensor de la cinta de monedas; agujero de 2,6 mm en PLA, MEDIR) | 2 contados + 10% de repuesto *(estimado)* | 3 | $150 | $450 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
+| Prisionero M3 x 10 punta de copa (tensor de la cinta de vasos; rosca en un agujero de 2,5 mm en PLA, MEDIR) | 2 contados + 10% de repuesto *(estimado)* | 3 | $200 | $600 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
+| **Subtotal** | | | | **$342.742** | |
 

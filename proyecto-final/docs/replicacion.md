@@ -86,8 +86,8 @@ Valores de `tiempos_ms`. **Cómo medirlos:** en el firmware, marcar con `millis(
 | material lectura | 5 |
 | intervalo entre lecturas | 30 |
 | vision captura inferencia | 400 |
-| desvio | 150 |
-| carrusel giro | 4096 |
+| desvio | 200 |
+| carrusel giro | 4223 |
 | compuerta tubo | 600 |
 | caida moneda tubo | 400 |
 | avance casilla vasos | 1000 |
@@ -95,7 +95,7 @@ Valores de `tiempos_ms`. **Cómo medirlos:** en el firmware, marcar con `millis(
 | camara vasos cuadro | 60 |
 | tapa caida | 500 |
 | prensa ciclo | 1400 |
-| empujador | 700 |
+| empujador | 1000 |
 | cortina lectura | 33 |
 | serial ida vuelta | 20 |
 
@@ -107,10 +107,10 @@ Ciclo de la cinta de monedas: **1600 ms** (≈ 38 elementos por minuto). Ciclo m
 |---|---|---|---|---|---|
 | Las lecturas repetidas caben en la pausa | 125 | 1000 | +875 | OK | Cada estación lee su sensor varias veces (separadas para que sean independientes) y vota, y el evento viaja al PC, con la cinta quieta. |
 | La visión decide con la cinta quieta | 820 | 1000 | +180 | OK | 2 foto(s) + segmentación + clasificador + ida y vuelta por serial, dentro de la pausa en E3. |
-| La compuerta de desvío se pone antes de que caiga la pieza | 170 | 600 | +430 | OK | El veredicto ya se sabe desde la visión; el desvío se mueve mientras la cinta trae la pieza a la descarga. |
-| El carrusel pone el tubo bajo la carga antes de que caiga la moneda | 4116 | 1600 | -2516 | **NO CABE** | El carrusel gira al tubo de la denominación durante el ciclo en que la moneda va de la visión a la descarga. Peor caso: media vuelta (tubo opuesto). Si no cabe, la cinta de monedas ESPERA al carrusel antes de soltar la moneda (pausa más larga en ese ciclo: baja la producción, no se pierde ninguna moneda; un tubo vecino, 60 grados, tarda 1/3). |
+| La compuerta de desvío se pone antes de que caiga la pieza | 220 | 600 | +380 | OK | El veredicto ya se sabe desde la visión; el desvío se mueve mientras la cinta trae la pieza a la descarga. |
+| El carrusel pone el tubo bajo la carga antes de que caiga la moneda | 4243 | 1600 | -2643 | **NO CABE** | El carrusel gira al tubo de la denominación durante el ciclo en que la moneda va de la visión a la descarga. Peor caso: media vuelta (tubo opuesto). Si no cabe, la cinta de monedas ESPERA al carrusel antes de soltar la moneda (pausa más larga en ese ciclo: baja la producción, no se pierde ninguna moneda; un tubo vecino, 60 grados, tarda 1/3). |
 | La moneda termina de caer a su tubo antes del giro a la siguiente | 400 | 820 | +420 | OK | Del borde de la cinta al fondo del tubo (embudo, compuerta, canal corto) con el disco quieto; en régimen el giro a la siguiente moneda sale recién cuando la visión la acepta, después de esta caída. |
-| El carrusel suelta un lote y vuelve entre dos monedas | 8792 | 1600 | -7192 | **NO CABE** | Girar el tubo al agujero, abrir y cerrar el obturador y volver a la posición de carga, sin frenar la cinta de monedas. Si no cabe, la cinta de monedas ESPERA a que el carrusel vuelva (una vez por lote, cada `monedas_por_vaso` monedas de una denominación). |
+| El carrusel suelta un lote y vuelve entre dos monedas | 9046 | 1600 | -7446 | **NO CABE** | Girar el tubo al agujero, abrir y cerrar el obturador y volver a la posición de carga, sin frenar la cinta de monedas. Si no cabe, la cinta de monedas ESPERA a que el carrusel vuelva (una vez por lote, cada `monedas_por_vaso` monedas de una denominación). |
 | Llega un lote más lento de lo que la cinta de vasos lo despacha | 2400 | 16000 | +13600 | OK | Peor caso: todas las monedas de la misma denominación (un lote cada `lote` ciclos). |
 | La cámara de vasos decide con la cinta de vasos quieta | 200 | 1400 | +1200 | OK | Varios cuadros votados (silueta en las franjas de medida + marcador ArUco) en cada estación, antes de que la cinta de vasos arranque. |
 | La tapa cae y la cámara la confirma en la misma pausa | 680 | 1400 | +720 | OK | El escape suelta la tapa, cae por gravedad y la cámara ve que quedó sobre el vaso (un intento). |

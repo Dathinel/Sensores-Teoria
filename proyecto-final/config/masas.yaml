@@ -48,7 +48,7 @@ componentes:
   # --- cinta de vasos
   motor_cinta_vasos: {zona: Cinta de vasos, masa_g: 280, fuente: hoja_de_datos, como: "17HS4401: 0,28 kg"}
   camara_vasos: {zona: Cinta de vasos, masa_g: 70, fuente: estimado, como: "webcam 720p con su cable"}
-  panel_luz: {zona: Pórtico, masa_g: 150, fuente: estimado, como: "acrílico opalino 330 x 110 x 3 mm = 109 cm³ x 1,19 = 130 g + tira LED de 1 m (~20 g)"}
+  panel_luz: {zona: Pórtico, masa_g: 20, fuente: estimado, como: "tira LED de 1 m (~20 g); la caja de luz es de PLA blanco (vas_panel_a/b) y va en la maqueta impresa (antes 130 g de acrílico opalino)"}
   sensor_interior: {zona: Cinta de vasos, masa_g: 2, fuente: estimado, como: "módulo GY-VL53L0XV2"}
   cortina: {zona: Cinta de vasos, masa_g: 2, fuente: estimado, como: "módulo GY-VL53L0XV2"}
   servo_tapas: {zona: Pórtico, masa_g: 9, fuente: hoja_de_datos, como: "SG90: 9 g"}
@@ -85,7 +85,7 @@ componentes:
   buck_servos: {zona: Caja de control, masa_g: 25, fuente: estimado, como: "XL4015 de 5 A con su disipador"}
   buck_5v: {zona: Caja de control, masa_g: 12, fuente: estimado, como: "módulo LM2596"}
   fusibles: {zona: Caja de control, masa_g: 10, fuente: estimado, como: "un portafusible de 1 vía con su fusible"}
-  empalmes: {zona: Caja de control, masa_g: 5, fuente: estimado, como: "estaño, termoencogible, 2 diodos y 4 resistencias"}
+  empalmes: {zona: Caja de control, masa_g: 5, fuente: estimado, como: "estaño, termoencogible, 2 diodos y 5 resistencias (la de 3,3 Ω 1 W del panel de luz, ~1 g)"}
   cable_red: {zona: Caja de control, masa_g: 120, fuente: estimado, como: "cable de poder de 3 x 18 AWG de 1,5 m con enchufe"}
   uln2003: {zona: Caja de control, masa_g: 6, fuente: estimado, como: "placa ULN2003 del kit del 28BYJ-48"}
   bridas_caja: {zona: Caja de control, masa_g: 25, fuente: estimado, como: "~40 bridas usadas (~0,3 g c/u) + 10 bases adhesivas (~1 g) + ventilador 4010 (~6 g)"}
@@ -98,17 +98,21 @@ componentes:
 # -------------------------------------------------------------------------------------------
 otros:
   # --- cinta de monedas (en detalle: es la que carga el NEMA 17 más exigido por la precisión)
-  - {id: banda_monedas, zona: Cinta de monedas, nombre: "Banda de caucho de 55 mm (cerrada)", material: caucho, volumen_cm3: 76.7, fuente: estimado, como: "largo 2 x 430 + π x 22 = 930 mm x 55 mm x 1,5 mm de espesor"}
-  - {id: rodillos_monedas, zona: Cinta de monedas, nombre: "Rodillos Ø22 x 57 mm con su eje de 8 mm (x2)", masa_g: 76, fuente: estimado, como: "tubo de aluminio Ø22 pared 1 mm: π·22·57·1 = 3,9 cm³ x 2,7 = 11 g + eje de acero Ø8 x 68: 3,4 cm³ x 7,85 = 27 g; = 38 g por rodillo"}
+  - {id: banda_monedas, zona: Cinta de monedas, nombre: "Banda de caucho de 55 mm (cerrada)", material: caucho, volumen_cm3: 50.7, fuente: estimado, como: "largo ~615 mm (línea media del casco del motriz, el tensor y los retornos A y B de cinta_monedas.scad: 611,5 con el tensor en x 86 y 618 en x 90; segunda opinión 2026-10-25) x 55 mm x 1,5 mm de espesor. Antes 638 (contaba el retorno C, que queda dentro del lazo) y 930 (la cinta vieja de 2 rodillos)"}
+  - {id: rodillos_monedas, zona: Cinta de monedas, nombre: "Rodillos Ø22 x 59 mm con su eje de 8 mm (x2)", masa_g: 76, fuente: estimado, como: "tubo de aluminio Ø22 pared 1 mm: π·22·59·1 = 4,1 cm³ x 2,7 = 11 g + eje de acero Ø8 x 68: 3,4 cm³ x 7,85 = 27 g; = 38 g por rodillo"}
   - {id: rodamientos_608_monedas, zona: Cinta de monedas, nombre: "Rodamientos 608ZZ (x4)", masa_g: 48, fuente: hoja_de_datos, como: "608ZZ: 12 g c/u"}
+  - {id: rodillos_retorno_monedas, zona: Cinta de monedas, nombre: "Rodillos de retorno A y B (Ø22 x 59) con sus ejes Ø8 fijos", masa_g: 100, fuente: estimado, como: "2 tubos de aluminio Ø22 pared 1 mm: π·22·59·1 = 4,1 cm³ x 2,7 = 11 g c/u; ejes de acero Ø8 de 114 (A: cuelga de las bajadas de los bloques del motriz) y 84,3 mm (B) de cinta_monedas.scad: π·4²·198,3 = 10,0 cm³ x 7,85 = 78 g. Sin el retorno C (2026-10-25: quedaba dentro del lazo y no tocaba la banda)"}
   - {id: acople_monedas, zona: Cinta de monedas, nombre: "Acople flexible 5 a 8 mm", masa_g: 9, fuente: hoja_de_datos, como: "acople helicoidal de aluminio Ø19 x 25"}
-  - {id: separadores_monedas, zona: Cinta de monedas, nombre: "Separadores de casilla de la banda (cada 40 mm, ~23)", masa_g: 23, fuente: estimado, como: "listón de caucho de 55 x 3 x 4 mm: 0,7 cm³ x 1,3 ≈ 1 g c/u"}
+  - {id: separadores_monedas, zona: Cinta de monedas, nombre: "Separadores de casilla de la banda (15, a L/15 ≈ 41 mm)", masa_g: 15, fuente: estimado, como: "una banda cerrada solo tiene casillas iguales si su largo es N x paso: ~615 mm / 15 = 41 mm (quedan 38 mm libres para la moneda de Ø26,7; con 16 cada 40 sobraba una casilla de ~15-18 mm). Listón de caucho de 55 x 3 x 4 mm: 0,7 cm³ x 1,3 ≈ 1 g c/u"}
   # --- cinta de vasos
-  - {id: banda_vasos, zona: Cinta de vasos, nombre: "Banda de caucho de 75 mm (cerrada)", material: caucho, volumen_cm3: 94.0, fuente: estimado, como: "largo 2 x 400 + π x 22 = 870 mm x 75 mm x 1,5 mm"}
+  - {id: banda_vasos, zona: Cinta de vasos, nombre: "Banda de caucho de 75 mm (cerrada)", material: caucho, volumen_cm3: 98.4, fuente: estimado, como: "largo 2 x 400 + 2π x 12 = 875 mm (línea media de una banda de 2 sobre los Ø22) x 75 mm x 1,5 mm"}
+  - {id: separadores_vasos, zona: Cinta de vasos, nombre: "Separadores de casilla de la banda (11, a L/11 ≈ 79,6 mm; cada uno con su taco separador impreso, que va en la maqueta)", material: caucho, volumen_cm3: 37.1, fuente: estimado, como: "875,4 mm de banda / 80 = 10,94: 11 separadores a L/11 (segunda opinión 2026-10-25; antes 7, con dos huecos de 238 mm). Separador de 3 x 75 x 15 mm (cinta_vasos.scad, vas_sep; viene con la banda): 3,4 cm³ c/u"}
   - {id: rodillos_vasos, zona: Cinta de vasos, nombre: "Rodillos Ø22 x 79 mm con su eje (x2)", masa_g: 90, fuente: estimado, como: "igual que los de monedas pero de 79 mm: ~45 g por rodillo"}
-  - {id: rodamientos_kfl08, zona: Cinta de vasos, nombre: "Rodamientos con brida KFL08 (x4)", masa_g: 120, fuente: hoja_de_datos, como: "KFL08 de zamak: ~30 g c/u"}
+  - {id: rodamientos_kfl08, zona: Cinta de vasos, nombre: "Rodamiento con brida KFL08 (x1) y rodamientos 608ZZ (x3)", masa_g: 66, fuente: hoja_de_datos, como: "KFL08 de zamak ~30 g (eje motriz, lateral -y) + 3 x 608ZZ de 12 g (cinta_vasos.scad)"}
   - {id: acople_vasos, zona: Cinta de vasos, nombre: "Acople flexible 5 a 8 mm", masa_g: 9, fuente: hoja_de_datos}
-  - {id: separadores_prensa, zona: Cinta de vasos, nombre: "Separadores M3 x 20 del motor (x4) y varillas guía de la prensa (x2)", masa_g: 85, fuente: estimado, como: "varillas de acero Ø8 x 101 mm: 5,1 cm³ x 7,85 = 40 g c/u; separadores de latón ~1 g"}
+  - {id: separadores_prensa, zona: Cinta de vasos, nombre: "Varillas guía Ø8 del empujador (x2) y separadores de nailon de 3 mm del NEMA (x4)", masa_g: 82, fuente: estimado, como: "varillas de acero Ø8 x 102,5 mm: 5,2 cm³ x 7,85 = 40 g c/u; separadores de nailon ~0,5 g. Los postes del motor (32,8 mm) son impresos: van en vas_lat_s_a"}
+  # --- almacén
+  - {id: rodamiento_608_almacen, zona: Almacén, nombre: "Rodamiento 608ZZ del eje del carrusel (en la placa fija)", masa_g: 12, fuente: hoja_de_datos, como: "608ZZ: 12 g (almacen.scad)"}
   # --- pórtico
   # --- canaleta y muelle
   - {id: espuma_topes, zona: Canaleta y muelle, nombre: "Espuma de los topes y cinta de PTFE", masa_g: 8, fuente: estimado}
@@ -138,7 +142,8 @@ comprobaciones:
     par_util_frac: 0.5            # a ~100 rpm el par que sostiene un paso a paso cae a ~la mitad del de retención
     inercia_rotor_kg_m2: 5.4e-6   # 54 g·cm² (hoja de datos)
     mu_banda_cama: 0.6            # caucho sobre la cama de MDF/PLA, en seco: peor caso (0,4-0,6)
-    tension_banda_n: 20           # tensión de montaje de cada ramal: PROVISIONAL (se ajusta con el tensor)
+    tension_banda_n: 20           # tensión de montaje de cada ramal: PROVISIONAL (se ajusta con el tensor de cada cinta: M3 de
+                                  # empuje en monedas, prisioneros M3 en vasos; a tope y medida con una balanza de gancho)
     mu_rodamiento: 0.0015         # rodamiento de bolas (608ZZ / KFL08), hoja de datos
     radio_eje_m: 0.004            # eje de 8 mm
     # El tiempo de cada avance y el largo de la casilla se leen de config/parametros.yaml
@@ -150,15 +155,18 @@ comprobaciones:
   mg996r:
     par_bloqueo_nm_4v8: 0.92      # 9,4 kg·cm a 4,8 V (hoja de datos)
     par_bloqueo_nm_6v: 1.08       # 11 kg·cm a 6 V (hoja de datos); el buck de servos da 6 V
-    excentricidad_m: 0.0065       # leva de la prensa (catálogo)
+    excentricidad_m: 0.007        # leva de la prensa (tapas_prensa_empujador.scad, tap_exc: el pistón baja 14 mm)
     fuerza_tapa_n: [30, 50]       # lo que pide una tapa a presión: PROVISIONAL (catálogo)
     # Fuerza OBJETIVO de la prensa (usuario 2026-09-28: decidirla según cómo sella la tapa). La
     # tapa sella a presión (snap-fit): su reborde se abre y "salta" sobre el labio del vaso; eso
     # pide ~30-50 N, y pasado el salto no hace falta más (apretar más solo deforma el vaso de
-    # plástico). Objetivo = 50 N x 1,2 de margen = 60 N, y el RESORTE LIMITADOR del plato se
-    # elige para que al final de la carrera no pase de ahí (un objeto extraño tampoco recibe
-    # más). Antes decía "≥150 N" (catálogo): el MG996R con la leva de 6,5 mm no lo sostiene a
-    # 90° de la leva y tampoco hace falta. Con 60 N el MG996R queda con margen >x2 a 6 V.
+    # plástico). Objetivo = 50 N x 1,2 de margen = 60 N, como tope de diseño para el servo. La
+    # maqueta impresa NO lleva resorte limitador: la fuerza la da el apriete de 0,5 mm al final de
+    # la carrera (leva de 7 mm) más los suplementos impresos que se pegan bajo el plato (0,5 y 1,0 mm,
+    # apilables) contra la rigidez del lazo de la prensa (estimada ~0,05 mm/N con la placa con costillas y
+    # remachada a la columna: ~10 N con 0,5 mm y ~40 N con los dos suplementos): MEDIR la tapa y el lazo
+    # con una balanza (manual_maqueta.py) y elegir el suplemento. Antes decía "≥150 N" (catálogo): el MG996R con esta leva no lo
+    # sostiene a 90° de la leva y tampoco hace falta. Con 60 N el MG996R queda con margen >x2 a 6 V.
     fuerza_prensa_objetivo_n: 60
     radio_manivela_m: 0.035       # empujador: carrera de ~70 mm = 2 x radio
     mu_vaso_banda: 0.6

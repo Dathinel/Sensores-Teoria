@@ -81,7 +81,9 @@ def config_fijo(p: dict) -> dict:
         "micropasos": p["motor_paso_a_paso"]["microstepping"], "mm_por_vuelta_cinta": f["mm_por_vuelta_cinta"],
         "pasos_por_vuelta_motor": p["motor_paso_a_paso"]["pasos_por_revolucion"],
         "carrusel_pasos_por_vuelta": f["carrusel_pasos_por_vuelta"], "carrusel_ms_por_paso": f["carrusel_ms_por_paso"],
+        "carrusel_rampa_ms": f["carrusel_rampa_ms"], "carrusel_rampa_pasos": f["carrusel_rampa_pasos"],
         "a4988_reposo_ms": f["a4988_reposo_ms"], "i2c_bus_largo_hz": f["i2c_bus_largo_hz"],
+        "cinta_rampa_ms": f["cinta_rampa_ms"], "cinta_arranque": f["cinta_arranque"],
         "servos": f["servos"], "activo_bajo": f["activo_bajo"], "telemetria_ms": f["telemetria_ms"],
         # Cortina: el umbral es el largo de la zona, el MISMO numero que el
         # alcance del cono de la simulacion (una sola fuente). La placa vota

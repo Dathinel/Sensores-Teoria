@@ -1,8 +1,11 @@
 # Estructura impresa: dónde está cada cosa (GENERADO por estructura.py)
 
-Tubo de 16 x 16 mm, pared 1.6 mm, hueco de 12.8 mm (con chaflanes de 3 mm
-arriba). Coordenadas del mundo en mm. Un remache que sujeta algo a un tubo atraviesa la pieza y UNA pared
-del tubo: agarre = espesor de la pieza + 1.6 (+0,2 si hay holgura de encaje); la una abre dentro del
+Tubo de 16 x 16 mm, pared 1.6 mm, hueco octogonal de 12.8 mm con chaflanes de 3 mm en
+las CUATRO esquinas (el tubo se gira al imprimir): si las patas de un remache se abren a lo ancho de una cara (la
+cabeza atravesada al tubo), el remache va a no más de ~0,75 mm del eje del tubo (3,4 - 2,45 - 0,2); si no, una pata
+pega en el chaflán por dentro (el revisor lo marca). Coordenadas del mundo en mm. Un remache que sujeta algo a un tubo atraviesa la pieza y UNA pared
+del tubo: agarre = espesor de la pieza + 1.6 (+ los huecos de la pila, y +0,2 más si la pieza de adentro
+puede correrse dentro de una cajera o U; el revisor acepta la cara de salida de agarre - 0,3 a agarre + 0,15); la una abre dentro del
 hueco del tubo. No remachar a menos de 5 mm de la boca de un nodo, de un empalme ni de la punta de un tubo,
 ni donde ya hay un remache de la estructura (ver REM_ESTRUCTURA en estructura_gen.scad).
 

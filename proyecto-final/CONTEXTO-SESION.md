@@ -63,6 +63,26 @@ Puntos:
   maqueta aligerada 2,74 -> 2,68 kg (3 rollos) con revisión completa en TODO OK y probar_revisor 39/39.
   HECHO (2026-10-24): commits 6006bae y 8de40b8 en main (940 pruebas en verde; .gitattributes con PDF/STL/3MF/GLB binarios).
 - [x] 9. Actualizar TODA la carpeta proyecto-final (README, docs, contexto) y SUBIRLA a GitHub.
+- [x] 11. (usuario, 2026-10-24) "los 3mf... se está levantando la primera capa en los círculos chicos... la membrana es
+  horrible, esa no es solución... haga otra vez una auditoría completa y arréglelo": cara de apoyo maciza y agujeros a los
+  costados (CONVENCIONES.md "Primera capa"), tubos con hueco octogonal y giro automático, primera_capa.py + auditar.py
+  (todos los criterios por pieza) y perfiles nuevos de Creality Print "... maqueta" (una pared en la primera capa, sin wipe).
+  EN CURSO (2026-10-25, "dejelo supremamente corregido en todo aspecto"; ultracode; límite de agentes quitado "pero que la
+  cpu no se cargue tanto"): auditoría de 10 lentes con 2 verificadores por hallazgo (scratchpad wf/r1_*.md) y 2 rondas de
+  arreglos con un agente por subsistema, trabajando en una COPIA (scratchpad pf/maqueta_impresa) que se pasa a la carpeta
+  real al final. Causa de alm_1: se laminó con el filamento 2 (sistema) y el proceso "sin saltos" (wipe_on_loops 1, wipe
+  con retracción 100 %, Slope Lift) y la placa vieja tenía una rejilla abajo con un puente de 3646 mm² en z 2,4 (el "mismo
+  z"). La interfaz de Creality Print (abierta por un agente con --help) borró los perfiles "maqueta" al sincronizar con la
+  nube: restaurados con sync_info = create, y ahora cada 3MF trae la configuración ADENTRO (exportar.py + perfil_creality.json)
+  y laminar.py lo comprueba con el CLI.
+  HECHO (2026-10-25): copia pasada a la carpeta real; segunda opinión aplicada entera (usuario: "A, cambiarlas, B
+  cambiarlas, C cambiarlos, todo"): revisión capa por capa (voladizos.capas), islas de mon_e4/tap_pre_placa/vas_lat_s_b
+  y postes en V de vas_lat_s_a corregidos, rodillo C quitado, canaleta amarrada, 11 separadores en la banda de vasos,
+  precios de lo que el manual manda comprar. Única excepción (usuario: "Acepta el puente de 30 mm de mon_e4 como
+  excepción documentada"): voladizos.PUENTES_ACEPTADOS, sale como aviso. Revisión completa en TODO OK (183 piezas, 316
+  remaches), probar_revisor 128/128, auditoría 0 fallas de 183, esfuerzos todo cumple, 26 tandas laminadas bien
+  (Creality Print: 2,95 kg y 101 h; exportar estima 2,98 kg y 91 h), costo $1.586.033, peso 8,08 kg. No se tocó
+  la orientación en Y ni los agujeros ciegos (usuario: "Déjelo como esta", "Déjalos así").
 - [x] 10. (usuario, 2026-10-24) El carro del visor igual al impreso; los remaches como parte del modelo (con casilla);
   verificar esfuerzo, deformación permanente (fluencia) y calor del PLA: maqueta_impresa/esfuerzos.py -> esfuerzos.md
   (todo cumple; condiciones nuevas: NEMA 17 con separadores de nailon, tira LED sobre cinta de aluminio a media potencia).

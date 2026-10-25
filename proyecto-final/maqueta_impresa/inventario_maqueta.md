@@ -1,5 +1,14 @@
 # Inventario geométrico de la maqueta (planta) — proyecto final
 
+> **Qué vale de este inventario (nota del 2026-10-25).** Es la foto de la simulación y del visor del 2026-10-24 por
+> la mañana, de antes de la maqueta impresa. Valen sus **medidas funcionales** (estaciones, alturas de las bandas,
+> carrusel, tolva, canaleta, sensores, cámaras, §18): son las que la maqueta impresa no mueve. Los **soportes** que
+> describe (perfil 2020, escuadras, pies niveladores, poste E4, pletina y varillas M5, placas de aluminio y acrílico,
+> tablero MDF) son del diseño anterior: en la maqueta impresa todo es PLA, con tubos 16 × 16 y nodos
+> (`estructura.py`; la viga del pórtico va en y −40,5, z 400, con las columnas P1 en x −50 y P2 en x 315). Las citas
+> `precios.yaml:NNN` son de la versión de ese archivo del 2026-10-24 por la mañana y ya no apuntan a lo que dicen.
+> Lo que la maqueta impresa cambió de las medidas de aquí (y el visor y la simulación tienen que seguir) está en §20.
+
 Rutas relativas a `D:\cosas uni\Micros\Micros teoria\github\Sensores-Teoria\proyecto-final`.
 Solo lectura. Los números "(calc.)" son derivados por mí de las fórmulas citadas; los demás están
 escritos tal cual en la fuente. Las posiciones de `sim/geometria.py` se verificaron ejecutando
@@ -433,3 +442,42 @@ Total 6,10 m en 31 tramos (docs/costos.md:45). Escuadras: 5 + 9 + 2 + 8 = 24 (pr
 | 27 | Medio ancho de la canaleta | estructura.js:33 dice 75 mm | parametros.yaml:378 dice 100 mm |
 | 28 | Alto de los tacos de casilla | visor 10 mm (linea_vasos.js:191) | precios 15 mm (precios.yaml:155) |
 | 29 | Comentario del URDF de monedas | "5 separadores" (cinta_monedas.urdf:63) | dibuja 6 (cinta_monedas.urdf:65-70) |
+
+---
+
+## 20. Lo que la maqueta impresa cambió de este inventario (2026-10-25)
+
+Mandan las piezas físicas: el visor y la simulación se ajustan a esto (rutas en `maqueta_impresa/`).
+
+| § | Elemento | Aquí dice | En la maqueta impresa | Fuente |
+|---|---|---|---|---|
+| 1.2 | Ejes de los rodillos motriz y tensor de monedas | z 0,441 | z 0,439: la cima del Ø22 en 0,450, la cara de la bancada (la banda apoya en los dos; superficie 0,452 igual) | cinta_monedas.scad:39 |
+| 1.2 | NEMA 17 de monedas | cara en y 0,097 | cara en y 0,100 (4 separadores de nailon de 3 mm; la jaula sigue en 0,093-0,097); el eje entra 9,5 mm en el acople | cinta_monedas.scad:55 |
+| 1.2 | Banda de monedas (la que se compra) | 200 × 55 × 2 (tramo de arriba), separadores cada 40 | cerrada de ~620 × 55 × 2 alrededor de los rodillos motriz, tensor, B y A (L 611,5 con el tensor en x 86, 618 en 90), con 15 separadores a L/15 (≈ 41 mm) marcados desde el empalme: uno cada 40 deja una casilla de ~18 mm. El visor y la simulación pueden seguir con 40 (menos de 1,2 mm por casilla) | manual_maqueta.py |
+| 1.2 | Bloques del rodillo motriz de monedas | — | abrazan el riel: labio bajo el riel y otro SOBRE el riel (z 0,4482-0,4512; x −0,135 a −0,098; \|y\| 0,034-0,0485); se montan deslizando en y | cinta_monedas.scad:249 |
+| 1.2 | Retorno A de monedas | placas colgantes | sin placas: su eje Ø8 (de y −0,057 a 0,057) cuelga de las bajadas de los bloques del motriz (\|y\| 0,0485-0,0575, hasta z 0,336), con 2 casquillos impresos de \|y\| 0,0296 a 0,0484 (mon_casq_a_m/_p); el rodillo sigue en (−0,113; 0,344). Ya no existen mon_ret_a_m/_p ni sus 4 remaches | cinta_monedas.scad:250-266, 516 |
+| 1.2 | Tensor de monedas | cojinetes tensores (608 fijo en x 0,090) | el 608 corre en una ranura de x 0,086 (montaje) a 0,090 (funcional, a tope), empujado por un M3 × 16 autorroscante que baja desde z 0,456 en \|y\| 0,0522, inclinado 12° hacia +x; ranura de 9 × 13 en los rieles (x 0,0835-0,0965); piso del bloque en z 0,422 | cinta_monedas.scad:296-317, 553 |
+| 1.2 | Retorno C de monedas (rodillo, eje y colgantes) | rodillo en (0,065; 0,4188) con 2 placas colgantes | no hay: quedaba 6,3 mm dentro del lazo (la banda es el casco de los rodillos) y no tocaba la banda; se quitaron el rodillo, su eje de 64,6, mon_ret_c_m/_p y sus 4 remaches. El visor tiene que dejar de dibujarlo (y de pasar la banda por encima de él) | cinta_monedas.scad, esfuerzos.md |
+| 3 | Salida del embudo E4 | Ø20 | Ø29 | cinta_monedas.scad:10 |
+| 3 | Aleta de desvío | cuelga del pivote, reposo 0,5 rad, pasador Ø3 | placa de 2 que SUBE del pivote (0,105; 0; 0,418) dentro del embudo, ±45° (+45 = rechazo, reposo, punta hacia −y); barril Ø5 y cubo Ø8 a presión en la estría del SG90 | cinta_monedas.scad:25, 46 |
+| 4.2 | Obturador | aleta Ø34 × 2 bajo la placa, bisagra a 20 mm | corredera de 44 × 35,8 × 1,9 en un rebaje de la placa fija, z 0,2681-0,270 (enrasada con el piso), de u −14,5 a 29,5 desde el agujero en la dirección 300°; abre corriéndose 30 mm a 300° | almacen.scad:93, 226 |
+| 4.2 | SG90 del obturador | 47 mm de la bisagra | eje en (0,1265; −0,1413), caja hacia 210°; palanca de 24 mm con horquilla para el perno de la corredera, gira −90° (horario visto desde arriba) | almacen.scad:103, 240 |
+| 4.2 | Tolva y columnas | — | poste 1 de la tolva a 270° (antes 300°); columnas hasta z 0,377 | almacen.scad:81, 110 |
+| 5.2 | Ejes de los rodillos de vasos | z 0,111 | z 0,109 (la banda envuelve el Ø22: arriba 0,122 igual; vuelta de abajo en z 0,096-0,098) | cinta_vasos.scad:44 |
+| 5.2 | NEMA 17 de vasos | origen (0; −0,1445; 0,111), cara en y −0,1785 | origen (0; −0,1445; 0,109), cara en y −0,1855 (separadores de 3 mm), cuerpo hasta y ≈ −0,2255; placa del motor en y −0,1825 a −0,1775 sobre 4 postes de 32,8 mm; la punta del eje del motor en y −0,1615, el medio del acople | cinta_vasos.scad:79, 412-417 |
+| 5.2 | Largo de los ejes de los rodillos de vasos | — | el de x 0 de y −0,1605 a −0,0515 (109 mm: entra 9 en el acople y queda a 1 del eje del motor); el de x 0,400, 97,5 mm | cinta_vasos.scad:404 |
+| 5.2 | Tensor de vasos (rodillo de x 0,400) | rodillo fijo | el 608 de cada lateral corre de x 0,396 (montaje) a 0,400 (funcional, a tope), empujado hacia +x por un prisionero M3 × 10 en z 0,107 (y −0,146 y −0,054); más allá de 0,400 no se tensa | cinta_vasos.scad:81-89, 164-189 |
+| 5.2 | Bancada de vasos | x 0,013 a 0,387 | x 0,013 a 0,383 (a 2 del rodillo de x 0,400 cuando está en 0,396) | cinta_vasos.scad:62 |
+| 5.2 | Banda de vasos (la que se compra) | 400 × 75 × 2, 6 separadores + 1 abajo | cerrada de ~875 × 75 × 2 (L = 2 × 400 + 2π × 12 = 875,4 con el tensor a tope), con 11 separadores a L/11 (≈ 79,6 mm) marcados desde el empalme: con 7 quedaban 2 huecos de 238 y la casilla de entrada sin separador al avanzar. El visor y la simulación pueden seguir con 80 (la resincronización por cámara corrige 0,4 mm por casilla) | manual_maqueta.py, cinta_vasos.scad (VAS_TACOS) |
+| 5.2 | Tacos de casilla | arco a los dos lados | arco solo del lado +y; del lado −y (canaleta) cara recta, para que el vaso salga | cinta_vasos.scad:230-231 |
+| 6 | Colgante del tubo de tapas | colgante de aluminio 12 × 12 (M3) | tap_colgante con 2 remaches verticales en (0,1875 y 0,2125; −0,0405; 0,3878) | tapas_prensa_empujador.scad:90-91 |
+| 6 | Tubo de tapas: de qué cuelga | colgado del colgante | entra desde abajo y el hombro del cabezal (z 0,241) se pega con cianoacrilato al anillo de tap_abr_servo (corona de ~500 mm²): de ese pegado cuelga; el anillo solo frena la subida y los dedos no sostienen peso | tapas_prensa_empujador.scad:12-14, 164-167 |
+| 9 | Cortina VL53L0X: sujeción | escuadra + poste + brazo (aluminio) | la GY-530 pegada con cinta doble faz a la cara −x (x 0,3018) de la escuadra de vas_cortina, chip hacia −x, centrada en (y −0,185; z 0,187); vas_cortina remachada a la cara −y del tubo (0,315; −0,1525) | cinta_vasos.scad:313-325, 446-448 |
+| 7 | Prensa | carrera 13 (exc 6,5), neopreno 0,5 | carrera 14 (exc 7, leva R 22,5): el plato baja de 0,229 a 0,215 y aprieta 0,5 el ala de la tapa asentada (0,2155); sin neopreno ni resorte limitador. Suplementos de 0,5 y 1,0 mm (Ø62) para pegar bajo el plato si la tapa real lo pide: no van montados (en el ensamble, sueltos en el piso en (0,240; −0,0855)) | tapas_prensa_empujador.scad:48-49, 218-224 |
+| 7 | Placa de la prensa | placa de aluminio en y −0,055 | tap_pre_placa de 6 mm (y −0,0547 a −0,0487) con costillas (x 0,240-0,249 y 0,290-0,299, hasta y −0,0782, de z 0,349 a 0,393 / 0,385), alargada hasta x 0,323 (z 0,257-0,367) y remachada a la viga (3) y a la cara −y de la columna de x 0,315 (4, en z 0,265 / 0,288 / 0,308 / 0,345); pie en z 0,257-0,2588 | tapas_prensa_empujador.scad:96-101, 178-200 |
+| 8 | Paleta del empujador | — | 4 remaches con el carro, dos por brazo (z 0,2425 y 0,231); las lengüetas del carro y los brazos bajan a z 0,226 y el travesaño de la paleta va en z 0,219-0,225 | tapas_prensa_empujador.scad:117-122, 262-282 |
+| 9 | Porta del VL53L0X interior | — | remachado bajo la viga en x 0,0365 y 0,0465 (y −0,0405) | tapas_prensa_empujador.scad:125-126 |
+| 11 | Marco de la canaleta: amarre | travesaños, largueros y escuadras de 2020 sobre el MDF | el marco de tubos (nodos C1..C4, M1, M2) va unido al resto por can_amarre: puntal en Z de z 0,048 a 0,078 entre la cara +y del poste t_C1-L (0,2975; −0,2111) y la cara −y del poste t_V4-L (0,315; −0,1525), 2 remaches en cada poste. Plantilla de 69 mm (can_plantilla) para dejar las varillas a 69 entre ejes al remachar los cabezales; queda suelta en el piso del marco | canaleta_muelle.scad:185-205 |
+| 12 | Pórtico | 2020, viga en y −0,045, columnas en x −0,035 / 0,315 | tubos 16 × 16 impresos: viga en y −0,0405, z 0,400; columnas P1 en x −0,050 y P2 en x 0,315 | estructura.py:69 |
+| 14, 15 | MDF y pies niveladores | tablero 600 × 450, 15 pies | no hay: el piso de tubos apoya directo en la mesa (617 × 484 mm; con canaleta, muelle y bandejas, ~700 × 900) | estructura.py, manual_maqueta.py |
+| 18.12 | Prensa | 13 mm de carrera | 14 mm | tapas_prensa_empujador.scad:48 |

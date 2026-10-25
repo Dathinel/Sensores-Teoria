@@ -33,7 +33,7 @@ Dónde está cada cosa después de rehacerla:
 - [x] Botón **Cables** (muestra/oculta todo el cableado 3D y su leyenda; se recuerda en
   `localStorage.verCables`; `?cables` en la URL lo abre).
 - [x] Casilla **Remaches** (2026-10-24; botón que se marca y desmarca, como Cables): muestra u oculta los
-  remaches impresos de la maqueta (310) y del carro (27), que vienen en los GLB en rojo (`#d1001f`).
+  remaches impresos de la maqueta (los de `REM_TODOS` de maqueta_impresa/maqueta.scad) y del carro (27), que vienen en los GLB en rojo (`#d1001f`).
   Marcada por defecto; se recuerda en `localStorage.verRemaches`; `?sinremaches` en la URL la desmarca. Si
   no cargó ningún GLB (`?sinmaqueta`) el botón se esconde.
 - [x] Botón **Panel** (muestra/oculta el panel lateral).

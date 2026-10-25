@@ -497,6 +497,32 @@ def test_fijo_i2c_largo_a_100khz_y_rodillo_de_22mm(importar_hw):
     assert abs(80 * hw.cintas["vasos"].pasos_por_mm - 926) < 1
 
 
+@pytest.mark.parametrize("cinta,mm", [("monedas", 40), ("vasos", 80)])
+def test_cinta_con_rampa_da_los_mismos_pasos_en_el_mismo_tiempo(importar_hw, cinta, mm):
+    """Rampa trapezoidal de Cinta.avanzar (esfuerzos.md: la cinta arrancaba y paraba de golpe): arranca
+    despacio, sube a la de crucero y baja, sin cambiar el tiempo del avance ni los micropasos (con el
+    bucle actualizando la frecuencia cada 4 ms, como en la placa)."""
+    mod, reloj = importar_hw("fijo")
+    cfg = config_fijo(P)
+    ms = cfg["tiempos"][f"avance_casilla_{cinta}"]
+    assert cfg["cinta_rampa_ms"] == P["firmware"]["cinta_rampa_ms"] > 0
+    hw = mod.Hardware(cfg)
+    c = hw.cintas[cinta]
+    hw.avanzar_cinta(cinta, mm, ms)
+    t0, pedidos, pasos, frecs = reloj.ms, mm * c.pasos_por_mm, 0.0, []
+    while c.step.duty() == 512:
+        frecs.append(c.step.freq())
+        pasos += c.step.freq() * 4 / 1000            # lo que da el PWM hasta la proxima vuelta del bucle
+        reloj.ms += 4
+        hw.leer()
+    assert reloj.ms - t0 == ms                        # termina a tiempo (600 / 1000 ms)
+    assert abs(pasos - pedidos) < 0.01 * pedidos      # los mismos micropasos (±1 %)
+    constante = pedidos * 1000 / ms                   # lo de antes, sin rampa
+    assert frecs[0] == pytest.approx(cfg["cinta_arranque"] * c.f_crucero, abs=1)
+    assert max(frecs) == int(c.f_crucero) and constante < c.f_crucero < 1.3 * constante
+    assert frecs[-1] < 0.5 * c.f_crucero              # llega frenando
+
+
 def test_fijo_suelta_los_a4988_solo_en_esperas_largas(importar_hw):
     mod, reloj = importar_hw("fijo")
     cfg = config_fijo(P)
@@ -522,6 +548,18 @@ def test_fijo_suelta_los_a4988_solo_en_esperas_largas(importar_hw):
     assert hw.en.value() == 0 and hw.cintas["vasos"].step.duty() == 512
 
 
+def _girar(car):
+    """Corre el Timer (1 ms por latido) hasta que el carrusel llega: [ms de cada medio paso]."""
+    ms, momentos, antes = 0, [], car.posicion
+    while car.moviendose():
+        car._timer.callback(car._timer)
+        ms += 1
+        if car.posicion != antes:
+            momentos.append(ms)
+            antes = car.posicion
+    return momentos
+
+
 def test_carrusel_por_timer_y_su_tiempo_es_el_de_la_config(importar_hw):
     """El tiempo del carrusel en tiempos_ms tiene que ser el que de verdad
     tarda el firmware (antes: 500 ms en la config y 4,1 s en la placa)."""
@@ -529,14 +567,33 @@ def test_carrusel_por_timer_y_su_tiempo_es_el_de_la_config(importar_hw):
     cfg = config_fijo(P)
     hw = mod.Hardware(cfg)
     car = hw.carrusel
-    assert car._timer.period == cfg["carrusel_ms_por_paso"]   # el paso lo da el Timer, no el bucle
+    assert car._timer.period == 1                              # el paso lo da el Timer (de a 1 ms), no el bucle
     car.a_tubo(3)                                              # tubo opuesto: media vuelta
-    pasos = 0
-    while car.moviendose():
-        car._timer.callback(car._timer)
-        pasos += 1
-    assert pasos == cfg["carrusel_pasos_por_vuelta"] // 2
-    assert pasos * cfg["carrusel_ms_por_paso"] == P["tiempos_ms"]["carrusel_giro"]
+    momentos = _girar(car)
+    assert len(momentos) == cfg["carrusel_pasos_por_vuelta"] // 2
+    assert momentos[-1] == P["tiempos_ms"]["carrusel_giro"]
+
+
+def test_el_carrusel_arranca_y_para_con_rampa(importar_hw):
+    """Segunda opinion (2026-10-25): sin rampa arrancaba a 500 Hz con el tambor lleno. Los primeros y
+    ultimos `carrusel_rampa_pasos` medios pasos van de `carrusel_rampa_ms` bajando a `carrusel_ms_por_paso`,
+    igual al arrancar y al parar, en cualquier giro (tambien en el corto, de un tubo)."""
+    mod, _ = importar_hw("fijo")
+    cfg = config_fijo(P)
+    car = mod.Hardware(cfg).carrusel
+    r, lento, rapido = cfg["carrusel_rampa_pasos"], cfg["carrusel_rampa_ms"], cfg["carrusel_ms_por_paso"]
+    for tubo in (1, 3):
+        for _ in range(10):                                    # quieto un rato (lo que deja el ultimo paso)
+            car._timer.callback(car._timer)
+        car.a_tubo(tubo)
+        m = _girar(car)
+        dt = [b - a for a, b in zip(m, m[1:])]
+        assert dt[0] == dt[-1] == lento                        # el primero y el ultimo, lentos
+        assert dt[:r] == dt[::-1][:r]                          # para igual que arranca
+        assert all(a >= b for a, b in zip(dt[:r], dt[1:r]))   # baja sin saltos hacia arriba
+        assert set(dt[r:-r]) == {rapido}                       # en el medio, a la velocidad de siempre
+        rampa = P["tiempos_ms"]["carrusel_giro"] - cfg["carrusel_pasos_por_vuelta"] // 2 * rapido
+        assert m[-1] == len(m) * rapido + rampa                # la rampa cuesta lo mismo en cualquier giro
 
 
 
@@ -1124,7 +1181,7 @@ def test_el_carrusel_de_hw_py_se_detiene_donde_esta(importar_hw):
     hw = mod.Hardware(config_fijo(P))
     car = hw.carrusel
     car.a_tubo(3)
-    for _ in range(100):
+    while car.posicion < 100:
         car._timer.callback(car._timer)
     assert car.moviendose()
     hw.carrusel_detener()

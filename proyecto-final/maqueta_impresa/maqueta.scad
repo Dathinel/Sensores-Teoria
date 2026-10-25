@@ -17,10 +17,13 @@ include <canaleta_muelle.scad>
 
 modo = "ensamble";
 cual = "";
+k = 0;          // paso de un mecanismo (modo "fase")
+incl = [];      // remaches a cruzar con un barrido (modo "barrido_remaches")
 
 REM_TODOS = concat(REM_ESTRUCTURA, REM_ALM, REM_MON, REM_VAS, REM_TAP, REM_CAN);
 AGUJEROS = concat(AGUJEROS_ALM, AGUJEROS_MON, AGUJEROS_VAS, AGUJEROS_TAP, AGUJEROS_CAN);
 MOVILES = concat(MOVILES_ALM, MOVILES_MON, MOVILES_VAS, MOVILES_TAP, MOVILES_CAN);
+SINCRONOS = concat(SINCRONOS_ALM, SINCRONOS_MON, SINCRONOS_VAS, SINCRONOS_TAP, SINCRONOS_CAN);
 PIEZAS = concat(PIEZAS_ESTRUCTURA, PIEZAS_ALM, PIEZAS_MON, PIEZAS_VAS, PIEZAS_TAP, PIEZAS_CAN);
 
 function _de(lista, n) = search([n], lista)[0] != [];
@@ -54,6 +57,15 @@ module barrido(n) {
   else if (_de_mov(MOVILES_CAN, n)) can_barrido(n);
 }
 
+// Un mecanismo en el paso k: lado 0 (lo que mueve) o lado 1 (lo que lo sigue). Lo define su subsistema.
+module fase(n, k, lado) {
+  if (_de_mov(SINCRONOS_ALM, n)) alm_fase(n, k, lado);
+  else if (_de_mov(SINCRONOS_MON, n)) mon_fase(n, k, lado);
+  else if (_de_mov(SINCRONOS_VAS, n)) vas_fase(n, k, lado);
+  else if (_de_mov(SINCRONOS_TAP, n)) tap_fase(n, k, lado);
+  else if (_de_mov(SINCRONOS_CAN, n)) can_fase(n, k, lado);
+}
+
 // lo comprado (motores, servos, bandas, rodillos...), solo para ver y revisar choques: cada subsistema lo agrega
 module comprados() { alm_comprados(); mon_comprados(); vas_comprados(); tap_comprados(); can_comprados(); }
 HAY_COMPRADOS = true;
@@ -63,9 +75,12 @@ if (modo == "lista") {
   for (r = REM_TODOS) echo(REM = r);
   echo(COMPRADOS = HAY_COMPRADOS);
   for (m = MOVILES) echo(MOVIL = m);
+  for (s = SINCRONOS) echo(SINCRONO = s);
 }
 else if (modo == "comprados") comprados();
 else if (modo == "barrido") barrido(cual);
+else if (modo == "fase") intersection() { fase(cual, k, 0); fase(cual, k, 1); }
+else if (modo == "barrido_remaches") intersection() { barrido(cual); for (r = REM_TODOS) if (_de(incl, r[0])) remache_en(r); }
 else if (modo == "ensamble") { for (n = PIEZAS) pieza(n); color("#d22") for (r = REM_TODOS) remache_en(r); comprados(); }
 else if (modo == "pieza") pieza(cual);
 else if (modo == "cama") a_cama(cual) pieza(cual);

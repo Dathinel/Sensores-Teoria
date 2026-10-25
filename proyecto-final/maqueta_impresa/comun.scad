@@ -37,7 +37,10 @@ module remache(agarre) {
         cylinder(d = rem_d, h = agarre + 0.2);
         translate([0, 0, agarre + 0.2]) cylinder(d1 = rem_d + 2 * rem_garra, d2 = rem_d - 0.8, h = 2.6);
       }
-      translate([-rem_ranura / 2, -10, agarre * 0.3]) cube([rem_ranura, 20, agarre + 10]);
+      // en los cortos (agarre < 8) la ranura empieza DENTRO de la cabeza (queda 1 mm de puente): desde 0,3 agarre la pata del
+      // de 4,2 media 3,1 y al entrar se deformaba 2-3 veces mas que los del carro (que si funcionaron); asi queda en ~1,4 %
+      // (FEM de la auditoria, 2026-10-25). Desde 8 sigue como en el carro.
+      translate([-rem_ranura / 2, -10, agarre < 8 ? -0.6 : agarre * 0.3]) cube([rem_ranura, 20, agarre + 10]);
     }
     translate([-10, -rem_plano / 2, -10]) cube([20, rem_plano, agarre + 20]);
   }
@@ -64,14 +67,16 @@ module cajera_cabeza_en(r, hondo = 1.8) en_marco(r[2], r[2] + r[3], no_paralelo(
   translate([-(rem_cabeza[0] + 0.6) / 2, -(rem_plano + 0.6) / 2, -0.01]) cube([rem_cabeza[0] + 0.6, rem_plano + 0.6, hondo]);
 
 // ----------------------------------------------------------------- tubo impreso 16 x 16
-// Reemplaza al perfil 2020 (la carga es poca: la viga mas cargada flecta 0,2 mm con 900 g; ver estructura.py).
-// Se imprime ACOSTADO: el hueco es cuadrado con las esquinas de arriba cortadas a 45 grados, asi el techo
-// es un puente de 6,8 mm (sale sin soportes).
+// Reemplaza al perfil 2020 (la carga es poca: la viga mas cargada flecta 0,5 mm con 900 g; ver esfuerzos.md).
+// Se imprime ACOSTADO: el hueco es un octogono (las 4 esquinas cortadas a 45 grados), asi el techo es un puente
+// de 6,8 mm (sale sin soportes) GIRE COMO GIRE el tubo sobre su eje: estructura_a_cama elige el giro que deja la
+// cara con agujeros de remache hacia un costado y la cara de apoyo lisa (2026-10-24: los circulos chicos en la
+// primera capa se levantaban).
 lado_tubo = 16;
 pared_tubo = 1.6;
 chaflan_hueco = 3;
 module hueco_tubo_2d(o = 0) let(a = lado_tubo / 2 - pared_tubo, c = chaflan_hueco)
-  offset(delta = -o) polygon([[-a, -a], [a, -a], [a, a - c], [a - c, a], [-a + c, a], [-a, a - c]]);
+  offset(delta = -o) polygon([[-a + c, -a], [a - c, -a], [a, -a + c], [a, a - c], [a - c, a], [-a + c, a], [-a, a - c], [-a, -a + c]]);
 module seccion_tubo() difference() { square(lado_tubo, center = true); hueco_tubo_2d(); }
 module tubo(p0, p1, arriba = [0, 0, 1]) en_marco(p0, p1, arriba) linear_extrude(norm(p1 - p0)) seccion_tubo();
 

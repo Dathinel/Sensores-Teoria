@@ -128,18 +128,19 @@ def test_presupuesto_dice_cuanto_baja_la_produccion():
     ciclo = t["avance_casilla_monedas"] + t["pausa_casilla_monedas"]
     hueco = ciclo - p["planta"]["fotos_por_moneda"] * t["vision_captura_inferencia"] - t["serial_ida_vuelta"]
     assert c["hueco_ms"] == hueco                                        # 780 ms con los valores de hoy
-    assert c["espera_peor_ms"] == pytest.approx(t["carrusel_giro"] - hueco)     # 3316 ms
+    assert c["espera_peor_ms"] == pytest.approx(t["carrusel_giro"] - hueco)     # 3443 ms
     assert c["espera_tubo_vecino_ms"] == pytest.approx(t["carrusel_giro"] / 3 - hueco)
     assert c["elementos_por_minuto_peor"] < c["elementos_por_minuto_tubo_vecino"] < r["elementos_por_minuto"]
     assert elementos_por_minuto_medidos(40, 50, t) == pytest.approx(60 * 40 / (50 * ciclo / 1000))
 
 
 def test_la_duracion_sigue_al_firmware():
-    """tiempos_ms.carrusel_giro = medio paso x ms por paso x media vuelta."""
+    """tiempos_ms.carrusel_giro = medio paso x ms por paso x media vuelta, mas la rampa de arranque y
+    parada (2026-10-25: 127 ms; la cuenta exacta, latido por latido, en tests/firmware/test_firmware.py)."""
     from app.configuracion import cargar_parametros
     p = cargar_parametros()
     f = p["firmware"] if "firmware" in p else p["tiempos_ms"]
     pasos = f.get("carrusel_pasos_por_vuelta", p["tiempos_ms"].get("carrusel_pasos_por_vuelta"))
     ms = f.get("carrusel_ms_por_paso", p["tiempos_ms"].get("carrusel_ms_por_paso"))
     c = Carrusel(POS, p["tiempos_ms"]["carrusel_giro"])
-    assert c.duracion_ms(180) == pytest.approx(pasos / 2 * ms)
+    assert c.duracion_ms(180) == pytest.approx(pasos / 2 * ms + 127)
