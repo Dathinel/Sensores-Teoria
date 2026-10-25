@@ -54,8 +54,8 @@ CICLOS_SERVO = {"prensa": "prensa_ciclo", "empujador": "empujador", "tapas": "ta
 
 # Servos que no se pueden mover a la vez: los dos MG996R del riel de 6 V.
 # Por que: la prensa apretando la tapa ya lleva el riel a ~3,9 A; con el
-# empujador arrancando (o trabado) al mismo tiempo el peor caso queda JUSTO
-# bajo los 8 A del XL4016 y el fusible F1 (docs/electrica.md). Ademas son la
+# empujador arrancando (o trabado) al mismo tiempo pasaria de los 5 A del
+# buck XL4015 de los servos (docs/electrica.md, ahorro 2026-10-24). Ademas son la
 # misma casilla de la cinta de vasos: el plato de la prensa abajo y la paleta
 # empujando el vaso de lado se estorbarian. El PC ya los manda en orden, pero
 # un reintento, un boton de prueba del dashboard o un PC colgado pueden

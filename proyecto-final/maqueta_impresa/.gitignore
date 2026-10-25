@@ -1,0 +1,4 @@
+_cache/
+img/manual/*.scad
+__pycache__/
+img/manual/

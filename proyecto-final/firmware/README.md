@@ -72,16 +72,16 @@ tiene licencia, por eso no está aquí).
 
 | Señal | GPIO |
 |---|---|
+| `CAPACITIVO_S` | 35 |
 | `DRIVERS_EN` | 13 |
 | `DRIVERS_M_DIR` | 26 |
 | `DRIVERS_M_STEP` | 25 |
 | `DRIVERS_V_DIR` | 14 |
 | `DRIVERS_V_STEP` | 27 |
 | `HALL_S` | 39 |
-| `HUB_I2C_SCL` | 17 |
-| `HUB_I2C_SDA` | 16 |
-| `OPTO_OUT1` | 35 |
-| `OPTO_OUT2` | 36 |
+| `I2C1_SCL` | 17 |
+| `I2C1_SDA` | 16 |
+| `INDUCTIVO_S` | 36 |
 | `PRESENCIA_OUT` | 34 |
 | `ULN2003_IN1` | 32 |
 | `ULN2003_IN2` | 33 |

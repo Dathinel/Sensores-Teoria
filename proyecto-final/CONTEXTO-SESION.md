@@ -11,6 +11,88 @@ puntos; al terminar cada punto, marcarlo. Si se pierde un mensaje, está complet
 transcript de Claude Code: `~/.claude/projects/D--cosas-uni-Micros/<sesion>.jsonl`
 (líneas con `"type":"user"`; el más reciente por fecha de modificación).
 
+### Pedido EN CURSO del 2026-10-24 (tarde) — ahorros de costo aprobados (agente de ahorros)
+
+Textual del usuario:
+> "también el tema de ahorrar costos pueden ser la eliminación de borneras y swiches, al final es un proyecto universitario, no un sistema industrial, entre más se ahorre mejor, tanto para lo impreso como para el proyecto final"
+
+Eligió: sí buck de 5 A para servos, sí sin optoacopladores, sí sin hub USB; NO cambiar la webcam cenital; DEJAR el
+PCA9685; "el carro ya no lo toque"; un solo ESP32 fijo alcanza (19 de 24 GPIO). Puntos (en todas las capas):
+- [x] 1. Bornera X2 → empalmes soldados con termoencogible (GND en estrella igual).
+- [x] 2. IEC → cable de la fuente a una multitoma con interruptor; 4 fusibles → 1 fusible principal en el +12 V.
+- [x] 3. Fuente 12 V 10 A → 12 V 5 A. 4. XL4016 → XL4015 5 A (pico ≈3,9 A; prensa y empujador nunca a la vez).
+- [x] 5. Sin optoacopladores: M18 directo al GPIO con diodo + pull-up 10 kΩ (sigue activo en bajo).
+- [x] 6. Sin hub USB (ESP32 y 2 webcams al portátil). 7. Reparto I2C → hilos con 2 pull-ups 2,2 kΩ en línea.
+- [x] 8. Canaletas y prensaestopas → bridas; ventilador según la térmica. 9. Sin base MDF.
+- [x] 10. Estructura = maqueta impresa (gramos × PLA + energía). 11-13. Documentos, visor y pruebas en verde.
+HECHO (2026-10-24): total $1.393.790 (antes $1.998.921), peso 7,92 kg; detalle en docs/bitacora.md.
+No se toca `maqueta_impresa/`, `chasis_impreso/` ni nada del carro. Sin git.
+
+### Pedido EN CURSO del 2026-10-24 — maqueta completa impresa (carpeta nueva `maqueta_impresa/`)
+
+Textual del usuario:
+> "Ahora también saque ordenadamente todo el tema del almacenamiento para la impresión en 3d y el chasis para montar toda la maqueta en 3d, como se haría sin con chasis, unidos, pero bien revisado, también cuanto material se gastaría y un manual inspirado en el que ya existe, y revise el modelado el proyecto final para que los modelos sean iguales tanto físicos como digitales, revise todo múltiples veces para no cometer el mismo error, otra instancia está trabajando a la par en el pc, si se cruzan avísele para que no se pisen"
+
+Respuestas del usuario a las preguntas de alcance: estructura **todo impreso, sin perfil 2020** (módulos que caben en la
+cama, unidos a presión: remaches impresos y colas de milano; MDF solo como piso); "almacenamiento" = **almacén de monedas**
+(carrusel tipo revólver: placa fija, disco, tubos —también impresos—, obturador, soporte del 28BYJ-48, embudo al vaso);
+si digital y físico difieren **mandan las piezas físicas** (después se corrigen visor y simulación, con prueba).
+Lección del carro (2026-10-24): los remaches salieron mal porque su agarre se sacó de fórmulas y nunca se midió el
+ensamble. Aquí TODA unión se mide en el ensamble con un revisor automático antes de entregar.
+Puntos:
+- [x] 1. Inventario geométrico de la planta (sim/mundo.py, geometria.py, parametros.yaml, visor) y discrepancias.
+- [x] 2. Almacén de monedas imprimible (carrusel, tubos, obturador, soporte 28BYJ-48, embudo).
+- [x] 3. Estructura impresa de toda la maqueta (mesas, patas, pórtico, canaleta...) en módulos unidos, sin aluminio.
+- [x] 4. Revisión automática: choques, voladizos (sin soportes), cada unión medida en el ensamble, que todo quepa en la cama.
+- [x] 5. Material: gramos, tiempo y rollos por pieza y total; tandas 3MF + STL por pieza.
+  HECHO (2026-10-24): `maqueta_impresa/` (comun.scad, estructura.py -> estructura_gen.scad, un .scad por subsistema
+  hecho por agentes, maqueta.scad, revisar.py, probar_revisor.py 39/39, exportar.py). Revisión completa en TODO OK:
+  310 remaches medidos, 170 piezas sin choques, 13 móviles barridos (74 pares), sin soportes, todo cabe. 2,74 kg de PLA
+  (4 rollos), ~82 h, 25 tandas (material.md). Diferencias funcionales a llevar al visor/sim: paleta 56 de ancho con
+  esquina cortada; embudo E4 salida Ø29 y aleta nueva; obturador gira en horizontal; 28BYJ girado 90°; embudo de carga
+  termina en z 335; vaso retenido por el escape ~17 mm más abajo que el visor; separadores de vasos recortados 3 mm.
+- [x] 6. Manual de armado inspirado en el del carro (tandas, dónde va cada pieza, remaches, componentes y cables).
+- [x] 7. Visor y simulación iguales a las piezas físicas (corregir y dejar prueba).
+- [x] 8. Ahorro de costos (usuario, 2026-10-24: "entre más se ahorre mejor, tanto para lo impreso como para el proyecto
+  final"): sin bornera, sin IEC, un solo fusible, fuente de 5 A, buck XL4015 5 A, sin optoacopladores (M18 con diodo +
+  pull-up), sin hub USB, sin reparto I2C en placa, sin canaletas, sin MDF; PCA9685 y webcam 1080p se quedan; el carro no
+  se toca. PLA: aligerar manteniendo rigidez.
+  HECHO (2026-10-24): manual_maqueta.pdf (27 págs., comprobado: 170 piezas, 310 remaches y 19 dispositivos en un paso);
+  visor con maqueta_impresa.glb + tests/sim/test_maqueta_impresa.py; costo $1.998.921 -> $1.387.143 (ahorro $611.778,
+  calculado en app/costos.py), diodo Schottky BAT85 en los M18 (con 1N4148 el ESP32 no leía el 0), ventilador se queda;
+  maqueta aligerada 2,74 -> 2,68 kg (3 rollos) con revisión completa en TODO OK y probar_revisor 39/39.
+- [ ] 9. Actualizar TODA la carpeta proyecto-final (README, docs, contexto) y SUBIRLA a GitHub (usuario, 2026-10-24:
+  "junto a su github no se le olvide"): commit y push al terminar, con la suite en verde.
+- Coordinación: la sesión "cambios en general de la carpeta" trabaja en paralelo; se le avisó (mensaje retenido sin leer,
+  2026-10-24). Esta sesión solo crea `maqueta_impresa/` y lee lo demás; antes de editar visor/sim/config, avisar.
+
+### Pedido EN CURSO del 2026-10-20 — chasis impreso del carro (carpeta `chasis_impreso/`)
+
+Resumen fiel del pedido (texto completo en el transcript de la sesión): construir el carro de verdad imprimiendo
+chasis y soportes (Creality HI, cama 260x260x300, boquilla 0.4, CFS, PLA). Puntos:
+- [x] 1. Sacar del visor la disposición del carro (posiciones, alturas, carga, cables) solo como referencia.
+- [x] 2. Chasis paramétrico desde cero (OpenSCAD/CadQuery), medidas en variables; medidas dudosas → variable + cómo medir.
+- [x] 3. Liviano y rígido (nervaduras, vaciados, carga cerca de ejes) + masa estimada.
+- [x] 4. Piezas: soportes TT, porta 18650, base ESP32 (M3), soporte TB6612, HC-SR04, VL53L0X, barra 5 TCRT5000, interruptor+fusible, pasacables, carga.
+- [x] 5. Piezas que no quepan → cortes con cola de milano o pines + M3 con tuerca cautiva; tolerancia variable (0.2); sin soportes.
+- [x] 6. Tandas que quepan en cama → 3MF por tanda + STL por pieza.
+- [x] 7. Por pieza: material, capa, paredes, relleno, orientación, tiempo y gramos.
+- [x] 8. Pieza de prueba de tolerancias (cola de milano + M3 con tuerca).
+- [x] 9. Tornillería/insertos, orden de ensamble y render del carro completo.
+  HECHO (2026-10-20): `chasis_impreso/` (chasis.scad + exportar.py + README con decisiones, medidas MEDIR, tabla de impresion,
+  tornilleria y ensamble). 232 g / ~6,5 h estimados, sin choques. Falta imprimir la prueba y medir las piezas reales. Sin commit.
+
+### Pedido EN CURSO del 2026-10-16 — auditoría de prácticas 1–11 y proyecto final
+
+Textual del usuario:
+> "codex, ud es el lider, revise en el disco D cosas uni, micros, organice esas carpetas actualice el repo en github si va a cambiar los nombres, y separe la carpeta y todo lo referente a modelado 3d fuera de la carpeta y coloquele un nombre acorde a todo el modelaje, arregle rutas dañadas de todas las practicas talleres etc, y arregle cualquier error que encuentre, organice tambien el repo con su logica respectiva, puede usar los agentes ia en el chat, exepto claude y modelos que usan claude de mi cuenta, tiene acceso a el github, si no lo tiene hagalo junto a las herramientas necesarias, recuerde arreglar cualquier ruta y si encuentra algun fallo lo arregla"
+>
+> Aclaración posterior: "no movio la carpeta de micros entorno de pruebas que le dije dentro de micros, y tampoco reviso las practicas de la 1 a la 11 con talleres y proyectos los errores logicos que pudierantener, por eso le dije que usara varios agentes por si acaso, es bastante trabajo"
+
+Puntos:
+- [x] Mover `D:\micros entorno de pruebas` dentro de `D:\cosas uni\Micros` (destino `Micros entorno de pruebas`); preservar su entorno y datos.
+- [x] Auditar prácticas 1–11, talleres y proyecto final por lógica y rutas con agentes que no usen Claude. Prácticas 1–8: enlaces locales Markdown verificados, sintaxis Python válida y revisión de flujos/rutas; 9–11: Compose válido, 40/40 pruebas de protocolo y enlaces Markdown; proyecto final: 937/937 tests pasaron en la ejecución desde `proyecto-final`. Sin ejecutar prácticas que requieren hardware/servicios externos.
+- [x] Corregir fallos reproducibles, revisar cambios y dejar registro de lo que quede pendiente. Se corrigió la ruta del activador del venv tras mover `Micros entorno de pruebas` y referencias operativas del nombre del modelado 3D. Un fallo adicional de pytest fue por ejecutar desde el directorio raíz; aislado desde `proyecto-final`, pasó. Tema 10 prueba 6 sigue documentada como 90% frente al criterio de 95%; no se cambió la configuración porque es un resultado conocido, no una ruta rota ni una regresión.
 ### Reglas permanentes del usuario
 
 **Reglas permanentes del usuario (2026-09-27):** responder SIEMPRE en español; dejar SIEMPRE la

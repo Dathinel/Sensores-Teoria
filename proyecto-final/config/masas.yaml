@@ -2,8 +2,9 @@
 #
 # Fuente única: app/masas.py suma esto y app/documentos.py genera docs/peso.md. Lo que YA está
 # contado en config/precios.yaml no se repite aquí: las piezas impresas (sus gramos salen de la
-# misma cuenta del costo), los tramos de perfil 2020 (largo medido x kg/m) y la tornillería
-# contada (cantidad x masa de cada tipo).
+# misma cuenta del costo), la maqueta impresa (gramos de maqueta_impresa/piezas.json, por grupo) y la
+# tornillería contada (cantidad x masa de cada tipo). Desde el 2026-10-24 no hay perfil 2020, ni
+# placas de aluminio, ni acrílico en la planta, ni tablero MDF: todo eso es la maqueta impresa.
 #
 # `fuente`: hoja_de_datos = masa publicada por el fabricante o la tienda; estimado = calculada
 # con material x volumen (se dice cómo en `como`) o comparada con un producto parecido: PESAR
@@ -12,7 +13,7 @@
 #
 # `zona`: el subsistema de docs/peso.md (el montaje se pesa por partes: así se sabe cuánto carga
 # cada mesa, cada motor y el carro). Nombres de zona: Cinta de monedas, Almacén, Cinta de vasos,
-# Pórtico, Canaleta y muelle, Carro, Caja de control, Pista y base.
+# Pórtico, Canaleta y muelle, Estructura impresa, Carro, Caja de control, Pista.
 
 consultado: "2026-09-28"
 
@@ -21,7 +22,6 @@ materiales:                   # densidades para las cuentas de volumen (g/cm³)
   aluminio: 2.70
   acero: 7.85
   caucho: 1.30                # banda de caucho con lona (típico 1,2-1,5)
-  mdf: 0.65                   # MDF de 9 mm (hoja de datos de tableros: 600-750 kg/m³)
   carton: 0.70
 
 # -------------------------------------------------------------------------------------------
@@ -37,14 +37,14 @@ componentes:
   inductivo: {zona: Cinta de monedas, masa_g: 55, fuente: estimado, como: "LJ18A3-8: cuerpo M18 con tuercas + 1 m de cable"}
   camara: {zona: Cinta de monedas, masa_g: 110, fuente: estimado, como: "webcam 1080p con su cable (~80 g) + anillo LED (~30 g)"}
   servo_desvio_e7: {zona: Cinta de monedas, masa_g: 9, fuente: hoja_de_datos, como: "SG90: 9 g"}
-  canaletas_rechazo: {zona: Cinta de monedas, impreso: true}
-  canal_e7: {zona: Cinta de monedas, impreso: true}
+  canaletas_rechazo: {zona: Cinta de monedas, masa_g: 0, fuente: estimado, como: "impresa: va en la maqueta impresa (grupo Cinta de monedas)"}
+  canal_e7: {zona: Cinta de monedas, masa_g: 0, fuente: estimado, como: "impreso: va en la maqueta impresa (grupo Cinta de monedas)"}
   cinta_monedas: {zona: Cinta de monedas, masa_g: 0, fuente: estimado, como: "banda, rodillos y rodamientos van desglosados en `otros`"}
   # --- almacén
   motor_carrusel: {zona: Almacén, masa_g: 30, fuente: hoja_de_datos, como: "28BYJ-48: ~30 g"}
   hall_carrusel: {zona: Almacén, masa_g: 3, fuente: estimado, como: "módulo 3144 + imán de neodimio de 6 mm"}
   servo_obturador: {zona: Almacén, masa_g: 9, fuente: hoja_de_datos, como: "SG90: 9 g"}
-  almacen: {zona: Almacén, masa_g: 80, fuente: estimado, como: "solo los 6 tubos de acrílico Ø29 int / Ø33 ext x 58 mm: π·(16,5² - 14,5²)·58 = 11,2 cm³ x 1,19 = 13 g c/u (disco y placa: piezas impresas)"}
+  almacen: {zona: Almacén, masa_g: 0, fuente: estimado, como: "todo impreso (tubos, disco, placa, obturador, embudo): va en la maqueta impresa (grupo Almacén de monedas)"}
   # --- cinta de vasos
   motor_cinta_vasos: {zona: Cinta de vasos, masa_g: 280, fuente: hoja_de_datos, como: "17HS4401: 0,28 kg"}
   camara_vasos: {zona: Cinta de vasos, masa_g: 70, fuente: estimado, como: "webcam 720p con su cable"}
@@ -54,15 +54,15 @@ componentes:
   servo_tapas: {zona: Pórtico, masa_g: 9, fuente: hoja_de_datos, como: "SG90: 9 g"}
   motor_prensa: {zona: Pórtico, masa_g: 55, fuente: hoja_de_datos, como: "MG996R: 55 g"}
   servo_empujador: {zona: Cinta de vasos, masa_g: 55, fuente: hoja_de_datos, como: "MG996R: 55 g"}
-  tubo_tapas: {zona: Pórtico, masa_g: 75, fuente: estimado, como: "tubo de acrílico Ø78 int / Ø86 ext x 61 mm: π·(43² - 39²)·61 = 62,8 cm³ x 1,19"}
-  bandeja_rechazo_vasos: {zona: Cinta de vasos, impreso: true}
+  tubo_tapas: {zona: Pórtico, masa_g: 0, fuente: estimado, como: "impreso: va en la maqueta impresa (grupo Tapas, prensa y empujador)"}
+  bandeja_rechazo_vasos: {zona: Cinta de vasos, masa_g: 0, fuente: estimado, como: "impresa: va en la maqueta impresa (grupo Cinta de vasos)"}
   cinta_vasos: {zona: Cinta de vasos, masa_g: 0, fuente: estimado, como: "banda, rodillos y bastidor van desglosados en `otros`"}
   # --- estructura (el perfil 2020 se cuenta por tramo, desde precios.yaml)
-  estructura: {zona: Pórtico, masa_g: 0, fuente: estimado, como: "el perfil va por tramo (precios.yaml, estructura_3d.perfil) x 0,5 kg/m"}
+  estructura: {zona: Estructura impresa, masa_g: 0, fuente: estimado, como: "la maqueta impresa va por grupo (maqueta_impresa/piezas.json)"}
   # --- canaleta y muelle
   servo_compuerta_canaleta: {zona: Canaleta y muelle, masa_g: 9, fuente: hoja_de_datos, como: "SG90: 9 g"}
   canaleta_entrega: {zona: Canaleta y muelle, masa_g: 55, fuente: estimado, como: "2 varillas de acero Ø4 x 284 mm: π·2²·284 = 3,6 cm³ x 7,85 = 28 g c/u, + cinta de PTFE"}
-  muelle_carga: {zona: Canaleta y muelle, impreso: true}
+  muelle_carga: {zona: Canaleta y muelle, masa_g: 0, fuente: estimado, como: "impreso: va en la maqueta impresa (grupo Canaleta y muelle)"}
   # --- carro
   esp32_carro: {zona: Carro, masa_g: 10, fuente: hoja_de_datos, como: "ESP32 DevKit de 30 pines: ~9-10 g"}
   motores_carro: {zona: Carro, masa_g: 50, fuente: estimado, como: "motorreductor TT 1:48 (~30 g) + llanta de 65 mm (~20 g), por lado"}
@@ -76,22 +76,19 @@ componentes:
   interruptor_carro: {zona: Carro, masa_g: 8, fuente: estimado, como: "interruptor KCD11 + portafusible y fusible (la caja impresa va aparte)"}
   rodillos_guia: {zona: Carro, masa_g: 6, fuente: estimado, como: "2 rodamientos 623 (~1,7 g c/u) + tornillo M3 x 30 y tuerca, por esquina"}
   cuna_carro: {zona: Carro, impreso: true}
-  pista: {zona: Pista y base, masa_g: 60, fuente: hoja_de_datos, como: "rollo de cinta aislante 3M de 18 m (la lámina y los muros van en `otros`)"}
+  pista: {zona: Pista, masa_g: 60, fuente: hoja_de_datos, como: "rollo de cinta aislante 3M de 18 m (la lámina y los muros van en `otros`)"}
   # --- caja de control (el portátil no es parte del montaje: no se cuenta)
   esp32_fijo: {zona: Caja de control, masa_g: 35, fuente: estimado, como: "ESP32 DevKit 38 pines (~10 g) + placa de expansión GVS (~25 g)"}
   drivers_cintas: {zona: Caja de control, masa_g: 12, fuente: estimado, como: "A4988 con disipador (~3 g) + su mitad de la placa perforada, por driver"}
   pca9685: {zona: Caja de control, masa_g: 9, fuente: hoja_de_datos, como: "PCA9685 de 16 canales: ~9 g"}
-  fuente: {zona: Caja de control, masa_g: 500, fuente: estimado, como: "fuente conmutada 12 V 10 A de caja metálica (genérica ~0,5 kg; la LRS-150-12 original pesa 0,6 kg)"}
-  buck_servos: {zona: Caja de control, masa_g: 60, fuente: estimado, como: "XL4016 con sus dos disipadores"}
+  fuente: {zona: Caja de control, masa_g: 300, fuente: estimado, como: "fuente conmutada 12 V 5 A de caja metálica (genérica de 60 W: ~0,3 kg)"}
+  buck_servos: {zona: Caja de control, masa_g: 25, fuente: estimado, como: "XL4015 de 5 A con su disipador"}
   buck_5v: {zona: Caja de control, masa_g: 12, fuente: estimado, como: "módulo LM2596"}
-  fusibles: {zona: Caja de control, masa_g: 40, fuente: estimado, como: "portafusibles de 4 vías con fusibles de cuchilla"}
-  bornera_x2: {zona: Caja de control, masa_g: 125, fuente: estimado, como: "16 bornes de 2,5 mm² (~6 g c/u) + riel DIN de 110 mm (~25 g)"}
-  entrada_red: {zona: Caja de control, masa_g: 20, fuente: estimado, como: "conector IEC C14 con interruptor y portafusible"}
-  optoacopladores: {zona: Caja de control, masa_g: 5, fuente: estimado, como: "placa de 2 PC817"}
-  reparto_i2c: {zona: Caja de control, masa_g: 5, fuente: estimado, como: "placa perforada pequeña con 2 conectores"}
+  fusibles: {zona: Caja de control, masa_g: 10, fuente: estimado, como: "un portafusible de 1 vía con su fusible"}
+  empalmes: {zona: Caja de control, masa_g: 5, fuente: estimado, como: "estaño, termoencogible, 2 diodos y 4 resistencias"}
+  cable_red: {zona: Caja de control, masa_g: 120, fuente: estimado, como: "cable de poder de 3 x 18 AWG de 1,5 m con enchufe"}
   uln2003: {zona: Caja de control, masa_g: 6, fuente: estimado, como: "placa ULN2003 del kit del 28BYJ-48"}
-  hub_usb: {zona: Caja de control, masa_g: 45, fuente: estimado, como: "hub de 4 puertos con su cable (el adaptador de pared no va en la caja)"}
-  canaletas_caja: {zona: Caja de control, masa_g: 70, fuente: estimado, como: "1 m de canaleta ranurada 25 x 30 (~40 g) + 8 prensaestopas (~3 g c/u) + ventilador 4010 (~6 g)"}
+  bridas_caja: {zona: Caja de control, masa_g: 25, fuente: estimado, como: "~40 bridas usadas (~0,3 g c/u) + 10 bases adhesivas (~1 g) + ventilador 4010 (~6 g)"}
   pc: {zona: Caja de control, masa_g: 0, fuente: estimado, como: "el portátil del grupo no es parte del montaje"}
 
 # -------------------------------------------------------------------------------------------
@@ -105,19 +102,14 @@ otros:
   - {id: rodillos_monedas, zona: Cinta de monedas, nombre: "Rodillos Ø22 x 57 mm con su eje de 8 mm (x2)", masa_g: 76, fuente: estimado, como: "tubo de aluminio Ø22 pared 1 mm: π·22·57·1 = 3,9 cm³ x 2,7 = 11 g + eje de acero Ø8 x 68: 3,4 cm³ x 7,85 = 27 g; = 38 g por rodillo"}
   - {id: rodamientos_608_monedas, zona: Cinta de monedas, nombre: "Rodamientos 608ZZ (x4)", masa_g: 48, fuente: hoja_de_datos, como: "608ZZ: 12 g c/u"}
   - {id: acople_monedas, zona: Cinta de monedas, nombre: "Acople flexible 5 a 8 mm", masa_g: 9, fuente: hoja_de_datos, como: "acople helicoidal de aluminio Ø19 x 25"}
-  - {id: platinas_bastidor_monedas, zona: Cinta de monedas, nombre: "Platinas laterales de aluminio 430 x 34 x 4 mm (x2)", material: aluminio, volumen_cm3: 117.0, fuente: estimado, como: "malla del modelo: 58,5 cm³ cada una"}
-  - {id: platinas_m18, zona: Cinta de monedas, nombre: "Platinas de los sensores M18 (x2)", material: aluminio, volumen_cm3: 8.0, fuente: estimado, como: "platina de 36 x 61 mm de 2 mm con agujero de 18 mm: ~4 cm³ c/u"}
   - {id: separadores_monedas, zona: Cinta de monedas, nombre: "Separadores de casilla de la banda (cada 40 mm, ~23)", masa_g: 23, fuente: estimado, como: "listón de caucho de 55 x 3 x 4 mm: 0,7 cm³ x 1,3 ≈ 1 g c/u"}
   # --- cinta de vasos
   - {id: banda_vasos, zona: Cinta de vasos, nombre: "Banda de caucho de 75 mm (cerrada)", material: caucho, volumen_cm3: 94.0, fuente: estimado, como: "largo 2 x 400 + π x 22 = 870 mm x 75 mm x 1,5 mm"}
   - {id: rodillos_vasos, zona: Cinta de vasos, nombre: "Rodillos Ø22 x 79 mm con su eje (x2)", masa_g: 90, fuente: estimado, como: "igual que los de monedas pero de 79 mm: ~45 g por rodillo"}
   - {id: rodamientos_kfl08, zona: Cinta de vasos, nombre: "Rodamientos con brida KFL08 (x4)", masa_g: 120, fuente: hoja_de_datos, como: "KFL08 de zamak: ~30 g c/u"}
   - {id: acople_vasos, zona: Cinta de vasos, nombre: "Acople flexible 5 a 8 mm", masa_g: 9, fuente: hoja_de_datos}
-  - {id: bastidor_vasos, zona: Cinta de vasos, nombre: "Cama y placas laterales de la cinta de vasos (MDF)", material: mdf, volumen_cm3: 606.0, fuente: estimado, como: "malla del modelo: 374 x 81 x 20 mm"}
   - {id: separadores_prensa, zona: Cinta de vasos, nombre: "Separadores M3 x 20 del motor (x4) y varillas guía de la prensa (x2)", masa_g: 85, fuente: estimado, como: "varillas de acero Ø8 x 101 mm: 5,1 cm³ x 7,85 = 40 g c/u; separadores de latón ~1 g"}
   # --- pórtico
-  - {id: placa_prensa, zona: Pórtico, nombre: "Placa de aluminio de la prensa (70 x 165 x 8 mm)", material: aluminio, volumen_cm3: 63.9, fuente: estimado, como: "malla del modelo"}
-  - {id: colgantes_portico, zona: Pórtico, nombre: "Barras cuadradas de aluminio de 10-12 mm (colgantes y marco del panel)", material: aluminio, volumen_cm3: 90.0, fuente: estimado, como: "marco del panel 310 + 310 + 20 mm de 10 x 10 (64 cm³ de malla) + colgantes del tubo de tapas y de la prensa (~26 cm³)"}
   # --- canaleta y muelle
   - {id: espuma_topes, zona: Canaleta y muelle, nombre: "Espuma de los topes y cinta de PTFE", masa_g: 8, fuente: estimado}
   # --- carro
@@ -128,11 +120,10 @@ otros:
   # --- caja de control
   - {id: gabinete, zona: Caja de control, nombre: "Gabinete de acrílico 360 x 240 x 80 mm, 3 mm (con tapa)", material: acrilico, volumen_cm3: 803.0, fuente: estimado, como: "piso y tapa 2 x 360 x 240 + paredes 2 x 360 x 80 + 2 x 234 x 80 = 0,268 m² x 3 mm"}
   - {id: cables_caja, zona: Caja de control, nombre: "Cables de la caja y de campo (18 AWG, dupont, JST)", masa_g: 250, fuente: estimado, como: "~15 m de cable de 18-24 AWG entre caja, planta y sensores"}
-  # --- pista y base
-  - {id: tablero_base, zona: Pista y base, nombre: "Tablero MDF de 9 mm bajo la planta (600 x 450 mm)", material: mdf, volumen_cm3: 2430.0, fuente: estimado, como: "huella de las mesas, el pórtico y la canaleta en el modelo: ~0,60 x 0,45 m x 9 mm"}
-  - {id: lamina_pista, zona: Pista y base, nombre: "Lámina blanca de la pista (cartón/vinilo de 1 mm, 160 mm de ancho)", material: carton, volumen_cm3: 560.7, fuente: estimado, como: "malla del modelo: 0,56 m² x 1 mm"}
-  - {id: muros_pista, zona: Pista y base, nombre: "3 muros-obstáculo de bloques de juguete (100 x 30 x 80 mm)", masa_g: 360, fuente: estimado, como: "bloques de ABS huecos: ~120 g por muro"}
-  - {id: bandera_meta, zona: Pista y base, nombre: "Bandera de la meta (mástil de aluminio Ø6 x 250 y base de Ø60)", masa_g: 80, fuente: estimado}
+  # --- pista (va sobre el piso o la mesa: ya no hay tablero MDF)
+  - {id: lamina_pista, zona: Pista, nombre: "Lámina blanca de la pista (cartón/vinilo de 1 mm, 160 mm de ancho)", material: carton, volumen_cm3: 560.7, fuente: estimado, como: "malla del modelo: 0,56 m² x 1 mm"}
+  - {id: muros_pista, zona: Pista, nombre: "3 muros-obstáculo de bloques de juguete (100 x 30 x 80 mm)", masa_g: 360, fuente: estimado, como: "bloques de ABS huecos: ~120 g por muro"}
+  - {id: bandera_meta, zona: Pista, nombre: "Bandera de la meta (mástil de aluminio Ø6 x 250 y base de Ø60)", masa_g: 80, fuente: estimado}
 
 # -------------------------------------------------------------------------------------------
 # Datos para las comprobaciones de par y de carga (docs/peso.md). Lo que no es medible todavía

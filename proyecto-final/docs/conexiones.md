@@ -5,90 +5,82 @@
 
 Fuente única: `sim/conexiones.py`. De ahí salen los cables del visor 3D (botón **Cables**) y esta tabla; `tests/sim/test_conexiones.py` verifica que cada pin exista, que ningún pin de header reciba dos hilos, que los bornes lleven como mucho dos y que los GPIO sean los de la tabla de pines de [revision-final.md](revision-final.md).
 
-Convenciones: placas GVS con el jumper en 3,3 V (**G** = GND, **V** = 3,3 V, **S** = señal del GPIO). Bornera X2 con puentes 2-3 (+12 V sensores), 5-6 (+5 V) y 7 a 13 (GND en estrella).
+Convenciones: placas GVS con el jumper en 3,3 V (**G** = GND, **V** = 3,3 V, **S** = señal del GPIO). Sin bornera (ahorro 2026-10-24): el +12 V (después del fusible principal), el +5 V y la tierra se reparten con **empalmes soldados con termoencogible** (pin `J`, hasta 5 hilos cada uno); la tierra sigue en estrella en los bornes −V de la fuente. Las pull-ups y los diodos de las entradas NPN y las pull-ups del bus I2C 1 van soldados en línea en sus empalmes.
 
 ## Caja de control
 
-### Entrada IEC → fuente
+### Cable de poder → fuente (entra con una brida de alivio)
 
 | Hilo | De | A | Función |
 |---|---|---|---|
-| <span style="color:#6b3a1f">■</span> | Entrada de red con interruptor · **L** | Fuente 12 V 10 A · **L** | fase |
-| <span style="color:#2d6fd0">■</span> | Entrada de red con interruptor · **N** | Fuente 12 V 10 A · **N** | neutro |
-| <span style="color:#9bbf2a">■</span> | Entrada de red con interruptor · **PE** | Fuente 12 V 10 A · **PE** | tierra |
+| <span style="color:#6b3a1f">■</span> | Cable de poder (a la multitoma con interruptor) · **L** | Fuente 12 V 5 A · **L** | fase |
+| <span style="color:#2d6fd0">■</span> | Cable de poder (a la multitoma con interruptor) · **N** | Fuente 12 V 5 A · **N** | neutro |
+| <span style="color:#9bbf2a">■</span> | Cable de poder (a la multitoma con interruptor) · **PE** | Fuente 12 V 5 A · **PE** | tierra |
 
-### Fuente → fusibles y GND
-
-| Hilo | De | A | Función |
-|---|---|---|---|
-| <span style="color:#d23a2a">■</span> | Fuente 12 V 10 A · **+V1** | Fusibles F1 5 A · F2 2 A · F3 3 A · F4 1 A · **IN** | +12 V |
-| <span style="color:#1a1a1a">■</span> | Fuente 12 V 10 A · **-V1** | Bornera X2 · **7** | GND (estrella) |
-| <span style="color:#1a1a1a">■</span> | Fuente 12 V 10 A · **-V2** | Bornera X2 · **8** | GND (estrella) |
-
-### F1 5 A → buck 6 V → bornera
+### Fuente → fusible principal y GND en estrella
 
 | Hilo | De | A | Función |
 |---|---|---|---|
-| <span style="color:#d23a2a">■</span> | Fusibles F1 5 A · F2 2 A · F3 3 A · F4 1 A · **F1** | Buck 6 V 8 A (servos) · **IN+** | +12 V |
-| <span style="color:#1a1a1a">■</span> | Buck 6 V 8 A (servos) · **IN-** | Bornera X2 · **7** | GND |
-| <span style="color:#d23a2a">■</span> | Buck 6 V 8 A (servos) · **OUT+** | Bornera X2 · **4** | +6 V servos |
-| <span style="color:#1a1a1a">■</span> | Buck 6 V 8 A (servos) · **OUT-** | Bornera X2 · **9** | GND |
+| <span style="color:#d23a2a">■</span> | Fuente 12 V 5 A · **+V1** | Fusible principal 5 A (lento) en el +12 V · **IN** | +12 V |
+| <span style="color:#1a1a1a">■</span> | Fuente 12 V 5 A · **-V1** | Empalme GND de potencia (a −V1) · **J** | GND (estrella) |
+| <span style="color:#1a1a1a">■</span> | Fuente 12 V 5 A · **-V2** | Empalme GND de los sensores M18 (a −V2) · **J** | GND (estrella) |
 
-### F2 2 A → buck 5 V → bornera
-
-| Hilo | De | A | Función |
-|---|---|---|---|
-| <span style="color:#d23a2a">■</span> | Fusibles F1 5 A · F2 2 A · F3 3 A · F4 1 A · **F2** | Buck 5 V 3 A · **IN+** | +12 V |
-| <span style="color:#1a1a1a">■</span> | Buck 5 V 3 A · **IN-** | Bornera X2 · **8** | GND |
-| <span style="color:#d23a2a">■</span> | Buck 5 V 3 A · **OUT+** | Bornera X2 · **5** | +5 V |
-| <span style="color:#1a1a1a">■</span> | Buck 5 V 3 A · **OUT-** | Bornera X2 · **10** | GND |
-
-### F3 3 A (drivers) y F4 1 A (sensores 12 V)
+### Fusible principal → empalmes de +12 V
 
 | Hilo | De | A | Función |
 |---|---|---|---|
-| <span style="color:#d23a2a">■</span> | Fusibles F1 5 A · F2 2 A · F3 3 A · F4 1 A · **F3** | Bornera X2 · **1** | +12 V drivers |
-| <span style="color:#d23a2a">■</span> | Fusibles F1 5 A · F2 2 A · F3 3 A · F4 1 A · **F4** | Bornera X2 · **2** | +12 V sensores |
+| <span style="color:#d23a2a">■</span> | Fusible principal 5 A (lento) en el +12 V · **OUT** | Empalme +12 V (después del fusible) · **J** | +12 V |
+| <span style="color:#d23a2a">■</span> | Empalme +12 V (después del fusible) · **J** | Empalme +12 V de los sensores M18 · **J** | +12 V sensores |
 
-### Bornera → PCA9685 (V+ de los servos)
-
-| Hilo | De | A | Función |
-|---|---|---|---|
-| <span style="color:#d23a2a">■</span> | Bornera X2 · **4** | PCA9685 (servos) · **T.V+** | +6 V (18 AWG) |
-| <span style="color:#1a1a1a">■</span> | Bornera X2 · **9** | PCA9685 (servos) · **T.GND** | GND (18 AWG) |
-
-### Bornera → drivers (VMOT)
+### +12 V → buck 6 V (XL4015)
 
 | Hilo | De | A | Función |
 |---|---|---|---|
-| <span style="color:#d23a2a">■</span> | Bornera X2 · **1** | Drivers A4988 (monedas M, vasos V) · **VMOT** | +12 V |
-| <span style="color:#1a1a1a">■</span> | Bornera X2 · **11** | Drivers A4988 (monedas M, vasos V) · **GNDP** | GND |
+| <span style="color:#d23a2a">■</span> | Empalme +12 V (después del fusible) · **J** | Buck 6 V 5 A XL4015 (servos) · **IN+** | +12 V |
+| <span style="color:#1a1a1a">■</span> | Buck 6 V 5 A XL4015 (servos) · **IN-** | Empalme GND de potencia (a −V1) · **J** | GND |
 
-### Bornera → ULN2003
-
-| Hilo | De | A | Función |
-|---|---|---|---|
-| <span style="color:#d23a2a">■</span> | Bornera X2 · **5** | ULN2003 (carrusel) · **+** | +5 V |
-| <span style="color:#1a1a1a">■</span> | Bornera X2 · **10** | ULN2003 (carrusel) · **−** | GND |
-
-### Bornera → optoacopladores (+12)
+### Buck 6 V → PCA9685 (V+ de los servos)
 
 | Hilo | De | A | Función |
 |---|---|---|---|
-| <span style="color:#d23a2a">■</span> | Bornera X2 · **2** | Optoacopladores PC817 · **+12** | +12 V |
+| <span style="color:#d23a2a">■</span> | Buck 6 V 5 A XL4015 (servos) · **OUT+** | PCA9685 (servos) · **T.V+** | +6 V (18 AWG) |
+| <span style="color:#1a1a1a">■</span> | Buck 6 V 5 A XL4015 (servos) · **OUT-** | PCA9685 (servos) · **T.GND** | GND (18 AWG) |
 
-### Buck 5 V → ventilador 4010 (0,1 A)
-
-| Hilo | De | A | Función |
-|---|---|---|---|
-| <span style="color:#d23a2a">■</span> | Buck 5 V 3 A · **OUT+** | Ventilador 4010 5 V (saca el aire de los drivers) · **+5V** | +5 V ventilador |
-| <span style="color:#1a1a1a">■</span> | Buck 5 V 3 A · **OUT-** | Ventilador 4010 5 V (saca el aire de los drivers) · **GND** | GND ventilador |
-
-### GND común ESP32 ↔ bornera
+### +12 V → buck 5 V → empalmes de 5 V
 
 | Hilo | De | A | Función |
 |---|---|---|---|
-| <span style="color:#1a1a1a">■</span> | ESP32 fijo (DevKit 38P) en placa GVS · **GND.1** | Bornera X2 · **11** | GND común |
+| <span style="color:#d23a2a">■</span> | Empalme +12 V (después del fusible) · **J** | Buck 5 V 3 A · **IN+** | +12 V |
+| <span style="color:#1a1a1a">■</span> | Buck 5 V 3 A · **IN-** | Empalme GND de potencia (a −V1) · **J** | GND |
+| <span style="color:#d23a2a">■</span> | Buck 5 V 3 A · **OUT+** | Empalme +5 V · **J** | +5 V |
+| <span style="color:#1a1a1a">■</span> | Buck 5 V 3 A · **OUT-** | Empalme GND de 5 V · **J** | GND |
+
+### +12 V → drivers (VMOT)
+
+| Hilo | De | A | Función |
+|---|---|---|---|
+| <span style="color:#d23a2a">■</span> | Empalme +12 V (después del fusible) · **J** | Drivers A4988 (monedas M, vasos V) · **VMOT** | +12 V |
+| <span style="color:#1a1a1a">■</span> | Drivers A4988 (monedas M, vasos V) · **GNDP** | Empalme GND de potencia (a −V1) · **J** | GND |
+
+### Empalmes de 5 V → ULN2003
+
+| Hilo | De | A | Función |
+|---|---|---|---|
+| <span style="color:#d23a2a">■</span> | Empalme +5 V · **J** | ULN2003 (carrusel) · **+** | +5 V |
+| <span style="color:#1a1a1a">■</span> | Empalme GND de 5 V · **J** | ULN2003 (carrusel) · **−** | GND |
+
+### Empalmes de 5 V → ventilador 4010 (0,1 A)
+
+| Hilo | De | A | Función |
+|---|---|---|---|
+| <span style="color:#d23a2a">■</span> | Empalme +5 V · **J** | Ventilador 4010 5 V (saca el aire de los drivers) · **+5V** | +5 V ventilador |
+| <span style="color:#1a1a1a">■</span> | Empalme GND de 5 V · **J** | Ventilador 4010 5 V (saca el aire de los drivers) · **GND** | GND ventilador |
+
+### GND común ESP32 ↔ estrella
+
+| Hilo | De | A | Función |
+|---|---|---|---|
+| <span style="color:#1a1a1a">■</span> | ESP32 fijo (DevKit 38P) en placa GVS · **GND.1** | Empalme GND de potencia (a −V1) · **J** | GND común |
 
 ### ESP32 I2C 0 → PCA9685
 
@@ -120,35 +112,31 @@ Convenciones: placas GVS con el jumper en 3,3 V (**G** = GND, **V** = 3,3 V, **S
 | <span style="color:#8a939e">■</span> | ESP32 fijo (DevKit 38P) en placa GVS · **G23.S** | ULN2003 (carrusel) · **IN3** | bobina 3 |
 | <span style="color:#e8e8e8">■</span> | ESP32 fijo (DevKit 38P) en placa GVS · **G4.S** | ULN2003 (carrusel) · **IN4** | bobina 4 |
 
-### Optoacopladores → ESP32
+### Capacitivo e inductivo → ESP32 (diodo + pull-up 10 kΩ en línea)
 
 | Hilo | De | A | Función |
 |---|---|---|---|
-| <span style="color:#1a1a1a">■</span> | Optoacopladores PC817 · **GND** | ESP32 fijo (DevKit 38P) en placa GVS · **G35.G** | GND |
-| <span style="color:#d23a2a">■</span> | Optoacopladores PC817 · **3V3** | ESP32 fijo (DevKit 38P) en placa GVS · **G35.V** | 3,3 V pull-up |
-| <span style="color:#2da44e">■</span> | Optoacopladores PC817 · **OUT1** | ESP32 fijo (DevKit 38P) en placa GVS · **G35.S** | capacitivo |
-| <span style="color:#e3c22b">■</span> | Optoacopladores PC817 · **OUT2** | ESP32 fijo (DevKit 38P) en placa GVS · **G36.S** | inductivo |
+| <span style="color:#2da44e">■</span> | Señal del capacitivo (diodo + pull-up 10 kΩ) · **J** | ESP32 fijo (DevKit 38P) en placa GVS · **G35.S** | capacitivo (activo en bajo) |
+| <span style="color:#d23a2a">■</span> | ESP32 fijo (DevKit 38P) en placa GVS · **G35.V** | Señal del capacitivo (diodo + pull-up 10 kΩ) · **J** | pull-up 10 kΩ a 3,3 V (en línea) |
+| <span style="color:#e3c22b">■</span> | Señal del inductivo (diodo + pull-up 10 kΩ) · **J** | ESP32 fijo (DevKit 38P) en placa GVS · **G36.S** | inductivo (activo en bajo) |
+| <span style="color:#d23a2a">■</span> | ESP32 fijo (DevKit 38P) en placa GVS · **G36.V** | Señal del inductivo (diodo + pull-up 10 kΩ) · **J** | pull-up 10 kΩ a 3,3 V (en línea) |
 
-### ESP32 I2C 1 → reparto I2C
-
-| Hilo | De | A | Función |
-|---|---|---|---|
-| <span style="color:#2d6fd0">■</span> | ESP32 fijo (DevKit 38P) en placa GVS · **G16.S** | Reparto I2C 1 (pull-ups 2,2 kΩ) · **SDA** | SDA (G16) |
-| <span style="color:#e3c22b">■</span> | ESP32 fijo (DevKit 38P) en placa GVS · **G17.S** | Reparto I2C 1 (pull-ups 2,2 kΩ) · **SCL** | SCL (G17) |
-| <span style="color:#d23a2a">■</span> | ESP32 fijo (DevKit 38P) en placa GVS · **G16.V** | Reparto I2C 1 (pull-ups 2,2 kΩ) · **3V3** | 3,3 V |
-| <span style="color:#1a1a1a">■</span> | ESP32 fijo (DevKit 38P) en placa GVS · **G16.G** | Reparto I2C 1 (pull-ups 2,2 kΩ) · **GND** | GND |
-
-### ESP32 fijo → hub USB P3 (datos y alimentación)
+### ESP32 I2C 1 → empalmes del bus (pull-ups 2,2 kΩ en línea)
 
 | Hilo | De | A | Función |
 |---|---|---|---|
-| <span style="color:#1a1a1a">■</span> | ESP32 fijo (DevKit 38P) en placa GVS · **USB** | Hub USB con fuente · **P3** | USB |
+| <span style="color:#2d6fd0">■</span> | ESP32 fijo (DevKit 38P) en placa GVS · **G16.S** | SDA del bus I2C 1 (pull-up 2,2 kΩ) · **J** | SDA (G16) |
+| <span style="color:#e3c22b">■</span> | ESP32 fijo (DevKit 38P) en placa GVS · **G17.S** | SCL del bus I2C 1 (pull-up 2,2 kΩ) · **J** | SCL (G17) |
+| <span style="color:#d23a2a">■</span> | ESP32 fijo (DevKit 38P) en placa GVS · **G16.V** | 3,3 V del bus I2C 1 · **J** | 3,3 V |
+| <span style="color:#1a1a1a">■</span> | ESP32 fijo (DevKit 38P) en placa GVS · **G16.G** | GND del bus I2C 1 · **J** | GND |
+| <span style="color:#d23a2a">■</span> | 3,3 V del bus I2C 1 · **J** | SDA del bus I2C 1 (pull-up 2,2 kΩ) · **J** | pull-up 2,2 kΩ de SDA (en línea) |
+| <span style="color:#d23a2a">■</span> | 3,3 V del bus I2C 1 · **J** | SCL del bus I2C 1 (pull-up 2,2 kΩ) · **J** | pull-up 2,2 kΩ de SCL (en línea) |
 
-### Hub USB → portátil
+### ESP32 fijo → portátil (USB derecho de atrás, datos y alimentación)
 
 | Hilo | De | A | Función |
 |---|---|---|---|
-| <span style="color:#1a1a1a">■</span> | Hub USB con fuente · **UP** | Portátil · **USB1** | USB |
+| <span style="color:#1a1a1a">■</span> | ESP32 fijo (DevKit 38P) en placa GVS · **USB** | Portátil · **USB2** | USB |
 
 ## Planta (campo)
 
@@ -160,21 +148,21 @@ Convenciones: placas GVS con el jumper en 3,3 V (**G** = GND, **V** = 3,3 V, **S
 | <span style="color:#1a1a1a">■</span> | FC-51 presencia (1) · **GND** | ESP32 fijo (DevKit 38P) en placa GVS · **G34.G** | GND |
 | <span style="color:#d23a2a">■</span> | FC-51 presencia (1) · **VCC** | ESP32 fijo (DevKit 38P) en placa GVS · **G34.V** | 3,3 V |
 
-### Capacitivo → optoacoplador IN1
+### Capacitivo → su diodo (G35) y empalmes de 12 V
 
 | Hilo | De | A | Función |
 |---|---|---|---|
-| <span style="color:#1a1a1a">■</span> | Capacitivo LJC18A3 (2) · **NEGRO** | Optoacopladores PC817 · **IN1** | salida NPN |
-| <span style="color:#6b3a1f">■</span> | Capacitivo LJC18A3 (2) · **CAFE** | Bornera X2 · **3** | +12 V |
-| <span style="color:#2d6fd0">■</span> | Capacitivo LJC18A3 (2) · **AZUL** | Bornera X2 · **12** | 0 V |
+| <span style="color:#1a1a1a">■</span> | Capacitivo LJC18A3 (2) · **NEGRO** | Señal del capacitivo (diodo + pull-up 10 kΩ) · **J** | salida NPN (por el diodo BAT85) |
+| <span style="color:#6b3a1f">■</span> | Capacitivo LJC18A3 (2) · **CAFE** | Empalme +12 V de los sensores M18 · **J** | +12 V |
+| <span style="color:#2d6fd0">■</span> | Capacitivo LJC18A3 (2) · **AZUL** | Empalme GND de los sensores M18 (a −V2) · **J** | 0 V |
 
-### Inductivo → optoacoplador IN2
+### Inductivo → su diodo (G36) y empalmes de 12 V
 
 | Hilo | De | A | Función |
 |---|---|---|---|
-| <span style="color:#1a1a1a">■</span> | Inductivo LJ18A3-8 (3) · **NEGRO** | Optoacopladores PC817 · **IN2** | salida NPN |
-| <span style="color:#6b3a1f">■</span> | Inductivo LJ18A3-8 (3) · **CAFE** | Bornera X2 · **3** | +12 V |
-| <span style="color:#2d6fd0">■</span> | Inductivo LJ18A3-8 (3) · **AZUL** | Bornera X2 · **12** | 0 V |
+| <span style="color:#1a1a1a">■</span> | Inductivo LJ18A3-8 (3) · **NEGRO** | Señal del inductivo (diodo + pull-up 10 kΩ) · **J** | salida NPN (por el diodo BAT85) |
+| <span style="color:#6b3a1f">■</span> | Inductivo LJ18A3-8 (3) · **CAFE** | Empalme +12 V de los sensores M18 · **J** | +12 V |
+| <span style="color:#2d6fd0">■</span> | Inductivo LJ18A3-8 (3) · **AZUL** | Empalme GND de los sensores M18 (a −V2) · **J** | 0 V |
 
 ### Hall KY-003 → ESP32 G39 · conector Dupont 3 vías
 
@@ -184,24 +172,24 @@ Convenciones: placas GVS con el jumper en 3,3 V (**G** = GND, **V** = 3,3 V, **S
 | <span style="color:#d23a2a">■</span> | Hall KY-003 (6) · **+** | ESP32 fijo (DevKit 38P) en placa GVS · **G39.V** | 3,3 V |
 | <span style="color:#1a1a1a">■</span> | Hall KY-003 (6) · **−** | ESP32 fijo (DevKit 38P) en placa GVS · **G39.G** | GND |
 
-### VL53L0X interior → reparto I2C (A) y XSHUT G18
+### VL53L0X interior → empalmes del bus I2C 1 y XSHUT G18
 
 | Hilo | De | A | Función |
 |---|---|---|---|
-| <span style="color:#d23a2a">■</span> | VL53L0X interior (5) · **VIN** | Reparto I2C 1 (pull-ups 2,2 kΩ) · **A.3V3** | 3,3 V |
-| <span style="color:#1a1a1a">■</span> | VL53L0X interior (5) · **GND** | Reparto I2C 1 (pull-ups 2,2 kΩ) · **A.GND** | GND |
-| <span style="color:#e3c22b">■</span> | VL53L0X interior (5) · **SCL** | Reparto I2C 1 (pull-ups 2,2 kΩ) · **A.SCL** | SCL |
-| <span style="color:#2d6fd0">■</span> | VL53L0X interior (5) · **SDA** | Reparto I2C 1 (pull-ups 2,2 kΩ) · **A.SDA** | SDA |
+| <span style="color:#d23a2a">■</span> | VL53L0X interior (5) · **VIN** | 3,3 V del bus I2C 1 · **J** | 3,3 V |
+| <span style="color:#1a1a1a">■</span> | VL53L0X interior (5) · **GND** | GND del bus I2C 1 · **J** | GND |
+| <span style="color:#e3c22b">■</span> | VL53L0X interior (5) · **SCL** | SCL del bus I2C 1 (pull-up 2,2 kΩ) · **J** | SCL |
+| <span style="color:#2d6fd0">■</span> | VL53L0X interior (5) · **SDA** | SDA del bus I2C 1 (pull-up 2,2 kΩ) · **J** | SDA |
 | <span style="color:#e8e8e8">■</span> | VL53L0X interior (5) · **XSHUT** | ESP32 fijo (DevKit 38P) en placa GVS · **G18.S** | XSHUT (dirección 0x30) |
 
-### VL53L0X cortina → reparto I2C (B) y XSHUT G19
+### VL53L0X cortina → empalmes del bus I2C 1 y XSHUT G19
 
 | Hilo | De | A | Función |
 |---|---|---|---|
-| <span style="color:#d23a2a">■</span> | VL53L0X cortina (8) · **VIN** | Reparto I2C 1 (pull-ups 2,2 kΩ) · **B.3V3** | 3,3 V |
-| <span style="color:#1a1a1a">■</span> | VL53L0X cortina (8) · **GND** | Reparto I2C 1 (pull-ups 2,2 kΩ) · **B.GND** | GND |
-| <span style="color:#e3c22b">■</span> | VL53L0X cortina (8) · **SCL** | Reparto I2C 1 (pull-ups 2,2 kΩ) · **B.SCL** | SCL |
-| <span style="color:#2d6fd0">■</span> | VL53L0X cortina (8) · **SDA** | Reparto I2C 1 (pull-ups 2,2 kΩ) · **B.SDA** | SDA |
+| <span style="color:#d23a2a">■</span> | VL53L0X cortina (8) · **VIN** | 3,3 V del bus I2C 1 · **J** | 3,3 V |
+| <span style="color:#1a1a1a">■</span> | VL53L0X cortina (8) · **GND** | GND del bus I2C 1 · **J** | GND |
+| <span style="color:#e3c22b">■</span> | VL53L0X cortina (8) · **SCL** | SCL del bus I2C 1 (pull-up 2,2 kΩ) · **J** | SCL |
+| <span style="color:#2d6fd0">■</span> | VL53L0X cortina (8) · **SDA** | SDA del bus I2C 1 (pull-up 2,2 kΩ) · **J** | SDA |
 | <span style="color:#e8e8e8">■</span> | VL53L0X cortina (8) · **XSHUT** | ESP32 fijo (DevKit 38P) en placa GVS · **G19.S** | XSHUT (dirección 0x31) |
 
 ### NEMA17 cinta de monedas → driver M · conector JST-PH 6 → bornes
@@ -280,31 +268,31 @@ Convenciones: placas GVS con el jumper en 3,3 V (**G** = GND, **V** = 3,3 V, **S
 | <span style="color:#d23a2a">■</span> | Servo escape canaleta (SG90) · **CABLE** | PCA9685 (servos) · **V+5** | 6 V |
 | <span style="color:#6b3a1f">■</span> | Servo escape canaleta (SG90) · **CABLE** | PCA9685 (servos) · **GND5** | GND |
 
-### Panel de luz → bornera 5 V
+### Panel de luz → empalmes de 5 V
 
 | Hilo | De | A | Función |
 |---|---|---|---|
-| <span style="color:#d23a2a">■</span> | Panel de luz 5 V · **+5V** | Bornera X2 · **6** | +5 V |
-| <span style="color:#1a1a1a">■</span> | Panel de luz 5 V · **GND** | Bornera X2 · **13** | GND |
+| <span style="color:#d23a2a">■</span> | Panel de luz 5 V · **+5V** | Empalme +5 V · **J** | +5 V |
+| <span style="color:#1a1a1a">■</span> | Panel de luz 5 V · **GND** | Empalme GND de 5 V · **J** | GND |
 
-### Anillo de luz → bornera 5 V
-
-| Hilo | De | A | Función |
-|---|---|---|---|
-| <span style="color:#d23a2a">■</span> | Anillo de luz 5 V · **+5V** | Bornera X2 · **6** | +5 V |
-| <span style="color:#1a1a1a">■</span> | Anillo de luz 5 V · **GND** | Bornera X2 · **13** | GND |
-
-### Webcam cenital → hub USB P2
+### Anillo de luz → empalmes de 5 V
 
 | Hilo | De | A | Función |
 |---|---|---|---|
-| <span style="color:#1a1a1a">■</span> | Webcam cenital (4) · **USB** | Hub USB con fuente · **P2** | USB |
+| <span style="color:#d23a2a">■</span> | Anillo de luz 5 V · **+5V** | Empalme +5 V · **J** | +5 V |
+| <span style="color:#1a1a1a">■</span> | Anillo de luz 5 V · **GND** | Empalme GND de 5 V · **J** | GND |
 
-### Webcam de vasos → hub USB P1 (con extensión USB de 1 m)
+### Webcam cenital → portátil (USB derecho de adelante)
 
 | Hilo | De | A | Función |
 |---|---|---|---|
-| <span style="color:#1a1a1a">■</span> | Webcam de vasos (7) · **USB** | Hub USB con fuente · **P1** | USB |
+| <span style="color:#1a1a1a">■</span> | Webcam cenital (4) · **USB** | Portátil · **USB1** | USB |
+
+### Webcam de vasos → portátil (USB izquierdo, con la extensión USB de 1 m)
+
+| Hilo | De | A | Función |
+|---|---|---|---|
+| <span style="color:#1a1a1a">■</span> | Webcam de vasos (7) · **USB** | Portátil · **USB3** | USB |
 
 ## Carro
 

@@ -1,13 +1,15 @@
 // Piezas de la mesa de control: el gabinete de la caja de control (acrilico con tapa
-// transparente, prensaestopas y ventilacion) y el portatil del grupo (ASUS TUF Gaming A15).
+// transparente, pasos de cable con brida y ventilacion) y el portatil del grupo (ASUS TUF Gaming A15).
 // Convencion: ver README.md de esta carpeta. Marco de la simulacion (x largo, y ancho, z arriba),
 // metros; las medidas de ficha tecnica van en mm y se pasan con MM.
 //
 // Contenido:
 //   crearGabineteControl(opciones)   caja de acrilico 360 × 240 × 80 mm con placa de montaje,
 //                                    esquineros de aluminio, tapa de policarbonato atornillada,
-//                                    prensaestopas, ventilador 40 mm y rejilla de entrada de aire
-//   crearPrensaestopas(opciones)     prensaestopas de nylon PG7 / PG9 / PG11 / PG16
+//                                    pasos de cable con brida (o prensaestopas), ventilador 40 mm y
+//                                    rejilla de entrada de aire
+//   crearPrensaestopas(opciones)     prensaestopas de nylon PG7 / PG9 / PG11 / PG16 (ya no se usa)
+//   crearPasoConBrida(opciones)      agujero en la pared + brida de alivio por dentro (ahorro 2026-10-24)
 //   crearVentilador4010(opciones)    ventilador 40 × 40 × 10 mm de 5 V con su rejilla
 //   crearLaptopTUFA15(opciones)      ASUS TUF Gaming A15 a su medida real, con la pantalla del
 //                                    asistente (lienzo 1920 × 1080) y el teclado RGB
@@ -104,6 +106,32 @@ export function crearPrensaestopas(opciones = {}) {
   g.add(ancla('ancla_adentro', Pm(0, pared + ct + 1, 0)));
   terminar(g, { datos: _datos(opciones) });
   g.userData.pieza = `Prensaestopas ${tipo}`;
+  return g;
+}
+
+// ---------------------------------------------------------------------------
+// Paso de cable con brida (ahorro 2026-10-24: reemplaza a los prensaestopas)
+// ---------------------------------------------------------------------------
+// Agujero en el acrilico del diametro del cable (el `cable[1]` del PG equivalente + 1,5 mm) y, por
+// dentro, una brida apretada al cable (con su cabeza) que no lo deja salir si alguien tira: es el
+// alivio de tension. Mismo origen y mismas anclas que crearPrensaestopas: ancla_afuera (8 mm
+// afuera) y ancla_adentro (6 mm adentro de la pared), asi los cables siguen el mismo eje.
+export function crearPasoConBrida(opciones = {}) {
+  const { tipo = 'PG7', pared = 3 } = opciones;
+  const d = PG[tipo] || PG.PG7;
+  const rc = d.cable[1] / 2;                                   // radio del cable que pasa
+  const g = new THREE.Group();
+  g.name = `paso_brida_${tipo}`;
+  // Agujero (canto oscuro del acrilico cortado) y la brida negra alrededor del cable, por dentro.
+  g.add(_cilY(rc + 0.75, pared + 0.3, 0x050506, 0, pared / 2, 0, { roughness: 1 }, 24));
+  const brida = new THREE.Mesh(new THREE.TorusGeometry((rc + 0.4) * MM, 0.55 * MM, 6, 24), mat(0x111111, { roughness: 0.6 }));
+  brida.position.copy(Pm(0, pared + 2.5, 0));
+  g.add(brida);
+  g.add(caja(4 * MM, 3 * MM, 3.2 * MM, 0x111111, Pm(0, pared + 2.5, rc + 1.8), { roughness: 0.6 }));   // cabeza
+  g.add(ancla('ancla_afuera', Pm(0, -8, 0)));
+  g.add(ancla('ancla_adentro', Pm(0, pared + 6, 0)));
+  terminar(g, { datos: _datos(opciones) });
+  g.userData.pieza = 'Paso de cable con brida';
   return g;
 }
 
@@ -217,6 +245,7 @@ export function crearVentilador4010(opciones = {}) {
 //   largo, ancho, alto, grueso (mm)
 //   prensaestopas: [{ pared: 'frente'|'atras'|'izq'|'der', u, z, tipo, verticesArriba }] con u = mm
 //     a lo largo de la pared desde el centro de la caja (x en frente/atras, y en izq/der).
+//   conBridas: true = cada entrada es un agujero con brida (crearPasoConBrida), no un prensaestopas.
 //   ventilador: { pared, u, z } (o null); rejilla: { pared, u0, u1, z0, z1 } (o null)
 //   rotulo: texto de la placa grabada de la tapa.
 // Nodos: piso, pared_frente / pared_atras / pared_izq / pared_der, tapa, ventilador,
@@ -224,7 +253,7 @@ export function crearVentilador4010(opciones = {}) {
 // dado), ancla_prensa_<i>_adentro, pin_ventilador_+5V / GND.
 export function crearGabineteControl(opciones = {}) {
   const { largo = 360, ancho = 240, alto = 80, grueso = 3, prensaestopas = [], ventilador = null, rejilla = null,
-    rotulo = 'CAJA DE CONTROL · GRUPO 7' } = opciones;
+    rotulo = 'CAJA DE CONTROL · GRUPO 7', conBridas = false, leyenda = '12 V 12,5 A · 110 V~ entrada IEC' } = opciones;
   const g = new THREE.Group();
   g.name = 'gabinete_control';
   const L = largo, W = ancho, H = alto, e = grueso;
@@ -303,7 +332,7 @@ export function crearGabineteControl(opciones = {}) {
     ctx.fillStyle = '#e6e8eb'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = `700 ${4.6 * k}px "Space Grotesk", sans-serif`; ctx.fillText(rotulo, X(0), Y(3.5));
     ctx.fillStyle = '#9aa4b1'; ctx.font = `500 ${3 * k}px "IBM Plex Mono", monospace`;
-    ctx.fillText('12 V 12,5 A · 110 V~ entrada IEC', X(0), Y(-4.5));
+    ctx.fillText(leyenda, X(0), Y(-4.5));
   }, { ppm: 14, fondo: '#1b1f24' });
   placa.position.copy(Pm(-L / 2 + 60, -W / 2 + 20, H + 3.05));
   tapa.add(placa);
@@ -329,7 +358,8 @@ export function crearGabineteControl(opciones = {}) {
     }
   };
   prensaestopas.forEach((pe, i) => {
-    const p = crearPrensaestopas({ tipo: pe.tipo, pared: e, verticesArriba: pe.verticesArriba !== false });
+    const p = conBridas ? crearPasoConBrida({ tipo: pe.tipo, pared: e })
+      : crearPrensaestopas({ tipo: pe.tipo, pared: e, verticesArriba: pe.verticesArriba !== false });
     const { pos, giro } = enPared(pe.pared, pe.u, pe.z);
     p.position.copy(pos);
     p.rotation.y = giro;
@@ -512,6 +542,8 @@ export function crearLaptopTUFA15(opciones = {}) {
   const usbDerecha = [[-0.02, 0.013], [0.0, 0.013]];
   for (const [y, a] of usbDerecha) puerto(xd, y, 0.009, 0.0012, a, 0.005, 0x2d6fd0);
   usbDerecha.forEach(([y], i) => pc.add(ancla(`pin_pc_USB${i + 1}`, P(xd + 0.0006, y, 0.009), { pin: `USB${i + 1}` })));
+  // USB-A azul del costado izquierdo (y = -6 mm): sin hub (2026-10-24) ahi va la webcam de vasos.
+  pc.add(ancla('pin_pc_USB3', P(xi - 0.0006, -0.006, 0.009), { pin: 'USB3' }));
   // Bisagras: dos ejes y la cubierta de la bisagra de lado a lado (la del A15 es una barra).
   const yBis = L.fondo / 2 - 0.006, zBis = L.base + 0.003;
   for (const x of [-0.13, 0.13]) {

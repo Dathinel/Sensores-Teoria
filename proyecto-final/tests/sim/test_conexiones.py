@@ -23,6 +23,8 @@ def test_ningun_pin_de_header_tiene_dos_hilos_y_los_bornes_como_mucho_dos():
         tipo = cx.pin(extremo)["tipo"]
         if tipo in ("borne", "borne_din"):
             assert n <= 2, f"{extremo}: {n} hilos en un borne"
+        elif tipo == "empalme":
+            assert 2 <= n <= cx.MAX_HILOS_EMPALME, f"{extremo}: {n} hilos en un empalme"
         elif tipo not in cx.TIPOS_MULTIPLES:
             assert n == 1, f"{extremo}: {n} hilos en un pin de header"
 
@@ -57,7 +59,7 @@ def test_los_pines_solo_entrada_se_usan_solo_para_leer():
             for extremo in (h["de"], h["a"]):
                 if any(extremo.endswith(f".G{n}.S") for n in (34, 35, 36, 39)):
                     otro = h["a"] if extremo == h["de"] else h["de"]
-                    assert otro.split(".")[0] in {"presencia", "opto", "hall", "ir_linea"}, (c["id"], otro)
+                    assert otro.split(".")[0] in {"presencia", "capacitivo_s", "inductivo_s", "hall", "ir_linea"}, (c["id"], otro)
 
 
 def test_cada_servo_en_su_canal_del_pca9685():
@@ -84,9 +86,30 @@ def test_cada_dispositivo_es_de_un_componente_o_de_un_sensor():
     assert sueltos == set()
 
 
-def test_ventilador_de_la_caja_va_al_buck_de_5v():
+def test_ventilador_de_la_caja_va_a_los_empalmes_de_5v():
     hilos = {(h["de"], h["a"]) for c in cx.CABLES for h in c["hilos"] if "ventilador." in h["de"] + h["a"]}
-    assert hilos == {("buck5.OUT+", "ventilador.+5V"), ("buck5.OUT-", "ventilador.GND")}
+    assert hilos == {("e5.J", "ventilador.+5V"), ("e5_gnd.J", "ventilador.GND")}
+    # Y los empalmes de 5 V salen del buck de 5 V.
+    assert {(h["de"], h["a"]) for c in cx.CABLES for h in c["hilos"]} >= {("buck5.OUT+", "e5.J"), ("buck5.OUT-", "e5_gnd.J")}
+
+
+def test_ahorros_sin_bornera_iec_hub_ni_optoacopladores():
+    """Ahorro aprobado (2026-10-24): nada de bornera X2, entrada IEC, hub USB, optoacopladores,
+    reparto I2C ni portafusibles de 4 vias; un solo fusible en el +12 V que cubre TODO el riel."""
+    plantillas = {d["plantilla"] for d in cx.DISPOSITIVOS.values()}
+    assert not plantillas & {"bornera16", "iec", "hub_usb4", "opto2", "hub_i2c", "fusibles4", "xl4016", "lrs150"}
+    assert not set(cx.DISPOSITIVOS) & {"x2", "iec", "hub_usb", "opto", "hub_i2c", "fusibles"}
+    hilos = [(h["de"], h["a"]) for c in cx.CABLES for h in c["hilos"]]
+    # Lo unico que sale del +V de la fuente es el fusible: nada del +12 V lo saltea.
+    assert [h for h in hilos if any(e.startswith("fuente.+V") for e in h)] == [("fuente.+V1", "fusible.IN")]
+    # Las entradas de los M18 llevan su pull-up (G35/G36 no tienen interna) y siguen en G35 y G36.
+    for sensor, gpio in (("capacitivo", "G35"), ("inductivo", "G36")):
+        assert (f"{sensor}.NEGRO", f"{sensor}_s.J") in hilos
+        assert (f"{sensor}_s.J", f"esp32_fijo.{gpio}.S") in hilos
+        assert (f"esp32_fijo.{gpio}.V", f"{sensor}_s.J") in hilos
+    # Las webcams y el ESP32 van directo al portatil.
+    usb = {c["id"]: c["hilos"][0]["a"] for c in cx.CABLES if c["tipo"] == "usb"}
+    assert usb == {"usb_cenital": "pc.USB1", "usb_vasos": "pc.USB3", "usb_esp": "pc.USB2"}
 
 
 def test_plantillas_con_la_medida_de_las_piezas_reales():

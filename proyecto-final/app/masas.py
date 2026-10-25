@@ -1,7 +1,7 @@
 """Masa (peso) de todo el montaje y comprobaciones de par con esas masas.
 
 Fuente única: config/masas.yaml (componentes del catálogo y lo demás que pesa) y
-config/precios.yaml (las piezas impresas, los tramos de perfil 2020 y la tornillería, que ya están
+config/precios.yaml (las piezas impresas, la maqueta impresa y la tornillería, que ya están
 contados ahí para el costo: se reusan, no se copian). `app.documentos` genera docs/peso.md.
 
 Por qué importa el peso (usuario, 2026-09-28: "peso total del montaje"): con las masas se
@@ -22,8 +22,8 @@ import yaml
 from app import costos
 
 RUTA = Path(__file__).resolve().parent.parent / "config" / "masas.yaml"
-ORDEN_ZONAS = ["Cinta de monedas", "Almacén", "Cinta de vasos", "Pórtico", "Canaleta y muelle", "Carro",
-               "Caja de control", "Pista y base"]
+ORDEN_ZONAS = ["Cinta de monedas", "Almacén", "Cinta de vasos", "Pórtico", "Canaleta y muelle", "Estructura impresa",
+               "Carro", "Caja de control", "Pista"]
 FACTOR_SEGURIDAD = 2.0      # un motor "alcanza" si da al menos el doble de lo que se le pide
 
 
@@ -48,7 +48,8 @@ def filas(datos: dict | None = None, precios: dict | None = None) -> list[dict]:
 
     origen dice de dónde salió: "catálogo" (componente de sim/catalogos.py), "impresa" (pieza de
     precios.yaml: volumen x densidad x llenado, SIN el desperdicio, que se queda en la impresora),
-    "perfil" (tramo medido x kg/m), "tornillería" (contada por zona) u "otro" (masas.yaml: otros).
+    "maqueta" (grupo de maqueta_impresa/piezas.json: gramos de la pieza, sin desperdicio), "tornillería"
+    (contada por zona) u "otro" (masas.yaml: otros).
     """
     from sim.catalogos import CATALOGO_SENSORES, COMPONENTES
 
@@ -76,13 +77,11 @@ def filas(datos: dict | None = None, precios: dict | None = None) -> list[dict]:
         g = p["volumen_cm3"] * imp["densidad_g_cm3"] * p["factor"]
         fila(p["zona"], f"{p['nombre']} (impresa)", p["cantidad"], g, "estimado", "impresa",
              f"{_num(p['volumen_cm3'])} cm³ x {_num(imp['densidad_g_cm3'], 2)} g/cm³ x {p['factor']:.0%} de llenado")
-    # 3. Perfil 2020 por tramo: largo x kg/m.
-    per = precios["estructura_3d"]["perfil"]
-    for t in per["tramos"]:
-        fila(t["zona"], f"Perfil 2020: {t['nombre'][0].lower() + t['nombre'][1:]} ({t['largo_mm']} mm)", t.get("cantidad", 1),
-             t["largo_mm"] / 1000 * per["kg_por_m"] * 1000, "hoja_de_datos", "perfil",
-             f"{t['largo_mm']} mm x {_num(per['kg_por_m'], 2)} kg/m")
-    # 4. Tornillería, escuadras y pies, contados por zona (sin el repuesto, que no se monta).
+    # 3. Maqueta impresa por grupo (la masa de las piezas, sin el desperdicio de la impresora).
+    for g in costos.maqueta(precios):
+        fila(g["zona"], f"Maqueta impresa: {g['nombre'][0].lower() + g['nombre'][1:]} (PLA)", 1, g["gramos"], "estimado",
+             "maqueta", f"{g['piezas']} piezas, gramos del exportador de la maqueta (maqueta_impresa/piezas.json)")
+    # 4. Tornillería contada por zona (sin el repuesto, que no se monta).
     tipos = precios["estructura_3d"]["tornilleria"]["tipos"]
     for zona, cuenta in costos.tornillos_por_zona(precios).items():
         for t, n in cuenta.items():
@@ -316,7 +315,7 @@ def generar_md() -> str:
         "# Peso del montaje",
         "",
         "> Generado por `python -m app.documentos` desde `config/masas.yaml` y `config/precios.yaml` (piezas",
-        "> impresas, perfil y tornillería): no editar a mano. Masas de hoja de datos o estimadas por material",
+        "> impresas, maqueta impresa y tornillería): no editar a mano. Masas de hoja de datos o estimadas por material",
         f"> x volumen ({datos['consultado']}): PESAR lo marcado *estimado* cuando esté en la mano.",
         "",
         f"**Peso total del montaje: {_kg(tot)}** (sin el portátil). De eso, {_kg(est)} "

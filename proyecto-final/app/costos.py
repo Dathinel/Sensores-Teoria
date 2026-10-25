@@ -2,12 +2,13 @@
 
 Lo usan `app.documentos` (genera docs/costos.md), el dashboard (pestaña Montaje real), el
 asistente (lee docs/costos.md y responde "cuánto cuesta" con el intérprete local) y
-`app.masas` (reusa los gramos de las piezas impresas y los tramos de perfil).
+`app.masas` (reusa los gramos de las piezas impresas, de la maqueta y la tornillería).
 
-La estructura 3D (usuario, 2026-09-28: "costos en estructura 3D completos, en tablas y todo") ya
-no es un "2 kg de PLA y 3 m de perfil estimados": sale de `estructura_3d` en precios.yaml, con
-cada pieza impresa, cada tramo de perfil y cada tornillo contados sobre el modelo 3D del visor.
-Aquí solo está la cuenta; los datos (y de dónde salió cada uno) están en el YAML.
+La estructura 3D (usuario, 2026-09-28: "costos en estructura 3D completos, en tablas y todo") sale
+de `estructura_3d` en precios.yaml. Desde el 2026-10-24 (ahorros aprobados) la estructura de la
+planta es la MAQUETA IMPRESA (maqueta_impresa/piezas.json: gramos y minutos de cada pieza, medidos
+por su exportador): ya no hay perfil 2020, escuadras, pies ni MDF. Las piezas impresas sueltas que
+quedan en el YAML son las del carro y de la caja de control.
 """
 
 from __future__ import annotations
@@ -18,7 +19,8 @@ from pathlib import Path
 
 import yaml
 
-RUTA = Path(__file__).resolve().parent.parent / "config" / "precios.yaml"
+RAIZ = Path(__file__).resolve().parent.parent
+RUTA = RAIZ / "config" / "precios.yaml"
 ORDEN_SUBSISTEMAS = ["Cinta de monedas", "Cinta de vasos", "Canaleta y muelle", "Carro", "Control y potencia",
                      "Estructura"]
 
@@ -84,37 +86,40 @@ def piezas_impresas(datos: dict | None = None) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------------------------
-# Perfil 2020: despiece en barras de 1 m
+# Maqueta impresa (maqueta_impresa/piezas.json)
 # ---------------------------------------------------------------------------------------------
 
-def despiece_perfil(datos: dict | None = None) -> dict:
-    """Acomoda los tramos medidos en barras de 1 m (el perfil se vende así).
+def maqueta(datos: dict | None = None) -> list[dict]:
+    """Un grupo de la maqueta impresa por fila, con sus gramos, horas y costo.
 
-    Método "primero el más largo" (first-fit decreasing): se ordenan los tramos de mayor a menor
-    y cada uno va a la primera barra donde todavía cabe (su largo + el corte de la sierra); si no
-    cabe en ninguna, se abre una barra nueva. No es el óptimo matemático, pero es lo que haría
-    cualquiera en el taller con un metro y una sierra, y para ~30 tramos queda a 1 barra o menos
-    del óptimo. Devuelve los tramos, las barras (lista de largos por barra) y el sobrante.
+    gramos = suma de gramos x cantidad de sus piezas (los del exportador de la maqueta: la masa de la
+             pieza, sin desperdicio)
+    horas  = suma de minutos x cantidad / 60
+    costo  = gramos x (1 + desperdicio) x precio_kg / 1000 + horas x (1 + desperdicio) x kWh/h x tarifa
+             (el desperdicio, impresiones fallidas y purga, gasta filamento Y horas de impresora)
     """
+    import json
+
     datos = datos or cargar()
-    per = datos["estructura_3d"]["perfil"]
-    L, corte = per["largo_barra_mm"], per["corte_mm"]
-    tramos = [{**t, "cantidad": t.get("cantidad", 1)} for t in per["tramos"]]
-    largos = sorted((t["largo_mm"] for t in tramos for _ in range(t["cantidad"])), reverse=True)
-    barras: list[list[int]] = []
-    for largo in largos:
-        if largo > L:
-            raise ValueError(f"un tramo de {largo} mm no cabe en una barra de {L} mm")
-        for b in barras:
-            usado = sum(b) + corte * len(b)          # cada tramo ya puesto se llevó un corte
-            if usado + largo <= L:
-                b.append(largo)
-                break
-        else:
-            barras.append([largo])
-    total_mm = sum(largos)
-    return {"tramos": tramos, "barras": barras, "n_barras": len(barras), "total_mm": total_mm,
-            "sobrante_mm": len(barras) * L - total_mm - corte * len(largos), "kg_por_m": per["kg_por_m"]}
+    e3d = datos["estructura_3d"]
+    imp, mq = e3d["impresion"], e3d["maqueta"]
+    piezas = json.loads((RAIZ / mq["archivo"]).read_text(encoding="utf-8"))["piezas"]
+    out = []
+    for gid, g in mq["grupos"].items():
+        suyas = [x for x in piezas if x["grupo"] == gid]
+        if not suyas:
+            raise ValueError(f"maqueta: el grupo {gid} no tiene piezas en {mq['archivo']}")
+        gramos = sum(x["gramos"] * x.get("cantidad", 1) for x in suyas)
+        horas = sum(x["minutos"] * x.get("cantidad", 1) for x in suyas) / 60
+        k = 1 + imp["desperdicio"]
+        filamento = gramos * k * imp["precio_kg"] / 1000
+        energia = horas * k * imp["kwh_por_hora"] * imp["tarifa_kwh"]
+        out.append({"grupo": gid, **g, "piezas": sum(x.get("cantidad", 1) for x in suyas), "gramos": gramos,
+                    "horas": horas, "costo_filamento": filamento, "costo_energia": energia, "costo": filamento + energia})
+    sin_grupo = {x["grupo"] for x in piezas} - set(mq["grupos"])
+    if sin_grupo:
+        raise ValueError(f"maqueta: grupos de {mq['archivo']} sin subsistema en precios.yaml: {sorted(sin_grupo)}")
+    return out
 
 
 # ---------------------------------------------------------------------------------------------
@@ -122,7 +127,7 @@ def despiece_perfil(datos: dict | None = None) -> dict:
 # ---------------------------------------------------------------------------------------------
 
 def conteo_tornilleria(datos: dict | None = None) -> dict[str, dict]:
-    """Cuántos de cada tipo hay en el montaje: las uniones de la estructura de perfil más lo que
+    """Cuántos de cada tipo hay en el montaje: las uniones que la maqueta no remacha más lo que
     lleva cada pieza impresa (por su cantidad). Devuelve por tipo: contados, a comprar (con el
     repuesto, redondeado hacia arriba), precio, subtotal y de dónde salen (para la tabla)."""
     datos = datos or cargar()
@@ -172,7 +177,8 @@ def filas(datos: dict | None = None) -> list[dict]:
     Filas calculadas (no escritas a mano):
       - `calculado: impresas` (un componente del catálogo que es una pieza impresa): su precio es
         la suma del costo de sus piezas en estructura_3d.piezas_impresas;
-      - `calculado: perfileria`: la cantidad son las barras de 1 m del despiece;
+      - `calculado: maqueta` (la estructura): los grupos de la maqueta impresa del subsistema
+        Estructura; los de los otros subsistemas van a su fila "Maqueta impresa";
       - "Otras piezas impresas" de cada subsistema: las piezas sin componente `calculado: impresas`;
       - una fila por tipo de tornillo/escuadra/pie, con lo contado + el repuesto.
     """
@@ -183,6 +189,7 @@ def filas(datos: dict | None = None) -> list[dict]:
     catalogo.update({s["id"]: s for s in CATALOGO_SENSORES})
     impresas = piezas_impresas(datos)
     imp = datos["estructura_3d"]["impresion"]
+    mq = maqueta(datos)
     out = []
 
     def fila(id_, nombre, subsistema, producto, cantidad, precio, fuente, tienda=None, grupo="items"):
@@ -203,8 +210,11 @@ def filas(datos: dict | None = None) -> list[dict]:
                 precio, cantidad = round(sum(p["costo_total"] for p in mias)), 1
                 gramos = sum(p["gramos_total"] for p in mias)
                 d = {**d, "producto": f"{d['producto']}: {_num(gramos, 0)} g de PLA", "tienda": imp.get("tienda")}
-            elif d.get("calculado") == "perfileria":
-                cantidad = despiece_perfil(datos)["n_barras"]
+            elif d.get("calculado") == "maqueta":
+                mias = [g for g in mq if g["subsistema"] == d["subsistema"]]
+                precio, cantidad = round(sum(g["costo"] for g in mias)), 1
+                d = {**d, "producto": f"{d['producto']}: {_num(sum(g['gramos'] for g in mias), 0)} g de PLA, "
+                                      f"{_num(sum(g['horas'] for g in mias))} h de impresora", "tienda": imp.get("tienda")}
             fila(id_, c.get("nombre", id_.replace("_", " ").capitalize()), d["subsistema"], d["producto"], cantidad,
                  precio, d["fuente"], d.get("tienda"), grupo)
 
@@ -222,11 +232,20 @@ def filas(datos: dict | None = None) -> list[dict]:
              f"{n} piezas en PLA ({_num(g, 0)} g, {_num(sum(p['horas_total'] for p in sueltas))} h de impresora): "
              "soportes, bridas, bloques (tabla de piezas impresas)",
              1, round(sum(p["costo_total"] for p in sueltas)), "estimado", imp.get("tienda"), "estructura_3d")
-    # Tornillería, escuadras y pies: contados en el modelo.
+    # Maqueta impresa de los subsistemas que no son la estructura: una fila por subsistema.
+    for s_ in ORDEN_SUBSISTEMAS:
+        mias = [g for g in mq if g["subsistema"] == s_]
+        if not mias or s_ == "Estructura":
+            continue
+        fila(f"maqueta_{_slug(s_)}", "Maqueta impresa", s_,
+             "Piezas de PLA de la maqueta impresa: " + ", ".join(f"{g['nombre'].lower()} ({_num(g['gramos'], 0)} g)" for g in mias)
+             + f"; {_num(sum(g['horas'] for g in mias))} h de impresora",
+             1, round(sum(g["costo"] for g in mias)), "estimado", imp.get("tienda"), "estructura_3d")
+    # Tornillería: lo que no va remachado.
     for t, d in conteo_tornilleria(datos).items():
         if d["comprar"]:
             fila(f"tornilleria_{t}", d["nombre"], "Estructura",
-                 f"{d['contados']} contados en el modelo + {datos['estructura_3d']['tornilleria']['repuesto']:.0%} de repuesto",
+                 f"{d['contados']} contados + {datos['estructura_3d']['tornilleria']['repuesto']:.0%} de repuesto",
                  d["comprar"], d["precio"], d["fuente"], d.get("tienda"), "estructura_3d")
     return out
 
@@ -243,24 +262,46 @@ def total(datos: dict | None = None) -> int:
 
 
 def costo_estructura_3d(datos: dict | None = None) -> dict:
-    """Lo que cuesta la estructura 3D completa: piezas impresas (filamento + energía), perfil 2020
-    en barras y tornillería/escuadras/pies. Es parte del total (no se suma aparte)."""
+    """Lo que cuesta la estructura 3D completa: la maqueta impresa (filamento + energía), las otras
+    piezas impresas (carro y caja) y la tornillería. Es parte del total (no se suma aparte)."""
     datos = datos or cargar()
     fs = filas(datos)
-    impresas = sum(f["subtotal"] for f in fs
-                   if f["id"].startswith("impresas_") or (datos["items"].get(f["id"], {}).get("calculado") == "impresas"))
-    perfil = sum(f["subtotal"] for f in fs if datos["items"].get(f["id"], {}).get("calculado") == "perfileria")
+    calc = lambda f, c: datos["items"].get(f["id"], {}).get("calculado") == c   # noqa: E731
+    impresas = sum(f["subtotal"] for f in fs if f["id"].startswith("impresas_") or calc(f, "impresas"))
+    mq_costo = sum(f["subtotal"] for f in fs if f["id"].startswith("maqueta_") or calc(f, "maqueta"))
     tornilleria = sum(f["subtotal"] for f in fs if f["id"].startswith("tornilleria_"))
     ps = piezas_impresas(datos)
-    return {"impresas": impresas, "perfil": perfil, "tornilleria": tornilleria,
-            "total": impresas + perfil + tornilleria,
+    mq = maqueta(datos)
+    return {"impresas": impresas, "maqueta": mq_costo, "tornilleria": tornilleria,
+            "total": impresas + mq_costo + tornilleria,
             "gramos_pla": sum(p["gramos_total"] for p in ps), "horas": sum(p["horas_total"] for p in ps),
-            "piezas": sum(p["cantidad"] for p in ps)}
+            "piezas": sum(p["cantidad"] for p in ps),
+            "maqueta_gramos": sum(g["gramos"] for g in mq), "maqueta_horas": sum(g["horas"] for g in mq),
+            "maqueta_piezas": sum(g["piezas"] for g in mq)}
+
+
+def _con_ahorro(datos: dict) -> list[dict]:
+    """Cada ahorro con su monto. Uno con `antes` (lo que costaba lo reemplazado) se calcula contra lo que
+    cuesta hoy la estructura 3D (maqueta + tornillería): así sigue cuadrando cuando la maqueta se aligera."""
+    c3d = None
+    out = []
+    for a in datos.get("ahorros") or []:
+        if "antes" in a:
+            c3d = c3d or costo_estructura_3d(datos)
+            a = dict(a, ahorro=a["antes"] - round(c3d["maqueta"] + c3d["tornilleria"]))
+        out.append(a)
+    return out
 
 
 def ahorros(datos: dict | None = None) -> list[dict]:
+    """Propuestas de ahorro TODAVÍA no aplicadas (las aprobadas ya están en el total)."""
     datos = datos or cargar()
-    return sorted(datos.get("ahorros") or [], key=lambda a: -a["ahorro"])
+    return sorted((a for a in _con_ahorro(datos) if not a.get("aplicado")), key=lambda a: -a["ahorro"])
+
+
+def ahorros_aplicados(datos: dict | None = None) -> list[dict]:
+    datos = datos or cargar()
+    return sorted((a for a in _con_ahorro(datos) if a.get("aplicado")), key=lambda a: -a["ahorro"])
 
 
 # ---------------------------------------------------------------------------------------------
@@ -268,32 +309,55 @@ def ahorros(datos: dict | None = None) -> list[dict]:
 # ---------------------------------------------------------------------------------------------
 
 def _md_estructura_3d(datos: dict) -> list[str]:
-    """Secciones de la estructura 3D: resumen, piezas impresas, perfilería y tornillería."""
+    """Secciones de la estructura 3D: resumen, maqueta impresa, piezas impresas sueltas y tornillería."""
     e3d = datos["estructura_3d"]
     imp = e3d["impresion"]
     ps = piezas_impresas(datos)
+    mq = maqueta(datos)
     c3d = costo_estructura_3d(datos)
-    desp = despiece_perfil(datos)
     tor = conteo_tornilleria(datos)
     f_hueca = imp["paredes"] + (1 - imp["paredes"]) * imp["relleno"]
+    pct = lambda v: f"{v * 100 / max(c3d['total'], 1):.0f} %"   # noqa: E731
     L = [
-        "## Estructura 3D (piezas impresas, perfil 2020 y tornillería)", "",
-        f"Contada sobre el modelo 3D del visor (medido el {e3d['consultado']}): cada pieza impresa con su volumen, cada "
-        "tramo de perfil con su largo y cada tornillo por pieza. Ya está dentro del total de arriba (en su subsistema).", "",
+        "## Estructura 3D (maqueta impresa, piezas impresas y tornillería)", "",
+        "Desde el 2026-10-24 la estructura de la planta es la **maqueta impresa** "
+        "([maqueta_impresa/](../maqueta_impresa/README.md)): mesas, pórtico, soportes, almacén, mecanismos y canaleta en "
+        "PLA, unidos con remaches impresos. Ya no hay perfil 2020, escuadras, pies niveladores, placas de aluminio, "
+        "acrílico ni tablero MDF (la maqueta va sobre la mesa y la pista sobre el piso o la mesa). Lo comprado sigue "
+        "comprado: bandas, rodillos, ejes, rodamientos, varillas, motores, servos, sensores y cámaras. Ya está dentro "
+        "del total de arriba (en su subsistema).", "",
         "| Parte | Qué es | Costo | % de la estructura 3D |", "|---|---|---:|---:|",
-        f"| Piezas impresas | {c3d['piezas']} piezas, {_num(c3d['gramos_pla'], 0)} g de PLA, "
-        f"{_num(c3d['horas'])} h de impresora | {pesos(c3d['impresas'])} | {c3d['impresas'] * 100 / max(c3d['total'], 1):.0f} % |",
-        f"| Perfil 2020 | {_num(desp['total_mm'] / 1000, 2)} m en {len([1 for t in desp['tramos'] for _ in range(t['cantidad'])])} "
-        f"tramos → {desp['n_barras']} barras de 1 m | {pesos(c3d['perfil'])} | {c3d['perfil'] * 100 / max(c3d['total'], 1):.0f} % |",
-        f"| Tornillería, escuadras y pies | {sum(d['comprar'] for d in tor.values())} unidades (con repuesto) | "
-        f"{pesos(c3d['tornilleria'])} | {c3d['tornilleria'] * 100 / max(c3d['total'], 1):.0f} % |",
+        f"| Maqueta impresa | {c3d['maqueta_piezas']} piezas (con los remaches), {_num(c3d['maqueta_gramos'], 0)} g de PLA, "
+        f"{_num(c3d['maqueta_horas'])} h de impresora | {pesos(c3d['maqueta'])} | {pct(c3d['maqueta'])} |",
+        f"| Otras piezas impresas (carro y caja) | {c3d['piezas']} piezas, {_num(c3d['gramos_pla'], 0)} g de PLA, "
+        f"{_num(c3d['horas'])} h de impresora | {pesos(c3d['impresas'])} | {pct(c3d['impresas'])} |",
+        f"| Tornillería | {sum(d['comprar'] for d in tor.values())} unidades (con repuesto) | "
+        f"{pesos(c3d['tornilleria'])} | {pct(c3d['tornilleria'])} |",
         f"| **Total estructura 3D** | | **{pesos(c3d['total'])}** | 100 % |", "",
-        "### Cómo se calcula una pieza impresa", "",
+        "### Maqueta impresa por grupo", "",
+        f"Gramos y horas del exportador de la maqueta (`{e3d['maqueta']['archivo']}`, la masa de cada pieza con sus "
+        "parámetros de capa, paredes y relleno; el tiempo real lo da el laminador). Costo = gramos x (1 + desperdicio) x "
+        f"{pesos(imp['precio_kg'])}/kg + horas x (1 + desperdicio) x {_num(imp['kwh_por_hora'], 2)} kWh/h x "
+        f"{pesos(imp['tarifa_kwh'])}/kWh, con el {imp['desperdicio']:.0%} de desperdicio (purga e impresiones fallidas).", "",
+        "| Grupo | Subsistema | Piezas | Gramos | Horas | Filamento | Energía | Costo |",
+        "|---|---|---:|---:|---:|---:|---:|---:|",
+    ]
+    for g in mq:
+        L.append(f"| {g['nombre']} | {g['subsistema']} | {g['piezas']} | {_num(g['gramos'], 0)} | {_num(g['horas'])} | "
+                 f"{pesos(g['costo_filamento'])} | {pesos(g['costo_energia'])} | {pesos(g['costo'])} |")
+    L.append(f"| **Total** | | **{c3d['maqueta_piezas']}** | **{_num(c3d['maqueta_gramos'], 0)}** | **{_num(c3d['maqueta_horas'])}** | "
+             f"**{pesos(sum(g['costo_filamento'] for g in mq))}** | **{pesos(sum(g['costo_energia'] for g in mq))}** | "
+             f"**{pesos(sum(g['costo'] for g in mq))}** |")
+    kg = (c3d["maqueta_gramos"] + c3d["gramos_pla"] / (1 + imp["desperdicio"])) * (1 + imp["desperdicio"]) / 1000
+    L += ["", f"Filamento de todo lo impreso (maqueta + carro + caja, con el desperdicio): {_num(kg, 2)} kg → "
+          f"**{math.ceil(kg)} rollo(s) de 1 kg**.", ""]
+    L += [
+        "### Cómo se calcula una pieza impresa suelta (carro y caja)", "",
         "```",
         "gramos = V x ρ x f x (1 + desperdicio)",
-        f"  V   = volumen de material de la pieza en el modelo (cm³)",
+        "  V   = volumen de material de la pieza en el modelo (cm³)",
         f"  ρ   = {_num(imp['densidad_g_cm3'], 2)} g/cm³ (PLA)",
-        f"  f   = 1 si la pieza es maciza (pared ≤ 3 mm: los 3 perímetros la llenan)",
+        "  f   = 1 si la pieza es maciza (pared ≤ 3 mm: los 3 perímetros la llenan)",
         f"      = paredes + (1 - paredes) x relleno = {_num(imp['paredes'], 2)} + {_num(1 - imp['paredes'], 2)} x "
         f"{_num(imp['relleno'], 2)} = {_num(f_hueca, 2)} si es gruesa",
         f"  desperdicio = {imp['desperdicio']:.0%} (purga, falda, soportes, alguna fallida)",
@@ -305,7 +369,7 @@ def _md_estructura_3d(datos: dict) -> list[str]:
         f"{_num(imp['kwh_por_hora'], 2)} kWh/h y la tarifa de {pesos(imp['tarifa_kwh'])}/kWh (mírela en su recibo). "
         "Volumen \"malla\" = medido sumando los tetraedros de la malla del visor; \"estimado\" = calculado a mano "
         "con superficie x pared (la columna *Cómo* dice la cuenta).", "",
-        "### Piezas impresas", "",
+        "### Piezas impresas sueltas (carro y caja de control)", "",
         "| Pieza | Dónde | Cant. | Medidas (mm) | Volumen (cm³) | Llenado | g c/u | h c/u | Costo c/u | Subtotal |",
         "|---|---|---:|---|---:|---:|---:|---:|---:|---:|",
     ]
@@ -320,25 +384,12 @@ def _md_estructura_3d(datos: dict) -> list[str]:
     if estimadas:
         L += ["", "**Cómo** (piezas con volumen estimado o sumado de varias mallas):", ""]
         L += [f"- {p['nombre']}: {p['como']}." for p in estimadas]
-    kg = c3d["gramos_pla"] / 1000
-    L += ["", f"Filamento: {_num(kg, 2)} kg → **{math.ceil(kg)} rollo(s) de 1 kg** (antes se estimaban 2).", ""]
-    # Perfil
-    L += ["### Perfil 2020 por tramo", "",
-          f"Largo medido en el modelo; se compra en barras de {datos['estructura_3d']['perfil']['largo_barra_mm']} mm "
-          f"con {datos['estructura_3d']['perfil']['corte_mm']} mm por corte de sierra.", "",
-          "| Tramo | Zona | Cant. | Largo (mm) | Subtotal (mm) |", "|---|---|---:|---:|---:|"]
-    for t in desp["tramos"]:
-        L.append(f"| {t['nombre']} | {t['zona']} | {t['cantidad']} | {t['largo_mm']} | {t['largo_mm'] * t['cantidad']} |")
-    L += [f"| **Total** | | **{sum(t['cantidad'] for t in desp['tramos'])}** | | **{desp['total_mm']}** |", "",
-          f"**Despiece** (primero el tramo más largo, en la primera barra donde quepa): {desp['n_barras']} barras, "
-          f"sobran {desp['sobrante_mm']} mm en total.", ""]
-    for i, b in enumerate(desp["barras"], 1):
-        L.append(f"- Barra {i}: {' + '.join(str(x) for x in b)} mm")
     # Tornillería
-    L += ["", "### Tornillería, escuadras y pies niveladores", "",
-          f"Contado por pieza: las uniones de la estructura (escuadras con 2 tornillos M5 y 2 tuercas en T cada una; "
-          f"un pie nivelador por pata o poste) y los tornillos de cada pieza impresa (columna `tornillos` en "
-          f"precios.yaml). Se compra un {datos['estructura_3d']['tornilleria']['repuesto']:.0%} de repuesto.", "",
+    L += ["", "### Tornillería", "",
+          "La maqueta va remachada (sin escuadras, pies ni tuercas en T): solo se atornilla lo comprado que lo pide "
+          "(los NEMA 17 y los rodamientos KFL08; los servos traen los tornillos de su kit) y las piezas impresas del "
+          f"carro y de la caja (columna `tornillos` en precios.yaml). Se compra un "
+          f"{datos['estructura_3d']['tornilleria']['repuesto']:.0%} de repuesto.", "",
           "| Qué | Contados | A comprar | Precio | Subtotal |", "|---|---:|---:|---:|---:|"]
     for d in tor.values():
         if d["contados"]:
@@ -367,9 +418,10 @@ def generar_md() -> str:
         "",
         f"**Total del proyecto: {pesos(t)}** (sin el portátil, que es del grupo). De eso, "
         f"{pesos(estimado)} ({estimado * 100 // max(t, 1)} %) son **estimados** (materiales sin un producto",
-        "igual publicado: banda de las cintas, tornillería, cables, tubos, piezas impresas): el resto es precio de tienda.",
+        "igual publicado: banda de las cintas, tornillería, cables, piezas impresas, la fuente de 5 A y el buck XL4015): "
+        "el resto es precio de tienda.",
         "",
-        f"La **estructura 3D** (piezas impresas, perfil 2020 y tornillería, contadas en el modelo) cuesta "
+        f"La **estructura 3D** (la maqueta impresa, las piezas impresas del carro y de la caja y la tornillería) cuesta "
         f"**{pesos(c3d['total'])}** ({c3d['total'] * 100 / max(t, 1):.0f} % del total): detalle más abajo.",
         "",
         "## Por subsistema",
@@ -380,6 +432,15 @@ def generar_md() -> str:
     for s, v in por_subsistema(datos).items():
         lineas.append(f"| {s} | {pesos(v)} | {v * 100 / max(t, 1):.0f} % |")
     lineas.append(f"| **Total** | **{pesos(t)}** | **100 %** |")
+    aplicados = ahorros_aplicados(datos)
+    if aplicados:
+        lineas += ["", "## Ahorros ya aplicados (aprobados el 2026-10-24)", "",
+                   "\"Es un proyecto universitario, no un sistema industrial\": lo que el usuario aprobó ya está en el "
+                   "diseño, en la simulación eléctrica, en el firmware y en el total de arriba.", "",
+                   "| Cambio | Ahorro | Riesgo | Por qué alcanza |", "|---|---:|---|---|"]
+        for a in aplicados:
+            lineas.append(f"| {a['titulo']} | {pesos(a['ahorro'])} | {a['riesgo']} | {a['detalle']} |")
+        lineas.append(f"| **Total ahorrado** | **{pesos(sum(a['ahorro'] for a in aplicados))}** | | |")
     lineas += ["", "## Dónde abaratar (propuestas, NO aplicadas)", "",
                "El diseño no se cambia sin que el grupo lo apruebe. Riesgo bajo = mismo comportamiento; medio = "
                "funciona pero hay que medir algo; alto = cambia el diseño.", "",

@@ -138,3 +138,13 @@ que NO se corrigió):
   0.024`, en `holguras_carro` y `medio_ancho`) y no lee `ancho_rueda_mm`. No cambia nada hoy: lo más
   ancho del carro son los rodillos guía (93 mm), que sí lee de la configuración. Queda anotado para
   cuando se toque el control (fuera del alcance de este cambio).
+
+## Maqueta impresa (2026-10-24)
+
+Desde la maqueta impresa (`maqueta_impresa/`: estructura de tubos 16 x 16 y piezas de PLA, sin perfil
+2020, aluminio ni acrílico) "mandan las piezas físicas": el visor dibuja la estructura y las piezas
+impresas con `app/visor3d/maqueta_impresa.glb` (`python maqueta_impresa/modelo_3d.py`) y los URDF
+copian lo físico en bancadas, patas, tubo de tapas, prensa, separadores y empujador (ahora una paleta
+que corre 67,5 mm en -y, como la biela-manivela real). Que lo funcional de la maqueta (estaciones,
+carrusel, tolva, canaleta, carro estacionado, cámaras y sensores) sea lo de `sim/geometria.py` lo
+comprueba `tests/sim/test_maqueta_impresa.py`.

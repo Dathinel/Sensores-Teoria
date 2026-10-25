@@ -337,11 +337,15 @@ def zonas_carro(parametros: dict, geo: dict | None = None) -> dict:
     atras, adelante = xt - tope[0], x2 + esp / 2
     caja_muelle = pieza((atras + adelante) / 2, 0.0, 0.0, (adelante - atras) / 2, guia_y + abre_boca + esp)
 
-    # 4. El poste de la camara de vasos (llega al piso al costado de la cinta).
+    # 4. El poste de la camara de vasos (llega al piso al costado de la cinta). En la maqueta impresa
+    # va `poste_camara_detras_mm` detras de la camara y lo une a la planta un tubo por el piso: la
+    # zona va desde el poste hasta el borde de la planta (y0).
     cam = next(x for x in geo["sensores"] if x["id"] == "camara_vasos")["geometria"]["posicion"]
     lado = z["medio_lado_poste_camara_mm"] / 1000
+    y_poste = cam[1] - z.get("poste_camara_detras_mm", 0) / 1000
+    y_abajo, y_arriba = y_poste - lado, max(y_poste + lado, y0)
     poste = {"clave": "poste_camara", "nombre": "el poste de la cámara de vasos", "atravesar": "atravesarlo",
-             "cx": cam[0], "cy": cam[1], "rumbo": 0.0, "ml": lado, "ma": lado}
+             "cx": cam[0], "cy": (y_abajo + y_arriba) / 2, "rumbo": 0.0, "ml": lado, "ma": (y_arriba - y_abajo) / 2}
 
     # 5. El puesto del PC en el piso: portatil y hub USB (2026-09-28: antes no estaban en el mapa y
     # una orden podia mandar el carro encima de ellos).

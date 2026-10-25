@@ -164,7 +164,8 @@ Dónde está cada cosa después de rehacerla:
 - [x] `?demo`, `?cables`, `?panel=0` (panel cerrado), `?vista=<nombre>` (incluye `carga` y
   `vision`, que no tienen botón), `?paso=<n>`, `?sensor=<id>`, `?componente=<id>`,
   `?cam=x,y,z&mira=x,y,z` (toma exacta, en coordenadas de la simulación), `?auditar`
-  (`window.__visor` con la escena para scripts de revisión).
+  (`window.__visor` con la escena para scripts de revisión), `?sinmaqueta` (sin la maqueta impresa
+  `maqueta_impresa.glb`: el modelo de antes con perfil 2020, aluminio y acrílico, para comparar).
 
 ## Pantalla angosta (< 900 px)
 

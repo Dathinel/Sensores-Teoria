@@ -52,7 +52,7 @@ PLACA = {"fijo": "esp32_fijo", "carro": "esp32_carro"}
 def pines(placa: str) -> dict[str, int]:
     """GPIO de senal de la placa: {"DRIVERS_M_STEP": 25, ...} (sim/conexiones.py)."""
     sys.path.insert(0, str(RAIZ))
-    from sim.conexiones import CABLES
+    from sim.conexiones import CABLES, DISPOSITIVOS
 
     out = {}
     for cable in CABLES:
@@ -60,6 +60,10 @@ def pines(placa: str) -> dict[str, int]:
             for a, b in ((h["de"], h["a"]), (h["a"], h["de"])):
                 m = re.match(PLACA[placa] + r"\.G(\d+)\.S$", a)
                 if m:
+                    # Un empalme soldado (sin placa) se nombra por el empalme: "capacitivo_s.J" -> CAPACITIVO_S.
+                    dev = b.split(".", 1)[0]
+                    if DISPOSITIVOS[dev]["plantilla"] == "empalme":
+                        b = dev
                     out[re.sub(r"[^A-Za-z0-9]+", "_", b).upper()] = int(m.group(1))
     return dict(sorted(out.items()))
 

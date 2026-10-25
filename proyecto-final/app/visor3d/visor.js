@@ -29,6 +29,7 @@ import * as PIEZAS_CARRO from './piezas/carro.js';
 import * as PIEZAS_SENSORES_CARRO from './piezas/sensores.js';
 import * as PIEZAS_VASOS from './piezas/linea_vasos.js';
 import * as PIEZAS_OPTIMIZAR from './piezas/optimizar.js';
+import * as PIEZAS_MAQUETA from './piezas/maqueta_impresa.js';
 // La interfaz (barra, vistas, panel, avisos, bitacora): ver interfaz.js y docs/interfaz-visor.md.
 import { crearInterfaz, SEL, simulacionCorriendo } from './interfaz.js';
 
@@ -62,6 +63,12 @@ let cuadrosDemo = [];
 let cuadroDemo = 0;
 
 let G = null;          // geometria
+// Maqueta impresa (maqueta_impresa/, pedido 2026-10-24: "mandan las piezas fisicas"): si el GLB
+// cargo, la estructura y las piezas de PLA se dibujan con el y lo viejo que reemplazan (perfil 2020,
+// escuadras, pies, placas de aluminio, acrilico, soportes) se marca con reemplazar() y se saca al
+// terminar de construir (montarMaqueta). Si no carga, queda el modelo de antes, igual que siempre.
+let MAQ = null;
+const REEMPLAZADAS = new Set();
 let PASOS = [];        // docs/paso-a-paso.yaml
 let estado = null;     // ultimo /api/estado
 let ultimoTick = -1;
@@ -572,6 +579,15 @@ function registrar(id, ...objetos) {
   for (const o of objetos) if (o) { o.userData.parte = true; (COMP[id] ||= []).push(o); }
 }
 
+// Lo que la maqueta impresa reemplaza (solo si su GLB cargo): se saca al terminar de construir.
+function reemplazar(...objetos) { if (MAQ) for (const o of objetos) if (o) REEMPLAZADAS.add(o); }
+// En una pieza mixta, solo sus mallas impresas o de aluminio (lo comprado que trae se queda).
+function reemplazarImpreso(g) {
+  if (!MAQ || !g) return;
+  const impresos = [COLOR.impreso, COLOR.aluminio];
+  g.traverse((o) => { if (o.isMesh && o.material && o.material.color && impresos.includes(o.material.color.getHex())) REEMPLAZADAS.add(o); });
+}
+
 // Caja de un motor paso a paso NEMA17 (42 mm), con el eje hacia +y.
 function nema17(pos) {
   const g = new THREE.Group();
@@ -687,6 +703,7 @@ function soporteServo(grupo, servoObj, puntoEstructura, idComponente, grande = f
   const abajo = new THREE.Vector3(0, -0.005, 0);
   const bajoSalida = salida.clone().setY(bajo.y).add(abajo);
   P.rutasServo[idComponente] = [salida, bajoSalida, codo.clone().add(d).add(abajo), puntoEstructura.clone().add(d)];
+  return [montaje, ...tramos, pie];
 }
 
 // Sensor de proximidad cilindrico (capacitivo LJC18A3 / inductivo LJ18A3):
@@ -743,7 +760,7 @@ function conosSensor(origen, dir, alcance, semiNominal, semiError, color = COLOR
 
 // Cinta indexada: bancada, banda, rodillos y separadores que SI avanzan
 // una casilla en cada paso (y reaparecen por la cola, como una banda real).
-function construirBanda(grupo, nombre, { x0, x1, y, zs, ancho, paso, altoSep, ventanas = [], insertos = true, fabricaRodillo = null }) {
+function construirBanda(grupo, nombre, { x0, x1, y, zs, ancho, paso, altoSep, ventanas = [], insertos = true, fabricaRodillo = null, recorteSep = 0 }) {
   const zb = zs - G.altura_superficie;
   const largo = x1 - x0, xc = (x0 + x1) / 2;
   // Bancada (la cama sobre la que desliza la banda): termina 2 mm antes de
@@ -759,12 +776,14 @@ function construirBanda(grupo, nombre, { x0, x1, y, zs, ancho, paso, altoSep, ve
     const tramo = caja(b - a, ancho + 0.006, 0.02, COLOR.bancada, Vxyz((a + b) / 2, y, zb + 0.01));
     tramo.receiveShadow = true;
     grupo.add(tramo);
+    reemplazar(tramo);                         // bancada impresa (mon_bancada, vas_bancada_a/b)
   }
   if (insertos) {
     for (const v of ventanas) {
       const inserto = caja(0.036, ancho + 0.006, 0.006, 0x56606e, Vxyz(v, y, zs - 0.005));
       grupo.add(inserto);
       registrar('estructura', inserto);
+      reemplazar(inserto);
     }
   }
   const banda = caja(largo, ancho, 0.002, COLOR.cinta, Vxyz(xc, y, zs - 0.001), { roughness: 0.95 });
@@ -793,7 +812,8 @@ function construirBanda(grupo, nombre, { x0, x1, y, zs, ancho, paso, altoSep, ve
   const seps = [], base = [];
   for (let k = -1; x0 + k * paso <= x1 + 1e-6; k++) {
     const x = x0 + k * paso;
-    const s = caja(0.003, ancho, altoSep, COLOR.separador, Vxyz(x, y, zs + altoSep / 2));
+    // recorteSep: mm que se le cortan al separador del lado -y (maqueta impresa, cinta de vasos)
+    const s = caja(0.003, ancho - recorteSep, altoSep, COLOR.separador, Vxyz(x, y + recorteSep / 2, zs + altoSep / 2));
     s.visible = k >= 0;
     grupo.add(s);
     seps.push(s); base.push(x);
@@ -890,7 +910,7 @@ function construirCintaMonedas() {
   } catch (e) { console.warn('platinas M18: se usa el inserto impreso', e); platinas = []; }
   construirBanda(grupo, 'monedas', { x0, x1, y, zs, ancho, paso, altoSep: 0.004,
     ventanas: [est[0][0], est[1][0]], insertos: platinas.length === 0, fabricaRodillo });
-  if (platinas.length) { grupo.add(...platinas); registrar('estructura', ...platinas); }
+  if (platinas.length) { grupo.add(...platinas); registrar('estructura', ...platinas); reemplazar(...platinas); }
   // Rieles laterales (perfil 2020) a los dos lados de la bancada: la
   // sostienen y llevan los cojinetes de los rodillos. Las patas van debajo
   // de los rieles, POR FUERA de la banda, para que el retorno pase libre.
@@ -900,6 +920,7 @@ function construirCintaMonedas() {
   const rieles = [-1, 1].map((l) => perfil(Vxyz(x0 - 0.035, y + l * yRiel, zs - 0.012), Vxyz(x1 + 0.016, y + l * yRiel, zs - 0.012)));
   grupo.add(...rieles);
   registrar('estructura', ...rieles);
+  reemplazar(...rieles);
   // Cojinetes 608ZZ de los dos rodillos, a los dos lados (el de la cabeza
   // es tensor: colisos y tornillo que lo empuja hacia afuera).
   try {
@@ -913,6 +934,7 @@ function construirCintaMonedas() {
     }
     grupo.add(...cojs);
     registrar('cinta_monedas', ...cojs);
+    for (const c of cojs) reemplazarImpreso(c);   // los bloques son mon_rod_*; el 608 queda
   } catch (e) { console.warn('cojinetes de la cinta de monedas', e); }
   // Patas: dos en la cola (fuera de la viga del portico) y una en el
   // extremo de descarga del lado +y; del lado -y ese extremo APOYA sobre la
@@ -948,6 +970,7 @@ function construirCintaMonedas() {
   } catch (e) { console.warn('escuadras de la mesa de monedas', e); }
   grupo.add(...patas, ...piesMesa, ...travesanos, ...escuadras);
   registrar('estructura', ...patas, ...piesMesa, ...travesanos, ...escuadras);
+  reemplazar(...patas, ...piesMesa, ...travesanos, ...escuadras);
   P.apoyoMesaMonedas = { x: xPD, y: y - yRiel, zArriba: zs - 0.022 };   // el taco se pone con el portico
   // Retorno de la banda (revision de solapes, 2026-09-27). Con rodillos de Ø22 el retorno iria
   // derecho a ~429 mm y atravesaria el capacitivo y el inductivo M18, que cuelgan 50-60 mm bajo
@@ -972,6 +995,7 @@ function construirCintaMonedas() {
     grupo.add(r, eje, ...placas);
     registrar('cinta_monedas', r, eje);
     registrar('estructura', ...placas);
+    reemplazar(...placas);                     // mon_ret_*
   };
   const zAB = zs - 0.108;                              // eje de A y B: la banda pasa ~10-12 mm bajo los cables
   const xA = x0 - 0.003, xB = est[1][0] + 0.021, xC = est[1][0] + 0.075, zC = zs - 0.0332;   // C: 2 mm antes del brazo del embudo de E4
@@ -1024,6 +1048,7 @@ function construirCintaMonedas() {
   for (const lado of [-1, 1]) {
     const guia = caja(x1 - x0, 0.002, 0.006, COLOR.impreso, Vxyz((x0 + x1) / 2, y + lado * (ancho / 2 + 0.001), zs + 0.003));
     grupo.add(guia);
+    reemplazar(guia);
   }
   est.forEach((p, i) => {
     const e = etiqueta(NOMBRES_E_MONEDAS[i], { alto: 0.0085, prioridad: 0.08 });
@@ -1086,6 +1111,8 @@ function construirCintaMonedas() {
   const canalB = canalU(inicioB, finB, 0.03, 0.012, 0x8a3a3a, { transparent: true, opacity: 0.85 });
   const brazoEmb = barra(Vxyz(fx - 0.018, y - 0.012, zEmbAbajo), Vxyz(x1 - 0.012, y - ancho / 2 - 0.013, zs - 0.0235), 0.002, MAT_ALU);
   grupo.add(emb, desvio, servoDesvio, canalA, embCarga, canalB, brazoEmb);
+  // E4, canales, embudo de carga (alm_embudo) y la aleta (mon_aleta, se cuelga de `desvio`)
+  reemplazar(emb, canalA, embCarga, canalB, brazoEmb, ...desvio.children);
   // Poste propio hasta el piso, justo debajo: a los lados bajan los dos
   // canales (al carrusel y al rechazo) y adelante esta el rodillo.
   if (desvioDetallado) try {
@@ -1104,6 +1131,7 @@ function construirCintaMonedas() {
     const oreja = LM.crearOrejaBisagra({ idComponente: 'canal_e7' });
     oreja.position.copy(Vxyz(fx - 0.0125, y, zPivote));
     grupo.add(brida, pieD, posteD, tacoD, oreja);
+    reemplazar(brida, pieD, posteD, tacoD, oreja);
     registrar('servo_desvio_e7', brida);
     registrar('estructura', pieD, posteD, tacoD);
     registrar('canal_e7', oreja);
@@ -1136,6 +1164,7 @@ function construirCintaMonedas() {
   }
   grupo.add(cubFinal);
   registrar('canaletas_rechazo', cubFinal);
+  reemplazar(cubFinal);
   const etRf = etiqueta('Bandeja de rechazo', { alto: 0.01, color: '#e5534b' });
   etRf.position.copy(Vxyz(rf[0], rf[1], 0.06));
   grupo.add(etRf);
@@ -1180,6 +1209,7 @@ function construirCintaMonedas() {
     acople.rotation.x = Math.PI / 2;
     grupo.add(jaula, acople);
     registrar('estructura', jaula);
+    reemplazar(jaula);
     registrar('cinta_monedas', acople);
     // El acople y el eje del motor giran con los rodillos (moverCinta).
     CINTAS.monedas.rodillos.push(acople);
@@ -1209,7 +1239,8 @@ function construirCintaVasos() {
   const hV = G.vaso.altura, rBoca = G.vaso.diametro / 2 + G.vaso.reborde;
   const grupo = new THREE.Group();
 
-  construirBanda(grupo, 'vasos', { x0, x1, y, zs, ancho, paso, altoSep: 0.015 });
+  // Maqueta impresa: los separadores van recortados 3 mm del lado -y (cinta_vasos.scad, vas_recorte_sep).
+  construirBanda(grupo, 'vasos', { x0, x1, y, zs, ancho, paso, altoSep: 0.015, recorteSep: MAQ ? 0.003 : 0 });
   // Casillas que encajan la base del vaso: un taco impreso con dos caras concavas pegado a cada
   // separador (avanza con el); abierto hacia los lados para el empujador y la caida al final.
   try {
@@ -1217,6 +1248,7 @@ function construirCintaVasos() {
       const t = PIEZAS_VASOS.crearTacoCasilla({ paso, rBase: G.vaso.diametro / 2 * 0.86, idComponente: 'cinta_vasos' });
       t.position.y = -0.015 / 2;   // pie del separador (la caja del separador esta centrada en su alto)
       s.add(t);
+      reemplazar(t);                           // vas_taco_* (se cuelgan del mismo separador)
     }
   } catch (e) { console.warn('tacos de casilla: sin tacos', e); }
   // Bastidor: placas laterales de aluminio de 4 mm a los dos lados de la bancada, con los
@@ -1226,7 +1258,10 @@ function construirCintaVasos() {
     caja(x1 - x0 + 0.03, 0.004, 0.034, COLOR.aluminio, Vxyz((x0 + x1) / 2, yl, zb + 0.003), { metalness: 0.75, roughness: 0.38 }));
   grupo.add(...ladosBastidor);
   registrar('estructura', ...ladosBastidor);
+  reemplazar(...ladosBastidor);                 // vas_lat_*
+  const nMesa = grupo.children.length;
   mesa(grupo, [x0 + 0.02, x1 - 0.02], [y - 0.03, y + 0.03], zb, 'estructura');
+  reemplazar(...grupo.children.slice(nMesa));
   est.forEach((p, i) => {
     const e = etiqueta(NOMBRES_E_VASOS[i], { alto: 0.011, prioridad: 0.08 });
     e.position.copy(Vxyz(p[0], y - 0.075, zs + 0.004));
@@ -1253,12 +1288,17 @@ function construirCintaVasos() {
   }
   grupo.add(...portico);
   registrar('estructura', ...portico);
+  reemplazar(...portico);
   P.portico = { y: yP, z: zViga };
+  // Maqueta impresa: la viga del portico es el tubo t_P1-P2 (eje en y -40,5, z 400); los cables la siguen.
+  const viga = MAQ && MAQ.piezas.get('t_P1-P2_1');
+  if (viga) { viga.geometry.computeBoundingBox(); P.portico.y = -viga.geometry.boundingBox.getCenter(new THREE.Vector3()).z; }
   // Taco impreso: el extremo -y de la mesa de monedas apoya en la viga.
   const am = P.apoyoMesaMonedas;
   const taco = caja(0.02, 0.02, am.zArriba - (zViga + 0.01), COLOR.impreso, Vxyz(am.x, am.y, (am.zArriba + zViga + 0.01) / 2));
   grupo.add(taco);
   registrar('estructura', taco);
+  reemplazar(taco);
 
   // Panel de luz detras de verificacion, llenado, tapa y prensa: la camara
   // de vasos ve cada casilla a contraluz (silueta nitida, sin depender de la
@@ -1293,6 +1333,7 @@ function construirCintaVasos() {
   }
   grupo.add(panel, ...marco);
   registrar('panel_luz', panel, ...marco);
+  reemplazar(panel, ...marco);                  // vas_panel_a/b: caja de luz impresa con la tira LED
 
   construirAlmacen(grupo);
 
@@ -1315,6 +1356,12 @@ function construirCintaVasos() {
     const colgante = [perfil(Vxyz(xt, yP, zViga - 0.01), Vxyz(xt, yCol, zViga - 0.01), 0.012),
       perfil(Vxyz(xt, yCol, zViga - 0.01), Vxyz(xt, yCol, zTubo0 + 0.026), 0.012)];
     grupo.add(...colgante);
+    // tap_tubo (tubo y cabezal en una pieza), abrazaderas, colgante y dedos (estos se cuelgan de los
+    // dedos del visor, que siguen animandose con poner()); quedan servo, cuerno, pernos y tapas.
+    reemplazar(...colgante, ...tt.children.filter((o) => o.isMesh && o.name !== 'tubo' && !/^tapa_/.test(o.name)),
+      tt.getObjectByName('tubo'), ...ud.dedos.flatMap((d) => d.children));
+    reemplazarImpreso(tt);
+    for (const t of ud.pila) for (const m of t.children) REEMPLAZADAS.delete(m);
     registrar('tubo_tapas', ...tt.children.filter((o) => o !== ud.servo && o.name !== 'escape'));
     registrar('servo_tapas', ...ud.motor);
     registrar('estructura', ...colgante);
@@ -1375,6 +1422,16 @@ function construirCintaVasos() {
     const ud = pr.userData;
     registrar('motor_prensa', ...ud.motor);
     registrar('estructura', ...ud.fijas);
+    // tap_pre_placa (con los separadores), buje, leva, plato, horquilla y rodillo; quedan servo,
+    // vastago, collar, resortes y el eje del rodillo.
+    // El limitador y el collar no van en la fisica (tapas_prensa_empujador.scad): del piston quedan
+    // el vastago, el neopreno y el eje del rodillo.
+    reemplazar(...ud.fijas, ...ud.leva.children);
+    reemplazarImpreso(pr);
+    for (const o of ud.piston.children) {
+      const queda = o.name === 'vastago' || (o.isMesh && (o.material.color.getHex() === 0x151515 || o.geometry.parameters?.radiusTop === 0.0015));
+      if (!queda) reemplazar(o);
+    }
     P.prensa = { piston: ud.piston, leva: ud.leva, zPiston: ud.zPiston, exc: ud.exc };
     pr.updateMatrixWorld(true);
     P.rutasServo.motor_prensa = [pr.getObjectByName('pin_servo_prensa_CABLE').getWorldPosition(new THREE.Vector3())];
@@ -1426,6 +1483,13 @@ function construirCintaVasos() {
     const ud = em.userData;
     registrar('servo_empujador', ...ud.motor);
     registrar('estructura', ...ud.fijas);
+    // tap_emp_*: soporte, placa del servo, carro, paleta, manivela y biela. Quedan servo, varillas,
+    // pernos y la goma de la paleta.
+    reemplazarImpreso(em);
+    reemplazar(...ud.biela.children, ...ud.paleta.children.filter((o) => o.isMesh && o.material.color.getHex() === 0x2a8c46));
+    // Goma de la paleta como en la fisica: 52 x 46 mm, de z 144 a 190 (antes 56 x 49 desde z 141).
+    const goma = ud.paleta.children.find((o) => o.isMesh && o.material.color.getHex() === 0x151515);
+    if (MAQ && goma) { goma.scale.set(52 / 56, 46 / 49, 1); goma.position.y += 0.0015; }
     P.empujador = { paleta: ud.paleta, biela: ud.biela, horn: ud.manivela, xd, y, zs, yReposo: yEmpReposo, yFin: yEmpFin, poner: ud.poner };
     em.updateMatrixWorld(true);
     const pinEmp = em.getObjectByName('pin_servo_empujador_CABLE').getWorldPosition(new THREE.Vector3());
@@ -1463,6 +1527,7 @@ function construirCintaVasos() {
   labio.rotation.z = -0.9;
   grupo.add(bandeja, labio);
   registrar('bandeja_rechazo_vasos', bandeja, labio);
+  reemplazar(bandeja, labio);                    // vas_bandeja (con el labio)
   const et = etiqueta('Rechazo de vasos', { alto: 0.01, color: '#e5534b' });
   et.position.copy(Vxyz(bj[0], bj[1], 0.09));
   grupo.add(et);
@@ -1499,6 +1564,7 @@ function construirCintaVasos() {
     nema.userData.conector = nema.getObjectByName('pin_motor_vasos_JST').position.clone();
     P.nemaVasos = nema;
     registrar('motor_cinta_vasos', ac);
+    reemplazarImpreso(ac);                       // vas_placa_motor y los postes de vas_lat_s_a
   } catch (e) {
     console.warn('motor de la cinta de vasos: se usa el modelo simple', e);
     const motor = nema17(Vxyz(x0, y - ancho / 2 - 0.024, zs - 0.011));
@@ -1540,10 +1606,12 @@ function construirAlmacen(grupo) {
   }
   grupo.add(placa);
   registrar('almacen', placa);
+  reemplazar(placa);                             // alm_placa_fija
   for (const [dx, dy] of colgadores) {
     const v = barra(Vxyz(cx + dx, cy + dy, P.portico.z - 0.01), Vxyz(cx + dx, cy + dy, zBase - 0.006), 0.0025, MAT_ALU);
     grupo.add(v);
     registrar('estructura', v);
+    reemplazar(v);                               // las columnas y el puente impresos reemplazan las M5
   }
   // Obturador del agujero y embudo corto al vaso. La bisagra del obturador
   // (eje horizontal) es el eje de un SG90 acostado al lado, por FUERA del
@@ -1587,6 +1655,7 @@ function construirAlmacen(grupo) {
     grupo.add(liston, taco);
     registrar('servo_obturador', brida);
     registrar('estructura', liston, taco);
+    reemplazar(brida, liston, taco);             // el SG90 va en el bolsillo de alm_tolva
     // Coleta del SG90: el servo va parado (su -x mira abajo) y la coleta recta colgaba 36 mm hacia
     // el paso de los vasos (~8 mm de holgura). Se dobla: baja 3 mm al salir del cuerpo, pasa a su
     // espalda (lado contrario al eje, 3,6 mm afuera) y SUBE pegada a ella; el conector JR queda
@@ -1651,6 +1720,7 @@ function construirAlmacen(grupo) {
         brazo.traverse((o) => { if (o.isMesh) o.castShadow = true; });
         brazo.name = 'portacables_obturador';
         escena.add(brazo);
+        reemplazar(brazo);
       }
     } catch (e) { console.warn('portacables del obturador', e); }
   } catch (e) {
@@ -1665,7 +1735,21 @@ function construirAlmacen(grupo) {
   grupo.add(obturador, servoObt, tolva);
   registrar('servo_obturador', obturador, servoObt);
   registrar('almacen', tolva);
+  // Maqueta impresa: aleta alm_obturador (gira en horizontal, ver montarMaqueta) y tolva alm_tolva con el
+  // bolsillo del SG90. El SG90 pasa a su lugar fisico: eje vertical hacia arriba en alm_P, cara de abajo
+  // de las alas a z 253,2, la caja hacia los 150 grados (almacen.scad: alm_en_servo).
+  reemplazar(...obturador.children, tolva);
+  if (MAQ && servoObt && servoObt.getObjectByName('pin_servo_obturador_CABLE')) {
+    const F = MAQ.extras.funcional_mm, [px, py, zsg, v] = F.alm_sg;
+    servoObt.quaternion.copy(yaw(v + 180));       // la caja va hacia -x del servo: -x -> 150 grados
+    servoObt.position.copy(Vxyz(px / 1000, py / 1000, (zsg + 15.9) / 1000));
+    servoObt.updateMatrixWorld(true);
+    const pin = servoObt.getObjectByName('pin_servo_obturador_CABLE').getWorldPosition(new THREE.Vector3());
+    // el cable sale del bolsillo hacia +y (lejos de la tolva y del vaso) y sigue por donde iba
+    P.rutasServo.servo_obturador = [pin, Vxyz(pin.x, -0.05, pin.y)];
+  }
   P.obturador = obturador;
+  P.servoObturador = servoObt;
   P.hueco = hueco;
   P.tolva = Vxyz(tv.salida[0], tv.salida[1], tv.z_abajo);
 
@@ -1696,6 +1780,7 @@ function construirAlmacen(grupo) {
     acople.position.set(0, zAcople, 0);
     carrusel.add(disco, eje, collarin, acople);
     registrar('almacen', disco, eje, collarin);
+    reemplazar(...disco.children.filter((o) => o.name !== 'iman'), collarin);   // alm_disco (el iman queda)
     piezasDetalle = true;
   } catch (e) {
     console.warn('disco del carrusel: se usa el modelo simple', e);
@@ -1737,6 +1822,8 @@ function construirAlmacen(grupo) {
     pila.userData.parte = true;
     carrusel.add(...partes, et, pila);
     registrar('almacen', ...partes);
+    // alm_tambor (los 6 tubos impresos en una pieza); la etiqueta de cada tubo queda
+    for (const pt of partes) { if (pt.isMesh) reemplazar(pt); else reemplazar(...pt.children.filter((o) => o.name !== 'etiqueta')); }
     P.tubos[t.denominacion] = { pila, n: 0, radio: t.radio, alto: t.alto, anguloCasa, vaciarEn: 0 };
   }
   grupo.add(carrusel);
@@ -1749,6 +1836,13 @@ function construirAlmacen(grupo) {
     motor = PIEZAS_ELECTRONICA.crear28BYJ48({ id: 'motor_carrusel', idComponente: 'motor_carrusel' });
     motor.position.copy(Vxyz(cx - 0.008, cy, zMotor));
     motor.rotation.x = Math.PI;                        // eje (+z local) hacia abajo
+    if (MAQ) {
+      // Maqueta impresa: el cuerpo girado 90 grados sobre el eje (corrido 8 mm hacia -y, pestanas a lo
+      // largo de x) para que la oreja no quede sobre la boca del embudo (almacen.scad, alm_byj_c).
+      const [bx, by] = MAQ.extras.funcional_mm.alm_byj_c;
+      motor.position.copy(Vxyz(bx / 1000, by / 1000, zMotor));
+      motor.quaternion.premultiply(yaw(90));
+    }
     const placaM = LM.crearSoporteMotorCarrusel({ idComponente: 'estructura' });
     placaM.position.copy(Vxyz(cx, cy, zMotor));
     const zPletina = P.portico.z - 0.01 - 0.003;
@@ -1768,6 +1862,7 @@ function construirAlmacen(grupo) {
   grupo.add(motor, ...soporte);
   registrar('motor_carrusel', motor, carrusel);
   registrar('estructura', ...soporte);
+  reemplazar(...soporte);                        // alm_puente (placa del motor + horquillas a la viga)
   P.carrusel = { grupo: carrusel, angulo: 0, finGiro: 0, giros: 0, activo: 0, cx, cy, R, zBase,
     carga: ang(al.angulo_carga), agujero: ang(al.angulo_agujero) };
   const et = etiqueta('Almacén tipo revólver', { alto: 0.011, color: '#3fb68b' });
@@ -1931,9 +2026,11 @@ function animarEmbalado(e) {
   const marca = anotarEnAire();
   tubo.vaciarEn = Infinity;             // la pila no baja antes de abrir
   if (v) v.llenando = true;
+  // k = 0 cerrado, 1 abierto: el obturador viejo bajaba girando; el impreso gira en horizontal.
+  const ponerObt = (k) => { o.rotation.x = -1.3 * k; if (P.obturadorImpreso) P.obturadorImpreso(k); };
   const soltar = () => {
-    animar(abrir, (u) => { o.rotation.x = -1.3 * suave(u); }, { dueno: o });
-    animar(abrir, (u) => { o.rotation.x = -1.3 * (1 - suave(u)); }, { retraso: compuerta * 0.75, dueno: o,
+    animar(abrir, (u) => ponerObt(suave(u)), { dueno: o });
+    animar(abrir, (u) => ponerObt(1 - suave(u)), { retraso: compuerta * 0.75, dueno: o,
       fin: () => quitarDelAire(marca) });   // obturador cerrado: el disco ya puede girar
     tubo.vaciarEn = performance.now() + (abrir / VEL) * 1000;
     // La pila baja JUSTO cuando se abre el obturador (con el tubo quieto sobre
@@ -2030,7 +2127,10 @@ function construirCanaleta() {
         nuevo.add(esc);
       }
     }
-    grupo.add(...nuevo.children.slice());
+    const hijos = nuevo.children.slice();
+    grupo.add(...hijos);
+    // Maqueta impresa: postes = tubos de la estructura, cabezales can_cabezal_*; las varillas quedan.
+    reemplazar(...hijos.filter((h) => h.name !== 'riel_canaleta'));
     rielesHechos = true;
   } catch (err) { console.warn('canaleta: rieles y soportes simples', err); }
   if (!rielesHechos) for (const lado of [-1, 1]) {
@@ -2078,7 +2178,9 @@ function construirCanaleta() {
     const dedo = barra(new THREE.Vector3(sx, 0, 0), new THREE.Vector3(sx, 0, largoDedo * (zAdentro.x < 0 ? 1 : -1)), 0.0025, 0xd9261a);
     giro.add(dedo);
   }
-  const servoC = servo(new THREE.Vector3(0, -0.014, 0));
+  // SG90 del escape: con la maqueta impresa, donde lo pone can_soporte_escape (eje en el pivote, cuerpo
+  // de -16,65 a 5,85 mm a lo largo del riel y de 7,5 a 30,2 mm bajo el balancin: canaleta_muelle.scad).
+  const servoC = servo(MAQ ? new THREE.Vector3(-0.00575, -0.01885, 0) : new THREE.Vector3(0, -0.014, 0));
   balancin.add(servoC);
   grupo.add(balancin);
   balancin.updateMatrixWorld(true);
@@ -2097,13 +2199,15 @@ function construirCanaleta() {
     const poste = PIEZAS_ESTRUCTURA.mallaPerfil2020(alto, 'z');
     poste.position.set(posteX, PIEZAS_ESTRUCTURA.ALTO_PIE + alto / 2, zPoste);
     grupo.add(pie, poste);
+    reemplazar(pie, poste);
   } catch (err) {
     console.warn('canaleta: poste del escape simple', err);
     grupo.add(perfil(new THREE.Vector3(posteX, 0, zPoste), new THREE.Vector3(posteX, zTopPoste, zPoste), 0.012));
   }
   // El taco (Ø10 x 4 mm) va ENCIMA de la punta del poste (su centro 2 mm arriba); antes quedaba
   // medio metido en el perfil.
-  soporteServo(grupo, servoC, new THREE.Vector3(posteX, zTopPoste + 0.002, zPoste), 'servo_compuerta_canaleta');
+  reemplazar(...soporteServo(grupo, servoC, new THREE.Vector3(posteX, zTopPoste + 0.002, zPoste), 'servo_compuerta_canaleta'));
+  reemplazar(...giro.children);                // can_balancin (se cuelga de `giro`)
   P.posteCanaleta = new THREE.Vector3(posteX, 0, zPoste);
   // Retener = dedo A adentro: con el signo del eje, el angulo que mete la punta A.
   // Girar theta sobre Y lleva la punta A (+X local) hacia -Z local; si +Z
@@ -2287,6 +2391,8 @@ function construirMuelle() {
     }
   }
   muelle.name = 'muelle';
+  // Maqueta impresa: guias (can_guia_recta/v_*) y topes (can_topes); queda la espuma EVA de los topes.
+  if (MAQ) muelle.traverse((o) => { if (o.isMesh && !(o.material && o.material.color && o.material.color.getHex() === 0xe3c565)) reemplazar(o); });
   const et = etiqueta('Muelle de carga', { alto: 0.01, color: '#e3c565' });
   et.position.copy(Vxyz(x2 - 0.02, -(guiaY + 0.07), 0.03));   // al costado: no tapa la del ESP32
   muelle.add(et);
@@ -3024,13 +3130,15 @@ function orientar(normal) {
 const yaw = (grados) => new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(grados));
 
 // Caja de control (tapa quitada para verla por dentro), ordenada como un
-// tablero real: adelante la fila de logica (ESP32, reparto I2C,
-// optoacopladores, PCA9685, ULN2003, drivers), atras la de potencia (fuente,
-// fusibles, reguladores, bornera X2 en carril DIN), y entre y alrededor de
-// las dos filas canaletas ranuradas: todos los hilos van por ellas, ninguno
-// cruza por encima de otra placa. Los cables de campo entran por
-// prensaestopas en la pared de adelante, el USB por la izquierda y la red por
-// la derecha.
+// tablero real: adelante la fila de logica (ESP32, empalmes de las entradas NPN y
+// del bus I2C 1, PCA9685, ULN2003, drivers), atras la de potencia (fuente, fusible
+// principal, reguladores, empalmes de +12 V / +5 V / GND), y entre y alrededor de
+// las dos filas los haces de hilos atados con bridas a bases adhesivas: todos los
+// hilos van por ellos, ninguno cruza por encima de otra placa. Los cables de campo
+// entran por agujeros con una brida de alivio en la pared de adelante, el USB por la
+// izquierda y el cable de poder de la fuente por la derecha.
+// Ahorro 2026-10-24 (aprobado por el usuario): sin bornera X2, entrada IEC, hub USB,
+// optoacopladores, reparto I2C, canaletas ni prensaestopas, y un solo fusible.
 function construirCajaControl() {
   const grupo = new THREE.Group();
   // 36 x 24 x 8 cm: la fuente sola mide 159 x 97 mm y hacen falta las
@@ -3046,6 +3154,8 @@ function construirCajaControl() {
   try {
     gabinete = PIEZAS_CONTROL.crearGabineteControl({
       largo: ax / MM, ancho: ay / MM, alto: az / MM,
+      conBridas: true,
+      leyenda: '12 V 5 A · fusible 5 A · a la multitoma',
       prensaestopas: [
         // Adelante: senales G1 (el mazo del portico, PG16), motores, servos y cortos (PG7).
         ...[[0.2, 'PG7'], [0.28, 'PG7'], [0.297, 'PG7'], [0.3338, 'PG16'], [0.3725, 'PG7'], [0.405, 'PG7']]
@@ -3056,8 +3166,8 @@ function construirCajaControl() {
         // canaleta lateral (32,5 mm con su tapa) y de los hilos que entran en ella desde las placas.
         { pared: 'izq', u: -47, z: 52, tipo: 'PG7' },     // USB del ESP32
         { pared: 'izq', u: -79, z: 52, tipo: 'PG7' },     // luz 5 V (anillo)
-        // La red NO usa prensaestopas: el cable de poder trae su conector C13 y se enchufa a la
-        // entrada IEC C14 de la pared derecha (antes habia un PG9 vacio al lado).
+        // El cable de poder de la fuente (sin entrada IEC) entra por la pared derecha (8).
+        { pared: 'der', u: 60, z: 30, tipo: 'PG9' },
       ],
       // Ventilador a 54 mm: las tuercas de abajo (z = 38 mm) quedan sobre la canaleta lateral derecha.
       ventilador: { pared: 'der', u: -50, z: 54 },
@@ -3080,55 +3190,39 @@ function construirCajaControl() {
   const z0 = 0.003;
   const en = (dx, dy, z = z0) => Vxyz(bx + dx, by + dy, z);
 
-  // Canaletas ranuradas (25 x 30 mm, grises, con la tapa translucida).
-  // yF a 100,5 mm del centro: la canaleta de adelante deja 7,2 mm libres a la pared, donde van las
-  // contratuercas de los prensaestopas (5 mm reales; antes quedaba pegada a ellas).
+  // Recorridos de los haces de hilos (antes canaletas ranuradas; ahorro 2026-10-24: bridas). Los
+  // hilos siguen el mismo camino (rutaCaja), atados cada ~45 mm con una brida a una base adhesiva
+  // pegada a la placa de montaje.
+  // yF a 100,5 mm del centro: el haz de adelante deja lugar a las bridas de los pasos de cable.
   const DUCTOS = { yF: -0.1005, yM: 0.005, xI: -0.1695, xD: 0.1695 };
-  const matDucto = mat(0x9ca3ad, { roughness: 0.8 });
-  const matTapa = mat(0xc9ced6, { transparent: true, opacity: 0.25, depthWrite: false });
-  // `huecos`: [lado, t, ancho] = tramos de pared cortados donde llega otra canaleta (union en T,
-  // como se corta en el tablero real): por ahi pasan los hilos de una a la otra.
-  const ducto = (dx, dy, largo, alongX, ancho, huecos = []) => {
-    const g = new THREE.Group();
-    const [sx, sy] = alongX ? [largo, ancho] : [ancho, largo];
-    g.add(caja(sx, sy, 0.0015, matDucto, en(dx, dy, z0 + 0.00075)));
+  const matBase = mat(0xe8e8e8, { roughness: 0.7 });
+  const matBrida = mat(0x16181a, { roughness: 0.6 });
+  const haz = new THREE.Group();
+  haz.name = 'bridas_caja';
+  // Una base adhesiva de 10 x 10 mm y su brida (un lazo de 16 mm de ancho alrededor del haz).
+  const brida = (x, y, alongX) => {
+    const [sx, sy] = alongX ? [0.0025, 0.016] : [0.016, 0.0025];
+    haz.add(caja(0.01, 0.01, 0.0025, matBase, en(x, y, z0 + 0.00125)));
     for (const s of [-1, 1]) {
-      const cortes = huecos.filter(([l]) => l === s).map(([, t, w]) => [t - w / 2, t + w / 2]).sort((u, v) => u[0] - v[0]);
-      let t0 = -largo / 2;
-      for (const [c0, c1] of [...cortes, [largo / 2, largo / 2]]) {
-        const L = c0 - t0, tc = (t0 + c0) / 2;
-        if (L > 1e-4) {
-          g.add(alongX ? caja(L, 0.0015, 0.028, matDucto, en(dx + tc, dy + s * ancho / 2, z0 + 0.014))
-            : caja(0.0015, L, 0.028, matDucto, en(dx + s * ancho / 2, dy + tc, z0 + 0.014)));
-        }
-        t0 = c1;
-      }
-      // Ranuras (los "dedos" de la canaleta).
-      const n = Math.floor(largo / 0.008);
-      for (let i = 0; i < n; i++) {
-        const t = -largo / 2 + (i + 0.5) * (largo / n);
-        if (cortes.some(([c0, c1]) => t > c0 - 0.002 && t < c1 + 0.002)) continue;
-        // Terminan 0,4 mm antes del borde de la pared: con la cara de arriba en el mismo plano que
-        // la de la pared, las dos parpadeaban (2026-09-28).
-        const r = alongX ? caja(0.0035, 0.0017, 0.0196, 0x7d848e, en(dx + t, dy + s * ancho / 2, z0 + 0.0178))
-          : caja(0.0017, 0.0035, 0.0196, 0x7d848e, en(dx + s * ancho / 2, dy + t, z0 + 0.0178));
-        g.add(r);
-      }
+      haz.add(alongX ? caja(0.0025, 0.0012, 0.026, matBrida, en(x, y + s * 0.008, z0 + 0.0155))
+        : caja(0.0012, 0.0025, 0.026, matBrida, en(x + s * 0.008, y, z0 + 0.0155)));
     }
-    g.add(caja(sx, sy, 0.001, matTapa, en(dx, dy, z0 + 0.0285)));
-    g.traverse((o) => { o.castShadow = false; });
-    grupo.add(g);
-    registrar('canaletas_caja', g);
+    haz.add(caja(sx, sy, 0.0012, matBrida, en(x, y, z0 + 0.0286)));
   };
-  ducto(0, DUCTOS.yF, 0.339 + 0.02, true, 0.02, [[1, DUCTOS.xI, 0.015], [1, DUCTOS.xD, 0.015]]);
-  ducto(0, DUCTOS.yM, 0.339 + 0.02, true, 0.02, [[-1, DUCTOS.xI, 0.015], [-1, DUCTOS.xD, 0.015], [1, 0, 0.015]]);
-  ducto(DUCTOS.xI, (DUCTOS.yF + DUCTOS.yM) / 2, DUCTOS.yM - DUCTOS.yF - 0.02, false, 0.015);
-  ducto(DUCTOS.xD, (DUCTOS.yF + DUCTOS.yM) / 2, DUCTOS.yM - DUCTOS.yF - 0.02, false, 0.015);
-  // Canaleta de la fila de potencia, pegada a la bornera de la fuente.
-  ducto(0, (DUCTOS.yM + 0.117) / 2 + 0.005, 0.117 - DUCTOS.yM - 0.01, false, 0.015);
+  const conBridas = ([p, q]) => {
+    const L = Math.hypot(q[0] - p[0], q[1] - p[1]), n = Math.max(1, Math.round(L / 0.045));
+    for (let i = 0; i < n; i++) {
+      const t = (i + 0.5) / n;
+      brida(p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t, Math.abs(q[0] - p[0]) > Math.abs(q[1] - p[1]));
+    }
+  };
   DUCTOS.segmentos = [[[DUCTOS.xI, DUCTOS.yF], [DUCTOS.xD, DUCTOS.yF]], [[DUCTOS.xD, DUCTOS.yF], [DUCTOS.xD, DUCTOS.yM]],
     [[DUCTOS.xD, DUCTOS.yM], [DUCTOS.xI, DUCTOS.yM]], [[DUCTOS.xI, DUCTOS.yM], [DUCTOS.xI, DUCTOS.yF]],
     [[0, DUCTOS.yM], [0, 0.108]]];
+  DUCTOS.segmentos.forEach(conBridas);
+  haz.traverse((o) => { o.castShadow = false; });
+  grupo.add(haz);
+  registrar('bridas_caja', haz);
 
   // Fila de logica (adelante) y de potencia (atras). La placa GVS gira 180
   // grados: el USB del ESP32 queda hacia la pared izquierda.
@@ -3156,57 +3250,35 @@ function construirCajaControl() {
   // real: antena a -x, header de EN en -y; conexiones.py (`_shield`, ESP38_ABAJO en -y) ya usa ese
   // mismo pinout, asi que cada ancla `pin_esp32_fijo_G34.S` cae donde la plantilla (+8 mm de
   // punta) y los cables salen de los pines que se ven.
-  // 14 mm mas a la derecha que antes (y el reparto I2C y los optoacopladores 6 mm): la clavija
-  // micro-USB (23 mm con su alivio) deja 9 mm a la canaleta lateral para que el cable suba por
-  // encima de ella hacia su prensaestopas.
+  // 14 mm mas a la derecha que antes: la clavija micro-USB (23 mm con su alivio) deja 9 mm al haz
+  // lateral para que el cable suba por encima de el hacia su paso de la pared.
   conPieza('esp32_fijo', 'crearPlacaGVS38P', grupo, en(-0.103, -0.05), yaw(180), { idComponente: 'esp32_fijo' });
-  conPieza('hub_i2c', 'crearRepartoI2C', grupo, en(-0.039, -0.078), yaw(0), { idComponente: 'reparto_i2c' });
-  conPieza('opto', 'crearPlacaOptoPC817', grupo, en(-0.039, -0.035), yaw(0), { idComponente: 'optoacopladores' });
+  // Empalmes soldados con termoencogible (sin optoacopladores ni reparto I2C, 2026-10-24): los del
+  // bus I2C 1 (con sus pull-ups de 2,2 kOhm en linea) y los de las dos entradas NPN (diodo BAT85 +
+  // pull-up de 10 kOhm), donde estaban esas placas; los de potencia donde estaba la bornera X2.
+  const EMPALMES = {
+    i2c1_sda: [-0.05, -0.062], i2c1_scl: [-0.05, -0.074], i2c1_3v3: [-0.025, -0.062], i2c1_gnd: [-0.025, -0.074],
+    capacitivo_s: [-0.05, -0.03], inductivo_s: [-0.025, -0.03],
+    e12: [0.08, 0.1], e12s: [0.08, 0.087], egnd: [0.11, 0.1], egnd_s: [0.11, 0.087], e5: [0.14, 0.1], e5_gnd: [0.14, 0.087],
+  };
+  for (const [dev, [x, y]] of Object.entries(EMPALMES)) {
+    construirModulo(dev, grupo, en(x, y), yaw(0), { idComponente: 'empalmes', etiquetaSobre: 0 });
+  }
   conPieza('pca9685', 'crearPCA9685', grupo, en(0.02, -0.075), yaw(0), { idComponente: 'pca9685' });
   conPieza('uln2003', 'crearULN2003', grupo, en(0.005, -0.03), yaw(0), { idComponente: 'uln2003' });
   conPieza('drivers', 'crearPlacaDriversPasoAPaso', grupo, en(0.1, -0.05), yaw(0), { idComponente: 'drivers_cintas' });
-  conPieza('fuente', 'crearFuenteLRS150', grupo, en(-0.093, 0.068), yaw(0), { idComponente: 'fuente', etiquetaSobre: 0.045 });
-  conPieza('buck6', 'crearBuckXL4016', grupo, en(0.045, 0.045), yaw(0), { idComponente: 'buck_servos' });
-  conPieza('fusibles', 'crearPortafusibles4', grupo, en(0.045, 0.093), yaw(0), { idComponente: 'fusibles' });
+  // Fuente de 12 V 5 A (110 x 78 mm; antes la LRS-150 de 159 x 97): su bornera queda donde estaba.
+  conPieza('fuente', 'crearFuente12V5A', grupo, en(-0.0685, 0.068), yaw(0), { idComponente: 'fuente', etiquetaSobre: 0.05 });
+  conPieza('buck6', 'crearBuckXL4015', grupo, en(0.045, 0.045), yaw(0), { idComponente: 'buck_servos' });
+  conPieza('fusible', 'crearPortafusible1', grupo, en(0.03, 0.098), yaw(0), { idComponente: 'fusibles' });
   conPieza('buck5', 'crearBuckLM2596', grupo, en(0.115, 0.035), yaw(0), { idComponente: 'buck_5v' });
-  // Bornera X2 sobre su riel DIN TS35, con los puentes (2-3, 5-6, 7 a 13). La pieza trae el riel:
-  // va 7,5 mm mas abajo que la plantilla (que se apoyaba ENCIMA de un riel dibujado aparte).
-  const x2Pieza = conPieza('x2', 'crearBorneraDIN16', grupo, en(0.125, 0.092, z0 + 0.0075), yaw(0),
-    { idComponente: 'bornera_x2', etiquetaSobre: 0.05 }, -0.0075);
-  if (!x2Pieza) {
-    grupo.add(caja(0.105, 0.035, 0.0075, 0xc9ccd1, en(0.125, 0.092, z0 + 0.00375), { metalness: 0.8 }));
-    const tplX2 = plantilla('x2');
-    for (const grupoP of tplX2.puentes) {
-      const xs = grupoP.map((n) => tplX2.pines.find((p) => p.n === n).x);
-      const a = Math.min(...xs), b = Math.max(...xs);
-      grupo.add(caja((b - a) * MM + 0.004, 0.003, 0.004, 0xd23a2a, en(0.125 + (a + b) / 2 * MM, 0.092, z0 + 0.0075 + 0.03)));
-    }
-  }
-  // Entrada de red IEC C14 con interruptor y fusible, en la pared derecha (el frente hacia afuera).
-  // Centrada en y = 44 mm (agente de solapes, 2026-09-27): su cuerpo ocupa 48 mm de ancho y 36 mm
-  // hacia adentro; en y = 56 mm se metia 9 mm en los bornes 13-16 de la bornera X2. Ahora le
-  // deja 3 mm (cuerpo hasta y = 68 mm, bornera desde y = 71 mm).
-  try {
-    const iec = PIEZAS_ELECTRONICA.crearEntradaIEC({ id: 'iec', idComponente: 'entrada_red' });
-    iec.position.copy(en(ax / 2 + 0.0015, 0.044, 0.03));
-    iec.quaternion.copy(yaw(90));
-    grupo.add(iec);
-    registrar('entrada_red', iec);
-    iec.updateMatrix();
-    ['L', 'N', 'PE'].forEach((n) => pinSuelto(`iec.${n}`, grupo,
-      iec.getObjectByName(`pin_iec_${n}`).position.clone().applyMatrix4(iec.matrix),
-      new THREE.Vector3(-1, 0, 0), 'pad', new THREE.Vector3(0, 0, -1)));
-  } catch (e) {
-    console.warn('pieza entrada IEC: se usa el modelo simple', e);
-    const iec = caja(0.012, 0.03, 0.026, 0x111111, en(ax / 2 - 0.003, 0.06, 0.03));
-    const tecla = caja(0.006, 0.01, 0.012, 0xc8241c, en(ax / 2 + 0.005, 0.06, 0.036));
-    grupo.add(iec, tecla);
-    registrar('entrada_red', iec, tecla);
-    ['L', 'N', 'PE'].forEach((n, i) => pinSuelto(`iec.${n}`, grupo, en(ax / 2 - 0.012, 0.052 + i * 0.008, 0.03),
-      new THREE.Vector3(-1, 0, 0), 'pad', new THREE.Vector3(0, 0, -1)));
-  }
-  // Prensaestopas: los pone el gabinete (adelante G1 PG16 + 5 PG7, USB y luz a la izquierda, red a
-  // la derecha). Sin gabinete, los cilindros simples de antes.
+  // Cable de poder de la fuente (sin entrada IEC): entra por el paso con brida de la pared derecha
+  // (el 8 del gabinete) y sus 3 hilos van a los bornes L, N y PE de la fuente.
+  ['L', 'N', 'PE'].forEach((n, i) => pinSuelto(`cable_red.${n}`, grupo, en(ax / 2 - 0.012, 0.056 + i * 0.004, 0.03),
+    new THREE.Vector3(-1, 0, 0), 'pad', new THREE.Vector3(0, 0, -1)));
+  registrar('cable_red', ...(gabinete ? [gabinete.getObjectByName('prensaestopas_8')] : []));
+  // Pasos de cable con brida: los pone el gabinete (adelante G1 grande + 5 chicos, USB y luz a la
+  // izquierda, cable de poder a la derecha). Sin gabinete, los cilindros simples de antes.
   if (!gabinete) {
     const glandes = [];
     for (const [gx, rg] of [[0.2, 0.0055], [0.28, 0.0055], [0.297, 0.0055], [0.3338, 0.011], [0.3725, 0.0055], [0.405, 0.0055]]) {
@@ -3227,13 +3299,7 @@ function construirCajaControl() {
   P.caja = { bx, by, ax, ay, yPared: by - ay / 2, xParedIzq: bx - ax / 2, xParedDer: bx + ax / 2, DUCTOS };
   escena.add(grupo);
 
-  // Hub USB con fuente propia (el portatil necesita 3 USB) y el portatil. Detras de la caja, a
-  // la derecha del portatil: sus puertos miran a la caja con 8 mm libres detras de los enchufes
-  // (antes, en (0,26; 0,30), los USB chocaban con la pared de atras), y el USB-B de subida queda
-  // delante del costado derecho del portatil sin tocarlo.
-  // Posicion del hub desde config/parametros.yaml (puesto_pc): la misma que usa el mapa del carro.
-  const hubC = (G.puesto_pc && G.puesto_pc.hub_centro_mm) || [360, 330];
-  conPieza('hub_usb', 'crearHubUSB4', escena, Vxyz(hubC[0] / 1000, hubC[1] / 1000, 0), yaw(0), { idComponente: 'hub_usb', etiquetaSobre: 0.02 });
+  // El portatil (sin hub USB desde 2026-10-24: el ESP32 fijo y las dos webcams van a sus 3 USB).
   construirLaptop();
   construirEnlaceAsistente();
 }
@@ -3323,6 +3389,7 @@ function construirLaptop() {
     // Pines de los USB de la derecha, en coordenadas del mundo (el portatil esta ampliado).
     [1, 2].forEach((i) => pinSuelto(`pc.USB${i}`, escena, pc.getObjectByName(`pin_pc_USB${i}`).getWorldPosition(new THREE.Vector3()),
       new THREE.Vector3(1, 0, 0), 'usb'));
+    pinSuelto('pc.USB3', escena, pc.getObjectByName('pin_pc_USB3').getWorldPosition(new THREE.Vector3()), new THREE.Vector3(-1, 0, 0), 'usb');
     const etPc = etiqueta('Portátil ASUS TUF Gaming A15 · dibujado ×1,5 para leer la pantalla', { alto: 0.012, alcance: 1.2 });
     // Detras de la planta: con depthTest la planta la tapa; sin el, el rotulo se veia encima de
     // las tomas de la cinta y del material (2026-09-28).
@@ -3485,6 +3552,7 @@ function construirLaptop() {
     const w = pc.localToWorld(Vxyz(xd + 0.0006, y, 0.009));
     pinSuelto(`pc.USB${i + 1}`, escena, w, new THREE.Vector3(1, 0, 0), 'usb');
   });
+  pinSuelto('pc.USB3', escena, pc.localToWorld(Vxyz(xi - 0.0006, -0.006, 0.009)), new THREE.Vector3(-1, 0, 0), 'usb');
   const etPc = etiqueta('Portátil ASUS TUF Gaming A15 · dibujado ×1,5 para leer la pantalla', { alto: 0.012, alcance: 1.2 });
   // Detras de la planta: con depthTest la planta la tapa; sin el, el rotulo se veia encima de
   // las tomas de la cinta y del material (2026-09-28).
@@ -3906,7 +3974,8 @@ function construirCables() {
   // cruzarse; los USB y la red terminan en su clavija.
   const enMundo = (nombre) => { const o = escena.getObjectByName(nombre); return o ? o.getWorldPosition(new THREE.Vector3()) : null; };
   const zPiso = (tipo) => TIPOS_CABLE[tipo].r + 0.0004;          // apoyado en el piso
-  // Prensaestopas del gabinete (piezas/control.js): 0-5 adelante, 6 USB y 7 luz a la izquierda.
+  // Pasos de cable del gabinete (piezas/control.js, con brida desde 2026-10-24): 0-5 adelante, 6 USB
+  // y 7 luz a la izquierda, 8 el cable de poder de la fuente a la derecha.
   const FRENTE_X = [0.2, 0.28, 0.297, 0.3338, 0.3725, 0.405];   // desvio, cinta de vasos, cortina, G1, canaleta, empujador
   const glandula = (i) => {
     const a = enMundo(`ancla_prensa_${i}`), d = enMundo(`ancla_prensa_${i}_adentro`);
@@ -3915,6 +3984,7 @@ function construirCables() {
       const z = i === 3 ? 0.016 : 0.014;
       return { afuera: [FRENTE_X[i], C.yPared - 0.02, z], adentro: [FRENTE_X[i], C.yPared + 0.0075, z] };
     }
+    if (i === 8) return { afuera: [C.xParedDer + 0.01, C.by + 0.06, 0.03], adentro: [C.xParedDer - 0.009, C.by + 0.06, 0.03] };
     const y = C.by + (i === 6 ? -0.047 : -0.079);
     return { afuera: [C.xParedIzq - 0.02, y, 0.052], adentro: [C.xParedIzq + 0.0075, y, 0.052] };
   };
@@ -4082,8 +4152,8 @@ function construirCables() {
     },
   };
 
-  // --- USB y red: por la mesa, cada uno en su carril; terminan en su clavija (USB-A, micro-USB,
-  // USB-B, C13), que se dibuja en la boca del conector.
+  // --- USB y red: por la mesa, cada uno en su carril; terminan en su clavija (USB-A, micro-USB),
+  // que se dibuja en la boca del conector. Sin hub (2026-10-24): van directo al portatil.
   const CLAVIJAS = { A: [16, 8, 22], micro: [11, 6.5, 17], B: [16, 12, 21], C13: [26, 20, 36] };
   const clavija = (boca, dir, tipo) => {
     const [an, al, lg] = CLAVIJAS[tipo];
@@ -4100,8 +4170,9 @@ function construirCables() {
     return S(boca.clone().addScaledVector(d, (lg + 6) * MM));
   };
   const enchufe = (ref, tipo) => clavija(PIN[ref].tip, PIN[ref].dir, tipo);
-  // Carriles detras de la caja, entre su pared de atras y los enchufes del hub (el cable del puerto
-  // mas lejano va en el carril mas cercano a la caja: ninguno cruza a otro al doblar hacia su puerto).
+  // Carriles detras de la caja hacia los USB del costado derecho del portatil: el ESP32 (puerto de
+  // atras, USB2) va en el carril mas cercano a la caja y sube por afuera; la cenital (puerto de
+  // adelante, USB1) en el siguiente y sube por adentro: ninguno cruza al otro.
   const zU = zPiso('usb');
   // Pata de la mesa de monedas bajo el pie del poste de la camara cenital (perfil 2020): los cables
   // de la camara y del anillo bajan pegados a su cara +y.
@@ -4120,10 +4191,12 @@ function construirCables() {
     return mejor || { x0: 0.02, x1: 0.04, y0: 0.03, y1: 0.051 };
   })();
   const yAtras = C.by + C.ay / 2 + 0.0015;                          // cara de afuera de la pared de atras
-  const carril = { P3: yAtras + 0.0075, P2: yAtras + 0.0125, P1: yAtras + 0.0175 };
-  const alPuerto = (puerto, desdeX) => {
-    const e = enchufe(`hub_usb.${puerto}`, 'A');
-    return [[desdeX, carril[puerto], zU], [e[0], carril[puerto], zU], [e[0], e[1] - 0.006, e[2]], e];
+  const carril = { USB2: yAtras + 0.0125, USB1: yAtras + 0.0225 };
+  const subida = { USB1: 0.02, USB2: 0.03 };                         // a cuanto del costado del portatil sube
+  const alPortatil = (puerto, desdeX) => {
+    const e = enchufe(`pc.${puerto}`, 'A');
+    const x = e[0] + subida[puerto];
+    return [[desdeX, carril[puerto], zU], [x, carril[puerto], zU], [x, e[1], zU], [e[0] + 0.006, e[1], e[2]], e];
   };
   Object.assign(RUTAS, {
     // Webcam de vasos: por el piso por la izquierda de las mesas (extension USB de 1 m).
@@ -4135,8 +4208,12 @@ function construirCables() {
       const b = poste ? new THREE.Box3().setFromObject(poste) : null;
       const [px, py0, py1] = b ? [b.max.x, -b.max.z, -b.min.z] : [0.175, -0.445, -0.407];
       const xp = px + 0.0026, yp = (py0 + py1) / 2, yS = py0 - 0.006;
+      // Por la izquierda de las mesas hasta pasar detras de la caja y del frente del portatil, y por
+      // el costado izquierdo del portatil a su USB3 (sin hub, 2026-10-24).
+      const e = enchufe('pc.USB3', 'A');
+      const xL = e[0] - 0.02, yFrente = yAtras + 0.035;
       return [c0, [c0[0] + 0.008, c0[1], c0[2]], [c0[0] + 0.008, c0[1], c0[2] - 0.02], [xp, yp, c0[2] - 0.04], [xp, yp, 0.02],
-        [xp, yS, zU], [-0.168, yS, zU], ...alPuerto('P1', -0.168)];
+        [xp, yS, zU], [-0.168, yS, zU], [-0.168, yFrente, zU], [xL, yFrente, zU], [xL, e[1], zU], [e[0] - 0.006, e[1], e[2]], e];
     },
     // Webcam cenital: baja por el poste hasta su pie (rutaCable), pasa a la cara +y de la pata de la
     // mesa de monedas, baja por ella y va por el piso a su carril.
@@ -4144,37 +4221,24 @@ function construirCables() {
       const r = SENS.camara.rutaCable.map(S);
       const u = r[r.length - 1];
       const x = PATA.x0 + 0.006, y = PATA.y1 + 0.0026;
-      return [...r, [u[0], u[1], u[2] - 0.015], [x, y, u[2] - 0.03], [x, y, 0.025], [x, y + 0.009, zU], ...alPuerto('P2', x)];
+      return [...r, [u[0], u[1], u[2] - 0.015], [x, y, u[2] - 0.03], [x, y, 0.025], [x, y + 0.009, zU], ...alPortatil('USB1', x)];
     },
-    // ESP32: micro-USB, sube por encima de la canaleta lateral, sale por el prensaestopas 6 y va
-    // por el piso junto a la pared izquierda hasta su carril.
+    // ESP32: micro-USB, sube por encima del haz lateral, sale por el paso 6 y va por el piso junto a
+    // la pared izquierda hasta su carril y al USB2 del portatil.
     usb_esp: () => {
       const e = enchufe('esp32_fijo.USB', 'micro');
       const { afuera: a, adentro: d } = glandula(6);
       // Afuera baja entre la bandeja de rechazo de monedas (en el piso) y la pared de la caja.
       const xFuera = C.xParedIzq - 0.016;
       return [e, [e[0] - 0.004, e[1], e[2]], [e[0] - 0.004, e[1], 0.04], [d[0] + 0.012, d[1], a[2]], [d[0] + 0.004, d[1], a[2]], d, a,
-        [a[0] - 0.006, a[1], a[2]], [a[0] - 0.006, a[1] + 0.012, 0.04], [xFuera, a[1] + 0.02, zU], ...alPuerto('P3', xFuera)];
+        [a[0] - 0.006, a[1], a[2]], [a[0] - 0.006, a[1] + 0.012, 0.04], [xFuera, a[1] + 0.02, zU], ...alPortatil('USB2', xFuera)];
     },
-    // Hub -> portatil: sale del USB-B de subida hacia -x, va por el piso junto al portatil (sin
-    // tocar su clavija) y entra al USB1 desde afuera.
-    usb_pc: () => {
-      const h = enchufe('hub_usb.UP', 'B');
-      const p = enchufe('pc.USB1', 'A');
-      const xl = h[0] - 0.0045;
-      const xa = p[0] + 0.016;
-      return [h, [xl, h[1], h[2]], [xl, h[1] + 0.012, zU], [xl, p[1] - 0.035, zU], [xa, p[1] - 0.02, zU], [xa, p[1], p[2]], p];
-    },
-    // Red: el cable de poder con su conector C13 enchufado en la entrada IEC (pared derecha).
+    // Cable de poder de la fuente (sin IEC): sale por el paso con brida de la pared derecha y baja al
+    // piso hacia la multitoma con interruptor (fuera de la mesa, a la derecha).
     red: () => {
-      const iec = escena.getObjectByName('entrada_iec');
+      const { afuera: a, adentro: d } = glandula(8);
       const zr = zPiso('red');
-      let e;
-      if (iec) {
-        const q = iec.getWorldQuaternion(new THREE.Quaternion());
-        e = clavija(iec.localToWorld(new THREE.Vector3(-9 * MM, 2.5 * MM, 3.2 * MM)), new THREE.Vector3(0, 0, 1).applyQuaternion(q), 'C13');
-      } else e = [C.xParedDer + 0.04, C.by + 0.056, 0.03];
-      return [e, [e[0] + 0.012, e[1], e[2]], [e[0] + 0.03, e[1], zr], [0.75, e[1], zr]];
+      return [d, a, [a[0] + 0.02, a[1], a[2]], [a[0] + 0.04, a[1], zr], [0.75, a[1], zr]];
     },
   });
 
@@ -4430,6 +4494,7 @@ function construirSensores() {
           const m5 = [-1, 1].map((sx) => cilindro(0.004, 0.003, 0x2a2d31, Vxyz(xCol + sx * 0.0075, yCol, zPie + 0.0015),
             { metalness: 0.85, roughness: 0.3 }, 16));
           obj.objetos.push(cab, tu, col, pie, ...m5);
+          reemplazar(obj.objetos[obj.objetos.length - 8], obj.objetos[obj.objetos.length - 7], col, pie, ...m5);   // mon_fc51
           // Cable: sale del Dupont hacia -y bajo la bandera, pasa por afuera del
           // riel y baja pegado a su cara de afuera.
           const t = PIN['presencia.GND'];
@@ -4502,6 +4567,7 @@ function construirSensores() {
       const brazo = perfil(new THREE.Vector3(xPoste.x, zBrazo, yBorde), new THREE.Vector3(xPoste.x, zBrazo, xPoste.z + 0.005), 0.01);
       const pie = caja(0.016, 0.004, 0.016, 0x30363d, new THREE.Vector3(xPoste.x, zBrazo, yBorde + 0.002));
       obj.objetos.push(escuadra, poste, brazo, pie);
+      reemplazar(escuadra, poste, brazo, pie);      // vas_cortina
       obj.rutaCable = [PIN['vl53_cortina.SDA'].tip.clone().addScaledVector(dir, -0.012), new THREE.Vector3(xPoste.x + 0.007, a.y - 0.004, xPoste.z),
         new THREE.Vector3(xPoste.x + 0.007, zBrazo - 0.007, xPoste.z), new THREE.Vector3(xPoste.x + 0.007, zBrazo - 0.007, yBorde)];
       obj.ancla = a.clone().add(new THREE.Vector3(0, 0.022, 0));
@@ -4546,6 +4612,7 @@ function construirSensores() {
           esc.push(m5);
           escena.add(poste, ...esc);
           registrar('estructura', poste, ...esc);
+          reemplazar(poste, ...esc);               // mon_camara en la punta del brazo t_Q2-L
           // Cable USB: sale de la carcasa hacia -x, va a lo ancho hasta el
           // poste y baja por su cara -x hasta el riel.
           const usb = cam.getObjectByName('pin_cam_cenital_USB').getWorldPosition(new THREE.Vector3());
@@ -4572,6 +4639,7 @@ function construirSensores() {
           obj.objetos.push(cv);
           cv.updateMatrixWorld(true);
           obj.led = cv.userData.led;
+          reemplazar(cv.userData.poste);           // vas_placa_camara sobre el tubo K1-L
           obj.rutaCable = [cv.getObjectByName('pin_cam_vasos_USB').getWorldPosition(new THREE.Vector3()),
             ...cv.userData.puntosPoste.map((q) => cv.localToWorld(q.clone()))];
         } catch (e) {
@@ -4679,6 +4747,7 @@ function construirSensores() {
           // 8 mm corrido en x (agente de solapes, 2026-09-27): justo encima baja la varilla M5 que
           // cuelga la placa fija del almacen (a 30 grados, R 56 mm) y atravesaba este taco.
           obj.objetos.push(caja(0.012, 0.02, 0.006, COLOR.impreso, new THREE.Vector3(colgar.x + 0.008, P.portico.z - 0.01 - 0.003, -P.portico.y)));
+          reemplazar(...obj.objetos.slice(-2));      // la ranura de alm_columna_2 toma el KY-003
         } catch (e) {
           console.warn('KY-003 detallado: se usa el modulo simple', e);
           const centro = p.clone().addScaledVector(fuera, 0.006).add(new THREE.Vector3(0, 0.0035, 0));
@@ -4695,6 +4764,7 @@ function construirSensores() {
           const porta = PIEZAS_VASOS.crearPortaVL53Interior({ sensorId: s.id });
           porta.position.copy(p).add(new THREE.Vector3(0, 0.001, 0));
           obj.objetos.push(porta);
+          reemplazar(porta);                         // tap_sens_porta
           colgar = porta.position.clone().add(porta.userData.colgar);
         } catch (e) {
           console.warn('porta VL53 interior: se usa el modelo simple', e);
@@ -4725,6 +4795,7 @@ function construirSensores() {
         // El Hall llega a su taco 8 mm corrido en x (esquiva la varilla de la placa fija).
         const alPortico = new THREE.Vector3(colgar.x + (s.id === 'hall_carrusel' ? 0.008 : 0), zVarilla, -P.portico.y);
         obj.objetos.push(barra(colgar, arriba, 0.002, MAT_ALU), barra(arriba, alPortico, 0.002, MAT_ALU));
+        reemplazar(...obj.objetos.slice(-2));
         // El cable sale de los pines y sube pegado a la varilla (4 mm al lado).
         const lado = new THREE.Vector3(0.006, 0, 0);
         const pines = s.id === 'hall_carrusel' ? PIN['hall.S'] : PIN['vl53_interior.SCL'];
@@ -5130,7 +5201,10 @@ function sincronizarVasos() {
     if (enCinta.has(s.id)) return;
     const pos = fila.indexOf(s.id);   // 0 = contra la compuerta
     let v = vasos.get(s.id);
-    const objetivo = P.canaleta.fin.clone().addScaledVector(P.canaleta.dir, -(pos * (G.vaso.diametro + 2 * G.vaso.reborde + 0.004) + 0.04))
+    // Maqueta impresa: el vaso que retiene el dedo A descansa 17 mm mas abajo (23 mm del final y no 40;
+    // canaleta_muelle.scad, can_y_ret y el barrido can_vaso).
+    const primero = MAQ ? (MAQ.extras.funcional_mm.can_y_primero - MAQ.extras.funcional_mm.can_y_ret) / Math.cos(Math.PI / 12) : 0;
+    const objetivo = P.canaleta.fin.clone().addScaledVector(P.canaleta.dir, -(pos * (G.vaso.diametro + 2 * G.vaso.reborde + 0.004) + 0.04 - primero / 1000))
       .add(new THREE.Vector3(0, -G.vaso.altura + 0.002 + G.canaleta.diametro_riel / 2, 0));
     if (!v) {
       // El visor se abrio despues de que este vaso salio de la cinta: se
@@ -5741,6 +5815,93 @@ async function consultar() {
 // (piezas/optimizar.js explica que se une y que no). ?sinoptimizar deja la escena como se
 // construyo (para comparar); ?auditar muestra el resumen en window.__visor.optimizacion.
 let resumenOptimizacion = null;
+
+// ---------------------------------------------------------------------------
+// maqueta impresa (maqueta_impresa/modelo_3d.py -> maqueta_impresa.glb)
+// ---------------------------------------------------------------------------
+
+// El GLB viene embebido en visor-portable.html (window.__MAQUETA, base64) o se pide a la carpeta del
+// visor. ?sinmaqueta deja el modelo de antes (perfil 2020, aluminio, acrilico) para comparar.
+async function cargarMaqueta() {
+  if (new URLSearchParams(location.search).has('sinmaqueta')) return null;
+  try {
+    let buf;
+    if (window.__MAQUETA) buf = PIEZAS_MAQUETA.base64ABuffer(window.__MAQUETA);
+    else {
+      const r = await fetch('./maqueta_impresa.glb', { cache: 'no-store' });
+      if (!r.ok) throw new Error(`maqueta_impresa.glb: ${r.status}`);
+      buf = await r.arrayBuffer();
+    }
+    return PIEZAS_MAQUETA.leerMaquetaGLB(buf);
+  } catch (e) {
+    console.warn('maqueta impresa: se deja el modelo de antes', e);
+    return null;
+  }
+}
+
+// Componente (pestana Componentes, resaltado) de cada pieza impresa, por su nombre.
+function componenteDePieza(n) {
+  const reglas = [[/^tap_pre/, 'motor_prensa'], [/^tap_emp/, 'servo_empujador'], [/^tap_dedo/, 'servo_tapas'],
+    [/^tap_(tubo|abr|colgante)/, 'tubo_tapas'], [/^alm_obturador/, 'servo_obturador'], [/^alm_embudo/, 'canal_e7'],
+    [/^alm_(disco|tambor|placa_fija|tolva)/, 'almacen'], [/^mon_(e4|aleta)/, 'canal_e7'],
+    [/^mon_(canal_b|bandeja|soporte_b)/, 'canaletas_rechazo'], [/^vas_bandeja/, 'bandeja_rechazo_vasos'],
+    [/^vas_panel/, 'panel_luz'], [/^vas_taco/, 'cinta_vasos'], [/^can_(cabezal|prisionero)/, 'canaleta_entrega'],
+    [/^can_(balancin|soporte_escape)/, 'servo_compuerta_canaleta'], [/^can_(guia|topes)/, 'muelle_carga']];
+  return (reglas.find(([r]) => r.test(n)) || [null, 'estructura'])[1];
+}
+
+// Pone la maqueta en la escena: lo quieto queda tal cual (ya viene en su lugar); cada parte que se
+// mueve se cuelga (attach: no cambia donde se ve) del objeto que el visor ya anima, que gira o se
+// corre sobre el mismo pivote que la pieza fisica (extras del GLB). El obturador es la excepcion:
+// el impreso gira 70 grados en horizontal sobre el eje del SG90 (P.obturadorImpreso). Al final se
+// saca de la escena todo lo que la maqueta reemplaza (REEMPLAZADAS).
+function montarMaqueta() {
+  if (!MAQ) return;
+  escena.add(MAQ.grupo);
+  escena.updateMatrixWorld(true);
+  const destino = {
+    carrusel: P.carrusel && P.carrusel.grupo, desvio: P.desvio, leva: P.prensa && P.prensa.leva,
+    piston: P.prensa && P.prensa.piston, dedo_a: P.tapas && P.tapas.dedos && P.tapas.dedos[0],
+    dedo_b: P.tapas && P.tapas.dedos && P.tapas.dedos[1], paleta: P.empujador && P.empujador.paleta,
+    manivela: P.empujador && P.empujador.horn, biela: P.empujador && P.empujador.biela, escape: P.escape && P.escape.giro,
+  };
+  const centro = (m) => { m.geometry.computeBoundingBox(); return m.geometry.boundingBox.getCenter(new THREE.Vector3()); };
+  for (const m of [...MAQ.piezas.values()]) {
+    const id = componenteDePieza(m.name);
+    m.userData.idComponente = id;
+    registrar(id, m);
+    const mov = m.userData.movil;
+    if (!mov) continue;
+    let padre = destino[mov];
+    if (mov === 'obturador') {
+      const piv = new THREE.Group();
+      piv.name = 'pivote_obturador_impreso';
+      piv.position.copy(V(m.userData.pivote));
+      escena.add(piv);
+      piv.updateMatrixWorld(true);
+      const abre = THREE.MathUtils.degToRad(m.userData.recorrido[1]);
+      const cuerno = P.servoObturador && P.servoObturador.getObjectByName('cuerno');
+      const base = cuerno ? cuerno.rotation.y : 0;
+      P.obturadorImpreso = (k) => { piv.rotation.y = abre * k; if (cuerno) cuerno.rotation.y = base + abre * k; };
+      P.pivoteObturador = piv;
+      padre = piv;
+    } else if (mov === 'banda_vasos' && CINTAS.vasos) {
+      // cada mitad de taco va pegada al separador mas cercano (avanza y reaparece con el)
+      // (el par que va en la vuelta de abajo de la banda queda quieto: el visor no dibuja separadores ahi)
+      const c = centro(m);
+      const dx = (s) => Math.abs(s.getWorldPosition(new THREE.Vector3()).x - c.x);
+      const sep = CINTAS.vasos.seps.reduce((a, b) => (dx(b) < dx(a) ? b : a));
+      padre = dx(sep) < 0.03 && c.y > sep.getWorldPosition(new THREE.Vector3()).y - 0.01 ? sep : null;
+      if (!padre) continue;
+    }
+    if (padre) padre.attach(m);
+    else console.warn(`maqueta impresa: ${m.name} queda quieta (no esta ${mov} en el visor)`);
+  }
+  for (const o of REEMPLAZADAS) o.removeFromParent();
+  const enEscena = (o) => { for (let q = o; q; q = q.parent) if (q === escena) return true; return false; };
+  for (const id of Object.keys(COMP)) COMP[id] = COMP[id].filter(enEscena);
+  for (const sen of Object.values(SENS)) sen.objetos = sen.objetos.filter(enEscena);
+}
 function optimizar() {
   if (new URLSearchParams(location.search).has('sinoptimizar')) return;
   try {
@@ -5869,6 +6030,7 @@ async function iniciar() {
   if (EN_ARCHIVO) ui.vigilarSimulacion();
   ui.vigilarInternet();
   ui.pintarModo();
+  MAQ = await cargarMaqueta();
   construirCintaMonedas();
   construirCintaVasos();
   construirCanaleta();
@@ -5879,6 +6041,7 @@ async function iniciar() {
   construirSensores();
   construirCables();
   ui.iniciarCables();
+  montarMaqueta();
   for (const s of Object.values(SENS)) s.marcador.userData.baseX = s.marcador.scale.x, s.marcador.userData.baseY = s.marcador.scale.y;
   ajustarSombra();
   optimizar();
@@ -5912,7 +6075,7 @@ async function iniciar() {
 if (new URLSearchParams(location.search).has('auditar')) window.__visor = { THREE, escena, COMP, SENS, P, CABLES, G: () => G, camara, controles, PIN, PINES_REALES, renderer, vista, vuelo: () => vuelo,
   // Rendimiento: renderer.info (llamadas de dibujo, triangulos, geometrias, texturas) y lo que unio optimizar().
   info: () => ({ calls: renderer.info.render.calls, triangulos: renderer.info.render.triangles, ...renderer.info.memory, programas: renderer.info.programs.length }),
-  optimizacion: () => resumenOptimizacion, ETIQUETAS };
+  optimizacion: () => resumenOptimizacion, ETIQUETAS, MAQ: () => MAQ, REEMPLAZADAS };
 
 // La interfaz: le pasa lo que necesita de la escena (interfaz.js no toca Three.js).
 const ui = crearInterfaz({

@@ -10,13 +10,14 @@ Que hace este modulo (Python puro: numpy y, si esta, matplotlib; NO usa PyBullet
    cintas con los tiempos de `config/parametros.yaml`, los servos en el orden de la
    seccion 5 de docs/especificacion.md, prensa y empujador nunca a la vez) y un recorrido del
    carro (arranque, rectas, curvas, evasion de los 3 muros, meta, vuelta, muelle).
-   Resultado: corriente de cada riel contra el tiempo, pico, promedio, margen de
-   cada fusible y regulador, disipacion, consumo desde la red y autonomia.
+   Resultado: corriente de cada riel contra el tiempo, pico, promedio, margen del
+   fusible principal y de cada regulador, disipacion (y el calor dentro de la caja, que
+   decide el ventilador), consumo desde la red y autonomia.
 3. Asigna a CADA hilo de `sim/conexiones.py` (la fuente unica del conexionado) su
    voltaje, su corriente nominal y pico, su calibre (AWG), su largo, su caida de
    tension y la proteccion que lo cubre.
-4. Calcula los pasivos (Vref del A4988, divisor del ECHO, pull-ups, optoacoplador,
-   condensadores, PWM de los motores TT) con la formula a la vista.
+4. Calcula los pasivos (Vref del A4988, divisor del ECHO, pull-ups, entrada NPN con
+   diodo, condensadores, PWM de los motores TT) con la formula a la vista.
 5. `generar_markdown()` arma `docs/electrica.md`; `python -m sim.electrica` lo
    escribe junto con las graficas `docs/capturas/electrica-ciclo-*.png`.
 
@@ -59,6 +60,10 @@ def cargar_parametros() -> dict:
 # la del hilo positivo y la del GND.
 OHM_POR_M = {18: 0.021, 20: 0.033, 22: 0.053, 24: 0.084, 26: 0.134, 28: 0.213}
 
+# Largos de los USB al portatil (sin hub, 2026-10-24): recorrido del visor (boton Cables: 1,48 / 1,74 /
+# 0,73 m) + 20 % de holgura. La webcam de vasos necesita su extension USB de 1 m (su cable trae ~1,5 m).
+LARGO_USB_CENITAL, LARGO_USB_VASOS, LARGO_USB_ESP = 1.78, 2.09, 0.88
+
 # Largo de los cables de CAMPO medido en el modelo 3D con 20 % de holgura
 # (docs/revision-final.md §4, tabla "Largos de cable"). Es un texto en un .md, no un
 # dato de Python: se copia aqui con la cita, en metros, por id de cable de conexiones.py.
@@ -67,7 +72,8 @@ LARGOS_CAMPO_M = {
     "servo_0": 0.63, "servo_1": 1.19, "servo_2": 1.11, "servo_3": 0.59, "servo_4": 0.26, "servo_5": 0.70,
     "presencia": 1.18, "capacitivo": 1.18, "inductivo": 1.14, "hall": 0.88,
     "vl53_interior": 1.20, "vl53_cortina": 0.50, "panel_luz": 0.29, "anillo": 1.03,
-    "usb_cenital": 1.30, "usb_vasos": 1.23, "usb_esp": 0.38, "usb_pc": 0.07, "red": 0.28,
+    # USB (2026-10-24, sin hub): del conector de cada uno al puerto del portatil, medido en el visor.
+    "usb_cenital": LARGO_USB_CENITAL, "usb_vasos": LARGO_USB_VASOS, "usb_esp": LARGO_USB_ESP, "red": 1.50,
 }
 # Dentro de la caja: 18,7 m de hilo en 47 hilos (revision-final §4) = 0,40 m de promedio
 # por hilo de potencia; los Dupont de logica son jumpers de 20 cm. Carro: 6,0 m en 42
@@ -77,8 +83,9 @@ LARGO_DUPONT_M = 0.20
 LARGO_CARRO_M = 0.15
 
 # Calibre por tipo de cable (el `tipo` de cada cable de conexiones.py). Por que cada uno:
-# - potencia interna 18 AWG: la bornera V+ del PCA9685 ya va en 18 AWG (conexiones.py) y
-#   por la rama de F1 pueden pasar ~4 A: 18 AWG aguanta ~7 A en haz sin calentarse;
+# - potencia interna 18 AWG: la bornera V+ del PCA9685 ya va en 18 AWG (conexiones.py), por
+#   la salida del buck de 6 V pasan hasta ~4 A y el fusible principal es de 5 A: 18 AWG aguanta
+#   ~7 A en haz sin calentarse;
 # - servos 22 AWG: la extension que dice revision-final §4;
 # - sensores de 12 V: el cable propio del M18 (3 x 0,34 mm² ≈ 22 AWG);
 # - señal / I2C de campo 24 AWG (cable de 3-4 hilos apantallado o trenzado);
@@ -123,17 +130,20 @@ class Riel:
 
 
 RIELES = {
-    "12V": Riel("12V", "12 V de la fuente", 12.0, "Fuente conmutada LRS-150-12 (110 V AC → 12 V DC)", 10.0,
-                "10 A de la fuente (150 W)", "Drivers A4988 (VMOT), sensores capacitivo e inductivo y la entrada de los dos buck."),
-    "6V": Riel("6V", "6 V de los servos", 6.0, "Buck XL4016 desde F1", 8.0,
-               "8 A del XL4016 (≈5 A continuos sin ventilación extra)", "Solo los 6 servos, por la bornera V+ del PCA9685 (con 1000 µF)."),
-    "5V": Riel("5V", "5 V de la caja", 5.0, "Buck LM2596 desde F2", 3.0,
+    "12V": Riel("12V", "12 V de la fuente", 12.0, "Fuente conmutada 12 V 5 A de 60 W (110 V AC → 12 V DC)", 5.0,
+                "5 A de la fuente (60 W)", "Drivers A4988 (VMOT), sensores capacitivo e inductivo y la entrada de los dos buck, "
+                "todo detrás del fusible principal."),
+    "6V": Riel("6V", "6 V de los servos", 6.0, "Buck XL4015 desde el +12 V", 5.0,
+               "5 A del XL4015 (límite de corriente ajustado a ~4,5 A; ≈4 A continuos sin disipador extra)",
+               "Solo los 6 servos, por la bornera V+ del PCA9685 (con 1000 µF)."),
+    "5V": Riel("5V", "5 V de la caja", 5.0, "Buck LM2596 desde el +12 V", 3.0,
                "3 A del LM2596 (≈2 A continuos sin disipador)", "28BYJ-48 del carrusel por el ULN2003, panel de luz, anillo de la cámara, ventilador."),
     "3V3F": Riel("3V3F", "3,3 V del ESP32 fijo", 3.3, "Regulador lineal AMS1117-3.3 del DevKit, desde el USB", 0.6,
                  "≈0,6 A (1 A del AMS1117, limitado por temperatura: 1,7 V de caída)",
                  "El ESP32 y toda la lógica de 3,3 V: sensores de 3 hilos, VL53L0X, lógica del PCA9685 y de los A4988, pull-ups."),
-    "USB": Riel("USB", "5 V del hub USB", 5.0, "Hub USB 2.0 con fuente propia (adaptador 5 V 2 A, PROVISIONAL)", 2.0,
-                "2 A del adaptador del hub; 0,5 A por puerto (USB 2.0)", "ESP32 fijo (datos y alimentación) y las dos webcams."),
+    "USB": Riel("USB", "5 V del USB del ESP32 fijo", 5.0, "Puerto USB del portátil (sin hub desde 2026-10-24)", 0.5,
+                "0,5 A de un puerto USB 2.0 (un USB 3 da 0,9 A)",
+                "ESP32 fijo (datos y alimentación) y su lógica de 3,3 V. Cada webcam va a su propio puerto del portátil."),
     "BAT": Riel("BAT", "Batería 2S del carro", 7.4, "2 × 18650 2500 mAh con BMS 2S (6,0-8,4 V)", 3.0,
                 "3 A del fusible del carro (el BMS 2S típico corta en 3-5 A)", "Motores TT por el TB6612 y el regulador de 5 V de la placa."),
     "5VC": Riel("5VC", "5 V del carro", 5.0, "Regulador de la placa GVS (lineal tipo AMS1117-5.0) desde la batería", 1.0,
@@ -151,7 +161,6 @@ CARGAS = {
     # --- 12 V ---
     "nema17": ("12V", 0.19, 0.30, 0.45, "17HS4401 (1,5 Ω/fase) a 1 A/fase con A4988: ver modelo del paso a paso"),
     "sensor_m18": ("12V", 0.008, 0.008, 0.015, "LJC18A3 / LJ18A3-8: consumo sin carga ≤ 10-15 mA"),
-    "opto_led": ("12V", 0.0, 0.0045, 0.0047, "LED del PC817 con 2,2 kΩ desde 12 V (cálculo en pasivos)"),
     # --- 5 V de la caja ---
     "byj48": ("5V", 0.0, 0.15, 0.24, "28BYJ-48 5 V: 50 Ω/bobina → 0,1 A por bobina; medio paso = 1 o 2 bobinas; + LEDs del ULN2003"),
     "panel": ("5V", 0.80, 0.80, 0.85, "Panel LED difuso ~33 × 11 cm: 2 tiras 2835 de 20 LED a ~20 mA (PROVISIONAL)"),
@@ -164,12 +173,11 @@ CARGAS = {
     "ky003": ("3V3F", 0.005, 0.005, 0.010, "KY-003: A3144 ~4,4 mA (máx 9 mA) + LED del módulo"),
     "pca_logica": ("3V3F", 0.006, 0.006, 0.010, "PCA9685: lógica ~6 mA (VCC)"),
     "a4988_logica": ("3V3F", 0.005, 0.005, 0.008, "A4988: VDD de lógica ≤ 8 mA cada uno"),
-    "pullups": ("3V3F", 0.002, 0.003, 0.004, "Pull-ups: I2C 2,2 kΩ (1,5 mA con la línea en bajo), 10 kΩ del Hall y del opto (0,33 mA)"),
+    "pullups": ("3V3F", 0.002, 0.003, 0.004, "Pull-ups: I2C 2,2 kΩ (1,5 mA con la línea en bajo), 10 kΩ del Hall y de las dos entradas NPN (0,33 mA)"),
     "uln_entradas": ("3V3F", 0.0, 0.0014, 0.0028, "Entradas del ULN2003 (2,7 kΩ internas): ~0,7 mA por entrada encendida"),
     # --- USB ---
     "cam_1080": ("USB", 0.25, 0.25, 0.35, "Webcam 1080p con autoenfoque en MJPEG: 0,25-0,35 A"),
     "cam_720": ("USB", 0.20, 0.20, 0.25, "Webcam 720p en MJPEG: ~0,2 A"),
-    "hub": ("USB", 0.05, 0.05, 0.05, "Controlador del hub USB"),
     # --- Carro (lógica del 3,3 V del ESP32 del carro) ---
     "esp32_carro": ("5VC", 0.100, 0.110, 0.240, "ESP32 con ESP-NOW (igual que el fijo)"),
     "ir5": ("5VC", 0.050, 0.050, 0.060, "5 TCRT5000 a 3,3 V: ~10 mA por LED IR"),
@@ -364,33 +372,33 @@ def simular_planta(p: dict | None = None, duracion_s: float = 20.0) -> dict:
 
 
 # Eficiencias (hoja de datos, en el punto de trabajo de este montaje):
-ETA_XL4016 = 0.90       # 12 → 6 V a 1-4 A
-ETA_LM2596 = 0.82       # 12 → 5 V a ~1,5 A (el LM2596 rinde menos que el XL4016)
+ETA_XL4015 = 0.88       # 12 → 6 V a 1-4 A (hoja del XL4015: 88-92 % en ese rango; se toma el bajo)
+ETA_LM2596 = 0.82       # 12 → 5 V a ~1,5 A (el LM2596 rinde menos que el XL4015)
 IQ_BUCK = 0.008         # A que cada buck consume en vacio desde 12 V
-ETA_FUENTE = 0.84       # LRS-150-12 trabajando al ~20-30 % de su carga (a plena carga rinde ~89 %)
-P_VACIO_FUENTE = 0.75   # W de la fuente sin carga (hoja: < 0,75 W)
+ETA_FUENTE = 0.82       # fuente generica de 60 W al ~40-60 % de su carga (las de 12 V 5 A rinden 80-85 %)
+P_VACIO_FUENTE = 1.0    # W de la fuente sin carga (generica: ~0,5-1 W; PROVISIONAL)
 V_RED = 110.0
-FACTOR_POTENCIA = 0.55  # la LRS-150 no tiene PFC: factor de potencia ~0,5-0,6
+FACTOR_POTENCIA = 0.55  # una fuente de 60 W no tiene PFC: factor de potencia ~0,5-0,6
 
 
 def _rieles_planta(tiempo, I: dict, p: dict) -> dict:
     servos = sum(I["servo_" + s] for s in SERVO_MODELO)
     cinco = I["carrusel"] + I["panel"] + I["anillo"] + I["ventilador"]
-    sens12 = 2 * CARGAS["sensor_m18"][2] + 2 * CARGAS["opto_led"][2] * 0.5   # los opto prendidos la mitad del tiempo
+    sens12 = 2 * CARGAS["sensor_m18"][2]                     # sin optoacopladores: solo los dos M18
     uln = np.where(I["carrusel"] > 0, CARGAS["uln_entradas"][2], 0.0)
     tres3 = (I["esp32"] + 2 * CARGAS["vl53"][2] + CARGAS["fc51"][2] + CARGAS["ky003"][2] + CARGAS["pca_logica"][2]
              + 2 * CARGAS["a4988_logica"][2] + CARGAS["pullups"][2] + uln)
     usb_esp = tres3 + 0.005                                                   # lineal: entra lo que sale + reposo
-    hub = usb_esp + CARGAS["cam_1080"][2] + CARGAS["cam_720"][2] + CARGAS["hub"][2]
     drivers = I["nema_m"] + I["nema_v"]
-    f1 = servos * 6.0 / (ETA_XL4016 * 12.0) + IQ_BUCK        # potencia que sale / rendimiento / 12 V
-    f2 = cinco * 5.0 / (ETA_LM2596 * 12.0) + IQ_BUCK
-    f3 = drivers
-    f4 = np.full_like(tiempo, sens12)
-    doce = f1 + f2 + f3 + f4
+    # Ramas del +12 V (todas detras del fusible principal: ya no hay un fusible por rama).
+    b6 = servos * 6.0 / (ETA_XL4015 * 12.0) + IQ_BUCK        # potencia que sale / rendimiento / 12 V
+    b5 = cinco * 5.0 / (ETA_LM2596 * 12.0) + IQ_BUCK
+    sens = np.full_like(tiempo, sens12)
+    doce = b6 + b5 + drivers + sens
     p_red = doce * 12.0 / ETA_FUENTE + P_VACIO_FUENTE
-    series = {"6V": servos, "5V": cinco, "3V3F": tres3, "USB": hub, "USB_ESP": usb_esp, "12V": doce,
-              "F1": f1, "F2": f2, "F3": f3, "F4": f4, "red_W": p_red, "red_A": p_red / (V_RED * FACTOR_POTENCIA)}
+    series = {"6V": servos, "5V": cinco, "3V3F": tres3, "USB": usb_esp, "USB_ESP": usb_esp, "12V": doce,
+              "rama_buck6": b6, "rama_buck5": b5, "rama_drivers": drivers, "rama_sensores": sens,
+              "red_W": p_red, "red_A": p_red / (V_RED * FACTOR_POTENCIA)}
     series.update(I)
     return {"t": tiempo, "series": series}
 
@@ -526,13 +534,16 @@ def estad(serie) -> tuple[float, float]:
     return float(np.mean(serie)), float(np.max(serie))
 
 
-FUSIBLES = {  # nombre: (A, rama de la simulacion, que protege)
-    "F1": (5.0, "F1", "rama de 12 V del buck de 6 V (servos)"),
-    "F2": (2.0, "F2", "rama de 12 V del buck de 5 V"),
-    "F3": (3.0, "F3", "VMOT de los dos A4988"),
-    "F4": (1.0, "F4", "sensores de 12 V y LEDs de los optoacopladores"),
+# Ahorro 2026-10-24: UN fusible principal (lento) en el +12 V a la salida de la fuente, en vez de
+# cuatro (uno por rama). Se dimensiona con esta simulacion: el pico del ciclo y el peor caso con el
+# limite de corriente del XL4015 (`peor_caso_12v`) quedan bajo 5 A; un corto o un motor trabado
+# de forma sostenida lo abren. La fuente de 5 A tiene ademas su propia proteccion de sobrecarga.
+FUSIBLE_PRINCIPAL_A = 5.0
+FUSIBLES = {  # nombre: (A, serie de la simulacion, que protege)
+    "Fusible principal": (FUSIBLE_PRINCIPAL_A, "12V", "todo el +12 V: los dos buck, los drivers y los sensores M18"),
     "F carro": (3.0, "BAT", "todo el carro (después del interruptor)"),
 }
+LIMITE_CC_XL4015_A = 4.5   # A: el trimmer de corriente del XL4015 se deja aqui (bajo sus 5 A)
 
 
 def resumen(planta: dict | None = None, carro: dict | None = None) -> dict:
@@ -554,7 +565,7 @@ def resumen(planta: dict | None = None, carro: dict | None = None) -> dict:
     # Reguladores: potencia que sale, rendimiento, lo que se calienta.
     reg = {}
     p6, p5 = estad(sp["6V"] * 6.0), estad(sp["5V"] * 5.0)
-    reg["XL4016 (6 V)"] = {"sale_W": p6, "eta": ETA_XL4016, "disipa_W": tuple(x * (1 / ETA_XL4016 - 1) for x in p6)}
+    reg["XL4015 (6 V)"] = {"sale_W": p6, "eta": ETA_XL4015, "disipa_W": tuple(x * (1 / ETA_XL4015 - 1) for x in p6)}
     reg["LM2596 (5 V)"] = {"sale_W": p5, "eta": ETA_LM2596, "disipa_W": tuple(x * (1 / ETA_LM2596 - 1) for x in p5)}
     i33 = estad(sp["3V3F"])
     reg["AMS1117-3.3 (ESP32 fijo)"] = {"sale_W": tuple(3.3 * x for x in i33), "eta": 3.3 / 5.0,
@@ -577,24 +588,71 @@ def resumen(planta: dict | None = None, carro: dict | None = None) -> dict:
                  "v_min_pico": carro["v_bateria"] - rieles["BAT"]["pico"] * R_BATERIA,
                  "duty_max": float(max(np.max(sc["duty_izq"]), np.max(sc["duty_der"]))),
                  "i_motor_max": float(max(np.max(sc["motor_izq"]), np.max(sc["motor_der"])))}
+    calor = calor_caja(sp, reg)
     return {"rieles": rieles, "fusibles": fus, "reguladores": reg, "red_W": red_w, "red_A": red_a,
-            "autonomia": autonomia, "planta": planta, "carro": carro, "peores": peores_casos()}
+            "autonomia": autonomia, "planta": planta, "carro": carro, "peores": peores_casos(sp), "calor": calor,
+            "peor_12v": peor_caso_12v(sp)}
 
 
-def peores_casos() -> list[dict]:
+def peor_caso_12v(sp: dict) -> float:
+    """Lo maximo que puede pedir el +12 V (A): el buck de los servos en su limite de corriente
+    (pase lo que pase en el riel de 6 V, el XL4015 no entrega mas que eso) + el pico de las otras
+    ramas en el ciclo. Es lo que tiene que aguantar el fusible principal sin abrir."""
+    b6 = LIMITE_CC_XL4015_A * 6.0 / (ETA_XL4015 * 12.0) + IQ_BUCK
+    return b6 + float(np.max(sp["rama_buck5"])) + float(np.max(sp["rama_drivers"])) + float(np.max(sp["rama_sensores"]))
+
+
+# --- Calor dentro de la caja: decide si hace falta el ventilador ------------------------------
+# Caja de acrilico de 3 mm, 360 x 240 x 80 mm, cerrada con su tapa. Coeficiente global de
+# transferencia (conveccion natural + radiacion por dentro y por fuera, el acrilico casi no suma):
+# 1 / (1/8 + 0,003/0,19 + 1/10) ≈ 4 W/(m²·K). ESTIMADO (sin medir).
+U_CAJA = 4.0
+AREA_CAJA_M2 = 2 * (0.36 * 0.24 + 0.36 * 0.08 + 0.24 * 0.08)
+P_A4988_W = I_TRIP ** 2 * A4988_RDS          # 0,75 W en los transistores de cada driver (siempre, con ENABLE)
+# Pololu (hoja del A4988): "hasta ~1 A por fase sin disipador ni aire forzado", a temperatura de
+# laboratorio (~25 °C). Este montaje usa justo 1 A por fase (I_TRIP).
+I_A4988_SIN_AIRE = 1.0
+
+
+def calor_caja(sp: dict, reg: dict) -> dict:
+    """Calor que se queda dentro de la caja (W, promedio) y cuanto sube la temperatura del aire
+    de adentro sin ventilador: ΔT = P / (U · A)."""
+    p12_sale = float(np.mean(sp["12V"])) * 12.0
+    partes = {
+        "Fuente 12 V 5 A (pérdidas)": p12_sale * (1 / ETA_FUENTE - 1) + P_VACIO_FUENTE,
+        "2 × A4988 (1 A por fase)": 2 * P_A4988_W,
+        "XL4015 (6 V)": reg["XL4015 (6 V)"]["disipa_W"][0],
+        "LM2596 (5 V)": reg["LM2596 (5 V)"]["disipa_W"][0],
+        "AMS1117 del ESP32": reg["AMS1117-3.3 (ESP32 fijo)"]["disipa_W"][0],
+    }
+    total = sum(partes.values())
+    dT = total / (U_CAJA * AREA_CAJA_M2)
+    return {"partes": partes, "total_W": total, "dT_sin_ventilador": dT,
+            "a4988_al_limite": I_TRIP >= I_A4988_SIN_AIRE, "ventilador": True}
+
+
+def peores_casos(sp: dict | None = None) -> list[dict]:
     """Casos que la simulacion normal no recorre, calculados a mano (condiciones limite)."""
     sg, mg = CARGAS["SG90"][3], CARGAS["MG996R"][3]
     todos = 2 * mg + 4 * sg
     con_regla = mg + 4 * sg
-    def f1(i6):
-        return i6 * 6 / (ETA_XL4016 * 12) + IQ_BUCK
+    resto = 0.0 if sp is None else (float(np.max(sp["rama_buck5"])) + float(np.max(sp["rama_drivers"]))
+                                    + float(np.max(sp["rama_sensores"])))
+    def f12(i6):
+        # Lo que pide al +12 V: el XL4015 no entrega mas que su limite de corriente.
+        return min(i6, LIMITE_CC_XL4015_A) * 6 / (ETA_XL4015 * 12) + IQ_BUCK + resto
     motor_100 = 8.4 / (TT_R + TB6612_R)
     motor_70 = 0.70 * 8.4 / (TT_R + TB6612_R)
+    lim6 = RIELES["6V"].limite_a
     return [
         {"caso": "Los 6 servos trabados a la vez (sin la regla prensa/empujador)", "riel": "6 V",
-         "i": todos, "limite": 8.0, "fusible": f"F1: {_n(f1(todos))} A de 5 A"},
-        {"caso": "Prensa trabada + los 4 SG90 trabados (respetando la regla)", "riel": "6 V",
-         "i": con_regla, "limite": 8.0, "fusible": f"F1: {_n(f1(con_regla))} A de 5 A"},
+         "i": todos, "limite": lim6,
+         "fusible": f"principal: {_n(f12(todos))} A de {_n(FUSIBLE_PRINCIPAL_A, 0)} A (el XL4015 se queda en su límite de "
+                    f"{_n(LIMITE_CC_XL4015_A, 1)} A y el riel de 6 V se hunde: los servos se frenan, nada se quema)"},
+        {"caso": "Prensa trabada + los 4 SG90 trabados en los mismos 30 ms (respetando la regla)", "riel": "6 V",
+         "i": con_regla, "limite": lim6,
+         "fusible": f"principal: {_n(f12(con_regla))} A de {_n(FUSIBLE_PRINCIPAL_A, 0)} A (igual que arriba: el XL4015 "
+                    f"lo corta en {_n(LIMITE_CC_XL4015_A, 1)} A unos ms)"},
         {"caso": "Un motor TT trabado con PWM 100 % y batería llena (8,4 V)", "riel": "TB6612 (por canal)",
          "i": motor_100, "limite": TB6612_I_CONT, "fusible": f"2 motores: {_n(2 * motor_100 + 0.4)} A de 3 A"},
         {"caso": "Un motor TT trabado con PWM limitado a 70 %", "riel": "TB6612 (por canal)",
@@ -634,14 +692,23 @@ def pullup_hall(r: float = 10000) -> dict:
     return {"i_ma": 3.3 / r * 1000, "v_bajo": 0.15, "vil_max": VIL_MAX}
 
 
-def opto_pc817(v: float = 12.0, r: float = 2200, vf: float = 1.2, v_npn: float = 1.0, ctr_min: float = 0.5,
-               r_pullup: float = 10000) -> dict:
-    i_f = (v - vf - v_npn) / r
-    i_f_peor = (v * 0.95 - vf - 1.5) / r          # fuente 5 % baja y el NPN del sensor con 1,5 V
-    i_c_disp = i_f_peor * ctr_min
-    i_c_nec = 3.3 / r_pullup
-    return {"i_f_ma": i_f * 1000, "i_f_peor_ma": i_f_peor * 1000, "ic_disp_ma": i_c_disp * 1000,
-            "ic_nec_ma": i_c_nec * 1000, "satura": i_c_disp > 2 * i_c_nec, "p_r_mw": (v - vf - v_npn) ** 2 / r * 1000}
+# Entrada NPN sin optoacoplador (2026-10-24): GPIO con pull-up de 10 kΩ a 3,3 V y un diodo en serie
+# hacia la salida del sensor (catodo al sensor). Al detectar, el NPN conduce y el pin queda en
+# V_ce(sat) + V_f del diodo: tiene que ser < 0,825 V (VIL del ESP32). Con el sensor libre el diodo
+# queda en inverso aunque el sensor traiga su resistencia a 12 V: al pin solo llega la fuga.
+# V_f a ~0,3 mA (curva V_f-I_f de la hoja de cada diodo):
+DIODOS_ENTRADA = {"BAT85": {"vf": 0.27, "fuga_ua": 2.0, "nota": "Schottky de señal: V_f ≤ 0,24 V a 0,1 mA y ≤ 0,32 V a 1 mA"},
+                  "1N4148": {"vf": 0.55, "fuga_ua": 0.025, "nota": "de silicio: ~0,5 V a 0,1 mA y ~0,62 V a 1 mA"}}
+DIODO_ENTRADA = "BAT85"
+V_CE_NPN = 0.3      # V: salida NPN del M18 conduciendo ~0,3 mA (la hoja da ≤ 1,5 V a su corriente nominal de 200 mA)
+
+
+def entrada_npn(diodo: str = DIODO_ENTRADA, r_pullup: float = 10000, v_ce: float = V_CE_NPN) -> dict:
+    d = DIODOS_ENTRADA[diodo]
+    i = (3.3 - v_ce - d["vf"]) / r_pullup
+    v_bajo = v_ce + d["vf"]
+    return {"diodo": diodo, "v_bajo": v_bajo, "margen_v": VIL_MAX - v_bajo, "lee_cero": v_bajo < VIL_MAX,
+            "i_ma": i * 1000, "v_alto": 3.3 + d["fuga_ua"] * 1e-6 * r_pullup, "nota": d["nota"]}
 
 
 def condensadores() -> dict:
@@ -685,37 +752,33 @@ def electrica_hilo(cable: dict, hilo: dict, R: dict) -> dict:
         return {"v": v, "nivel": nivel, "i": corr, "prot": prot}
 
     mA = lambda n, p_: (n / 1000, p_ / 1000)
+    FP = f"fusible principal {_n(FUSIBLE_PRINCIPAL_A, 0)} A"
     if cid == "p_red":
         if "tierra" in fl:
             return {"v": 0.0, "nivel": "tierra de protección (PE)", "i": (0.0, 0.0), "prot": "—"}
         return {"v": 0.0 if "neutro" in fl else V_RED, "nivel": "110 V AC" if "fase" in fl else "neutro (≈0 V)",
-                "i": _i(sp["red_A"]), "prot": "fusible de la entrada IEC"}
+                "i": _i(sp["red_A"]), "prot": "fusible interno de entrada de la fuente (y el de la multitoma, si trae)"}
     if cid == "p_12":
-        i = _i(sp["12V"])
-        if "gnd" in fl:
-            i = (i[0] / 2, i[1] / 2)                   # dos hilos de GND en paralelo (-V1 y -V2)
-        return gnd_o(12.0, "+12 V DC", i, "límite de la fuente (10 A)")
+        if "+12" in f:
+            return {"v": 12.0, "nivel": "+12 V DC", "i": _i(sp["12V"]), "prot": "límite de la fuente (5 A), antes del fusible"}
+        serie = sp["rama_sensores"] if "egnd_s" in a else sp["12V"] - sp["rama_sensores"]
+        return gnd_o(12.0, "+12 V DC", _i(serie), FP)
+    if cid == "p_e12":
+        return {"v": 12.0, "nivel": "+12 V DC", "i": _i(sp["rama_sensores"] if "e12s" in a else sp["12V"]), "prot": FP}
     if cid == "p_buck6":
-        if "IN" in de or "IN" in a:
-            return gnd_o(12.0, "+12 V DC", _i(sp["F1"]), "F1 5 A")
-        return gnd_o(6.0, "+6 V DC", _i(sp["6V"]), "F1 5 A (del lado de 12 V)")
+        return gnd_o(12.0, "+12 V DC", _i(sp["rama_buck6"]), FP)
     if cid == "p_buck5":
         if "IN" in de or "IN" in a:
-            return gnd_o(12.0, "+12 V DC", _i(sp["F2"]), "F2 2 A")
-        return gnd_o(5.0, "+5 V DC", _i(sp["5V"] - sp["ventilador"]), "F2 2 A (del lado de 12 V)")
-    if cid == "p_f3f4":
-        return {"v": 12.0, "nivel": "+12 V DC", "i": _i(sp["F3"] if "F3" in de else sp["F4"]),
-                "prot": "F3 3 A" if "F3" in de else "F4 1 A"}
+            return gnd_o(12.0, "+12 V DC", _i(sp["rama_buck5"]), FP)
+        return gnd_o(5.0, "+5 V DC", _i(sp["5V"]), FP + " (del lado de 12 V)")
     if cid == "p_pca":
-        return gnd_o(6.0, "+6 V DC", _i(sp["6V"]), "F1 5 A")
+        return gnd_o(6.0, "+6 V DC", _i(sp["6V"]), f"límite de corriente del XL4015 ({_n(LIMITE_CC_XL4015_A, 1)} A) + " + FP)
     if cid == "p_drv":
-        return gnd_o(12.0, "+12 V DC", _i(sp["F3"]), "F3 3 A")
+        return gnd_o(12.0, "+12 V DC", _i(sp["rama_drivers"]), FP)
     if cid == "p_uln":
-        return gnd_o(5.0, "+5 V DC", _i(sp["carrusel"]), "F2 2 A")
-    if cid == "p_opto":
-        return {"v": 12.0, "nivel": "+12 V DC", "i": mA(4.5, 9.4), "prot": "F4 1 A"}
+        return gnd_o(5.0, "+5 V DC", _i(sp["carrusel"]), FP + " (del lado de 12 V)")
     if cid == "p_vent":
-        return gnd_o(5.0, "+5 V DC", _i(sp["ventilador"]), "F2 2 A")
+        return gnd_o(5.0, "+5 V DC", _i(sp["ventilador"]), FP + " (del lado de 12 V)")
     if cid == "p_gnd":
         return {"v": 0.0, "nivel": "0 V (une el GND del USB con el de la fuente)", "i": mA(5, 20),
                 "prot": "— (solo retornos de señal)"}
@@ -732,11 +795,15 @@ def electrica_hilo(cable: dict, hilo: dict, R: dict) -> dict:
                 "i": mA(0.01, 0.02), "prot": "—"}
     if cid == "l_uln":
         return {"v": 3.3, "nivel": "lógica 0/3,3 V → base del Darlington", "i": mA(0.7, 0.7), "prot": "—"}
-    if cid == "l_opto":
-        if "3,3" in f or "gnd" in fl:
-            return gnd_o(3.3, "+3,3 V (pull-ups)", mA(0.66, 0.66), "regulador del ESP32")
-        return {"v": 3.3, "nivel": "0/3,3 V (activo en bajo)", "i": mA(0.33, 0.33), "prot": "—"}
+    if cid == "l_npn":
+        e = entrada_npn()
+        if "pull-up" in fl:
+            return {"v": 3.3, "nivel": "+3,3 V por la pull-up de 10 kΩ", "i": mA(e["i_ma"], e["i_ma"]), "prot": "regulador del ESP32"}
+        return {"v": 3.3, "nivel": f"0/3,3 V (activo en bajo: ~{_n(e['v_bajo'])} V al detectar)", "i": mA(0.01, e["i_ma"]),
+                "prot": f"diodo {e['diodo']} (bloquea los 12 V del sensor)"}
     if cid == "l_i2c1":
+        if "pull-up" in fl:
+            return {"v": 3.3, "nivel": "+3,3 V por la pull-up de 2,2 kΩ", "i": mA(0.5, 1.5), "prot": "regulador del ESP32"}
         if "3,3" in f or "gnd" in fl:
             return gnd_o(3.3, "+3,3 V", mA(38, 80), "regulador del ESP32")
         return {"v": 3.3, "nivel": "I2C 0/3,3 V, 100 kHz (pull-ups 2,2 kΩ)", "i": mA(0.5, 1.5), "prot": "—"}
@@ -745,11 +812,14 @@ def electrica_hilo(cable: dict, hilo: dict, R: dict) -> dict:
             return {"v": 3.3, "nivel": "0/3,3 V (activo en bajo)", "i": mA(0.01, 0.33), "prot": "—"}
         return gnd_o(3.3, "+3,3 V", mA(12, 15), "regulador del ESP32")
     if cid in ("capacitivo", "inductivo"):
+        e = entrada_npn()
         if "npn" in fl:
-            return {"v": 12.0, "nivel": "salida NPN: ~11 V libre / <1,5 V al detectar", "i": mA(4.5, 4.7), "prot": "F4 1 A"}
+            return {"v": 12.0, "nivel": f"salida NPN: hasta 12 V libre (el diodo {e['diodo']} la bloquea) / "
+                                        f"~{_n(V_CE_NPN, 1)} V al detectar", "i": mA(0.01, e["i_ma"]),
+                    "prot": f"diodo {e['diodo']} en línea"}
         if "+12" in f:
-            return {"v": 12.0, "nivel": "+12 V DC", "i": mA(8, 15), "prot": "F4 1 A"}
-        return {"v": 0.0, "nivel": "0 V", "i": mA(12.5, 19.7), "prot": "F4 1 A"}
+            return {"v": 12.0, "nivel": "+12 V DC", "i": mA(8, 15), "prot": FP}
+        return {"v": 0.0, "nivel": "0 V", "i": mA(8, 15), "prot": FP}
     if cid == "hall":
         if "señal" in fl:
             return {"v": 3.3, "nivel": "0/3,3 V (colector abierto, pull-up 10 kΩ)", "i": mA(0.33, 0.33), "prot": "—"}
@@ -762,24 +832,23 @@ def electrica_hilo(cable: dict, hilo: dict, R: dict) -> dict:
         return gnd_o(3.3, "+3,3 V", mA(19, 40), "regulador del ESP32")
     if cid in ("motor_monedas", "motor_vasos"):
         return {"v": 12.0, "nivel": "bobina: 12 V troceado por el A4988 (±12 V, ~1,5 V medio)",
-                "i": (I_TRIP / math.sqrt(2), I_TRIP), "prot": "F3 3 A (VMOT)"}
+                "i": (I_TRIP / math.sqrt(2), I_TRIP), "prot": FP + " (VMOT)"}
     if cid == "motor_carrusel":
         if "+5" in f:
-            return {"v": 5.0, "nivel": "+5 V común de las bobinas", "i": (0.15, 0.24), "prot": "F2 2 A"}
-        return {"v": 5.0, "nivel": "5 V / 0 V (el ULN2003 la lleva a GND)", "i": (0.05, 0.1), "prot": "F2 2 A"}
+            return {"v": 5.0, "nivel": "+5 V común de las bobinas", "i": (0.15, 0.24), "prot": FP}
+        return {"v": 5.0, "nivel": "5 V / 0 V (el ULN2003 la lleva a GND)", "i": (0.05, 0.1), "prot": FP}
     if cid.startswith("servo_"):
         nombre = de.split(".")[0].replace("servo_", "")      # "servo_prensa.CABLE" -> "prensa"
         serie = sp["servo_" + nombre]
         if "pwm" in fl:
             return {"v": 3.3, "nivel": "PWM 50 Hz, 0,5-2,5 ms, 0/3,3 V (del PCA9685)", "i": mA(0.05, 0.1), "prot": "—"}
-        return gnd_o(6.0, "+6 V DC", _i(serie), "F1 5 A")
+        return gnd_o(6.0, "+6 V DC", _i(serie), f"límite del XL4015 ({_n(LIMITE_CC_XL4015_A, 1)} A)")
     if cid in ("panel_luz", "anillo"):
-        return gnd_o(5.0, "+5 V DC", _i(sp["panel" if cid == "panel_luz" else "anillo"]), "F2 2 A")
+        return gnd_o(5.0, "+5 V DC", _i(sp["panel" if cid == "panel_luz" else "anillo"]), FP + " (del lado de 12 V)")
     if cid.startswith("usb_"):
-        corr = {"usb_cenital": (0.25, 0.35), "usb_vasos": (0.20, 0.25), "usb_esp": _i(sp["USB_ESP"]),
-                "usb_pc": (0.0, 0.05)}[cid]
+        corr = {"usb_cenital": (0.25, 0.35), "usb_vasos": (0.20, 0.25), "usb_esp": _i(sp["USB_ESP"])}[cid]
         return {"v": 5.0, "nivel": "USB 2.0: VBUS 5 V + datos diferenciales", "i": corr,
-                "prot": "limitador del puerto del hub (0,5 A)"}
+                "prot": "limitador del puerto del portátil (0,5 A en USB 2.0)"}
     if cid == "c_bat":
         if "jack" in a.lower():
             return gnd_o(7.4, "+7,4 V (6,0-8,4 V)", _i(sc["5VC"]), "fusible del carro 3 A")
@@ -858,11 +927,12 @@ def caidas_por_carga(filas: list[dict]) -> list[dict]:
             extra = sum(h["caida"] for h in por_cable["p_pca"])
         out.append({"carga": hs[0]["nombre"], "v_nom": v_nom, "caida": ida + vuelta + extra,
                     "v_carga": v_nom - ida - vuelta - extra, "minimo": tol})
-    # Webcams: VBUS + GND del cable USB (28 AWG) de ida y vuelta.
+    # Webcams: VBUS + GND del cable USB (28 AWG) de ida y vuelta. USB 2.0: el PUERTO da 4,75-5,25 V y
+    # el aparato tiene que funcionar con 4,40 V en SU conector (la norma deja 350 mV para el cable).
     for cid, nombre in (("usb_cenital", "Webcam cenital"), ("usb_vasos", "Webcam de vasos")):
         f = por_cable[cid][0]
         out.append({"carga": nombre + " (cable USB)", "v_nom": 5.0, "caida": 2 * f["caida"],
-                    "v_carga": 5.0 - 2 * f["caida"], "minimo": 4.75})
+                    "v_carga": 5.0 - 2 * f["caida"], "minimo": 4.40})
     return out
 
 
@@ -889,8 +959,7 @@ def generar_graficas(R: dict) -> dict[str, Path] | None:
     salidas = {}
     sp, t = R["planta"]["series"], R["planta"]["t"]
     # Un panel por riel (una sola escala por panel: nada de doble eje), con su limite.
-    paneles = [("12V", "12 V de la fuente (A)", "12V", 10.0), ("6V", "6 V de los servos (A)", "6V", 8.0),
-               ("5V", "5 V de la caja (A)", "5V", 3.0), ("USB", "5 V del hub USB (A)", "USB", 2.0)]
+    paneles = [(k, f"{RIELES[k].nombre} (A)", k, RIELES[k].limite_a) for k in ("12V", "6V", "5V", "USB")]
     fig, ejes = plt.subplots(len(paneles), 1, figsize=(10, 9), sharex=True, facecolor="#fcfcfb")
     for eje, (clave, titulo, rid, lim), color in zip(ejes, paneles, COLORES):
         eje.set_facecolor("#fcfcfb")
@@ -989,23 +1058,23 @@ def generar_markdown(graficas: bool = True) -> str:
     for r in RIELES.values():
         w(f"| **{r.nombre}** | {r.origen} | {r.para_que} | {r.limite_texto} |")
     w("")
-    w("Un **buck** (XL4016, LM2596) es un regulador conmutado: prende y apaga un transistor miles de veces por "
+    w("Un **buck** (XL4015, LM2596) es un regulador conmutado: prende y apaga un transistor miles de veces por "
       "segundo y filtra con una bobina, así que baja el voltaje perdiendo solo ~10-20 % en calor. Un regulador "
       "**lineal** (el AMS1117 del ESP32) quema como calor TODA la diferencia de voltaje por la corriente: sirve "
       "para corrientes chicas o diferencias chicas.\n")
 
     w("## 2. Diagrama de bloques de potencia\n")
     w("```mermaid\nflowchart LR\n"
-      "  RED[\"Red 110 V AC\"] --> IEC[\"Entrada IEC<br/>interruptor + fusible\"] --> FTE[\"Fuente LRS-150<br/>12 V 10 A\"]\n"
-      "  FTE --> FUS{{\"Portafusibles\"}}\n"
-      "  FUS -- \"F1 5 A\" --> B6[\"Buck XL4016<br/>6 V\"] --> PCA[\"PCA9685 V+<br/>1000 µF\"] --> SERV[\"6 servos<br/>2 MG996R + 4 SG90\"]\n"
-      "  FUS -- \"F2 2 A\" --> B5[\"Buck LM2596<br/>5 V\"] --> X5[\"Bornera 5 V\"]\n"
-      "  X5 --> ULN[\"ULN2003 → 28BYJ-48\"]\n  X5 --> LUZ[\"Panel de luz + anillo\"]\n  B5 --> VEN[\"Ventilador\"]\n"
-      "  FUS -- \"F3 3 A\" --> DRV[\"2 × A4988<br/>100 µF c/u\"] --> NEMA[\"2 × NEMA17\"]\n"
-      "  FUS -- \"F4 1 A\" --> S12[\"Capacitivo + inductivo<br/>+ LEDs PC817\"]\n"
-      "  HUB[\"Hub USB con fuente<br/>5 V\"] --> ESP[\"ESP32 fijo<br/>AMS1117 → 3,3 V\"] --> L33[\"Lógica 3,3 V:<br/>FC-51, KY-003, 2 VL53L0X,<br/>PCA9685, A4988, pull-ups\"]\n"
-      "  HUB --> CAMS[\"2 webcams\"]\n  PC[\"Portátil\"] -. datos .- HUB\n"
-      "  FTE -. \"GND en estrella (bornera X2)\" .- ESP\n"
+      "  RED[\"Multitoma con interruptor<br/>110 V AC\"] --> FTE[\"Fuente 12 V 5 A<br/>con su cable\"]\n"
+      "  FTE --> FUS{{\"Fusible principal 5 A\"}} --> E12((\"empalme<br/>+12 V\"))\n"
+      "  E12 --> B6[\"Buck XL4015<br/>6 V 5 A\"] --> PCA[\"PCA9685 V+<br/>1000 µF\"] --> SERV[\"6 servos<br/>2 MG996R + 4 SG90\"]\n"
+      "  E12 --> B5[\"Buck LM2596<br/>5 V\"] --> X5((\"empalme<br/>+5 V\"))\n"
+      "  X5 --> ULN[\"ULN2003 → 28BYJ-48\"]\n  X5 --> LUZ[\"Panel de luz + anillo\"]\n  X5 --> VEN[\"Ventilador\"]\n"
+      "  E12 --> DRV[\"2 × A4988<br/>100 µF c/u\"] --> NEMA[\"2 × NEMA17\"]\n"
+      "  E12 --> S12[\"Capacitivo + inductivo<br/>(diodo + pull-up al GPIO)\"]\n"
+      "  PC[\"Portátil<br/>3 puertos USB\"] --> ESP[\"ESP32 fijo<br/>AMS1117 → 3,3 V\"] --> L33[\"Lógica 3,3 V:<br/>FC-51, KY-003, 2 VL53L0X,<br/>PCA9685, A4988, pull-ups\"]\n"
+      "  PC --> CAMS[\"2 webcams<br/>(un puerto cada una)\"]\n"
+      "  FTE -. \"GND en estrella (bornes −V)\" .- ESP\n"
       "  BAT[\"2 × 18650 + BMS<br/>6,0-8,4 V\"] --> SW[\"Interruptor + fusible 3 A\"]\n"
       "  SW --> TB[\"TB6612<br/>PWM ≤ 70 %\"] --> TT[\"2 motores TT<br/>100 nF c/u\"]\n"
       "  SW --> R5[\"Regulador 5 V<br/>de la placa GVS\"] --> ESPC[\"ESP32 carro → 3,3 V\"] --> LC[\"IR ×5, cuna, encoders, VL53L0X\"]\n"
@@ -1051,12 +1120,17 @@ def generar_markdown(graficas: bool = True) -> str:
     w("")
     w(f"**Consumo desde la red**: {_n(R['red_W'][0],1)} W promedio y {_n(R['red_W'][1],1)} W de pico (fuente al "
       f"{ETA_FUENTE*100:.0f} % de rendimiento a esta carga baja, más {_n(P_VACIO_FUENTE)} W en vacío) → "
-      f"{_n(R['red_A'][0])} A promedio a 110 V (factor de potencia ~{_n(FACTOR_POTENCIA)}: la LRS-150 no tiene PFC). "
-      "Sin contar el portátil ni el adaptador del hub.\n")
+      f"{_n(R['red_A'][0])} A promedio a 110 V (factor de potencia ~{_n(FACTOR_POTENCIA)}: una fuente de 60 W no tiene PFC). "
+      "Sin contar el portátil.\n")
 
     w("### Fusibles\n")
-    w("Un fusible de cuchilla aguanta su corriente nominal indefinidamente y abre con ~2 veces en segundos: los "
-      "picos de 30 ms de un servo no lo abren; lo que protege es un corto o un motor trabado de forma sostenida.\n")
+    w("Desde el 2026-10-24 hay **un solo fusible** en el +12 V, a la salida de la fuente (antes eran cuatro, uno por "
+      "rama). Un fusible lento aguanta su corriente nominal indefinidamente y abre con ~2 veces en segundos: los "
+      "picos de 30 ms de un servo no lo abren; lo que protege es un corto o un motor trabado de forma sostenida. "
+      f"Se dimensionó con esta simulación: el pico del ciclo es {_ma(fu['Fusible principal']['pico'])} y el peor caso "
+      f"posible del +12 V (el XL4015 en su límite de corriente de {_n(LIMITE_CC_XL4015_A, 1)} A más el pico de las otras "
+      f"ramas) es {_n(R['peor_12v'])} A: un fusible lento de **{_n(FUSIBLE_PRINCIPAL_A, 0)} A** no abre en ninguno de los "
+      "dos y queda bajo los 7 A que aguanta el 18 AWG de la caja.\n")
     w("| Fusible | Protege | Promedio | Pico en el ciclo | Margen en el pico |")
     w("|---|---|---|---|---|")
     for nombre, d in fu.items():
@@ -1130,7 +1204,8 @@ def generar_markdown(graficas: bool = True) -> str:
       f"con 4,5 V: {_n(d['v_gpio_echo_bajo'])} V, sigue siendo 1. Consume {_n(d['i_ma'])} mA solo mientras ECHO está alto; "
       f"la resistencia vista es {d['r_thevenin']:.0f} Ω y con ~20 pF el retardo es {d['tau_ns']:.0f} ns (despreciable: "
       "1 mm de distancia son 5,8 µs).\n")
-    for nombre, c in (("bus I2C 1 (largo, 1,7 m)", 170), ("bus I2C 0 (corto, al PCA9685, 10 kΩ del módulo)", 35)):
+    for nombre, c in (("bus I2C 1 (largo, 1,7 m; las dos de 2,2 kΩ soldadas en línea en los empalmes)", 170),
+                      ("bus I2C 0 (corto, al PCA9685, 10 kΩ del módulo)", 35)):
         r = 2200 if "largo" in nombre else 10000
         q = pullup_i2c(r, c)
         w(f"**Pull-ups del {nombre}: {_n(r / 1000, 1)} kΩ con ~{c} pF.** t_r = 0,8473·R·C = **{q['tr_ns']:.0f} ns** "
@@ -1139,12 +1214,25 @@ def generar_markdown(graficas: bool = True) -> str:
     h = pullup_hall()
     w(f"**Pull-up de 10 kΩ del Hall en el GPIO 39** (el 39 no tiene pull-up interno). Con el A3144 conduciendo "
       f"pasan {_n(h['i_ma'])} mA y el pin queda en ~{_n(h['v_bajo'])} V (< {_n(h['vil_max'])} V = 0 seguro); suelto, 3,3 V.\n")
-    o = opto_pc817()
-    w(f"**Optoacoplador PC817 a 12 V (2,2 kΩ).** I_F = (12 − 1,2 V del LED − ~1 V del NPN del sensor)/2,2 kΩ = "
-      f"**{_n(o['i_f_ma'])} mA** (peor caso, fuente 5 % baja y NPN con 1,5 V: {_n(o['i_f_peor_ma'])} mA). Con el CTR "
-      f"mínimo del PC817 (50 %) el transistor puede llevar {_n(o['ic_disp_ma'])} mA y el pull-up de 10 kΩ solo pide "
-      f"{_n(o['ic_nec_ma'])} mA: queda **saturado** (salida < 0,2 V) con {o['ic_disp_ma']/o['ic_nec_ma']:.0f}× de margen, "
-      f"aunque el LED envejezca. La resistencia disipa {o['p_r_mw']:.0f} mW (una de 1/4 W sobra).\n")
+    w("**Entradas del capacitivo y del inductivo sin optoacoplador (2026-10-24).** El cable negro (salida NPN) llega "
+      "al GPIO por un diodo en serie (cátodo hacia el sensor) y el GPIO tiene una pull-up de 10 kΩ a 3,3 V (G35 y G36 "
+      "no tienen pull-up interno). Sensor libre: el diodo queda en inverso aunque el sensor traiga su resistencia a "
+      "12 V, y el pin lee 3,3 V. Sensor detectando: el NPN conduce y el pin queda en V_ce + V_f, que tiene que ser "
+      f"menor que {_n(VIL_MAX, 3)} V (lo máximo que el ESP32 lee como 0). Con V_ce = {_n(V_CE_NPN, 1)} V (la salida a "
+      "0,3 mA; la hoja da ≤ 1,5 V a 200 mA):\n")
+    w("| Diodo | V_f a ~0,3 mA | Pin al detectar | Margen contra 0,825 V | Pin libre |")
+    w("|---|---|---|---|---|")
+    for dd in DIODOS_ENTRADA:
+        e = entrada_npn(dd)
+        ok = "✔" if e["lee_cero"] else "✘"
+        w(f"| {dd}{' (el elegido)' if dd == DIODO_ENTRADA else ''} | {_n(DIODOS_ENTRADA[dd]['vf'])} V ({DIODOS_ENTRADA[dd]['nota']}) | "
+          f"{_n(e['v_bajo'])} V {ok} | {e['margen_v'] * 1000:.0f} mV | {_n(e['v_alto'])} V |")
+    e = entrada_npn()
+    w(f"\nCon un 1N4148 el 0 queda en el borde (cualquier ruido o un sensor con más V_ce lo lee como 1): por eso va un "
+      f"**Schottky {e['diodo']}** (mismo precio). La lógica no cambia: sigue **activa en bajo** "
+      "(`firmware.activo_bajo`: capacitivo e inductivo en `true`, igual que con el PC817). La pull-up gasta "
+      f"{_n(e['i_ma'])} mA mientras el sensor detecta. Lo que se pierde frente al optoacoplador es el aislamiento: un "
+      "cable de 12 V pelado tocando el negro llegaría al diodo, no al pin (el diodo lo bloquea).\n")
     cd = condensadores()
     w(f"**1000 µF en la bornera V+ del PCA9685.** Cuando la prensa arranca pide 2,5 A de golpe; el buck tarda ~100 µs "
       f"en reaccionar y mientras tanto la corriente sale del condensador: ΔV = I·Δt/C = 2,5 A · 100 µs / 1000 µF = "
@@ -1168,6 +1256,21 @@ def generar_markdown(graficas: bool = True) -> str:
     w("\nCon el límite fijo de ~70 % el motor nunca pasa de 5,9 V (batería llena) y, trabado, pide "
       f"{_n(0.7*8.4/(TT_R+TB6612_R))} A: dentro de los 1,2 A continuos del TB6612.\n")
 
+    cal = R["calor"]
+    w("**Calor dentro de la caja (decide el ventilador).** Lo que se queda adentro, en promedio, y cuánto subiría el aire "
+      f"de la caja cerrada SIN ventilador (ΔT = P / (U·A), con U ≈ {_n(U_CAJA, 0)} W/(m²·K) estimado y "
+      f"A = {_n(AREA_CAJA_M2)} m²):\n")
+    w("| Qué | Calor |")
+    w("|---|---|")
+    for k, v in cal["partes"].items():
+        w(f"| {k} | {_n(v)} W |")
+    w(f"| **Total** | **{_n(cal['total_W'])} W** → **+{cal['dT_sin_ventilador']:.0f} °C** sin ventilador |")
+    w(f"\n**Se deja el ventilador** (0,1 A, ~6 000 COP): los A4988 van a {_n(I_TRIP, 1)} A por fase, que es justo el límite "
+      "que da la hoja para usarlos sin disipador ni aire forzado, y esa cifra es a temperatura de laboratorio; con la caja "
+      f"cerrada el aire de adentro sube ~{cal['dT_sin_ventilador']:.0f} °C. Sin aire el driver se protege solo (se apaga "
+      "por temperatura a 165 °C), pero la cinta se detendría en plena sustentación. Quitarlo exigiría bajar la "
+      "corriente a ~0,8 A (menos par) o probarlo en el montaje.\n")
+
     w("## 8. Conclusiones (honestas)\n")
     for texto in conclusiones(R, filas):
         w(f"- {texto}")
@@ -1178,7 +1281,9 @@ def generar_markdown(graficas: bool = True) -> str:
     w("- Consumo real del panel de luz y del anillo (el dato más incierto de la tabla).")
     w("- Qué regulador trae la placa GVS del carro (lineal o conmutado) y su temperatura tras 10 min.")
     w("- Corriente de la batería con el carro andando (pinza o multímetro en serie en el fusible).")
-    w("- Voltaje que le llega a cada webcam (5 V en el conector del hub y en la cámara).")
+    w("- Voltaje que le llega a cada webcam (5 V en el puerto del portátil y en la cámara).")
+    w("- V_ce real de la salida de cada M18 conduciendo (multímetro en el cable negro con el sensor detectando): con "
+      "más de 0,5 V, revisar el margen de la entrada.")
     return "\n".join(L) + "\n"
 
 
@@ -1189,16 +1294,20 @@ def conclusiones(R: dict, filas: list[dict]) -> list[str]:
     mal = [RIELES[k].nombre for k, d in ri.items() if d["pico"] > d["limite"]]
     c.append(f"En el ciclo simulado **{len(ok_rieles)} de {len(ri)} rieles** quedan bajo su límite en el pico"
              + (f"; NO alcanzan: {', '.join(mal)}." if mal else "."))
-    # Peor caso de 12 V: los 6 servos trabados (F1) + el pico de las otras tres ramas.
-    peor12 = 7.8 * 6 / (ETA_XL4016 * 12) + IQ_BUCK + fu["F2"]["pico"] + fu["F3"]["pico"] + fu["F4"]["pico"]
-    c.append(f"La fuente de 12 V 10 A está sobrada en el ciclo normal ({ri['12V']['uso_pico']*100:.0f} % en el pico): "
-             f"se eligió por el peor caso (6 servos trabados + lo demás ≈ {_n(peor12,1)} A). Una de 5 A alcanzaría "
-             "para el ciclo normal pero no para ese peor caso.")
-    c.append(f"El riel de 6 V llega a {_ma(ri['6V']['pico'])} por la prensa apretando la tapa. Sin la regla "
-             "prensa/empujador, los 6 servos trabados a la vez pedirían 7,8 A: justo bajo los 8 A del XL4016 y 4,4 A en F1 "
-             "(5 A): queda **justo**. Por eso la regla vive en la placa (2026-09-28): `firmware/fijo/estacion.py` "
-             "(`EXCLUYENTES`) no deja mover prensa y empujador a la vez aunque el PC los pida juntos: el segundo "
-             "espera a que el primero vuelva a reposo.")
+    peor12 = R["peor_12v"]
+    c.append(f"**Fuente de 12 V 5 A (ahorro 2026-10-24, antes 10 A):** en el ciclo llega a {_ma(ri['12V']['pico'])} "
+             f"({ri['12V']['uso_pico']*100:.0f} % en el pico) y el peor caso posible ({_n(peor12, 1)} A: el XL4015 en su "
+             f"límite de {_n(LIMITE_CC_XL4015_A, 1)} A + el pico de lo demás) también cabe. Los 10 A de antes se habían "
+             "elegido para los 6 servos trabados a la vez (7,8 A en 6 V), que con el buck de 5 A ya no pueden llegar "
+             "a la fuente.")
+    c.append(f"**Buck de servos XL4015 de 5 A (antes XL4016 de 9 A):** el riel de 6 V llega a {_ma(ri['6V']['pico'])} "
+             f"(la prensa apretando la tapa): {ri['6V']['margen']*100:.0f} % de margen. Cabe porque prensa y empujador "
+             "nunca arrancan a la vez: en esta simulación nunca piden corriente juntos y en la placa lo impide "
+             "`firmware/fijo/estacion.py` (`EXCLUYENTES = {\"prensa\": \"empujador\", \"empujador\": \"prensa\"}`: el "
+             "segundo espera a que el primero vuelva a reposo; lo prueba `tests/firmware/test_firmware.py`, "
+             "`test_prensa_y_empujador_nunca_se_mueven_a_la_vez`). Los peores casos con todo trabado a la vez (5,3 A "
+             f"con la regla) pasan los 5 A unos ms: el trimmer de corriente del XL4015 en {_n(LIMITE_CC_XL4015_A, 1)} A "
+             "los corta, el riel de 6 V se hunde y los servos se frenan; nada se quema.")
     fw0 = cargar_parametros()["firmware"]
     c.append("Los NEMA17 consumen casi lo mismo quietos que andando (~0,2 A cada uno de 12 V): el A4988 mantiene la "
              "corriente plena mientras ENABLE esté activo (no tiene corriente de reposo reducida propia). El firmware "
@@ -1207,7 +1316,13 @@ def conclusiones(R: dict, filas: list[dict]) -> list[str]:
              "esperas largas. La cinta indexada no tiene carga que la arrastre y la cámara re-sincroniza igual.")
     lm = rg["LM2596 (5 V)"]
     c.append(f"El LM2596 disipa {_n(lm['disipa_W'][1])} W en el pico con el panel y el anillo prendidos: tibio-caliente "
-             "sin disipador; queda en el flujo del ventilador de la caja, que es donde debe ir.")
+             "sin disipador; queda en el flujo del ventilador de la caja, que es donde debe ir (el ventilador se "
+             "queda: ver el calor de la caja en la sección 7).")
+    e = entrada_npn()
+    c.append(f"**Sin optoacopladores:** el capacitivo y el inductivo van al GPIO con un diodo {e['diodo']} y una pull-up "
+             f"de 10 kΩ: el pin queda en {_n(e['v_bajo'])} V al detectar ({e['margen_v']*1000:.0f} mV bajo el 0 del ESP32) y "
+             "nunca ve los 12 V. Sigue activo en bajo (no cambia nada en el firmware ni en la simulación). Con un 1N4148 el "
+             "margen no alcanza: por eso es Schottky.")
     ams = rg["AMS1117-3.3 (ESP32 fijo)"]
     c.append(f"El regulador del ESP32 fijo carga con toda la lógica de 3,3 V ({_ma(ri['3V3F']['pico'])} de pico, "
              f"{_n(ams['disipa_W'][0])} W de calor): bien, pero no conviene colgarle más sensores de 3,3 V.")
@@ -1236,8 +1351,11 @@ def conclusiones(R: dict, filas: list[dict]) -> list[str]:
              "tubo opuesto y ~7 s una vez por lote).")
     peor_caida = max(caidas_por_carga(filas), key=lambda x: x["caida"])
     c.append(f"Caídas en los cables: la peor es {peor_caida['carga']} con {peor_caida['caida']*1000:.0f} mV en su pico; "
-             "todas las cargas reciben más de su mínimo. Las webcams con su cable USB de 28 AWG quedan cerca de "
-             "los 4,75 V del estándar: por eso van a un hub con fuente propia y no al portátil.")
+             "todas las cargas reciben más de su mínimo. Sin hub (2026-10-24) cada webcam y el ESP32 van a su propio "
+             "puerto del portátil: ninguno pide más de 0,35 A (un USB 2.0 da 0,5 A). El cable de cada webcam es más "
+             f"largo que al hub ({_n(LARGO_USB_CENITAL)} m la cenital y {_n(LARGO_USB_VASOS)} m la de vasos, con holgura): la "
+             "de vasos necesita su extensión USB de 1 m y la cenital también si su cable trae solo 1,5 m. Con los hilos "
+             "de 28 AWG les llegan ~4,7 V: sobre los 4,40 V que la norma USB 2.0 exige que acepte el aparato.")
     c.append(f"Carro: con 2 × 18650 de {CAPACIDAD_MAH} mAh hay {_n(au['h_recorriendo'],1)} h de marcha; la batería no "
              "es un problema para la sustentación.")
     c.append("Todo esto está calculado con corrientes de hoja de datos: son cotas razonables, no mediciones. Los números "
@@ -1253,7 +1371,9 @@ def main() -> None:
     for rid, d in R["rieles"].items():
         print(f"  {RIELES[rid].nombre:28s} pico {d['pico']:.2f} A de {d['limite']:.2f} A (margen {d['margen']*100:.0f} %)")
     for nombre, d in R["fusibles"].items():
-        print(f"  fusible {nombre:8s} pico {d['pico']:.2f} A de {d['amperios']:.0f} A")
+        print(f"  fusible {nombre:18s} pico {d['pico']:.2f} A de {d['amperios']:.0f} A")
+    print(f"  peor caso del +12 V {R['peor_12v']:.2f} A; calor en la caja {R['calor']['total_W']:.1f} W "
+          f"(+{R['calor']['dT_sin_ventilador']:.0f} °C sin ventilador)")
 
 
 if __name__ == "__main__":

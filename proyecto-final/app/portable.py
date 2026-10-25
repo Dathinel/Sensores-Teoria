@@ -17,6 +17,7 @@ todo adentro:
   También los nombres del importmap de index.html que apunten a archivos de la carpeta.
 - Three.js (`three`), las hojas de estilo locales (`<link rel="stylesheet" href="./x.css">` pasa
   a `<style>`), el visor y la demo.
+- La maqueta impresa (`maqueta_impresa.glb`) en base64, `window.__MAQUETA`.
 
     python -m app.portable            # escribe visor-portable.html en la raíz del proyecto
 """
@@ -115,13 +116,16 @@ def generar() -> Path:
     demo = {n: json.loads((VISOR / "demo" / f"{n}.json").read_text(encoding="utf-8"))
             for n in ("geometria", "pasos", "grabacion")}
     importmap = {"three": _modulo(three), **{n: _modulo(c) for n, c in locales.items()}}
+    # Maqueta impresa (python maqueta_impresa/modelo_3d.py): desde file:// el visor no la puede pedir.
+    glb = VISOR / "maqueta_impresa.glb"
+    maqueta = f"window.__MAQUETA = '{base64.b64encode(glb.read_bytes()).decode('ascii')}';\n" if glb.is_file() else ""
 
     html = _estilos_adentro(html)
     inicio = html.index('<script type="importmap">')
     fin = html.index("</script>", html.index('<script type="module"')) + len("</script>")
     scripts = (
         "<!-- visor-portable.html: GENERADO por `python -m app.portable` (no editar a mano). -->\n"
-        f"<script>window.__URL_VIVO = 'http://127.0.0.1:{puerto}/';\n"
+        f"<script>window.__URL_VIVO = 'http://127.0.0.1:{puerto}/';\n{maqueta}"
         f"window.__DEMO = {_json_en_script(demo)};</script>\n"
         '<script type="importmap">\n'
         + json.dumps({"imports": importmap})

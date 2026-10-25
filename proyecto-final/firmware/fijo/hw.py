@@ -162,17 +162,17 @@ class Hardware:
         self.cintas = {"monedas": Cinta(pines.DRIVERS_M_STEP, pines.DRIVERS_M_DIR, mc),
                        "vasos": Cinta(pines.DRIVERS_V_STEP, pines.DRIVERS_V_DIR, mc)}
         self.entradas = {"presencia": Pin(pines.PRESENCIA_OUT, Pin.IN),
-                         "capacitivo": Pin(pines.OPTO_OUT1, Pin.IN),
-                         "inductivo": Pin(pines.OPTO_OUT2, Pin.IN),
+                         "capacitivo": Pin(pines.CAPACITIVO_S, Pin.IN),
+                         "inductivo": Pin(pines.INDUCTIVO_S, Pin.IN),
                          "hall": Pin(pines.HALL_S, Pin.IN)}
         self.carrusel = Carrusel(cfg, lambda: self._digital("hall"))
         # I2C 0, bus corto (G21/G22): PCA9685, cable corto dentro de la caja: 400 kHz.
-        # I2C 1, bus largo (G16/G17, reparto I2C): los dos VL53L0X, con cables LARGOS hasta la
+        # I2C 1, bus largo (G16/G17, empalmes con las pull-ups en linea): los dos VL53L0X, con cables LARGOS hasta la
         # cinta de vasos (~170 pF). A 400 kHz la subida con 2,2 kOhm (~317 ns) pasa
         # los 300 ns que pide la norma; a 100 kHz (1000 ns) cumple con margen. Los
         # VL53L0X leen cada 33 ms: 100 kHz sobra. Valor en firmware.i2c_bus_largo_hz.
         self.pca = PCA9685(I2C(0, sda=Pin(21), scl=Pin(22), freq=400_000))
-        bus2 = SoftI2C(sda=Pin(pines.HUB_I2C_SDA), scl=Pin(pines.HUB_I2C_SCL), freq=cfg["i2c_bus_largo_hz"])
+        bus2 = SoftI2C(sda=Pin(pines.I2C1_SDA), scl=Pin(pines.I2C1_SCL), freq=cfg["i2c_bus_largo_hz"])
         xshut = [Pin(pines.VL53_INTERIOR_XSHUT, Pin.OUT), Pin(pines.VL53_CORTINA_XSHUT, Pin.OUT)]
         apagar_todos(xshut)
         self.interior = Laser(bus2, 0x30, xshut[0])

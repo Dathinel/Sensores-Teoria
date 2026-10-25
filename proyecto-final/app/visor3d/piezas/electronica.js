@@ -819,6 +819,31 @@ export function crearBuckXL4016(opciones = {}) {
   }, { ppm: 14 });
   return _fin(g, opciones, 'Buck XL4016');
 }
+// XL4015 (ahorro 2026-10-24, reemplaza al XL4016 de los servos): modulo CC/CV tipico de
+// 54 × 23 mm con un disipador de 12 × 20 × 10 mm, bobina de Ø12, dos electroliticos, trimmer de
+// voltaje (CV) y de corriente (CC, se deja en ~4,5 A) y bornes IN (-x) / OUT (+x). Pines de `xl4015`.
+export function crearBuckXL4015(opciones = {}) {
+  const { id = 'buck6', serigrafia = true, voltaje = '6.0V' } = opciones;
+  const L = 54, W = 23, T = T_PCB;
+  const g = new THREE.Group();
+  g.name = 'buck_xl4015';
+  _pcb(g, L, W, 0x1d4f9c);
+  _bornes(g, [{ n: 'IN+', x: -23, y: -2.5 }, { n: 'IN-', x: -23, y: 2.5 }], id, T, [-1, 0], { color: 0x2a5fb0 });
+  _bornes(g, [{ n: 'OUT+', x: 23, y: -2.5 }, { n: 'OUT-', x: 23, y: 2.5 }], id, T, [1, 0], { color: 0x2a5fb0 });
+  _disipador(g, -8, 3.5, T, 12, 13, 10);
+  const bob = _ci(g, 6, 7, 0x2c2c2c, 8, 4, T + 3.5, { roughness: 0.5 }, 28, 'bobina');
+  bob.userData.nota = 'bobina de 47 µH';
+  _electrolitico(g, -14, -8, T, 6.3, 11);
+  _trimmer(g, 12.5, -7, T, 'ajuste_cv');
+  _trimmer(g, 2, -7, T, 'ajuste_cc');
+  _led(g, 'led_power', 0xff3b30, 16, 8, T);
+  if (serigrafia) _serigrafia(g, L, W, T, (ctx, x, y, k) => {
+    _texto(ctx, 'IN', x(-23), y(-8.5), k, { tam: 1.2 }); _texto(ctx, 'OUT', x(23), y(-8.5), k, { tam: 1.2 });
+    _texto(ctx, `XL4015 · ${voltaje} 5A`, x(0), y(9.5), k, { tam: 1.1 });
+    _texto(ctx, 'CV  CC', x(8), y(-10.3), k, { tam: 0.9 });
+  }, { ppm: 16 });
+  return _fin(g, opciones, 'Buck XL4015 5 A');
+}
 // LM2596: modulo azul de 43 × 21 mm (ficha tipica "DC-DC LM2596"): LM2596S (TO-263), bobina
 // CD54 de 12 × 12 mm, dos electroliticos de 8 × 10 mm, trimmer 3296 y 4 pads. Pads de `lm2596`.
 export function crearBuckLM2596(opciones = {}) {
@@ -848,9 +873,10 @@ export function crearBuckLM2596(opciones = {}) {
 // Ficha LRS-150: 159 × 97 × 30 mm. Chasis de aluminio con tapa perforada, bornera de barrera de
 // 7 tornillos M3,5 en el extremo +x (L, N, PE, -V, -V, +V, +V; paso 9,5 mm, conexiones.py), LED
 // verde y trimmer V.ADJ junto a la bornera. Anclas en la cabeza de cada tornillo, cable hacia +x.
+// Parametrica: L, W, H y el modelo de la etiqueta (la de 12 V 5 A usa crearFuente12V5A, abajo).
 export function crearFuenteLRS150(opciones = {}) {
-  const { id = 'fuente', serigrafia = true } = opciones;
-  const L = 159, W = 97, H = 30, xB = 73;
+  const { id = 'fuente', serigrafia = true, L = 159, W = 97, H = 30, modelo = 'LRS-150-12', pieza = 'Fuente LRS-150-12' } = opciones;
+  const xB = L / 2 - 6.5;
   const g = new THREE.Group();
   g.name = 'fuente_lrs150';
   _cj(g, L, W, 1.2, 0xa7adb5, 0, 0, 0.6, { metalness: 0.7, roughness: 0.45 }, 'base');
@@ -876,8 +902,8 @@ export function crearFuenteLRS150(opciones = {}) {
     _pin(g, id, n, Pm(xB + 1.5, y, 1.2 + 12 + 2.9), Dm(1, 0, 0));
   });
   _cj(g, 15, W - 4, 0.8, 0xf2f0e8, xB - 0.5, 0, 1.2 + 12 + 5.4, { transparent: true, opacity: 0.25, roughness: 0.2 }, 'tapa_bornera');
-  _led(g, 'led_power', 0x39d353, xB - 2, 40, 1.2 + 12);
-  _cj(g, 4, 4, 3, 0x2d6fd0, xB + 2, 43.5, 1.2 + 12 + 1.5, PLASTICO, 'v_adj');
+  _led(g, 'led_power', 0x39d353, xB - 2, W / 2 - 8.5, 1.2 + 12);
+  _cj(g, 4, 4, 3, 0x2d6fd0, xB + 2, W / 2 - 5, 1.2 + 12 + 1.5, PLASTICO, 'v_adj');
   if (serigrafia) {
     // Perforaciones de la tapa y etiqueta.
     _serigrafia(g, lt, W, H, (ctx, x, y, k) => {
@@ -885,7 +911,7 @@ export function crearFuenteLRS150(opciones = {}) {
       for (let px = -lt / 2 + 8; px < lt / 2 - 4; px += 5) for (let py = -W / 2 + 6; py < W / 2 - 5; py += 5)
         if (Math.abs(px + 10) > 32 || Math.abs(py) > 22) { ctx.beginPath(); ctx.arc(x(px), y(py), 1.3 * k, 0, 2 * Math.PI); ctx.fill(); }
       ctx.fillStyle = '#f4f4f0'; ctx.fillRect(x(-42), y(22), 64 * k, 44 * k);
-      _texto(ctx, 'LRS-150-12', x(-10), y(12), k, { tam: 6, color: '#1a1a1a', peso: 700, fuente: 'Space Grotesk' });
+      _texto(ctx, modelo, x(-10), y(12), k, { tam: 6, color: '#1a1a1a', peso: 700, fuente: 'Space Grotesk' });
       _texto(ctx, 'SWITCHING POWER SUPPLY', x(-10), y(4), k, { tam: 2.6, color: '#333' });
       _texto(ctx, 'INPUT 100-240VAC  OUTPUT 12VDC', x(-10), y(-4), k, { tam: 2.4, color: '#333' });
       _texto(ctx, 'L  N  PE  -V  -V  +V  +V', x(-10), y(-14), k, { tam: 2.4, color: '#1a1a1a' });
@@ -893,7 +919,12 @@ export function crearFuenteLRS150(opciones = {}) {
   }
   g.add(ancla('ancla_tornillo_1', Pm(-L / 2 + 20, -W / 2 + 15, 0)));
   g.add(ancla('ancla_tornillo_2', Pm(-L / 2 + 20, W / 2 - 15, 0)));
-  return _fin(g, opciones, 'Fuente LRS-150-12');
+  return _fin(g, opciones, pieza);
+}
+// Fuente de 12 V 5 A (60 W) de caja metalica, generica (ahorro 2026-10-24): 110 × 78 × 36 mm, la
+// misma bornera de 7 tornillos (L, N, PE, -V, -V, +V, +V) que `fuente60` de conexiones.py.
+export function crearFuente12V5A(opciones = {}) {
+  return crearFuenteLRS150({ L: 110, W: 78, H: 36, modelo: 'S-60-12', pieza: 'Fuente 12 V 5 A (60 W)', ...opciones });
 }
 
 // ---------------------------------------------------------------------------
@@ -927,6 +958,20 @@ export function crearPortafusibles4(opciones = {}) {
     amperios.forEach((a, i) => _texto(ctx, `F${i + 1}`, x(-8 + i * 10.5), y(-15.3), k, { tam: 1.4, color: '#c9ccd1' }));
   });
   return _fin(g, opciones, 'Portafusibles 4 vias');
+}
+
+// Fusible principal (ahorro 2026-10-24): portafusible de cuchilla de 1 via, 30 × 20 × 11 mm, con
+// su fusible ATO de 5 A (canela). Bornes IN (-x) y OUT (+x), como `portafusible1` de conexiones.py.
+export function crearPortafusible1(opciones = {}) {
+  const { id = 'fusible', amperios = 5 } = opciones;
+  const L = 30, W = 20, H = 11;
+  const g = new THREE.Group();
+  g.name = 'portafusible_1';
+  _cj(g, L, W, H, 0x151515, 0, 0, H / 2, { roughness: 0.6 }, 'base');
+  _bornes(g, [{ n: 'IN', x: -10, y: 0 }], id, H, [-1, 0], { color: 0x2a2a2a });
+  _bornes(g, [{ n: 'OUT', x: 10, y: 0 }], id, H, [1, 0], { color: 0x2a2a2a });
+  _fusibleATO(g, 0, 0, H, amperios, 'fusible_principal');
+  return _fin(g, opciones, `Fusible principal ${amperios} A`);
 }
 
 // ---------------------------------------------------------------------------

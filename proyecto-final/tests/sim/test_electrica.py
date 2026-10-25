@@ -53,9 +53,27 @@ def test_la_simulacion_recorre_el_ciclo_con_carga_real(R):
     assert R["autonomia"]["h_recorriendo"] > 1.0
 
 
-def test_peor_caso_con_la_regla_cabe_en_f1():
-    con_regla = el.peores_casos()[1]
-    assert con_regla["i"] < 8.0
+def test_un_solo_fusible_principal_que_cubre_el_pico_simulado(R):
+    """Ahorro 2026-10-24: un fusible (lento) en el +12 V en vez de 4. Tiene que aguantar el pico del
+    ciclo y el peor caso del +12 V (XL4015 en su limite de corriente + lo demas) sin abrir, y no
+    puede ser mayor que lo que da la fuente de 5 A."""
+    planta = {k for k in R["fusibles"] if k != "F carro"}
+    assert planta == {"Fusible principal"}
+    f = R["fusibles"]["Fusible principal"]
+    assert f["pico"] == pytest.approx(R["rieles"]["12V"]["pico"])      # protege TODO el riel de 12 V
+    assert f["pico"] < f["amperios"] and R["peor_12v"] < f["amperios"] <= el.RIELES["12V"].limite_a
+    assert 3.0 < f["pico"] < 3.6                                      # ~3,3 A (docs/electrica.md)
+
+
+def test_buck_de_5a_alcanza_porque_prensa_y_empujador_no_arrancan_juntos(R):
+    sp = R["planta"]["series"]
+    assert el.RIELES["6V"].limite_a == 5.0 and R["rieles"]["6V"]["pico"] < 4.0     # ~3,9 A
+    # Si arrancaran juntos los dos MG996R (2,5 A cada uno) ya no cabria.
+    assert 2 * el.CARGAS["MG996R"][3] >= 5.0
+    assert not ((sp["servo_prensa"] > 0.1) & (sp["servo_empujador"] > 0.1)).any()
+    # Y el firmware lo impide en la placa.
+    from firmware.fijo.estacion import EXCLUYENTES
+    assert EXCLUYENTES == {"prensa": "empujador", "empujador": "prensa"}
 
 
 # ----------------------------------------------------------------------- cada hilo
@@ -92,8 +110,10 @@ def test_pasivos():
     assert el.VIH_MIN < d["v_gpio_echo_bajo"]
     assert el.pullup_i2c(2200, 170)["tr_ns"] < 1000            # bus largo a 100 kHz
     assert abs(el.vref_a4988()[0.068] - 0.544) < 1e-9
-    o = el.opto_pc817()
-    assert o["satura"] and 3 < o["i_f_ma"] < 20                 # PC817: I_F dentro de 50 mA
+    # Entrada NPN sin optoacoplador: con el Schottky el 0 tiene margen; con un 1N4148 no.
+    e = el.entrada_npn()
+    assert e["diodo"] == "BAT85" and e["lee_cero"] and e["margen_v"] > 0.15 and e["v_alto"] < el.V_GPIO_MAX
+    assert not el.entrada_npn("1N4148")["lee_cero"]
     assert el.pullup_hall()["v_bajo"] < el.VIL_MAX
     assert el.pwm_motor_tt()[8.4] == pytest.approx(0.714, abs=0.01)
 
@@ -109,7 +129,7 @@ def test_markdown_se_genera_sin_graficas():
 NOMBRE_GPIO = {"VP": 36, "VN": 39}
 # Pines que en el montaje real van por un modulo que Wokwi no tiene (I2C del PCA9685 y de
 # los VL53L0X): no aparecen en el diagrama.
-SUSTITUIDOS = {"fijo": {"HUB_I2C_SDA", "HUB_I2C_SCL", "VL53_INTERIOR_XSHUT", "VL53_CORTINA_XSHUT"}, "carro": set()}
+SUSTITUIDOS = {"fijo": {"I2C1_SDA", "I2C1_SCL", "VL53_INTERIOR_XSHUT", "VL53_CORTINA_XSHUT"}, "carro": set()}
 # GPIO que SOLO usa Wokwi (servos directos y potenciometros en lugar del PCA9685 y los VL53L0X).
 EXTRA_WOKWI = {"fijo": {2, 5, 12, 15}, "carro": {2}}
 # Que parte del diagrama tiene que estar en cada pin del firmware.
@@ -117,8 +137,8 @@ PARTE = {
     "fijo": {"DRIVERS_M_STEP": "drv_m:STEP", "DRIVERS_M_DIR": "drv_m:DIR", "DRIVERS_V_STEP": "drv_v:STEP",
              "DRIVERS_V_DIR": "drv_v:DIR", "DRIVERS_EN": "drv_m:ENABLE", "ULN2003_IN1": "r_uln_in1:1",
              "ULN2003_IN2": "r_uln_in2:1", "ULN2003_IN3": "r_uln_in3:1", "ULN2003_IN4": "r_uln_in4:1",
-             "PRESENCIA_OUT": "btn_presencia:1.l", "OPTO_OUT1": "btn_capacitivo:1.l",
-             "OPTO_OUT2": "btn_inductivo:1.l", "HALL_S": "btn_hall:1.l"},
+             "PRESENCIA_OUT": "btn_presencia:1.l", "CAPACITIVO_S": "btn_capacitivo:1.l",
+             "INDUCTIVO_S": "btn_inductivo:1.l", "HALL_S": "btn_hall:1.l"},
     "carro": {"TB6612_PWMA": "r_led_pwma:1", "TB6612_AIN1": "r_led_ain1:1", "TB6612_AIN2": "r_led_ain2:1",
               "TB6612_PWMB": "r_led_pwmb:1", "TB6612_BIN1": "r_led_bin1:1", "TB6612_BIN2": "r_led_bin2:1",
               "TB6612_STBY": "r_led_stby:1", "ENC_IZQ_D0": "btn_enc_izq:1.l", "ENC_DER_D0": "btn_enc_der:1.l",

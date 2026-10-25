@@ -1,0 +1,565 @@
+{
+ "piezas": [
+  {
+   "pieza": "prueba_tolerancias",
+   "cantidad": 1,
+   "tanda": 0,
+   "medidas": [
+    68.0,
+    43.6,
+    14.0
+   ],
+   "volumen_cm3": 9.6,
+   "gramos": 6.6,
+   "minutos": 12,
+   "capa": 0.2,
+   "paredes": 3,
+   "relleno": 20,
+   "patron": "giroide",
+   "orientacion": "plana, como sale",
+   "esfuerzo": "ninguno: solo mide encajes",
+   "masa_maciza_g": 11.9
+  },
+  {
+   "pieza": "chasis",
+   "cantidad": 1,
+   "tanda": 1,
+   "medidas": [
+    180.0,
+    120.0,
+    36.0
+   ],
+   "volumen_cm3": 80.0,
+   "gramos": 83.4,
+   "minutos": 120,
+   "capa": 0.2,
+   "paredes": 3,
+   "relleno": 25,
+   "patron": "giroide",
+   "orientacion": "piel abajo, nervios y columnas hacia arriba",
+   "esfuerzo": "flexion y torsion; lleva todo",
+   "masa_maciza_g": 99.2
+  },
+  {
+   "pieza": "barra_tcrt5000",
+   "cantidad": 1,
+   "tanda": 1,
+   "medidas": [
+    40.2,
+    79.0,
+    10.0
+   ],
+   "volumen_cm3": 7.8,
+   "gramos": 5.3,
+   "minutos": 9,
+   "capa": 0.2,
+   "paredes": 3,
+   "relleno": 15,
+   "patron": "rejilla",
+   "orientacion": "de costado (la U acostada, sin puentes)",
+   "esfuerzo": "bajo (golpes leves en el piso)",
+   "masa_maciza_g": 9.7
+  },
+  {
+   "pieza": "porta_baterias",
+   "cantidad": 1,
+   "tanda": 1,
+   "medidas": [
+    45.2,
+    75.0,
+    17.6
+   ],
+   "volumen_cm3": 14.3,
+   "gramos": 14.2,
+   "minutos": 23,
+   "capa": 0.2,
+   "paredes": 3,
+   "relleno": 20,
+   "patron": "giroide",
+   "orientacion": "piso contra la cama",
+   "esfuerzo": "medio (pack de ~95 g, aceleraciones)",
+   "masa_maciza_g": 17.8
+  },
+  {
+   "pieza": "pared_cuna_izq",
+   "cantidad": 1,
+   "tanda": 2,
+   "medidas": [
+    106.0,
+    76.7,
+    12.5
+   ],
+   "volumen_cm3": 25.5,
+   "gramos": 26.0,
+   "minutos": 38,
+   "capa": 0.2,
+   "paredes": 3,
+   "relleno": 20,
+   "patron": "giroide",
+   "orientacion": "acostada, cara del vaso contra la cama",
+   "esfuerzo": "medio: cuelga el vaso (133 g)",
+   "masa_maciza_g": 31.6
+  },
+  {
+   "pieza": "pared_cuna_der",
+   "cantidad": 1,
+   "tanda": 2,
+   "medidas": [
+    106.0,
+    76.7,
+    15.0
+   ],
+   "volumen_cm3": 24.4,
+   "gramos": 25.8,
+   "minutos": 38,
+   "capa": 0.2,
+   "paredes": 3,
+   "relleno": 20,
+   "patron": "giroide",
+   "orientacion": "acostada, cara del vaso contra la cama",
+   "esfuerzo": "medio: cuelga el vaso (133 g)",
+   "masa_maciza_g": 30.3
+  },
+  {
+   "pieza": "mampara",
+   "cantidad": 1,
+   "tanda": 2,
+   "medidas": [
+    78.7,
+    87.0,
+    11.5
+   ],
+   "volumen_cm3": 20.9,
+   "gramos": 18.7,
+   "minutos": 28,
+   "capa": 0.2,
+   "paredes": 3,
+   "relleno": 20,
+   "patron": "giroide",
+   "orientacion": "cara delantera contra la cama",
+   "esfuerzo": "medio: amarra las dos paredes",
+   "masa_maciza_g": 25.9
+  },
+  {
+   "pieza": "zapata_guia",
+   "cantidad": 4,
+   "tanda": 2,
+   "medidas": [
+    24.0,
+    14.0,
+    6.0
+   ],
+   "volumen_cm3": 1.1,
+   "gramos": 0.9,
+   "minutos": 2,
+   "capa": 0.2,
+   "paredes": 2,
+   "relleno": 15,
+   "patron": "rejilla",
+   "orientacion": "cara del vaso contra la cama (lisa para la PTFE)",
+   "esfuerzo": "bajo",
+   "masa_maciza_g": 1.4
+  },
+  {
+   "pieza": "lengueta",
+   "cantidad": 1,
+   "tanda": 2,
+   "medidas": [
+    21.2,
+    32.0,
+    3.0
+   ],
+   "volumen_cm3": 0.6,
+   "gramos": 0.8,
+   "minutos": 2,
+   "capa": 0.2,
+   "paredes": 4,
+   "relleno": 40,
+   "patron": "giroide",
+   "orientacion": "plana",
+   "esfuerzo": "bajo, pero gira en un tornillo",
+   "masa_maciza_g": 0.8
+  },
+  {
+   "pieza": "soporte_motor_izq",
+   "cantidad": 1,
+   "tanda": 3,
+   "medidas": [
+    93.0,
+    25.3,
+    29.2
+   ],
+   "volumen_cm3": 7.2,
+   "gramos": 9.0,
+   "minutos": 18,
+   "capa": 0.2,
+   "paredes": 5,
+   "relleno": 50,
+   "patron": "giroide",
+   "orientacion": "techo contra la cama, mejillas hacia arriba",
+   "esfuerzo": "alto: par del motor y peso del carro",
+   "masa_maciza_g": 9.0
+  },
+  {
+   "pieza": "soporte_motor_der",
+   "cantidad": 1,
+   "tanda": 3,
+   "medidas": [
+    93.0,
+    25.3,
+    29.2
+   ],
+   "volumen_cm3": 7.2,
+   "gramos": 9.0,
+   "minutos": 18,
+   "capa": 0.2,
+   "paredes": 5,
+   "relleno": 50,
+   "patron": "giroide",
+   "orientacion": "techo contra la cama, mejillas hacia arriba",
+   "esfuerzo": "alto: par del motor y peso del carro",
+   "masa_maciza_g": 9.0
+  },
+  {
+   "pieza": "soporte_encoder_izq",
+   "cantidad": 1,
+   "tanda": 3,
+   "medidas": [
+    53.0,
+    21.0,
+    32.3
+   ],
+   "volumen_cm3": 3.7,
+   "gramos": 4.6,
+   "minutos": 13,
+   "capa": 0.2,
+   "paredes": 4,
+   "relleno": 40,
+   "patron": "giroide",
+   "orientacion": "como va montado: repisa contra la cama",
+   "esfuerzo": "bajo (sostiene el H206)",
+   "masa_maciza_g": 4.6
+  },
+  {
+   "pieza": "soporte_encoder_der",
+   "cantidad": 1,
+   "tanda": 3,
+   "medidas": [
+    53.0,
+    21.0,
+    32.3
+   ],
+   "volumen_cm3": 3.7,
+   "gramos": 4.6,
+   "minutos": 13,
+   "capa": 0.2,
+   "paredes": 4,
+   "relleno": 40,
+   "patron": "giroide",
+   "orientacion": "como va montado: repisa contra la cama",
+   "esfuerzo": "bajo (sostiene el H206)",
+   "masa_maciza_g": 4.6
+  },
+  {
+   "pieza": "torre_rueda_loca",
+   "cantidad": 1,
+   "tanda": 3,
+   "medidas": [
+    14.0,
+    50.0,
+    34.0
+   ],
+   "volumen_cm3": 9.3,
+   "gramos": 10.0,
+   "minutos": 20,
+   "capa": 0.2,
+   "paredes": 5,
+   "relleno": 50,
+   "patron": "giroide",
+   "orientacion": "brida contra la cama",
+   "esfuerzo": "alto: ~40 % del peso",
+   "masa_maciza_g": 11.5
+  },
+  {
+   "pieza": "soporte_rodillo_izq",
+   "cantidad": 1,
+   "tanda": 3,
+   "medidas": [
+    14.0,
+    46.0,
+    28.8
+   ],
+   "volumen_cm3": 6.2,
+   "gramos": 6.6,
+   "minutos": 15,
+   "capa": 0.2,
+   "paredes": 5,
+   "relleno": 50,
+   "patron": "giroide",
+   "orientacion": "brazo contra la cama, bloque hacia arriba",
+   "esfuerzo": "alto: empuje lateral del muelle",
+   "masa_maciza_g": 7.6
+  },
+  {
+   "pieza": "soporte_rodillo_der",
+   "cantidad": 1,
+   "tanda": 3,
+   "medidas": [
+    14.0,
+    46.0,
+    28.8
+   ],
+   "volumen_cm3": 6.2,
+   "gramos": 6.6,
+   "minutos": 15,
+   "capa": 0.2,
+   "paredes": 5,
+   "relleno": 50,
+   "patron": "giroide",
+   "orientacion": "brazo contra la cama, bloque hacia arriba",
+   "esfuerzo": "alto: empuje lateral del muelle",
+   "masa_maciza_g": 7.6
+  },
+  {
+   "pieza": "piso2_esp32",
+   "cantidad": 1,
+   "tanda": 4,
+   "medidas": [
+    66.0,
+    102.0,
+    14.0
+   ],
+   "volumen_cm3": 17.5,
+   "gramos": 21.7,
+   "minutos": 32,
+   "capa": 0.2,
+   "paredes": 3,
+   "relleno": 15,
+   "patron": "rejilla",
+   "orientacion": "placa contra la cama, separadores arriba",
+   "esfuerzo": "bajo",
+   "masa_maciza_g": 21.7
+  },
+  {
+   "pieza": "soporte_tb6612",
+   "cantidad": 1,
+   "tanda": 4,
+   "medidas": [
+    40.0,
+    18.0,
+    23.9
+   ],
+   "volumen_cm3": 9.3,
+   "gramos": 4.7,
+   "minutos": 11,
+   "capa": 0.2,
+   "paredes": 2,
+   "relleno": 15,
+   "patron": "rejilla",
+   "orientacion": "de costado (patas y marco suben derecho)",
+   "esfuerzo": "bajo",
+   "masa_maciza_g": 11.5
+  },
+  {
+   "pieza": "caja_interruptor",
+   "cantidad": 1,
+   "tanda": 4,
+   "medidas": [
+    30.0,
+    22.0,
+    16.0
+   ],
+   "volumen_cm3": 3.5,
+   "gramos": 3.2,
+   "minutos": 8,
+   "capa": 0.2,
+   "paredes": 2,
+   "relleno": 15,
+   "patron": "rejilla",
+   "orientacion": "panel contra la cama",
+   "esfuerzo": "bajo (pulsar el interruptor)",
+   "masa_maciza_g": 4.4
+  },
+  {
+   "pieza": "caja_fusible",
+   "cantidad": 1,
+   "tanda": 4,
+   "medidas": [
+    30.0,
+    22.0,
+    16.0
+   ],
+   "volumen_cm3": 3.8,
+   "gramos": 3.2,
+   "minutos": 8,
+   "capa": 0.2,
+   "paredes": 2,
+   "relleno": 15,
+   "patron": "rejilla",
+   "orientacion": "panel contra la cama",
+   "esfuerzo": "bajo (cambiar el fusible)",
+   "masa_maciza_g": 4.7
+  },
+  {
+   "pieza": "escuadra_frontal",
+   "cantidad": 1,
+   "tanda": 4,
+   "medidas": [
+    28.2,
+    38.1,
+    50.0
+   ],
+   "volumen_cm3": 9.8,
+   "gramos": 7.7,
+   "minutos": 21,
+   "capa": 0.2,
+   "paredes": 3,
+   "relleno": 15,
+   "patron": "rejilla",
+   "orientacion": "de costado (cara y pie de pie)",
+   "esfuerzo": "bajo (sensores livianos)",
+   "masa_maciza_g": 12.1
+  },
+  {
+   "pieza": "pasador_tt",
+   "cantidad": 4,
+   "tanda": 5,
+   "medidas": [
+    6.0,
+    29.3,
+    2.4
+   ],
+   "volumen_cm3": 0.2,
+   "gramos": 0.2,
+   "minutos": 1,
+   "capa": 0.12,
+   "paredes": 4,
+   "relleno": 100,
+   "patron": "solido",
+   "orientacion": "acostado sobre su cara plana",
+   "esfuerzo": "alto: sujeta la caja TT",
+   "masa_maciza_g": 0.2
+  },
+  {
+   "pieza": "remache_6",
+   "cantidad": 1,
+   "tanda": 5,
+   "medidas": [
+    8.0,
+    10.7,
+    3.2
+   ],
+   "volumen_cm3": 0.1,
+   "gramos": 0.1,
+   "minutos": 1,
+   "capa": 0.12,
+   "paredes": 4,
+   "relleno": 100,
+   "patron": "solido",
+   "orientacion": "acostado sobre su cara plana",
+   "esfuerzo": "pivote de la lengueta",
+   "masa_maciza_g": 0.1
+  },
+  {
+   "pieza": "remache_9_5",
+   "cantidad": 4,
+   "tanda": 5,
+   "medidas": [
+    8.0,
+    13.9,
+    3.2
+   ],
+   "volumen_cm3": 0.1,
+   "gramos": 0.2,
+   "minutos": 1,
+   "capa": 0.12,
+   "paredes": 4,
+   "relleno": 100,
+   "patron": "solido",
+   "orientacion": "acostado sobre su cara plana",
+   "esfuerzo": "mampara a las paredes",
+   "masa_maciza_g": 0.2
+  },
+  {
+   "pieza": "remache_10_5",
+   "cantidad": 8,
+   "tanda": 5,
+   "medidas": [
+    8.0,
+    14.9,
+    3.2
+   ],
+   "volumen_cm3": 0.2,
+   "gramos": 0.2,
+   "minutos": 1,
+   "capa": 0.12,
+   "paredes": 4,
+   "relleno": 100,
+   "patron": "solido",
+   "orientacion": "acostado sobre su cara plana",
+   "esfuerzo": "motores (adelante), porta baterias, caja",
+   "masa_maciza_g": 0.2
+  },
+  {
+   "pieza": "remache_11",
+   "cantidad": 8,
+   "tanda": 5,
+   "medidas": [
+    8.0,
+    15.4,
+    3.2
+   ],
+   "volumen_cm3": 0.2,
+   "gramos": 0.2,
+   "minutos": 1,
+   "capa": 0.12,
+   "paredes": 4,
+   "relleno": 100,
+   "patron": "solido",
+   "orientacion": "acostado sobre su cara plana",
+   "esfuerzo": "paredes, mampara, escuadra",
+   "masa_maciza_g": 0.2
+  },
+  {
+   "pieza": "remache_14",
+   "cantidad": 2,
+   "tanda": 5,
+   "medidas": [
+    8.0,
+    18.4,
+    3.2
+   ],
+   "volumen_cm3": 0.2,
+   "gramos": 0.2,
+   "minutos": 1,
+   "capa": 0.12,
+   "paredes": 4,
+   "relleno": 100,
+   "patron": "solido",
+   "orientacion": "acostado sobre su cara plana",
+   "esfuerzo": "motores (atras)",
+   "masa_maciza_g": 0.2
+  },
+  {
+   "pieza": "remache_37",
+   "cantidad": 4,
+   "tanda": 5,
+   "medidas": [
+    8.0,
+    41.2,
+    3.2
+   ],
+   "volumen_cm3": 0.4,
+   "gramos": 0.5,
+   "minutos": 2,
+   "capa": 0.12,
+   "paredes": 4,
+   "relleno": 100,
+   "patron": "solido",
+   "orientacion": "acostado sobre su cara plana",
+   "esfuerzo": "rodillos guia",
+   "masa_maciza_g": 0.5
+  }
+ ],
+ "avisos": []
+}

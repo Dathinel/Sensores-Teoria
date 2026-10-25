@@ -30,23 +30,30 @@
     <!-- Placa de la bancada: de x=-0.12 a x=0.08 (200 mm): la banda arranca UNA casilla antes de
          E1, como en el visor (revision 2026-09-26: el rodillo de cola a 2 cm de E1 no dejaba
          lugar al capacitivo debajo). Corregido aqui el 2026-09-28 (fisica vs 3D): antes 160 mm. -->
+    <!-- Maqueta impresa (2026-10-24, maqueta_impresa/cinta_monedas.scad, mon_bancada): bancada de PLA
+         de x -97 a 73,5 mm del mundo (170,5 mm), 96,6 de ancho con las pestanas sobre los rieles y
+         6 mm de espesor (z 444-450). Antes 200 x 61 x 20 mm. La banda (abajo) no cambia. -->
     <visual>
-      <geometry><box size="0.20 0.061 0.02"/></geometry>
-      <origin xyz="-0.02 0 0.01" rpy="0 0 0"/>
+      <geometry><box size="0.1705 0.0966 0.006"/></geometry>
+      <origin xyz="-0.02175 0 0.017" rpy="0 0 0"/>
       <material name="azul_bancada"/>
     </visual>
     <collision>
-      <geometry><box size="0.20 0.061 0.02"/></geometry>
-      <origin xyz="-0.02 0 0.01" rpy="0 0 0"/>
+      <geometry><box size="0.1705 0.0966 0.006"/></geometry>
+      <origin xyz="-0.02175 0 0.017" rpy="0 0 0"/>
     </collision>
 
-    <!-- Patas de perfil 2020: la mesa va a 43 cm del piso (sim/mundo.py,
-         ALTURA_MESA_MONEDAS) para que la moneda aceptada baje por gravedad
-         al almacen y de ahi al vaso. Solo visuales. -->
-    <visual><geometry><box size="0.02 0.02 0.43"/></geometry><origin xyz="-0.06 -0.02 -0.215" rpy="0 0 0"/><material name="aluminio"/></visual>
-    <visual><geometry><box size="0.02 0.02 0.43"/></geometry><origin xyz="-0.06 0.02 -0.215" rpy="0 0 0"/><material name="aluminio"/></visual>
-    <visual><geometry><box size="0.02 0.02 0.43"/></geometry><origin xyz="0.06 0.02 -0.215" rpy="0 0 0"/><material name="aluminio"/></visual>
-    <visual><geometry><box size="0.02 0.02 0.43"/></geometry><origin xyz="0.06 -0.02 -0.215" rpy="0 0 0"/><material name="aluminio"/></visual>
+    <!-- Estructura impresa (maqueta_impresa/estructura_resumen.md): la mesa va a 43 cm del piso
+         (sim/mundo.py, ALTURA_MESA_MONEDAS) sobre dos rieles de tubo 16 x 16 (eje en y +-40,5,
+         z 440, de x -170 a 106) y tres patas de tubo 16 x 16 hasta los nodos T1, T2 (x -170) y
+         T3 (x 30, lado +y); el extremo -y de la descarga apoya en la viga del portico con dos
+         tacos. Antes: 4 patas de perfil 2020 en x -0,05 / 0,07 (inventario_maqueta.md §19.1).
+         Solo visuales (en marco local: mundo - (0,01; 0; 0,43)). -->
+    <visual><geometry><box size="0.276 0.016 0.016"/></geometry><origin xyz="-0.042 -0.0405 0.010" rpy="0 0 0"/><material name="aluminio"/></visual>
+    <visual><geometry><box size="0.276 0.016 0.016"/></geometry><origin xyz="-0.042 0.0405 0.010" rpy="0 0 0"/><material name="aluminio"/></visual>
+    <visual><geometry><box size="0.016 0.016 0.448"/></geometry><origin xyz="-0.18 -0.0405 -0.206" rpy="0 0 0"/><material name="aluminio"/></visual>
+    <visual><geometry><box size="0.016 0.016 0.448"/></geometry><origin xyz="-0.18 0.0405 -0.206" rpy="0 0 0"/><material name="aluminio"/></visual>
+    <visual><geometry><box size="0.016 0.016 0.448"/></geometry><origin xyz="0.02 0.0405 -0.206" rpy="0 0 0"/><material name="aluminio"/></visual>
 
     <!-- Superficie de la cinta: negra mate, fondo de contraste para la
          camara de vision (seccion 5, paso 6). -->
@@ -60,13 +67,13 @@
       <origin xyz="-0.02 0 0.021" rpy="0 0 0"/>
     </collision>
 
-    <!-- Separadores cada 40 mm: 5 separadores delimitan las 4 casillas.
-         Solo visuales. -->
-    <visual><geometry><box size="0.003 0.055 0.003"/></geometry><origin xyz="-0.12 0 0.0235" rpy="0 0 0"/><material name="gris_separador"/></visual>
-    <visual><geometry><box size="0.003 0.055 0.003"/></geometry><origin xyz="-0.08 0 0.0235" rpy="0 0 0"/><material name="gris_separador"/></visual>
-    <visual><geometry><box size="0.003 0.055 0.003"/></geometry><origin xyz="-0.04 0 0.0235" rpy="0 0 0"/><material name="gris_separador"/></visual>
-    <visual><geometry><box size="0.003 0.055 0.003"/></geometry><origin xyz="0.0 0 0.0235" rpy="0 0 0"/><material name="gris_separador"/></visual>
-    <visual><geometry><box size="0.003 0.055 0.003"/></geometry><origin xyz="0.04 0 0.0235" rpy="0 0 0"/><material name="gris_separador"/></visual>
-    <visual><geometry><box size="0.003 0.055 0.003"/></geometry><origin xyz="0.08 0 0.0235" rpy="0 0 0"/><material name="gris_separador"/></visual>
+    <!-- Separadores cada 40 mm (6, de x -0,12 a 0,08), de 4 mm de alto como en el visor y la
+         maqueta impresa (cinta_monedas.scad, mon_sep_alto). Solo visuales. -->
+    <visual><geometry><box size="0.003 0.055 0.004"/></geometry><origin xyz="-0.12 0 0.024" rpy="0 0 0"/><material name="gris_separador"/></visual>
+    <visual><geometry><box size="0.003 0.055 0.004"/></geometry><origin xyz="-0.08 0 0.024" rpy="0 0 0"/><material name="gris_separador"/></visual>
+    <visual><geometry><box size="0.003 0.055 0.004"/></geometry><origin xyz="-0.04 0 0.024" rpy="0 0 0"/><material name="gris_separador"/></visual>
+    <visual><geometry><box size="0.003 0.055 0.004"/></geometry><origin xyz="0.0 0 0.024" rpy="0 0 0"/><material name="gris_separador"/></visual>
+    <visual><geometry><box size="0.003 0.055 0.004"/></geometry><origin xyz="0.04 0 0.024" rpy="0 0 0"/><material name="gris_separador"/></visual>
+    <visual><geometry><box size="0.003 0.055 0.004"/></geometry><origin xyz="0.08 0 0.024" rpy="0 0 0"/><material name="gris_separador"/></visual>
   </link>
 </robot>

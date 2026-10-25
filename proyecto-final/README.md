@@ -457,8 +457,8 @@ sin tocarlos y vuelve al muelle con menos de 3 mm de error.
 material cerca de su cara (plástico, metal, una mano), porque cambia la capacitancia de su campo. El
 inductivo genera un campo magnético alterno y solo reacciona a metal, por las corrientes que se
 inducen en él. Juntos dan una respuesta que ninguno da solo: capacitivo sí e inductivo no es un objeto
-**no metálico**. Los dos son NPN de 6-36 V, así que llegan al ESP32 por optoacopladores, nunca
-directo.
+**no metálico**. Los dos son NPN de 6-36 V: llegan al ESP32 por un diodo Schottky (BAT85) con una
+pull-up de 10 kΩ a 3,3 V, así el pin nunca ve los 12 V (antes iban por optoacopladores; ahorro del 2026-10-24).
 
 **VL53L0X (tiempo de vuelo).** Un sensor láser que mide distancia cronometrando cuánto tarda la luz
 en ir y volver. No mide en un rayo sino en un cono de unos 25°, y eso lo tuvimos en cuenta al
@@ -656,43 +656,51 @@ la alimentación, el largo de los cables y el ruido.
 
 ## Conexiones y parte eléctrica
 
-La estación se alimenta de una fuente de **12 V 10 A**. De ahí salen, cada uno con su fusible, un
-convertidor de **6 V** solo para los servos (para que sus arranques no metan ruido en lo demás), uno
-de **5 V** para el panel de luz, el anillo de la cámara y el motor del carrusel, y los **12 V** directos
-a los drivers de los NEMA 17 y a los sensores capacitivo e inductivo. El ESP32 fijo y las dos
-webcams van por USB a un **hub con fuente propia de 5 V** (así no le piden corriente al portátil), y
-el hub va al portátil por un solo cable. El carro tiene su propia batería de dos 18650, con un
-regulador de 5 V para su ESP32 y sus sensores.
+La estación se alimenta de una fuente de **12 V 5 A**, enchufada con su cable a una multitoma con
+interruptor. Detrás de **un solo fusible de 5 A** salen un convertidor de **6 V 5 A** solo para los
+servos (para que sus arranques no metan ruido en lo demás), uno de **5 V** para el panel de luz, el
+anillo de la cámara y el motor del carrusel, y los **12 V** directos a los drivers de los NEMA 17 y a
+los sensores capacitivo e inductivo. Todo se reparte con empalmes soldados con termoencogible (la
+tierra en estrella en los bornes −V de la fuente). El ESP32 fijo y las dos webcams van cada uno a un
+USB del portátil. El carro tiene su propia batería de dos 18650, con un regulador de 5 V para su ESP32
+y sus sensores.
+
+Es un proyecto universitario, no un sistema industrial: el 2026-10-24 el grupo aprobó quitar la
+bornera, la entrada IEC, los 4 portafusibles, los optoacopladores, el hub USB, las canaletas y el
+perfil de aluminio (la estructura ahora es [impresa](maqueta_impresa/README.md)). Cada ahorro se
+comprobó con la simulación eléctrica; el detalle está en [docs/costos.md](docs/costos.md).
 
 ```mermaid
 flowchart LR
-    RED["Red 110 V"] --> F["Fuente 12 V 10 A"]
-    F -->|"F1 5 A"| B6["Buck 6 V 8 A"] --> PCA["PCA9685<br/>6 servos"]
-    F -->|"F2 2 A"| B5["Buck 5 V 3 A"] --> C5["panel de luz, anillo,<br/>28BYJ-48, módulos"]
-    F -->|"F3 3 A"| DRV["2 drivers A4988<br/>NEMA 17"]
-    F -->|"F4 1 A"| S12["capacitivo e inductivo<br/>por optoacoplador"]
-    HUB["Hub USB con fuente 5 V"] -->|"USB 5 V + datos"| E["ESP32 fijo<br/>3,3 V"]
-    HUB -->|"datos"| PC["Portátil"]
+    RED["Multitoma con interruptor<br/>110 V"] --> F["Fuente 12 V 5 A"] --> FUS["Fusible 5 A"]
+    FUS --> B6["Buck 6 V 5 A"] --> PCA["PCA9685<br/>6 servos"]
+    FUS --> B5["Buck 5 V 3 A"] --> C5["panel de luz, anillo,<br/>28BYJ-48, módulos"]
+    FUS --> DRV["2 drivers A4988<br/>NEMA 17"]
+    FUS --> S12["capacitivo e inductivo<br/>diodo + pull-up al GPIO"]
+    PC["Portátil"] -->|"USB 5 V + datos"| E["ESP32 fijo<br/>3,3 V"]
+    PC -->|"USB"| CAM["2 webcams"]
     BAT["2 x 18650<br/>7,4-8,4 V, fusible 3 A"] --> TB["TB6612<br/>motores TT al 70 %"]
     BAT --> EC["ESP32 del carro<br/>y sensores"]
 ```
 
 Hicimos una **simulación eléctrica** (`sim/electrica.py`): recorre un ciclo real de la planta y un
 viaje del carro cada 10 ms (qué motor o servo se mueve en cada instante) y calcula la corriente de
-cada riel, la caída de tensión en cada cable, el margen de cada fusible y el calor de cada regulador.
-Ningún riel pasa de algo más de la mitad de su límite:
+cada riel, la caída de tensión en cada cable, el margen del fusible y el calor de cada regulador. Con
+la fuente de 5 A y el buck de 5 A los márgenes bajan, pero todo cabe: el pico del buck de los servos
+(3,9 A, la prensa apretando la tapa) solo cabe porque prensa y empujador nunca arrancan a la vez (lo
+impide el firmware de la placa):
 
 | Riel | Promedio | Pico | Límite |
 |---|---:|---:|---:|
-| 12 V de la fuente | 1,57 A | 3,30 A | 10 A |
-| 6 V de los servos | 0,70 A | 3,92 A | 8 A |
+| 12 V de la fuente (detrás del fusible de 5 A) | 1,57 A | 3,35 A | 5 A |
+| 6 V de los servos | 0,70 A | 3,92 A | 5 A |
 | 5 V de la caja | 1,36 A | 1,40 A | 3 A |
 | 3,3 V del ESP32 fijo | 0,18 A | 0,32 A | 0,6 A |
-| 5 V del hub USB (ESP32 fijo y webcams) | 0,69 A | 0,82 A | 2 A |
+| 5 V del USB del ESP32 fijo (cada webcam en su puerto) | 0,19 A | 0,32 A | 0,5 A |
 | Batería del carro | 0,34 A | 0,70 A | 3 A |
 | 5 V del carro | 0,24 A | 0,37 A | 1 A |
 
-Desde la red consume unos **23 W** de promedio, y la batería del carro dura unas **6 horas andando**.
+Desde la red consume unos **24 W** de promedio, y la batería del carro dura unas **6 horas andando**.
 
 ![Corriente de cada riel durante un ciclo de la planta](docs/capturas/electrica-ciclo-planta.png)
 
@@ -704,7 +712,7 @@ Los valores de los componentes pasivos salen calculados, no copiados:
 | Divisor del ECHO del HC-SR04 | 1 kΩ / 2 kΩ | baja los 5 V del sensor a 3,33 V para el GPIO del ESP32 |
 | Pull-ups del I2C largo | 2,2 kΩ, a 100 kHz | con ~170 pF de cable la subida tarda 317 ns: cumple a 100 kHz, no a 400 |
 | Pull-up del Hall | 10 kΩ a 3,3 V | el A3144 es de colector abierto y el GPIO 39 no tiene pull-up interno |
-| Optoacopladores PC817 | en la salida de 12 V del capacitivo y del inductivo | el ESP32 no aguanta 12 V; el PC817 queda saturado con 6 veces de margen |
+| Diodo BAT85 + pull-up de 10 kΩ | en la salida NPN del capacitivo y del inductivo | el diodo bloquea los 12 V; al detectar el pin queda en ~0,57 V (bajo los 0,825 V que el ESP32 lee como 0); con un 1N4148 no alcanzaría |
 | Condensadores | 1000 µF en el PCA9685, 100 µF en cada driver, 100 nF en los motores TT | picos de arranque de los servos, picos al enchufar, ruido de escobillas |
 
 **Pines del ESP32 fijo** (los mismos en el firmware, el visor y Wokwi: todos salen de `sim/conexiones.py`):
@@ -981,49 +989,54 @@ La historia completa, sesión por sesión, está en la [bitácora](docs/bitacora
 
 ## Costo y peso
 
-**Costo: $1.998.921 COP** en total, sin el portátil (que es del grupo), con precios consultados el
-2026-09-27 en Ferretrónica, Electronilab, Didácticas Electrónicas y Mercado Libre. El 38 % son
-estimados: banda de las cintas, tubos y piezas impresas no tienen un producto igual publicado.
+**Costo: $1.387.143 COP** en total, sin el portátil (que es del grupo), con precios consultados el
+2026-09-27 en Ferretrónica, Electronilab, Didácticas Electrónicas y Mercado Libre. Antes de los ahorros
+aprobados el 2026-10-24 eran $1.998.921 (se ahorraron $611.778: la estructura impresa, la fuente y el
+buck de 5 A, empalmes en vez de bornera y optoacopladores, sin hub USB, bridas y un solo fusible). El
+49 % son estimados: banda de las cintas, piezas impresas, la fuente de 5 A y el buck no tienen un
+producto igual publicado.
 
 | Subsistema | Costo | % |
 |---|---:|---:|
-| Cinta de monedas | $276.058 | 14 % |
-| Cinta de vasos | $312.373 | 16 % |
-| Canaleta y muelle | $56.422 | 3 % |
-| Carro | $253.036 | 13 % |
-| Control y potencia | $313.452 | 16 % |
-| Estructura | $787.580 | 39 % |
+| Cinta de monedas | $292.937 | 21 % |
+| Cinta de vasos | $351.656 | 25 % |
+| Canaleta y muelle | $55.283 | 4 % |
+| Carro | $253.036 | 18 % |
+| Control y potencia | $197.152 | 14 % |
+| Estructura | $237.079 | 17 % |
 
-La **estructura 3D** está contada pieza por pieza sobre el modelo del visor: **$716.675** en total.
+La **estructura 3D** es la maqueta impresa (sin perfil de aluminio, escuadras, pies, acrílico ni MDF):
+**$306.197** en total.
 
 | Parte | Qué lleva | Costo |
 |---|---|---:|
-| Piezas impresas | 73 piezas, 957 g de PLA y unas 96 h de impresora (filamento + energía) | $99.095 |
-| Perfil 2020 | 6,10 m medidos en el modelo (patas y pórtico): 7 barras de 1 m | $398.300 |
-| Tornillería | 24 escuadras, 71 tuercas en T, 15 pies y sus tornillos, más 10 % de repuesto | $219.280 |
+| Maqueta impresa | 539 piezas con los remaches, 2,68 kg de PLA y unas 81 h de impresora (filamento + energía) | $285.459 |
+| Piezas impresas del carro y de la caja | 11 piezas, 83 g de PLA | $8.588 |
+| Tornillería | los NEMA 17, los rodamientos KFL08 y las piezas del carro y de la caja, más 10 % de repuesto | $12.150 |
 
-**Peso: 13,38 kg** todo el montaje, sin el portátil (el 69 % es estimado por material × volumen:
+**Peso: 7,86 kg** todo el montaje, sin el portátil (el 86 % es estimado por material × volumen:
 hay que pesarlo cuando esté armado).
 
 | Subsistema | Peso |
 |---|---:|
-| Cinta de monedas | 2,96 kg |
-| Almacén | 0,23 kg |
-| Cinta de vasos | 2,59 kg |
-| Pórtico | 1,35 kg |
-| Canaleta y muelle | 1,08 kg |
+| Cinta de monedas | 1,06 kg |
+| Almacén | 0,21 kg |
+| Cinta de vasos | 1,40 kg |
+| Pórtico | 0,42 kg |
+| Canaleta y muelle | 0,25 kg |
+| Estructura impresa | 1,31 kg |
 | Carro | 0,51 kg (0,64 kg con un vaso lleno) |
-| Caja de control | 2,18 kg |
-| Pista y base | 2,47 kg |
+| Caja de control | 1,80 kg |
+| Pista | 0,89 kg |
 
 Con esas masas revisamos que cada motor dé al menos el doble de lo que se le pide:
 
 | Motor | Margen |
 |---|---:|
 | NEMA 17 de la cinta de monedas | ×9,3 |
-| NEMA 17 de la cinta de vasos (5 vasos llenos) | ×2,2 |
+| NEMA 17 de la cinta de vasos (5 vasos llenos) | ×2,3 |
 | MG996R de la prensa (60 N para asentar una tapa a presión) | ×2,8 |
-| MG996R del empujador | ×38 |
+| MG996R del empujador | ×39 |
 | Motores TT del carro (arranque con el vaso lleno) | ×5,9 |
 
 El vaso lleno pesa, en el peor caso, 133 g (vaso 25 g + tapa 8 g + 10 monedas de 10 g). La tapa sella
@@ -1048,10 +1061,19 @@ abaratar, ninguna aplicada sin aprobarla) y [`docs/peso.md`](docs/peso.md).
 - Firmware de los dos ESP32, protocolo, puente serial y backend real de la HAL, probados contra una
   estación emulada.
 - Conexionado pin a pin, lista de materiales, costos y presupuesto de tiempos.
+- **El carro impreso en PLA** ([`chasis_impreso/`](chasis_impreso/README.md)): chasis y soportes
+  paramétricos en OpenSCAD, uniones a presión con remaches impresos, tandas de impresión, manual de
+  armado con conexiones hilo por hilo y visor 3D del carro armado. Ya impreso y armado (2026-10-24).
+- **La maqueta completa impresa** ([`maqueta_impresa/`](maqueta_impresa/README.md)): toda la planta
+  en PLA (sin perfil de aluminio): estructura de tubos y nodos, almacén, cintas, mecanismos y canaleta.
+  Revisada en el ensamble (310 remaches medidos, choques, partes móviles barridas, sin soportes),
+  2,68 kg en 25 tandas, con manual de armado. El visor 3D y la simulación dibujan esta maqueta.
 
 **Falta, en físico:**
 
-- **Construir el montaje**: cintas, almacén, canaleta, muelle, pista y carro.
+- **Imprimir y armar la maqueta** (`maqueta_impresa/3mf/`, siguiendo `manual_maqueta.pdf`) y medir
+  las variables `MEDIR` de cada subsistema antes de imprimir sus piezas.
+- **Construir el resto del montaje**: bandas, motores, sensores, canaleta, pista.
 - **Medir los valores PROVISIONALES**: medidas del vaso y de las tapas, capacidad de los tubos,
   fuerza real para asentar una tapa, alturas de las mesas, trazado real de la pista, tiempos de cada
   acción y el error real de cada sensor (prueba de banco de 200 pasadas). Todos están listados en
@@ -1257,6 +1279,8 @@ hardware real, y el carro la lleva compilada en su ESP32.
 
 | Carpeta | Qué hay |
 |---|---|
+| `chasis_impreso/` | El carro impreso: `chasis.scad` (paramétrico), `exportar.py` (STL, 3MF por tanda, gramos y tiempo), revisores de voladizos y remaches, `manual_armado.pdf`, lista de materiales y visor del carro armado. |
+| `maqueta_impresa/` | La planta impresa: estructura (`estructura.py`), un `.scad` por subsistema, `revisar.py` (remaches medidos, choques, barridos de lo que se mueve, sin soportes), `exportar.py` (STL, 3MF, `material.md`), `manual_maqueta.pdf` y el GLB que usa el visor. |
 | `wokwi/` | El circuito del ESP32 fijo y del carro para abrir en wokwi.com (`diagram.json` + `main.py`). |
 | `vision/` | `capturar_dataset.py` (fotos del montaje) y `entrenar.py` (Keras + MobileNetV2, matriz de confusión). |
 | `tests/` | Las pruebas automáticas por capa: `control/`, `sim/`, `visor/`, `app/`, `firmware/`. |

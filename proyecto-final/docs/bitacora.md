@@ -1702,3 +1702,27 @@ app no podía mostrar su enlace; ahora lo imprime. Observación sin tocar: la es
 
 **Pruebas:** `entorno\Scripts\python -m pytest -q` → **937 passed** en 5 min 8 s (936 + la nueva de puertos); cifra
 actualizada en el README, `probar.json` y la app.
+
+## 2026-10-24 — Ahorros de costo aprobados, en todas las capas (agente de ahorros)
+
+Pedido: "eliminación de borneras y swiches... es un proyecto universitario, no un sistema industrial, entre más se
+ahorre mejor". Aprobado: buck de 5 A, sin optoacopladores, sin hub USB; se quedan la webcam cenital y el PCA9685; el
+carro no se toca; un solo ESP32 fijo (19 de 24 GPIO).
+
+- **Conexionado** (`sim/conexiones.py`): sin bornera X2 → 12 empalmes soldados (pin `J`, hasta 5 hilos; prueba nueva);
+  sin IEC → cable de poder a una multitoma con interruptor; UN fusible de 5 A en el +12 V (nada lo saltea, prueba);
+  fuente 12 V 5 A; XL4015; capacitivo/inductivo al GPIO por un diodo **BAT85** + pull-up de 10 kΩ (un 1N4148 deja el
+  0 en 0,85 V, sobre los 0,825 V del ESP32: por eso Schottky); bus I2C 1 con sus pull-ups en línea; ESP32 y webcams
+  directo al portátil (la de vasos con su extensión de 1 m; la cenital también si su cable trae 1,5 m).
+- **Firmware**: `pines.py` nombra los empalmes por su nombre: `CAPACITIVO_S`, `INDUCTIVO_S`, `I2C1_SDA/SCL`
+  (antes `OPTO_OUT1/2`, `HUB_I2C_*`); la polaridad no cambia (`activo_bajo` en true).
+- **Simulación eléctrica**: +12 V pico 3,35 A, peor caso 4,13 A (XL4015 en su límite de 4,5 A) → fusible lento de
+  5 A; 6 V pico 3,92 A de 5 A (prensa y empujador nunca juntos: `EXCLUYENTES`). Calor en la caja ~9 W (+8 °C sin
+  aire) y los A4988 a 1 A, el límite sin aire forzado: **el ventilador se queda**. Mínimo de las webcams: 4,40 V en
+  su conector (USB 2.0), no 4,75 V (eso es en el puerto).
+- **Costos**: la estructura es la maqueta impresa (`maqueta_impresa/piezas.json`, 2,74 kg y 82 h); total
+  **$1.393.790** (antes $1.998.921, −$605.131). Peso 7,92 kg (antes 13,38).
+- **Visor**: fuente de 5 A, XL4015, fusible de 1 vía, empalmes, bridas con bases adhesivas en vez de canaletas, pasos
+  de cable con brida en vez de prensaestopas, sin hub; USB al portátil (USB3 nuevo, a la izquierda).
+- Quedó sin tocar (lo edita otra sesión): la zona prohibida "hub USB" del mapa del carro (`sim/geometria.py`,
+  `puesto_pc.hub_*`).

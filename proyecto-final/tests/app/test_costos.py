@@ -83,32 +83,47 @@ def test_cada_pieza_impresa_cuenta_una_sola_vez_en_el_total():
         assert f["precio"] > 0, i
 
 
-def test_despiece_del_perfil():
+def test_maqueta_impresa_desde_su_exportador():
+    """La estructura de la planta es la maqueta impresa (2026-10-24): sus gramos y horas son los de
+    maqueta_impresa/piezas.json y el costo es gramos x PLA + energia, con el desperdicio."""
+    import json
+
     datos = costos.cargar()
-    per = datos["estructura_3d"]["perfil"]
-    d = costos.despiece_perfil(datos)
-    tramos = [t["largo_mm"] for t in per["tramos"] for _ in range(t.get("cantidad", 1))]
-    # Todos los tramos quedan en alguna barra, exactamente una vez.
-    assert sorted(x for b in d["barras"] for x in b) == sorted(tramos)
-    # Ninguna barra se pasa de 1 m contando el corte de cada tramo.
-    for b in d["barras"]:
-        assert sum(b) + per["corte_mm"] * len(b) <= per["largo_barra_mm"]
-    # No se compran barras de más que el mínimo teórico + 1.
-    minimo = math.ceil(sum(t + per["corte_mm"] for t in tramos) / per["largo_barra_mm"])
-    assert minimo <= d["n_barras"] <= minimo + 1
-    # La fila del perfil compra exactamente esas barras.
-    f = next(x for x in costos.filas(datos) if x["id"] == "estructura")
-    assert f["cantidad"] == d["n_barras"]
+    imp = datos["estructura_3d"]["impresion"]
+    pj = json.loads((costos.RAIZ / datos["estructura_3d"]["maqueta"]["archivo"]).read_text(encoding="utf-8"))
+    mq = costos.maqueta(datos)
+    assert math.isclose(sum(g["gramos"] for g in mq), pj["total_gramos"], abs_tol=1)
+    assert math.isclose(sum(g["horas"] for g in mq), pj["total_horas"], abs_tol=0.1)
+    k = 1 + imp["desperdicio"]
+    for g in mq:
+        assert g["subsistema"] in costos.ORDEN_SUBSISTEMAS
+        assert math.isclose(g["costo"], g["gramos"] * k * imp["precio_kg"] / 1000
+                            + g["horas"] * k * imp["kwh_por_hora"] * imp["tarifa_kwh"])
+    # Cada grupo esta en UNA fila del total (la de la estructura o la "Maqueta impresa" de su subsistema).
+    fs = costos.filas(datos)
+    filas_mq = sum(f["subtotal"] for f in fs if f["id"] == "estructura" or f["id"].startswith("maqueta_"))
+    assert abs(filas_mq - sum(g["costo"] for g in mq)) <= len(costos.ORDEN_SUBSISTEMAS)
+    # Ya no se compra perfil, escuadras, pies, acrilico ni MDF.
+    assert "perfil" not in datos["estructura_3d"] and "base" not in (datos.get("extras") or {})
+    assert {"escuadra_2020", "pie_nivelador", "tuerca_t"}.isdisjoint(datos["estructura_3d"]["tornilleria"]["tipos"])
+    for i in ("almacen", "tubo_tapas", "canaletas_rechazo", "bandeja_rechazo_vasos", "canal_e7", "muelle_carga"):
+        assert datos["items"][i]["precio"] == 0 and datos["items"][i]["incluido"] == "maqueta", i
+
+
+def test_ahorros_aplicados_son_la_diferencia_con_el_total_anterior():
+    datos = costos.cargar()
+    aplicados = costos.ahorros_aplicados(datos)
+    assert sum(a["ahorro"] for a in aplicados) == datos["total_antes_de_ahorros"] - costos.total(datos)
+    assert not {a["id"] for a in costos.ahorros(datos)} & {a["id"] for a in aplicados}
+    # Lo quitado ya no se compra.
+    assert {"bornera_x2", "entrada_red", "optoacopladores", "reparto_i2c", "hub_usb", "canaletas_caja"}.isdisjoint(datos["items"])
 
 
 def test_tornilleria_contada():
     datos = costos.cargar()
     t = costos.conteo_tornilleria(datos)
-    # En el modelo hay 22 escuadras (+2 de los postes de las cámaras) y 15 pies niveladores.
-    assert t["escuadra_2020"]["contados"] == 24
-    assert t["pie_nivelador"]["contados"] == 15
-    # Cada escuadra lleva 2 tornillos M5 x 8 con su tuerca en T.
-    assert t["m5x8"]["contados"] == 2 * t["escuadra_2020"]["contados"]
+    # La maqueta va remachada: solo los NEMA 17 (4 M3 c/u) y los 4 KFL08 (2 M5 con tuerca c/u).
+    assert t["m5x16"]["contados"] == t["tuerca_m5"]["contados"] == 8
     for d in t.values():
         if d["contados"]:
             assert d["comprar"] >= d["contados"] and d["subtotal"] == d["comprar"] * d["precio"] > 0
@@ -120,9 +135,9 @@ def test_tornilleria_contada():
 
 def test_la_estructura_3d_esta_dentro_del_total_y_en_el_documento():
     c = costos.costo_estructura_3d()
-    assert c["total"] == c["impresas"] + c["perfil"] + c["tornilleria"]
+    assert c["total"] == c["impresas"] + c["maqueta"] + c["tornilleria"]
     assert 0 < c["total"] < costos.total()
     md = costos.generar_md()
-    for texto in ("## Estructura 3D", "### Piezas impresas", "### Perfil 2020 por tramo", "Despiece",
-                  "### Tornillería", costos.pesos(c["total"])):
+    for texto in ("## Estructura 3D", "### Maqueta impresa por grupo", "### Piezas impresas sueltas", "### Tornillería",
+                  "## Ahorros ya aplicados", costos.pesos(c["total"])):
         assert texto in md, texto

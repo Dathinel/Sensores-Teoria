@@ -1,0 +1,257 @@
+<meta charset="utf-8">
+<title>Carro de la planta de monedas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<style>
+/* Layout: el carro ocupa la pantalla; un panel de taller a la derecha (abajo en el celular) con tandas, piezas y la ficha de la pieza. */
+:root {
+  --fondo: #f1f2ee; --panel: #ffffff; --tinta: #1d2126; --tenue: #5d646c; --linea: #d9dcd6;
+  --resalte: #ff7a1a; --escena: #e7e9e4; --fantasma: #9aa2a8; --elegida: #e3007d;
+  --f-titulo: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --f-texto: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-dato: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --fondo: #16191d; --panel: #1e2227; --tinta: #e8eaec; --tenue: #9aa3ab; --linea: #30363d;
+  --resalte: #ff8a33; --escena: #1b1f23; --fantasma: #59626a; --elegida: #ff3d9e; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --fondo: #16191d; --panel: #1e2227; --tinta: #e8eaec; --tenue: #9aa3ab; --linea: #30363d;
+  --resalte: #ff8a33; --escena: #1b1f23; --fantasma: #59626a; --elegida: #ff3d9e; color-scheme: dark }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--fondo); color: var(--tinta); font: 14px/1.45 var(--f-texto); }
+.app { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 340px; }
+.escena { position: relative; min-width: 0; min-height: 0; background: var(--escena); }
+#lienzo { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+#lienzo:active { cursor: grabbing; }
+.ayuda { position: absolute; left: max(12px, env(safe-area-inset-left, 0px)); bottom: 12px; margin: 0;
+  font: 12px var(--f-dato); color: var(--tenue); background: color-mix(in srgb, var(--panel) 80%, transparent);
+  padding: 6px 10px; border-radius: 6px; }
+.vistas { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.panel { background: var(--panel); border-left: 1px solid var(--linea); overflow-y: auto; min-width: 0;
+  padding-block: 18px 24px; padding-left: max(18px, env(safe-area-inset-left, 0px)); padding-right: max(18px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 18px; }
+h1 { font: 700 22px/1.15 var(--f-titulo); margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+.sub { margin: 4px 0 0; color: var(--tenue); font-size: 13px; }
+h2 { font: 500 11px var(--f-dato); text-transform: uppercase; letter-spacing: 0.09em; color: var(--tenue); margin: 0 0 8px; }
+.fichas { display: flex; flex-wrap: wrap; gap: 6px; }
+button { font: 500 13px var(--f-texto); color: var(--tinta); background: transparent; border: 1px solid var(--linea);
+  border-radius: 999px; padding: 6px 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+button:hover { border-color: var(--tenue); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--resalte); outline-offset: 2px; }
+button[aria-pressed="true"] { background: var(--tinta); color: var(--panel); border-color: var(--tinta); }
+.vistas button { background: var(--panel); border-radius: 6px; padding: 5px 10px; font: 12px var(--f-dato); }
+.punto { width: 10px; height: 10px; border-radius: 50%; flex: none; background: var(--c); }
+.lista { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.lista button { width: 100%; border-radius: 6px; border-color: transparent; justify-content: flex-start; padding: 6px 8px; text-align: left; }
+.lista button[aria-pressed="true"] { background: color-mix(in srgb, var(--elegida) 16%, transparent); color: var(--tinta); border-color: var(--elegida); }
+.lista .cant { margin-left: auto; font: 12px var(--f-dato); color: var(--tenue); }
+.grupo + .grupo { margin-top: 10px; }
+.grupo > p { margin: 0 0 4px; font: 500 12px var(--f-dato); color: var(--tenue); display: flex; align-items: center; gap: 7px; }
+.ficha { border: 1px solid var(--linea); border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.ficha strong { font: 700 16px var(--f-titulo); overflow-wrap: anywhere; }
+.ficha .meta { font: 12px var(--f-dato); color: var(--tenue); display: flex; gap: 10px; flex-wrap: wrap; }
+.ficha p { margin: 0; }
+.vacia { color: var(--tenue); }
+.control { display: flex; align-items: center; gap: 10px; }
+.control input { flex: 1; min-width: 0; accent-color: var(--resalte); }
+.control output { font: 12px var(--f-dato); width: 3.5em; text-align: right; font-variant-numeric: tabular-nums; }
+.casilla { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+.nota { font-size: 12px; color: var(--tenue); margin: 0; }
+#estado { position: absolute; inset: 0; display: grid; place-items: center; color: var(--tenue); font: 13px var(--f-dato); pointer-events: none; }
+@media (max-width: 760px) {
+  .app { grid-template-columns: 1fr; grid-template-rows: 58vh auto; height: auto; }
+  .escena { height: 58vh; }
+  .panel { border-left: 0; border-top: 1px solid var(--linea); overflow: visible; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="app">
+  <div class="escena">
+    <canvas id="lienzo" aria-label="Carro armado en 3D: arrastra para girar, rueda o pellizco para acercar, toca una pieza para ver qué es"></canvas>
+    <div id="estado">Cargando el modelo…</div>
+    <div class="vistas" role="group" aria-label="Vistas">
+      <button type="button" data-vista="iso">Inicio</button>
+      <button type="button" data-vista="arriba">Arriba</button>
+      <button type="button" data-vista="abajo">Abajo</button>
+      <button type="button" data-vista="lado">Lado</button>
+    </div>
+    <p class="ayuda">arrastrar: girar · rueda: acercar · clic derecho: mover · tocar: ver pieza</p>
+  </div>
+  <aside class="panel">
+    <header>
+      <h1>Carro de la planta de monedas</h1>
+      <p class="sub">Chasis impreso en PLA, armado. Cada color es una tanda de impresión.</p>
+    </header>
+    <section>
+      <h2>Tanda</h2>
+      <div class="fichas" id="tandas" role="group" aria-label="Filtrar por tanda"></div>
+    </section>
+    <section aria-live="polite">
+      <h2>Pieza</h2>
+      <div class="ficha" id="ficha"><p class="vacia">Toca una pieza en el carro o en la lista para ver qué es y dónde va.</p></div>
+    </section>
+    <section>
+      <h2>Despiezar</h2>
+      <div class="control"><input type="range" id="despiece" min="0" max="100" value="0" aria-label="Separar las piezas"><output id="despiece-val" for="despiece">0 %</output></div>
+      <label class="casilla" for="ver-comprado"><input type="checkbox" id="ver-comprado" checked> Mostrar lo comprado (motores, placas, vaso…)</label>
+    </section>
+    <section>
+      <h2>Piezas impresas</h2>
+      <div id="lista"></div>
+      <p class="nota">Los remaches y pasadores (tanda 5) no se dibujan: van en los agujeros de cada unión.</p>
+    </section>
+  </aside>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(() => {
+  const NOMBRE_TANDA = { 1: "Tanda 1 · chasis", 2: "Tanda 2 · cuna", 3: "Tanda 3 · motores", 4: "Tanda 4 · electrónica" };
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const lienzo = document.getElementById("lienzo");
+  const estado = document.getElementById("estado");
+  const renderer = new THREE.WebGLRenderer({ canvas: lienzo, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const escena = new THREE.Scene();
+  const camara = new THREE.PerspectiveCamera(35, 1, 0.005, 10);
+  const controles = new THREE.OrbitControls(camara, lienzo);
+  controles.enableDamping = true;
+  escena.add(new THREE.HemisphereLight(0xffffff, 0x444a50, 0.75));
+  const sol = new THREE.DirectionalLight(0xffffff, 0.75); sol.position.set(0.4, 0.8, 0.5); escena.add(sol);
+  const contraluz = new THREE.DirectionalLight(0xffffff, 0.3); contraluz.position.set(-0.5, -0.3, -0.6); escena.add(contraluz);
+
+  const piezas = [];      // {malla, datos, color, centro, origen}
+  let centroTotal = new THREE.Vector3(), radio = 0.2;
+  const estadoUI = { tanda: "todas", sel: null, comprado: true, despiece: 0 };
+
+  function ajustarTamano() {
+    const r = lienzo.getBoundingClientRect();
+    renderer.setSize(r.width, r.height, false);
+    camara.aspect = r.width / Math.max(1, r.height);
+    camara.updateProjectionMatrix();
+  }
+
+  function vista(nombre) {
+    const d = radio * 3.1, c = centroTotal;
+    const dir = { iso: [0.9, 0.75, 1.0], arriba: [0.001, 1, 0.0], abajo: [0.3, -1, 0.55], lado: [0, 0.15, 1] }[nombre];
+    const v = new THREE.Vector3(...dir).normalize().multiplyScalar(d);
+    camara.position.copy(c).add(v);
+    controles.target.copy(c);
+    controles.update();
+  }
+
+  function pintar() {
+    const fantasma = new THREE.Color(css("--fantasma"));
+    const elegida = new THREE.Color(css("--elegida"));   // la pieza tocada: un color que no usa ninguna tanda
+    for (const p of piezas) {
+      const m = p.malla.material, d = p.datos;
+      const enTanda = estadoUI.tanda === "todas" || (d.tipo === "impresa" && String(d.tanda) === estadoUI.tanda);
+      p.malla.visible = d.tipo === "impresa" || estadoUI.comprado;
+      const apagada = !enTanda && d.tipo === "impresa" || (estadoUI.tanda !== "todas" && d.tipo === "comprada");
+      m.color.copy(estadoUI.sel === p ? elegida : apagada ? fantasma : p.color);
+      m.transparent = apagada; m.opacity = apagada ? 0.18 : 1; m.depthWrite = !apagada;
+      m.needsUpdate = true;
+    }
+    document.querySelectorAll("#tandas button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.tanda === estadoUI.tanda)));
+    document.querySelectorAll("#lista button").forEach((b) => b.setAttribute("aria-pressed", String(estadoUI.sel && b.dataset.pieza === estadoUI.sel.datos.pieza)));
+  }
+
+  function mostrarFicha(p) {
+    const ficha = document.getElementById("ficha");
+    if (!p) { ficha.innerHTML = '<p class="vacia">Toca una pieza en el carro o en la lista para ver qué es y dónde va.</p>'; return; }
+    const d = p.datos;
+    const cant = d.cantidad > 1 ? ` · ${d.cantidad} copias` : "";
+    const tanda = d.tipo === "impresa" ? `<span><span class="punto" style="--c:#${p.color.getHexString()};display:inline-block;vertical-align:-1px"></span> ${NOMBRE_TANDA[d.tanda]}</span>` : "<span>comprado</span>";
+    ficha.innerHTML = `<strong></strong><div class="meta">${tanda}<span>${cant.replace(" · ", "")}</span></div><p></p>`;
+    ficha.querySelector("strong").textContent = d.tipo === "impresa" ? d.pieza.replace(/_/g, " ") : d.pieza;
+    ficha.querySelector("p").textContent = d.donde;
+  }
+
+  function seleccionar(p) {
+    estadoUI.sel = p;
+    if (p && p.datos.tipo === "impresa" && estadoUI.tanda !== "todas" && String(p.datos.tanda) !== estadoUI.tanda) estadoUI.tanda = "todas";
+    mostrarFicha(p); pintar();
+  }
+
+  function despiezar() {
+    const k = estadoUI.despiece / 100 * 1.4;
+    for (const p of piezas) p.malla.position.copy(p.origen).addScaledVector(p.centro.clone().sub(centroTotal), k);
+    document.getElementById("despiece-val").textContent = `${estadoUI.despiece} %`;
+  }
+
+  function armarPanel() {
+    const tandas = document.getElementById("tandas");
+    const colores = {};
+    for (const p of piezas) if (p.datos.tipo === "impresa") colores[p.datos.tanda] = "#" + p.color.getHexString();
+    const botones = [["todas", "Todas", null], ...Object.keys(NOMBRE_TANDA).map((t) => [t, NOMBRE_TANDA[t], colores[t]])];
+    for (const [t, texto, c] of botones) {
+      const b = document.createElement("button");
+      b.type = "button"; b.dataset.tanda = t;
+      b.innerHTML = (c ? `<span class="punto" style="--c:${c}"></span>` : "") + `<span></span>`;
+      b.lastChild.textContent = texto;
+      b.addEventListener("click", () => { estadoUI.tanda = t; pintar(); });
+      tandas.append(b);
+    }
+    const lista = document.getElementById("lista");
+    for (const t of Object.keys(NOMBRE_TANDA)) {
+      const grupo = document.createElement("div"); grupo.className = "grupo";
+      grupo.innerHTML = `<p><span class="punto" style="--c:${colores[t]}"></span></p><ul class="lista"></ul>`;
+      grupo.firstChild.append(NOMBRE_TANDA[t]);
+      for (const p of piezas.filter((q) => q.datos.tipo === "impresa" && String(q.datos.tanda) === t)) {
+        const li = document.createElement("li"), b = document.createElement("button");
+        b.type = "button"; b.dataset.pieza = p.datos.pieza;
+        b.innerHTML = `<span></span><span class="cant">${p.datos.cantidad > 1 ? "x" + p.datos.cantidad : ""}</span>`;
+        b.firstChild.textContent = p.datos.pieza.replace(/_/g, " ");
+        b.addEventListener("click", () => seleccionar(estadoUI.sel === p ? null : p));
+        li.append(b); grupo.lastChild.append(li);
+      }
+      lista.append(grupo);
+    }
+    document.querySelectorAll(".vistas button").forEach((b) => b.addEventListener("click", () => vista(b.dataset.vista)));
+    document.getElementById("despiece").addEventListener("input", (e) => { estadoUI.despiece = +e.target.value; despiezar(); });
+    document.getElementById("ver-comprado").addEventListener("change", (e) => { estadoUI.comprado = e.target.checked; pintar(); });
+  }
+
+  // Tocar una pieza: solo si el puntero casi no se movio (si no, era un giro).
+  const rayo = new THREE.Raycaster(), puntero = new THREE.Vector2();
+  let inicio = null;
+  lienzo.addEventListener("pointerdown", (e) => { inicio = [e.clientX, e.clientY]; });
+  lienzo.addEventListener("pointerup", (e) => {
+    if (!inicio || Math.hypot(e.clientX - inicio[0], e.clientY - inicio[1]) > 5) return;
+    const r = lienzo.getBoundingClientRect();
+    puntero.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    rayo.setFromCamera(puntero, camara);
+    const visibles = piezas.filter((p) => p.malla.visible && !p.malla.material.transparent).map((p) => p.malla);
+    const golpe = rayo.intersectObjects(visibles, false)[0];
+    seleccionar(golpe ? piezas.find((p) => p.malla === golpe.object) : null);
+  });
+
+  const b64 = "__GLB_BASE64__";
+  const binario = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer;
+  new THREE.GLTFLoader().parse(binario, "", (gltf) => {
+    const caja = new THREE.Box3();
+    gltf.scene.traverse((o) => {
+      if (!o.isMesh) return;
+      const c = o.material.color.clone();
+      o.material = new THREE.MeshStandardMaterial({ color: c, roughness: 0.7, metalness: 0, flatShading: true, side: THREE.DoubleSide });
+      o.geometry.computeBoundingBox();
+      const centro = o.geometry.boundingBox.getCenter(new THREE.Vector3());
+      caja.union(o.geometry.boundingBox);
+      piezas.push({ malla: o, datos: o.userData, color: c, centro, origen: o.position.clone() });
+    });
+    escena.add(gltf.scene);
+    caja.getCenter(centroTotal);
+    radio = caja.getSize(new THREE.Vector3()).length() / 2;
+    estado.hidden = true;
+    armarPanel(); ajustarTamano(); vista("iso"); pintar();
+  }, (err) => { estado.textContent = "No se pudo leer el modelo: " + err; });
+
+  new ResizeObserver(ajustarTamano).observe(lienzo);
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", pintar);
+  (function bucle() { requestAnimationFrame(bucle); controles.update(); renderer.render(escena, camara); })();
+})();
+</script>

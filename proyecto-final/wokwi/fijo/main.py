@@ -5,9 +5,9 @@
 #   - PCA9685 (I2C 21/22) -> la prensa y el empujador van directo a un GPIO libre;
 #   - VL53L0X (I2C 16/17 + XSHUT 18/19) -> potenciometros en ADC (cortina e interior);
 #   - ULN2003 + 28BYJ-48 -> 4 LEDs que muestran la secuencia de medio paso de las bobinas;
-#   - FC-51, capacitivo/inductivo (por PC817), Hall -> pulsadores con pull-up de 10 kOhm
+#   - FC-51, capacitivo/inductivo (diodo + pull-up), Hall -> pulsadores con pull-up de 10 kOhm
 #     (los pines 34-39 no tienen pull-up interno: en el montaje real el pull-up lo pone el
-#     modulo o el optoacoplador). Pulsado = el sensor detecta (salida activa en bajo).
+#     modulo o el diodo BAT85 con su pull-up de 10 kOhm). Pulsado = el sensor detecta (salida activa en bajo).
 
 import time
 from machine import Pin, PWM, ADC

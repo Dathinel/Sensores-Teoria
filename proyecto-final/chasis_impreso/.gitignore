@@ -1,0 +1,4 @@
+# STL de las piezas en su lugar del ensamble: solo los usa exportar.py (choques)
+stl_sin_membrana/_ensamble/
+__pycache__/
+img/manual/

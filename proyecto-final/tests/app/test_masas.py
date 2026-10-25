@@ -33,7 +33,7 @@ def test_el_total_es_la_suma_de_las_filas_y_de_las_zonas():
     assert all(v > 0 for v in masas.por_zona().values())
 
 
-def test_reusa_piezas_perfil_y_tornilleria_de_precios():
+def test_reusa_piezas_maqueta_y_tornilleria_de_precios():
     precios = costos.cargar()
     fs = masas.filas(precios=precios)
     imp = precios["estructura_3d"]["impresion"]
@@ -41,10 +41,9 @@ def test_reusa_piezas_perfil_y_tornilleria_de_precios():
     impresas = sum(f["total_g"] for f in fs if f["origen"] == "impresa")
     gramos_costo = sum(p["gramos_total"] for p in costos.piezas_impresas(precios))
     assert math.isclose(impresas * (1 + imp["desperdicio"]), gramos_costo)
-    # El perfil pesa largo x kg/m, tramo por tramo.
-    per = precios["estructura_3d"]["perfil"]
-    perfil = sum(f["total_g"] for f in fs if f["origen"] == "perfil")
-    assert math.isclose(perfil, costos.despiece_perfil(precios)["total_mm"] / 1000 * per["kg_por_m"] * 1000)
+    # La maqueta impresa pesa lo de sus piezas (los gramos de su exportador), sin el desperdicio.
+    maqueta = sum(f["total_g"] for f in fs if f["origen"] == "maqueta")
+    assert math.isclose(maqueta, sum(g["gramos"] for g in costos.maqueta(precios)))
     # La tornillería contada (sin repuesto) está toda.
     n = sum(f["cantidad"] for f in fs if f["origen"] == "tornillería")
     assert n == sum(d["contados"] for d in costos.conteo_tornilleria(precios).values())

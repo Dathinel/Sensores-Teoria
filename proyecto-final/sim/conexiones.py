@@ -139,28 +139,19 @@ PLANTILLAS: dict[str, dict] = {
         "pines": (_fila(["IN1", "IN2", "IN3", "IN4", "IN5", "IN6", "IN7"], -14.5, -7.6, eje="y")
                   + _fila(["−", "+"], 11.0, -13.0) + [{"n": "MOTOR", "x": 4.0, "y": 12.0, "tipo": "jst"}]),
         "partes": [{"caja": [19, 6.5, 3.5], "p": [0, -2, 3.4], "color": "#111111", "nombre": "ULN2003"}]},
-    # Optoacopladores para las salidas NPN de 12 V: +12 -> 2,2 kΩ -> LED del
-    # PC817 -> IN (la salida NPN del sensor lo lleva a 0 V al detectar). Del
-    # otro lado, OUT con pull-up de 10 kΩ a 3,3 V.
-    "opto2": {
-        "tamano": [40, 30, 1.6], "color": "#1d4f9c",
-        "pines": _bornes(["+12", "IN1", "IN2"], -14, 9.0) + _fila(["GND", "3V3", "OUT1", "OUT2"], -3.8, -10.0),
-        "partes": [{"caja": [6.5, 4.6, 3.5], "p": [-6, 0, 2.6], "color": "#111111", "nombre": "PC817"},
-                   {"caja": [6.5, 4.6, 3.5], "p": [6, 0, 2.6], "color": "#111111"}]},
-    # Reparto del bus I2C 1 (largo, 100 kHz) con pull-ups de 2,2 kΩ a 3,3 V.
-    "hub_i2c": {
-        "tamano": [30, 22, 1.6], "color": "#1f3d2b",
-        "pines": (_fila(["SDA", "SCL", "3V3", "GND"], -3.8, -7.6) + _fila(["A.SDA", "A.SCL", "A.3V3", "A.GND"], -3.8, 0.0)
-                  + _fila(["B.SDA", "B.SCL", "B.3V3", "B.GND"], -3.8, 7.6)),
-        "partes": []},
-    "xl4016": {  # buck 6 V 8 A de los servos
-        "tamano": [60, 51, 1.6], "color": "#1d4f9c",
-        "pines": _bornes(["IN+", "IN-"], -26, -3.0, eje="y") + _bornes(["OUT+", "OUT-"], 26, -3.0, eje="y"),
-        "partes": [{"caja": [18, 20, 16], "p": [-12, 5, 8.8], "color": "#a9b1bb", "metal": True},
-                   {"caja": [18, 20, 16], "p": [12, 5, 8.8], "color": "#a9b1bb", "metal": True},
-                   {"cilindro": [5, 13], "p": [-12, -17, 7.3], "color": "#1a1a1a"},
-                   {"cilindro": [5, 13], "p": [12, -17, 7.3], "color": "#1a1a1a"},
-                   {"caja": [7, 4, 8], "p": [0, -18, 4.8], "color": "#2d6fd0", "nombre": "ajuste"}]},
+    # Empalme soldado con termoencogible (ahorro 2026-10-24: reemplaza la bornera X2, la placa de
+    # los optoacopladores y la del reparto I2C). Un solo "pin" J que junta todos sus hilos (hasta 5:
+    # mas no se sueldan bien en un termoencogible de 6 mm). Acostado sobre la placa de montaje.
+    "empalme": {"tamano": [22, 7, 7], "color": "#151515",
+                "pines": [{"n": "J", "x": 0, "y": 0, "tipo": "empalme"}], "partes": []},
+    # Buck XL4015 5 A de los servos (modulo CC/CV tipico de 54 x 23 mm, un disipador, trimmer de
+    # voltaje y de corriente): bornes IN a -x y OUT a +x. El de corriente se deja en ~4,5 A.
+    "xl4015": {
+        "tamano": [54, 23, 1.6], "color": "#1d4f9c",
+        "pines": _bornes(["IN+", "IN-"], -23, -2.5, eje="y") + _bornes(["OUT+", "OUT-"], 23, -2.5, eje="y"),
+        "partes": [{"caja": [12, 13, 10], "p": [-8, 3.5, 5.8], "color": "#a9b1bb", "metal": True},
+                   {"cilindro": [6, 7], "p": [8, 4, 4.3], "color": "#2c2c2c"},
+                   {"caja": [9.5, 4.8, 10], "p": [12.5, -7, 5.8], "color": "#2d6fd0", "nombre": "ajuste"}]},
     "lm2596": {  # buck 5 V 3 A
         "tamano": [43, 21, 1.6], "color": "#1d4f9c",
         "pines": [{"n": "IN+", "x": -19, "y": 8, "tipo": "pad"}, {"n": "IN-", "x": -19, "y": -8, "tipo": "pad"},
@@ -168,30 +159,23 @@ PLANTILLAS: dict[str, dict] = {
         "partes": [{"caja": [12, 12, 7], "p": [-6, 0, 4.3], "color": "#2b2b2b"},
                    {"cilindro": [4, 10], "p": [8, 4, 5.8], "color": "#1a1a1a"},
                    {"caja": [7, 4, 8], "p": [8, -6, 4.8], "color": "#2d6fd0"}]},
-    "lrs150": {  # fuente 12 V 10 A
-        "tamano": [159, 97, 30], "color": "#b9bec6",
-        "pines": _bornes(["L", "N", "PE", "-V1", "-V2", "+V1", "+V2"], 73.0, -28.5, paso=9.5, eje="y"),
+    "fuente60": {  # fuente 12 V 5 A 60 W de caja metalica (generica: 110 x 78 x 36 mm)
+        "tamano": [110, 78, 36], "color": "#b9bec6",
+        "pines": _bornes(["L", "N", "PE", "-V1", "-V2", "+V1", "+V2"], 48.5, -28.5, paso=9.5, eje="y"),
         "partes": []},
-    "fusibles4": {
-        "tamano": [56, 36, 11], "color": "#151515",
-        "pines": [{"n": "IN", "x": -22, "y": 0, "tipo": "borne"}]
-                 + _bornes(["F1", "F2", "F3", "F4"], -8.0, 11.0, paso=10.5),
-        "partes": [{"caja": [4, 12, 9], "p": [-8 + i * 10.5, 0, 15.5], "color": c}
-                   for i, c in enumerate(["#f2c230", "#8a2be2", "#d23a2a", "#2d6fd0"])]},
-    # Bornera de carril DIN de 16 bornes (6,2 mm): los puentes unen 2-3
-    # (+12 V sensores), 5-6 (+5 V) y 7 a 13 (GND, estrella).
-    "bornera16": {"tamano": [100, 42, 1.0], "color": "#3a3f47",
-                  "pines": _fila([f"{i}" for i in range(1, 17)], -46.5, 0.0, paso=6.2, tipo="borne_din"),
-                  "puentes": [["2", "3"], ["5", "6"], ["7", "8", "9", "10", "11", "12", "13"]], "partes": []},
-    "iec": {"tamano": [30, 12, 28], "color": "#111111",
-            "pines": [{"n": "L", "x": -8, "y": 0, "tipo": "pad"}, {"n": "N", "x": 0, "y": 0, "tipo": "pad"},
-                      {"n": "PE", "x": 8, "y": 0, "tipo": "pad"}], "partes": []},
-    "hub_usb4": {"tamano": [100, 35, 20], "color": "#1d2129",
-                 "pines": [{"n": f"P{i + 1}", "x": -30 + i * 20, "y": -17.5, "tipo": "usb"} for i in range(4)]
-                          + [{"n": "UP", "x": -50, "y": 0, "tipo": "usb"}, {"n": "DC", "x": 50, "y": 0, "tipo": "jack"}],
-                 "partes": []},
+    # Fusible principal (uno solo, en el +12 V a la salida de la fuente): portafusible de cuchilla
+    # de 1 via con su fusible ATO; borne de entrada (-x) y de salida (+x).
+    "portafusible1": {"tamano": [30, 20, 11], "color": "#151515",
+                      "pines": [{"n": "IN", "x": -10, "y": 0, "tipo": "borne"}, {"n": "OUT", "x": 10, "y": 0, "tipo": "borne"}],
+                      "partes": [{"caja": [4, 12, 9], "p": [0, 0, 15.5], "color": "#c8a165"}]},
+    # Cable de poder de la fuente (con su enchufe, a una multitoma con interruptor): entra a la caja
+    # por un agujero de la pared derecha con una brida de alivio por dentro (sin conector IEC).
+    "salida_red": {"tamano": [12, 12, 6], "color": "#111111",
+                   "pines": [{"n": "L", "x": 0, "y": -3, "tipo": "pad"}, {"n": "N", "x": 0, "y": 0, "tipo": "pad"},
+                             {"n": "PE", "x": 0, "y": 3, "tipo": "pad"}], "partes": []},
     "portatil": {"tamano": [300, 200, 12], "color": "#3a3f47",
-                 "pines": [{"n": "USB1", "x": 150, "y": 30, "tipo": "usb"}, {"n": "USB2", "x": 150, "y": 50, "tipo": "usb"}],
+                 "pines": [{"n": "USB1", "x": 150, "y": 30, "tipo": "usb"}, {"n": "USB2", "x": 150, "y": 50, "tipo": "usb"},
+                           {"n": "USB3", "x": -150, "y": 0, "tipo": "usb"}],
                  "partes": []},
 
     # --- Sensores y actuadores de la planta ---
@@ -270,16 +254,26 @@ DISPOSITIVOS: dict[str, dict] = {
     "pca9685": {"plantilla": "pca9685", "nombre": "PCA9685 (servos)", "zona": "caja"},
     "drivers": {"plantilla": "placa_drivers", "nombre": "Drivers A4988 (monedas M, vasos V)", "zona": "caja"},
     "uln2003": {"plantilla": "uln2003", "nombre": "ULN2003 (carrusel)", "zona": "caja"},
-    "opto": {"plantilla": "opto2", "nombre": "Optoacopladores PC817", "zona": "caja"},
-    "hub_i2c": {"plantilla": "hub_i2c", "nombre": "Reparto I2C 1 (pull-ups 2,2 kΩ)", "zona": "caja"},
-    "buck6": {"plantilla": "xl4016", "nombre": "Buck 6 V 8 A (servos)", "zona": "caja"},
+    "buck6": {"plantilla": "xl4015", "nombre": "Buck 6 V 5 A XL4015 (servos)", "zona": "caja"},
     "buck5": {"plantilla": "lm2596", "nombre": "Buck 5 V 3 A", "zona": "caja"},
-    "fuente": {"plantilla": "lrs150", "nombre": "Fuente 12 V 10 A", "zona": "caja"},
-    "fusibles": {"plantilla": "fusibles4", "nombre": "Fusibles F1 5 A · F2 2 A · F3 3 A · F4 1 A", "zona": "caja"},
-    "x2": {"plantilla": "bornera16", "nombre": "Bornera X2", "zona": "caja"},
-    "iec": {"plantilla": "iec", "nombre": "Entrada de red con interruptor", "zona": "caja"},
+    "fuente": {"plantilla": "fuente60", "nombre": "Fuente 12 V 5 A", "zona": "caja"},
+    "fusible": {"plantilla": "portafusible1", "nombre": "Fusible principal 5 A (lento) en el +12 V", "zona": "caja"},
+    "cable_red": {"plantilla": "salida_red", "nombre": "Cable de poder (a la multitoma con interruptor)", "zona": "caja"},
     "ventilador": {"plantilla": "ventilador4010", "nombre": "Ventilador 4010 5 V (saca el aire de los drivers)", "zona": "caja"},
-    "hub_usb": {"plantilla": "hub_usb4", "nombre": "Hub USB con fuente", "zona": "mesa"},
+    # Empalmes soldados con termoencogible (en lugar de la bornera X2, los optos y el reparto I2C).
+    # El GND sigue en estrella: todos los retornos llegan a los dos bornes -V de la fuente.
+    "e12": {"plantilla": "empalme", "nombre": "Empalme +12 V (después del fusible)", "zona": "caja"},
+    "e12s": {"plantilla": "empalme", "nombre": "Empalme +12 V de los sensores M18", "zona": "caja"},
+    "e5": {"plantilla": "empalme", "nombre": "Empalme +5 V", "zona": "caja"},
+    "e5_gnd": {"plantilla": "empalme", "nombre": "Empalme GND de 5 V", "zona": "caja"},
+    "egnd": {"plantilla": "empalme", "nombre": "Empalme GND de potencia (a −V1)", "zona": "caja"},
+    "egnd_s": {"plantilla": "empalme", "nombre": "Empalme GND de los sensores M18 (a −V2)", "zona": "caja"},
+    "capacitivo_s": {"plantilla": "empalme", "nombre": "Señal del capacitivo (diodo + pull-up 10 kΩ)", "zona": "caja"},
+    "inductivo_s": {"plantilla": "empalme", "nombre": "Señal del inductivo (diodo + pull-up 10 kΩ)", "zona": "caja"},
+    "i2c1_sda": {"plantilla": "empalme", "nombre": "SDA del bus I2C 1 (pull-up 2,2 kΩ)", "zona": "caja"},
+    "i2c1_scl": {"plantilla": "empalme", "nombre": "SCL del bus I2C 1 (pull-up 2,2 kΩ)", "zona": "caja"},
+    "i2c1_3v3": {"plantilla": "empalme", "nombre": "3,3 V del bus I2C 1", "zona": "caja"},
+    "i2c1_gnd": {"plantilla": "empalme", "nombre": "GND del bus I2C 1", "zona": "caja"},
     "pc": {"plantilla": "portatil", "nombre": "Portátil", "zona": "mesa"},
     # Planta
     "presencia": {"plantilla": "fc51", "nombre": "FC-51 presencia (1)", "zona": "planta"},
@@ -338,35 +332,35 @@ def _servo(dev, canal, nombre):
 
 CABLES: list[dict] = [
     # ---------------- Potencia (caja) ----------------
-    {"id": "red", "nombre": "Red 110 V → entrada IEC", "tipo": "red", "externo": "tomacorriente", "hilos": []},
-    {"id": "p_red", "nombre": "Entrada IEC → fuente", "tipo": "interno", "hilos": [
-        _h("iec.L", "fuente.L", CAFE, "fase"), _h("iec.N", "fuente.N", AZUL, "neutro"),
-        _h("iec.PE", "fuente.PE", VERDE_AMARILLO, "tierra")]},
-    {"id": "p_12", "nombre": "Fuente → fusibles y GND", "tipo": "interno", "hilos": [
-        _h("fuente.+V1", "fusibles.IN", ROJO, "+12 V"), _h("fuente.-V1", "x2.7", NEGRO, "GND (estrella)"),
-        _h("fuente.-V2", "x2.8", NEGRO, "GND (estrella)")]},
-    {"id": "p_buck6", "nombre": "F1 5 A → buck 6 V → bornera", "tipo": "interno", "hilos": [
-        _h("fusibles.F1", "buck6.IN+", ROJO, "+12 V"), _h("buck6.IN-", "x2.7", NEGRO, "GND"),
-        _h("buck6.OUT+", "x2.4", ROJO, "+6 V servos"), _h("buck6.OUT-", "x2.9", NEGRO, "GND")]},
-    {"id": "p_buck5", "nombre": "F2 2 A → buck 5 V → bornera", "tipo": "interno", "hilos": [
-        _h("fusibles.F2", "buck5.IN+", ROJO, "+12 V"), _h("buck5.IN-", "x2.8", NEGRO, "GND"),
-        _h("buck5.OUT+", "x2.5", ROJO, "+5 V"), _h("buck5.OUT-", "x2.10", NEGRO, "GND")]},
-    {"id": "p_f3f4", "nombre": "F3 3 A (drivers) y F4 1 A (sensores 12 V)", "tipo": "interno", "hilos": [
-        _h("fusibles.F3", "x2.1", ROJO, "+12 V drivers"), _h("fusibles.F4", "x2.2", ROJO, "+12 V sensores")]},
-    {"id": "p_pca", "nombre": "Bornera → PCA9685 (V+ de los servos)", "tipo": "interno", "hilos": [
-        _h("x2.4", "pca9685.T.V+", ROJO, "+6 V (18 AWG)"), _h("x2.9", "pca9685.T.GND", NEGRO, "GND (18 AWG)")]},
-    {"id": "p_drv", "nombre": "Bornera → drivers (VMOT)", "tipo": "interno", "hilos": [
-        _h("x2.1", "drivers.VMOT", ROJO, "+12 V"), _h("x2.11", "drivers.GNDP", NEGRO, "GND")]},
-    {"id": "p_uln", "nombre": "Bornera → ULN2003", "tipo": "interno", "hilos": [
-        _h("x2.5", "uln2003.+", ROJO, "+5 V"), _h("x2.10", "uln2003.−", NEGRO, "GND")]},
-    {"id": "p_opto", "nombre": "Bornera → optoacopladores (+12)", "tipo": "interno", "hilos": [
-        _h("x2.2", "opto.+12", ROJO, "+12 V")]},
-    # El ventilador (5 V, 0,1 A) va directo a la salida del buck de 5 V (los pads aceptan dos
-    # hilos soldados; la bornera X2 ya tiene sus bornes de 5 V y GND con dos hilos cada uno).
-    {"id": "p_vent", "nombre": "Buck 5 V → ventilador 4010 (0,1 A)", "tipo": "interno", "hilos": [
-        _h("buck5.OUT+", "ventilador.+5V", ROJO, "+5 V ventilador"), _h("buck5.OUT-", "ventilador.GND", NEGRO, "GND ventilador")]},
-    {"id": "p_gnd", "nombre": "GND común ESP32 ↔ bornera", "tipo": "interno", "hilos": [
-        _h("esp32_fijo.GND.1", "x2.11", NEGRO, "GND común")]},
+    # Ahorro 2026-10-24: sin entrada IEC, sin bornera X2 y con UN fusible. La fuente trae su cable de
+    # poder con enchufe (a una multitoma con interruptor, que es el interruptor general); el +12 V
+    # pasa por el fusible principal y se reparte con empalmes soldados. Cada empalme junta como mucho
+    # 5 hilos. El GND sigue en estrella: todo vuelve a los bornes -V1 / -V2 de la fuente.
+    {"id": "red", "nombre": "Cable de poder de la fuente → multitoma con interruptor", "tipo": "red",
+     "externo": "multitoma con interruptor", "hilos": []},
+    {"id": "p_red", "nombre": "Cable de poder → fuente (entra con una brida de alivio)", "tipo": "interno", "hilos": [
+        _h("cable_red.L", "fuente.L", CAFE, "fase"), _h("cable_red.N", "fuente.N", AZUL, "neutro"),
+        _h("cable_red.PE", "fuente.PE", VERDE_AMARILLO, "tierra")]},
+    {"id": "p_12", "nombre": "Fuente → fusible principal y GND en estrella", "tipo": "interno", "hilos": [
+        _h("fuente.+V1", "fusible.IN", ROJO, "+12 V"), _h("fuente.-V1", "egnd.J", NEGRO, "GND (estrella)"),
+        _h("fuente.-V2", "egnd_s.J", NEGRO, "GND (estrella)")]},
+    {"id": "p_e12", "nombre": "Fusible principal → empalmes de +12 V", "tipo": "interno", "hilos": [
+        _h("fusible.OUT", "e12.J", ROJO, "+12 V"), _h("e12.J", "e12s.J", ROJO, "+12 V sensores")]},
+    {"id": "p_buck6", "nombre": "+12 V → buck 6 V (XL4015)", "tipo": "interno", "hilos": [
+        _h("e12.J", "buck6.IN+", ROJO, "+12 V"), _h("buck6.IN-", "egnd.J", NEGRO, "GND")]},
+    {"id": "p_pca", "nombre": "Buck 6 V → PCA9685 (V+ de los servos)", "tipo": "interno", "hilos": [
+        _h("buck6.OUT+", "pca9685.T.V+", ROJO, "+6 V (18 AWG)"), _h("buck6.OUT-", "pca9685.T.GND", NEGRO, "GND (18 AWG)")]},
+    {"id": "p_buck5", "nombre": "+12 V → buck 5 V → empalmes de 5 V", "tipo": "interno", "hilos": [
+        _h("e12.J", "buck5.IN+", ROJO, "+12 V"), _h("buck5.IN-", "egnd.J", NEGRO, "GND"),
+        _h("buck5.OUT+", "e5.J", ROJO, "+5 V"), _h("buck5.OUT-", "e5_gnd.J", NEGRO, "GND")]},
+    {"id": "p_drv", "nombre": "+12 V → drivers (VMOT)", "tipo": "interno", "hilos": [
+        _h("e12.J", "drivers.VMOT", ROJO, "+12 V"), _h("drivers.GNDP", "egnd.J", NEGRO, "GND")]},
+    {"id": "p_uln", "nombre": "Empalmes de 5 V → ULN2003", "tipo": "interno", "hilos": [
+        _h("e5.J", "uln2003.+", ROJO, "+5 V"), _h("e5_gnd.J", "uln2003.−", NEGRO, "GND")]},
+    {"id": "p_vent", "nombre": "Empalmes de 5 V → ventilador 4010 (0,1 A)", "tipo": "interno", "hilos": [
+        _h("e5.J", "ventilador.+5V", ROJO, "+5 V ventilador"), _h("e5_gnd.J", "ventilador.GND", NEGRO, "GND ventilador")]},
+    {"id": "p_gnd", "nombre": "GND común ESP32 ↔ estrella", "tipo": "interno", "hilos": [
+        _h("esp32_fijo.GND.1", "egnd.J", NEGRO, "GND común")]},
 
     # ---------------- Logica dentro de la caja ----------------
     {"id": "l_i2c0", "nombre": "ESP32 I2C 0 → PCA9685", "tipo": "dupont", "hilos": [
@@ -385,33 +379,44 @@ CABLES: list[dict] = [
     {"id": "l_uln", "nombre": "ESP32 → ULN2003 (IN1-IN4)", "tipo": "dupont", "hilos": [
         _h("esp32_fijo.G32.S", "uln2003.IN1", AZUL, "bobina 1"), _h("esp32_fijo.G33.S", "uln2003.IN2", MORADO, "bobina 2"),
         _h("esp32_fijo.G23.S", "uln2003.IN3", GRIS, "bobina 3"), _h("esp32_fijo.G4.S", "uln2003.IN4", BLANCO, "bobina 4")]},
-    {"id": "l_opto", "nombre": "Optoacopladores → ESP32", "tipo": "dupont", "hilos": [
-        _h("opto.GND", "esp32_fijo.G35.G", NEGRO, "GND"), _h("opto.3V3", "esp32_fijo.G35.V", ROJO, "3,3 V pull-up"),
-        _h("opto.OUT1", "esp32_fijo.G35.S", VERDE, "capacitivo"), _h("opto.OUT2", "esp32_fijo.G36.S", AMARILLO, "inductivo")]},
-    {"id": "l_i2c1", "nombre": "ESP32 I2C 1 → reparto I2C", "tipo": "dupont", "hilos": [
-        _h("esp32_fijo.G16.S", "hub_i2c.SDA", AZUL, "SDA (G16)"), _h("esp32_fijo.G17.S", "hub_i2c.SCL", AMARILLO, "SCL (G17)"),
-        _h("esp32_fijo.G16.V", "hub_i2c.3V3", ROJO, "3,3 V"), _h("esp32_fijo.G16.G", "hub_i2c.GND", NEGRO, "GND")]},
+    # Sin optoacopladores (2026-10-24): la salida NPN del sensor llega al GPIO por un diodo Schottky
+    # BAT85 (catodo hacia el sensor) y el GPIO tiene una pull-up de 10 kΩ a 3,3 V (G35 y G36 no
+    # tienen pull-up interno). Con el sensor libre el diodo queda en inverso (aunque el sensor traiga
+    # su propia resistencia a 12 V) y el pin lee 3,3 V; al detectar, el NPN lo baja a ~0,5 V:
+    # sigue activo en bajo. Diodo y resistencia van soldados en linea, con termoencogible.
+    {"id": "l_npn", "nombre": "Capacitivo e inductivo → ESP32 (diodo + pull-up 10 kΩ en línea)", "tipo": "dupont", "hilos": [
+        _h("capacitivo_s.J", "esp32_fijo.G35.S", VERDE, "capacitivo (activo en bajo)"),
+        _h("esp32_fijo.G35.V", "capacitivo_s.J", ROJO, "pull-up 10 kΩ a 3,3 V (en línea)"),
+        _h("inductivo_s.J", "esp32_fijo.G36.S", AMARILLO, "inductivo (activo en bajo)"),
+        _h("esp32_fijo.G36.V", "inductivo_s.J", ROJO, "pull-up 10 kΩ a 3,3 V (en línea)")]},
+    # Bus I2C 1 sin placa de reparto: los hilos de los dos VL53L0X se sueldan en 4 empalmes y las
+    # dos pull-ups de 2,2 kΩ van soldadas en linea entre el empalme de 3,3 V y el de SDA / SCL.
+    {"id": "l_i2c1", "nombre": "ESP32 I2C 1 → empalmes del bus (pull-ups 2,2 kΩ en línea)", "tipo": "dupont", "hilos": [
+        _h("esp32_fijo.G16.S", "i2c1_sda.J", AZUL, "SDA (G16)"), _h("esp32_fijo.G17.S", "i2c1_scl.J", AMARILLO, "SCL (G17)"),
+        _h("esp32_fijo.G16.V", "i2c1_3v3.J", ROJO, "3,3 V"), _h("esp32_fijo.G16.G", "i2c1_gnd.J", NEGRO, "GND"),
+        _h("i2c1_3v3.J", "i2c1_sda.J", ROJO, "pull-up 2,2 kΩ de SDA (en línea)"),
+        _h("i2c1_3v3.J", "i2c1_scl.J", ROJO, "pull-up 2,2 kΩ de SCL (en línea)")]},
 
     # ---------------- Campo: planta ----------------
     {"id": "presencia", "nombre": "FC-51 presencia → ESP32 G34", "tipo": "senal", "conector": "Dupont 3 vías", "hilos": [
         _h("presencia.OUT", "esp32_fijo.G34.S", VERDE, "señal"), _h("presencia.GND", "esp32_fijo.G34.G", NEGRO, "GND"),
         _h("presencia.VCC", "esp32_fijo.G34.V", ROJO, "3,3 V")]},
-    {"id": "capacitivo", "nombre": "Capacitivo → optoacoplador IN1", "tipo": "sensor12", "hilos": [
-        _h("capacitivo.NEGRO", "opto.IN1", NEGRO, "salida NPN"), _h("capacitivo.CAFE", "x2.3", CAFE, "+12 V"),
-        _h("capacitivo.AZUL", "x2.12", AZUL, "0 V")]},
-    {"id": "inductivo", "nombre": "Inductivo → optoacoplador IN2", "tipo": "sensor12", "hilos": [
-        _h("inductivo.NEGRO", "opto.IN2", NEGRO, "salida NPN"), _h("inductivo.CAFE", "x2.3", CAFE, "+12 V"),
-        _h("inductivo.AZUL", "x2.12", AZUL, "0 V")]},
+    {"id": "capacitivo", "nombre": "Capacitivo → su diodo (G35) y empalmes de 12 V", "tipo": "sensor12", "hilos": [
+        _h("capacitivo.NEGRO", "capacitivo_s.J", NEGRO, "salida NPN (por el diodo BAT85)"),
+        _h("capacitivo.CAFE", "e12s.J", CAFE, "+12 V"), _h("capacitivo.AZUL", "egnd_s.J", AZUL, "0 V")]},
+    {"id": "inductivo", "nombre": "Inductivo → su diodo (G36) y empalmes de 12 V", "tipo": "sensor12", "hilos": [
+        _h("inductivo.NEGRO", "inductivo_s.J", NEGRO, "salida NPN (por el diodo BAT85)"),
+        _h("inductivo.CAFE", "e12s.J", CAFE, "+12 V"), _h("inductivo.AZUL", "egnd_s.J", AZUL, "0 V")]},
     {"id": "hall", "nombre": "Hall KY-003 → ESP32 G39", "tipo": "senal", "conector": "Dupont 3 vías", "hilos": [
         _h("hall.S", "esp32_fijo.G39.S", VERDE, "señal (pull-up del módulo)"), _h("hall.+", "esp32_fijo.G39.V", ROJO, "3,3 V"),
         _h("hall.−", "esp32_fijo.G39.G", NEGRO, "GND")]},
-    {"id": "vl53_interior", "nombre": "VL53L0X interior → reparto I2C (A) y XSHUT G18", "tipo": "i2c", "hilos": [
-        _h("vl53_interior.VIN", "hub_i2c.A.3V3", ROJO, "3,3 V"), _h("vl53_interior.GND", "hub_i2c.A.GND", NEGRO, "GND"),
-        _h("vl53_interior.SCL", "hub_i2c.A.SCL", AMARILLO, "SCL"), _h("vl53_interior.SDA", "hub_i2c.A.SDA", AZUL, "SDA"),
+    {"id": "vl53_interior", "nombre": "VL53L0X interior → empalmes del bus I2C 1 y XSHUT G18", "tipo": "i2c", "hilos": [
+        _h("vl53_interior.VIN", "i2c1_3v3.J", ROJO, "3,3 V"), _h("vl53_interior.GND", "i2c1_gnd.J", NEGRO, "GND"),
+        _h("vl53_interior.SCL", "i2c1_scl.J", AMARILLO, "SCL"), _h("vl53_interior.SDA", "i2c1_sda.J", AZUL, "SDA"),
         _h("vl53_interior.XSHUT", "esp32_fijo.G18.S", BLANCO, "XSHUT (dirección 0x30)")]},
-    {"id": "vl53_cortina", "nombre": "VL53L0X cortina → reparto I2C (B) y XSHUT G19", "tipo": "i2c", "hilos": [
-        _h("vl53_cortina.VIN", "hub_i2c.B.3V3", ROJO, "3,3 V"), _h("vl53_cortina.GND", "hub_i2c.B.GND", NEGRO, "GND"),
-        _h("vl53_cortina.SCL", "hub_i2c.B.SCL", AMARILLO, "SCL"), _h("vl53_cortina.SDA", "hub_i2c.B.SDA", AZUL, "SDA"),
+    {"id": "vl53_cortina", "nombre": "VL53L0X cortina → empalmes del bus I2C 1 y XSHUT G19", "tipo": "i2c", "hilos": [
+        _h("vl53_cortina.VIN", "i2c1_3v3.J", ROJO, "3,3 V"), _h("vl53_cortina.GND", "i2c1_gnd.J", NEGRO, "GND"),
+        _h("vl53_cortina.SCL", "i2c1_scl.J", AMARILLO, "SCL"), _h("vl53_cortina.SDA", "i2c1_sda.J", AZUL, "SDA"),
         _h("vl53_cortina.XSHUT", "esp32_fijo.G19.S", BLANCO, "XSHUT (dirección 0x31)")]},
     {"id": "motor_monedas", "nombre": "NEMA17 cinta de monedas → driver M", "tipo": "paso", "conector": "JST-PH 6 → bornes",
      "hilos": [_h("motor_monedas.JST", "drivers.M.1A", NEGRO, "A+"), _h("motor_monedas.JST", "drivers.M.1B", VERDE, "A−"),
@@ -428,17 +433,20 @@ CABLES: list[dict] = [
     _servo("servo_prensa", 3, "Servo prensa (MG996R)"),
     _servo("servo_empujador", 4, "Servo empujador (MG996R)"),
     _servo("servo_canaleta", 5, "Servo escape canaleta"),
-    {"id": "panel_luz", "nombre": "Panel de luz → bornera 5 V", "tipo": "cinco", "hilos": [
-        _h("panel_luz.+5V", "x2.6", ROJO, "+5 V"), _h("panel_luz.GND", "x2.13", NEGRO, "GND")]},
-    {"id": "anillo", "nombre": "Anillo de luz → bornera 5 V", "tipo": "cinco", "hilos": [
-        _h("anillo.+5V", "x2.6", ROJO, "+5 V"), _h("anillo.GND", "x2.13", NEGRO, "GND")]},
-    {"id": "usb_cenital", "nombre": "Webcam cenital → hub USB P2", "tipo": "usb", "hilos": [
-        _h("cam_cenital.USB", "hub_usb.P2", NEGRO, "USB")]},
-    {"id": "usb_vasos", "nombre": "Webcam de vasos → hub USB P1 (con extensión USB de 1 m)", "tipo": "usb", "hilos": [
-        _h("cam_vasos.USB", "hub_usb.P1", NEGRO, "USB")]},
-    {"id": "usb_esp", "nombre": "ESP32 fijo → hub USB P3 (datos y alimentación)", "tipo": "usb", "hilos": [
-        _h("esp32_fijo.USB", "hub_usb.P3", NEGRO, "USB")]},
-    {"id": "usb_pc", "nombre": "Hub USB → portátil", "tipo": "usb", "hilos": [_h("hub_usb.UP", "pc.USB1", NEGRO, "USB")]},
+    {"id": "panel_luz", "nombre": "Panel de luz → empalmes de 5 V", "tipo": "cinco", "hilos": [
+        _h("panel_luz.+5V", "e5.J", ROJO, "+5 V"), _h("panel_luz.GND", "e5_gnd.J", NEGRO, "GND")]},
+    {"id": "anillo", "nombre": "Anillo de luz → empalmes de 5 V", "tipo": "cinco", "hilos": [
+        _h("anillo.+5V", "e5.J", ROJO, "+5 V"), _h("anillo.GND", "e5_gnd.J", NEGRO, "GND")]},
+    # Sin hub USB (2026-10-24): cada uno a su puerto del portatil (ninguno pasa de 0,35 A; un
+    # USB 2.0 da 0,5 A). Los dos del costado derecho para la cenital (el de adelante) y el ESP32
+    # (el de atras: asi sus cables no se cruzan), el izquierdo para la webcam de vasos (su cable
+    # viene por la izquierda de las mesas).
+    {"id": "usb_cenital", "nombre": "Webcam cenital → portátil (USB derecho de adelante)", "tipo": "usb", "hilos": [
+        _h("cam_cenital.USB", "pc.USB1", NEGRO, "USB")]},
+    {"id": "usb_vasos", "nombre": "Webcam de vasos → portátil (USB izquierdo, con la extensión USB de 1 m)", "tipo": "usb", "hilos": [
+        _h("cam_vasos.USB", "pc.USB3", NEGRO, "USB")]},
+    {"id": "usb_esp", "nombre": "ESP32 fijo → portátil (USB derecho de atrás, datos y alimentación)", "tipo": "usb", "hilos": [
+        _h("esp32_fijo.USB", "pc.USB2", NEGRO, "USB")]},
 
     # ---------------- Carro ----------------
     {"id": "c_bat", "nombre": "Batería → interruptor → TB6612 y ESP32", "tipo": "carro", "hilos": [
@@ -479,9 +487,10 @@ CABLES: list[dict] = [
         _h("ir_cuna.GND", "esp32_carro.G14.G", NEGRO, "GND")]},
 ]
 
-# Pines que pueden recibir mas de un hilo: bornes (hasta 2 hilos), salidas
+# Pines que pueden recibir mas de un hilo: bornes (hasta 2 hilos), empalmes (hasta 5), salidas
 # de cables integrados y conectores (todos sus hilos van juntos).
-TIPOS_MULTIPLES = {"borne", "borne_din", "cable", "jst", "pad", "jack"}
+TIPOS_MULTIPLES = {"borne", "borne_din", "cable", "jst", "pad", "jack", "empalme"}
+MAX_HILOS_EMPALME = 5   # mas hilos no se sueldan bien dentro de un termoencogible de 6 mm
 
 
 def pin(ref: str) -> dict:

@@ -43,8 +43,8 @@ el infrarrojo de la cuna.
 | `wokwi-a4988` + `wokwi-stepper-motor` (×2) | A4988 + NEMA17 de cada cinta | STEP/DIR 25/26 (monedas), 27/14 (vasos), ENABLE 13 | Existen en Wokwi. Con MS1-MS3 al aire Wokwi da paso completo; el montaje va a 1/4 de paso |
 | 4 LEDs azules | ULN2003 + 28BYJ-48 del carrusel | 32, 33, 23, 4 | Wokwi no tiene ULN2003 ni motor unipolar: los LEDs muestran qué bobina está energizada |
 | Pulsador + 10 kΩ a 3,3 V | FC-51 de presencia | 34 | Pulsado = detecta (salida activa en bajo). 34-39 no tienen pull-up interno |
-| Pulsador + 10 kΩ | Capacitivo por el PC817 | 35 | El sensor de 12 V + optoacoplador se ven desde el ESP32 como un contacto a GND con pull-up de 10 kΩ: exactamente esto |
-| Pulsador + 10 kΩ | Inductivo por el PC817 | 36 (VP) | Igual que el capacitivo |
+| Pulsador + 10 kΩ | Capacitivo (diodo BAT85 + pull-up) | 35 | El sensor NPN de 12 V con su diodo y la pull-up de 10 kΩ a 3,3 V se ve desde el ESP32 como un contacto a GND con pull-up de 10 kΩ: exactamente esto |
+| Pulsador + 10 kΩ | Inductivo (diodo BAT85 + pull-up) | 36 (VP) | Igual que el capacitivo |
 | Pulsador + 10 kΩ | Hall KY-003 (A3144, colector abierto) | 39 (VN) | Es el mismo pull-up de 10 kΩ del montaje |
 | `wokwi-servo` prensa y empujador | MG996R por el PCA9685 (canales 3 y 4) | **5 y 12, solo en Wokwi** | Wokwi no tiene PCA9685: dos servos directos a GPIO libres. En el montaje van por I2C 21/22 al PCA9685 (con los otros 4 SG90) y esos GPIO no se usan (el 12 es de arranque) |
 | Potenciómetro "cortina" | VL53L0X de la cortina | **2, solo en Wokwi** | Wokwi no tiene VL53L0X: el potenciómetro da la distancia (0-300 mm). En el montaje: I2C 16/17, XSHUT 19 |
@@ -57,7 +57,7 @@ el infrarrojo de la cuna.
 | 2 pulsadores verdes | Encoders H206 | 18, 19 | Cada pulsación = una ranura del disco |
 | Pulsador rojo | Infrarrojo de la cuna (TCRT5000) | 14 | Pulsado = vaso en la cuna |
 
-Los servos de Wokwi se alimentan del 5 V de la placa; en el montaje van a 6 V desde el buck XL4016
+Los servos de Wokwi se alimentan del 5 V de la placa; en el montaje van a 6 V desde el buck XL4015
 por la bornera V+ del PCA9685 (nunca desde el ESP32: un MG996R trabado pide 2,5 A).
 
 **Ojo con los pines extra.** Como Wokwi no tiene PCA9685 ni VL53L0X, sus sustitutos van a pines que el

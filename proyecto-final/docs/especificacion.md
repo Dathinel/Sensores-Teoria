@@ -282,7 +282,7 @@ carro (no lleva cámara).
 Modelo físico (2026-09-25): todo lo que se mueve lo hace dentro de sus límites y con su
 mecanismo (carrusel del almacén con motor y obturador, empujador con manivela, leva de la
 prensa, desvío de la descarga), y nada queda en el aire: la mesa de monedas (43 cm, para que
-la moneda baje por gravedad al carrusel y de ahí al vaso) y un pórtico trasero de perfil 2020
+la moneda baje por gravedad al carrusel y de ahí al vaso) y un pórtico trasero (impreso desde el 2026-10-24, `maqueta_impresa/`; antes perfil 2020)
 (viga a 40 cm) sostienen almacén, tubo de tapas, prensa y panel de luz. Rieles de la canaleta a
 69 mm (el cuerpo del vaso, 62 mm, pasa entre ellos; la pestaña del reborde, 78 mm = 62 + 2 × 8, se
 apoya). El visor 3D (`app/visor3d/visor.js`) es además el boceto de presentación: tiene que

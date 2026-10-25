@@ -289,7 +289,10 @@ def generar_conexiones() -> str:
          "dos hilos, que los bornes lleven como mucho dos y que los GPIO sean los de la tabla de pines de "
          "[revision-final.md](revision-final.md).\n",
          "Convenciones: placas GVS con el jumper en 3,3 V (**G** = GND, **V** = 3,3 V, **S** = señal del GPIO). "
-         "Bornera X2 con puentes 2-3 (+12 V sensores), 5-6 (+5 V) y 7 a 13 (GND en estrella).\n"]
+         "Sin bornera (ahorro 2026-10-24): el +12 V (después del fusible principal), el +5 V y la tierra se reparten "
+         "con **empalmes soldados con termoencogible** (pin `J`, hasta 5 hilos cada uno); la tierra sigue en estrella "
+         "en los bornes −V de la fuente. Las pull-ups y los diodos de las entradas NPN y las pull-ups del bus I2C 1 "
+         "van soldados en línea en sus empalmes.\n"]
     for zona, titulo in (("caja", "Caja de control"), ("planta", "Planta (campo)"), ("carro", "Carro")):
         L.append(f"## {titulo}\n")
         for c in cx.CABLES:

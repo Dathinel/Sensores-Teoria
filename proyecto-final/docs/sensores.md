@@ -49,7 +49,7 @@ Numerados igual que en el visor 3D (pestaña Sensores). Qué lo activa, qué rec
 - **Rango:** 1-10 mm, ajustable con el tornillo de sensibilidad · **Respuesta:** ~5 ms (conmuta a ~100 Hz)
 - **Error típico:** Humedad o polvo en la cara activa dan falsos positivos; piezas muy pequenas y delgadas pueden no alcanzar el umbral (falso negativo).
 - **Cómo mitigarlo:** Montarlo a 3-5 mm de la trayectoria; calibrar con el boton de plastico mas pequeno; limpiar la cara; voto de 3 lecturas.
-- **Conexión:** Salida NPN alimentada a 6-36 V: pasar por optoacoplador (PC817) o divisor a 3,3 V. NUNCA directo al ESP32.
+- **Conexión:** Salida NPN alimentada a 6-36 V (+12 V de la caja): al GPIO por un diodo Schottky BAT85 (catodo hacia el sensor) con pull-up de 10 kOhm a 3,3 V soldados en linea (sin optoacoplador desde 2026-10-24). NUNCA el cable negro solo al pin: si el sensor trae su resistencia a 12 V, meteria 12 V al ESP32.
 - **Cómo se simula:** Consulta si hay un cuerpo activo en la casilla E1 (cualquiera); la lectura viaja en el registro de la casilla y se usa en E2.
 - **Pasos:** [2. Estación 2 (material)](paso-a-paso.md#2-estación-2-material), [17. Firmware de los dos ESP32 y hardware real](paso-a-paso.md#17-firmware-de-los-dos-esp32-y-hardware-real)
 
@@ -67,7 +67,7 @@ Numerados igual que en el visor 3D (pestaña Sensores). Qué lo activa, qué rec
 - **Rango:** 8 mm nominal en acero (placa patron de 24 x 24 mm); una moneda de 17-27 mm centrada da ~70-80 % de eso, y en bronce, laton y cuproniquel ~40-60 % mas: ~2,2-4,8 mm, contra 2 mm de banda. Por eso M18 de 8 mm y no el M12 de 4 mm (a traves de la banda no alcanzaba con las no ferrosas) · **Respuesta:** ~2 ms (conmuta a ~500 Hz)
 - **Error típico:** Las monedas NO ferrosas (casi todas las antiguas y muy antiguas) se detectan a menos distancia que el acero: si la moneda pasa lejos, falso negativo y se iria como no metalica.
 - **Cómo mitigarlo:** Centrado bajo la casilla (descentrado pierde la mitad del alcance); inserto IMPRESO en la bancada alrededor de la cara (es no enrasable: nada de metal a menos de ~2 cm); probar con cada familia, sobre todo las de bronce; voto de 3 lecturas; si el inductivo ve metal, manda sobre el capacitivo.
-- **Conexión:** Salida NPN a 6-36 V: optoacoplador o divisor a 3,3 V. NUNCA directo al ESP32.
+- **Conexión:** Salida NPN alimentada a 6-36 V (+12 V de la caja): al GPIO por un diodo Schottky BAT85 (catodo hacia el sensor) con pull-up de 10 kOhm a 3,3 V soldados en linea (sin optoacoplador desde 2026-10-24). NUNCA el cable negro solo al pin: si el sensor trae su resistencia a 12 V, meteria 12 V al ESP32.
 - **Cómo se simula:** Consulta la bandera `metal` del cuerpo que está en E2.
 - **Pasos:** [2. Estación 2 (material)](paso-a-paso.md#2-estación-2-material), [17. Firmware de los dos ESP32 y hardware real](paso-a-paso.md#17-firmware-de-los-dos-esp32-y-hardware-real)
 

@@ -373,12 +373,17 @@ zonas_carro:
   # visor el NEMA17 de la cinta de vasos llega a y = -218 mm (12 cm mas alla de las estaciones,
   # con 100 quedaba 1,8 cm fuera) y el gabinete de control a y = +268 mm (14 cm detras del rechazo).
   margen_planta_mm: 150
-  # PROVISIONAL: soportes de la canaleta a cada lado de su eje (el visor: 28 mm afuera de cada
-  # riel + el perfil 2020; el poste del escape llega a 90 mm del eje, 2026-09-27) + 10 mm de margen.
-  medio_ancho_canaleta_mm: 100
-  # PROVISIONAL: poste de la camara de vasos, que llega al piso al lado de la cinta (pie de
-  # 3 cm, 2 cm detras de la camara): cuadrado de este medio lado alrededor de la camara.
+  # PROVISIONAL: soportes de la canaleta a cada lado de su eje + 10 mm de margen. Maqueta impresa
+  # (2026-10-24, maqueta_impresa/): el marco del piso C1..C4 y las placas de las guias del muelle
+  # (can_guia_recta_*, remachadas a los tubos C3-M1 y C4-M2) llegan a 116 mm del eje (antes 90: el
+  # poste 2020 del escape del visor viejo).
+  medio_ancho_canaleta_mm: 126
+  # PROVISIONAL: poste de la camara de vasos (cuadrado de este medio lado alrededor del poste).
+  # Maqueta impresa: el poste es el tubo K1-L, 22 mm detras de la camara (y -422, la camara en
+  # y -400), y lo une a la planta un tubo POR EL PISO (K0-K1, x 160, de y -152,5 a -422, 21 mm de
+  # alto: el carro no lo ve con el laser ni el ultrasonico). La zona va del poste hasta la planta.
   medio_lado_poste_camara_mm: 40
+  poste_camara_detras_mm: 22
   # PROVISIONAL: piso libre alrededor de la pista (desde el borde de la pista) por el que el carro
   # puede andar por orden. Depende del salon: medirlo el dia de la sustentacion.
   margen_zona_libre_mm: 300

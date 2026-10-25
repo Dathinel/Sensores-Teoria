@@ -41,15 +41,21 @@
       <inertia ixx="0.02" ixy="0.0" ixz="0.0" iyy="0.06" iyz="0.0" izz="0.06"/>
     </inertial>
 
+    <!-- Maqueta impresa (2026-10-24, maqueta_impresa/cinta_vasos.scad): bancada de PLA (dos mitades,
+         vas_bancada_a/b) de x 13 a 387 mm del mundo, entre las dos laterales (y -140,3 a -59,7) y de
+         z 104 a 119,9 (dentro del lazo de la banda). Antes 400 x 80 x 20 (inventario 19.3). -->
     <visual>
-      <geometry><box size="0.40 0.08 0.02"/></geometry>
-      <origin xyz="0 0 0.01" rpy="0 0 0"/>
+      <geometry><box size="0.374 0.0806 0.0159"/></geometry>
+      <origin xyz="0 0 0.01195" rpy="0 0 0"/>
       <material name="azul_bancada"/>
     </visual>
     <collision>
-      <geometry><box size="0.40 0.08 0.02"/></geometry>
-      <origin xyz="0 0 0.01" rpy="0 0 0"/>
+      <geometry><box size="0.374 0.0806 0.0159"/></geometry>
+      <origin xyz="0 0 0.01195" rpy="0 0 0"/>
     </collision>
+    <!-- Placas laterales impresas (vas_lat_s, vas_lat_n; antes aluminio): 4 mm, z 72 a 120. -->
+    <visual><geometry><box size="0.43 0.004 0.048"/></geometry><origin xyz="0 -0.0425 -0.004" rpy="0 0 0"/><material name="azul_bancada"/></visual>
+    <visual><geometry><box size="0.43 0.004 0.048"/></geometry><origin xyz="0 0.0425 -0.004" rpy="0 0 0"/><material name="azul_bancada"/></visual>
 
     <visual>
       <geometry><box size="0.395 0.075 0.002"/></geometry>
@@ -63,21 +69,28 @@
 
     <!-- Patas: la cinta de vasos va sobre una mesa de 10 cm (ver
          ALTURA_MESA_VASOS en sim/mundo.py: la canaleta de entrega necesita
-         esa altura para que el vaso colgado no toque el piso). -->
-    <visual><geometry><box size="0.014 0.014 0.10"/></geometry><origin xyz="-0.19 -0.03 -0.05" rpy="0 0 0"/><material name="azul_bancada"/></visual>
-    <visual><geometry><box size="0.014 0.014 0.10"/></geometry><origin xyz="-0.19 0.03 -0.05" rpy="0 0 0"/><material name="azul_bancada"/></visual>
-    <visual><geometry><box size="0.014 0.014 0.10"/></geometry><origin xyz="0.19 0.03 -0.05" rpy="0 0 0"/><material name="azul_bancada"/></visual>
-    <visual><geometry><box size="0.014 0.014 0.10"/></geometry><origin xyz="0.19 -0.03 -0.05" rpy="0 0 0"/><material name="azul_bancada"/></visual>
+         esa altura para que el vaso colgado no toque el piso). Maqueta impresa: 4 tubos 16 x 16 con
+         la punta en z 120 a los que se remachan las laterales: (40; -152,5), (315; -152,5),
+         (30; -40,5) y la columna +x del portico (315; -40,5), que sube hasta la viga (y -40,5,
+         z 400) junto con la columna (-50; -40,5). Antes 4 patas de 14 x 14 en x 0,01 / 0,39
+         (inventario 19.2). Marco local: mundo menos (0,20; -0,10; 0,10). -->
+    <visual><geometry><box size="0.016 0.016 0.12"/></geometry><origin xyz="-0.16 -0.0525 -0.04" rpy="0 0 0"/><material name="azul_bancada"/></visual>
+    <visual><geometry><box size="0.016 0.016 0.12"/></geometry><origin xyz="0.115 -0.0525 -0.04" rpy="0 0 0"/><material name="azul_bancada"/></visual>
+    <visual><geometry><box size="0.016 0.016 0.12"/></geometry><origin xyz="-0.17 0.0595 -0.04" rpy="0 0 0"/><material name="azul_bancada"/></visual>
+    <visual><geometry><box size="0.016 0.016 0.408"/></geometry><origin xyz="0.115 0.0595 0.104" rpy="0 0 0"/><material name="azul_bancada"/></visual>
+    <visual><geometry><box size="0.016 0.016 0.408"/></geometry><origin xyz="-0.25 0.0595 0.104" rpy="0 0 0"/><material name="azul_bancada"/></visual>
+    <visual><geometry><box size="0.381 0.016 0.016"/></geometry><origin xyz="-0.0675 0.0595 0.30" rpy="0 0 0"/><material name="azul_bancada"/></visual>
 
-    <!-- Separadores: 6 delimitan las 5 casillas/estaciones, de x=-0.20 a x=0.20.
+    <!-- Separadores: 6 delimitan las 5 casillas/estaciones, de x=-0.20 a x=0.20. Maqueta impresa:
+         75 mm (el ancho de la banda) menos 3 recortados del lado -y (vas_recorte_sep): 72 mm.
          Visual-only a proposito: un separador con colision chocaria con la
          base del vaso cada vez que sim/mundo.py lo reposiciona. -->
-    <visual><geometry><box size="0.003 0.08 0.015"/></geometry><origin xyz="-0.20 0 0.0295" rpy="0 0 0"/><material name="gris_separador"/></visual>
-    <visual><geometry><box size="0.003 0.08 0.015"/></geometry><origin xyz="-0.12 0 0.0295" rpy="0 0 0"/><material name="gris_separador"/></visual>
-    <visual><geometry><box size="0.003 0.08 0.015"/></geometry><origin xyz="-0.04 0 0.0295" rpy="0 0 0"/><material name="gris_separador"/></visual>
-    <visual><geometry><box size="0.003 0.08 0.015"/></geometry><origin xyz="0.04 0 0.0295" rpy="0 0 0"/><material name="gris_separador"/></visual>
-    <visual><geometry><box size="0.003 0.08 0.015"/></geometry><origin xyz="0.12 0 0.0295" rpy="0 0 0"/><material name="gris_separador"/></visual>
-    <visual><geometry><box size="0.003 0.08 0.015"/></geometry><origin xyz="0.20 0 0.0295" rpy="0 0 0"/><material name="gris_separador"/></visual>
+    <visual><geometry><box size="0.003 0.072 0.015"/></geometry><origin xyz="-0.20 0.0015 0.0295" rpy="0 0 0"/><material name="gris_separador"/></visual>
+    <visual><geometry><box size="0.003 0.072 0.015"/></geometry><origin xyz="-0.12 0.0015 0.0295" rpy="0 0 0"/><material name="gris_separador"/></visual>
+    <visual><geometry><box size="0.003 0.072 0.015"/></geometry><origin xyz="-0.04 0.0015 0.0295" rpy="0 0 0"/><material name="gris_separador"/></visual>
+    <visual><geometry><box size="0.003 0.072 0.015"/></geometry><origin xyz="0.04 0.0015 0.0295" rpy="0 0 0"/><material name="gris_separador"/></visual>
+    <visual><geometry><box size="0.003 0.072 0.015"/></geometry><origin xyz="0.12 0.0015 0.0295" rpy="0 0 0"/><material name="gris_separador"/></visual>
+    <visual><geometry><box size="0.003 0.072 0.015"/></geometry><origin xyz="0.20 0.0015 0.0295" rpy="0 0 0"/><material name="gris_separador"/></visual>
 
     <!-- Tolva sobre la estacion de llenado (x=-0.08): recibe el lote que
          suelta la compuerta de un tubo del almacen y lo lleva al vaso. Los 5
@@ -101,28 +114,37 @@
     <visual><geometry><cylinder radius="0.0155" length="0.058"/></geometry><origin xyz="-0.06792 0.01208 0.1990" rpy="0 0 0"/><material name="embudo"/></visual>
     <visual><geometry><cylinder radius="0.0155" length="0.058"/></geometry><origin xyz="-0.06792 0.04508 0.1990" rpy="0 0 0"/><material name="embudo"/></visual>
 
-    <!-- Tubo vertical de tapas sobre la estacion de tapa (x=0.00). Arranca
-         por encima de la cortina de seguridad (vasos 90 mm + margen 20 mm). -->
+    <!-- Tubo vertical de tapas sobre la estacion de tapa (x=0.00). Maqueta impresa (tap_tubo): una
+         pieza de PLA, cabezal desde z 225 (13 mm sobre la boca del vaso) y tubo de 86 mm de diametro
+         exterior hasta z 300. Antes r 34 de z 0,25 a 0,35 (inventario 19.5). -->
     <visual>
-      <geometry><cylinder radius="0.034" length="0.10"/></geometry>
-      <origin xyz="0.0 0 0.20" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.043" length="0.075"/></geometry>
+      <origin xyz="0.0 0 0.1625" rpy="0 0 0"/>
       <material name="tubo_tapas"/>
     </visual>
 
-    <!-- Prensa sobre la estacion de prensa (x=0.08): columna + cabezal. -->
+    <!-- Prensa sobre la estacion de prensa (x=0.08), maqueta impresa (tap_pre_*): placa de PLA en
+         la cara -y de la viga (x 235-304, y -54,7 a -48,7, z 245-406 del mundo), leva de 44 mm en el
+         eje del MG996R (z 339,5) y plato de 62 mm abajo en z 229 (piston arriba) con su vastago de
+         8 mm. Antes: columna + plato r 28 en z 0,285 (inventario 19.6). -->
     <visual>
-      <geometry><box size="0.02 0.02 0.19"/></geometry>
-      <origin xyz="0.08 0.05 0.115" rpy="0 0 0"/>
+      <geometry><box size="0.069 0.006 0.161"/></geometry>
+      <origin xyz="0.0695 0.0483 0.2255" rpy="0 0 0"/>
       <material name="acero_prensa"/>
     </visual>
     <visual>
-      <geometry><box size="0.02 0.06 0.015"/></geometry>
-      <origin xyz="0.08 0.02 0.20" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.022" length="0.008"/></geometry>
+      <origin xyz="0.08 0 0.246" rpy="1.5708 0 0"/>
       <material name="acero_prensa"/>
     </visual>
     <visual>
-      <geometry><cylinder radius="0.028" length="0.012"/></geometry>
-      <origin xyz="0.08 0 0.185" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.004" length="0.079"/></geometry>
+      <origin xyz="0.08 0 0.1715" rpy="0 0 0"/>
+      <material name="acero_prensa"/>
+    </visual>
+    <visual>
+      <geometry><cylinder radius="0.031" length="0.006"/></geometry>
+      <origin xyz="0.08 0 0.132" rpy="0 0 0"/>
       <material name="acero_prensa"/>
     </visual>
   </link>
@@ -132,23 +154,27 @@
        tapa) o hacia la bandeja de rechazo (cualquier otro caso). La
        canaleta de entrega real (rieles a 15 grados, seccion 4) se
        construye completa en la fase 6, junto con el vehiculo. -->
+  <!-- Maqueta impresa (tap_emp_paleta, 2026-10-24): paleta de 56 x 55 mm (z 138 a 193 del mundo)
+       que CORRE en -y (biela-manivela) de y -55 (reposo) a -122,5, en la x de la descarga (0,36).
+       Antes: paleta revoluta de 80 mm en (0,32; -0,14) (inventario 19.7). sim/mundo.py la lleva
+       hasta el limite superior de la junta y la vuelve. -->
   <link name="empujador_descarga">
     <inertial>
       <mass value="0.01"/>
       <inertia ixx="1e-6" ixy="0.0" ixz="0.0" iyy="1e-6" iyz="0.0" izz="1e-6"/>
     </inertial>
     <visual>
-      <geometry><box size="0.08 0.005 0.02"/></geometry>
-      <origin xyz="0.04 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.056 0.004 0.055"/></geometry>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
       <material name="verde_empujador"/>
     </visual>
   </link>
-  <joint name="junta_empujador_descarga" type="revolute">
+  <joint name="junta_empujador_descarga" type="prismatic">
     <parent link="bancada"/>
     <child link="empujador_descarga"/>
-    <origin xyz="0.12 -0.04 0.032" rpy="0 0 0"/>
-    <axis xyz="0 0 1"/>
-    <limit lower="0" upper="1.45" effort="5" velocity="4"/>
+    <origin xyz="0.16 0.045 0.0655" rpy="0 0 0"/>
+    <axis xyz="0 -1 0"/>
+    <limit lower="0" upper="0.0675" effort="5" velocity="0.5"/>
   </joint>
 
   <link name="bandeja_rechazo_vasos">

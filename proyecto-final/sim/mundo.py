@@ -776,7 +776,10 @@ class EscenaEstacion:
 
     def _animar_junta(self, body_id: int, indice_junta: int, pasos_ida: int = PASOS_SERVO,
                       pasos_vuelta: int = PASOS_SERVO) -> None:
-        p.setJointMotorControl2(body_id, indice_junta, p.POSITION_CONTROL, targetPosition=1.45, force=5)
+        # Hasta el limite superior de la junta (URDF): desde la maqueta impresa (2026-10-24) el
+        # empujador es una paleta que corre 67,5 mm en -y; antes era una revoluta de 1,45 rad.
+        tope = p.getJointInfo(body_id, indice_junta)[9]
+        p.setJointMotorControl2(body_id, indice_junta, p.POSITION_CONTROL, targetPosition=tope, force=5)
         for _ in range(pasos_ida):
             self._paso_fisica()
         p.setJointMotorControl2(body_id, indice_junta, p.POSITION_CONTROL, targetPosition=0.0, force=5)

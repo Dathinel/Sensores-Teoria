@@ -1,0 +1,4045 @@
+{
+ "piezas": [
+  {
+   "pieza": "F1",
+   "grupo": "est_nodos",
+   "cantidad": 1,
+   "medidas": [
+    43.2,
+    43.2,
+    43.2
+   ],
+   "gramos": 18.5,
+   "minutos": 33.9,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_nodos_1"
+   ]
+  },
+  {
+   "pieza": "F2",
+   "grupo": "est_nodos",
+   "cantidad": 1,
+   "medidas": [
+    43.2,
+    43.2,
+    43.2
+   ],
+   "gramos": 18.5,
+   "minutos": 33.9,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_nodos_1"
+   ]
+  },
+  {
+   "pieza": "F3",
+   "grupo": "est_nodos",
+   "cantidad": 1,
+   "medidas": [
+    46.4,
+    43.2,
+    43.2
+   ],
+   "gramos": 19.0,
+   "minutos": 34.6,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_nodos_1"
+   ]
+  },
+  {
+   "pieza": "F4",
+   "grupo": "est_nodos",
+   "cantidad": 1,
+   "medidas": [
+    65.2,
+    21.2,
+    43.2
+   ],
+   "gramos": 18.5,
+   "minutos": 33.9,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_nodos_1"
+   ]
+  },
+  {
+   "pieza": "F6",
+   "grupo": "est_nodos",
+   "cantidad": 1,
+   "medidas": [
+    65.2,
+    43.2,
+    43.2
+   ],
+   "gramos": 23.0,
+   "minutos": 40.0,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_nodos_1"
+   ]
+  },
+  {
+   "pieza": "F5",
+   "grupo": "est_nodos",
+   "cantidad": 1,
+   "medidas": [
+    46.4,
+    43.2,
+    43.2
+   ],
+   "gramos": 19.0,
+   "minutos": 34.6,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_nodos_1"
+   ]
+  },
+  {
+   "pieza": "V2",
+   "grupo": "est_nodos",
+   "cantidad": 1,
+   "medidas": [
+    43.2,
+    21.2,
+    43.2
+   ],
+   "gramos": 14.1,
+   "minutos": 27.9,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_nodos_1"
+   ]
+  },
+  {
+   "pieza": "K0",
+   "grupo": "est_nodos",
+   "cantidad": 1,
+   "medidas": [
+    65.2,
+    43.2,
+    24.4
+   ],
+   "gramos": 19.2,
+   "minutos": 30.9,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_nodos_1"
+   ]
+  },
+  {
+   "pieza": "V4",
+   "grupo": "est_nodos",
+   "cantidad": 1,
+   "medidas": [
+    46.4,
+    43.2,
+    43.2
+   ],
+   "gramos": 19.0,
+   "minutos": 34.6,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_nodos_1"
+   ]
+  },
+  {
+   "pieza": "C1",
+   "grupo": "est_nodos",
+   "cantidad": 1,
+   "medidas": [
+    43.2,
+    43.2,
+    43.2
+   ],
+   "gramos": 18.5,
+   "minutos": 33.9,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_nodos_1"
+   ]
+  },
+  {
+   "pieza": "C2",
+   "grupo": "est_nodos",
+   "cantidad": 1,
+   "medidas": [
+    46.4,
+    43.2,
+    43.2
+   ],
+   "gramos": 19.0,
+   "minutos": 34.6,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_nodos_1"
+   ]
+  },
+  {
+   "pieza": "C3",
+   "grupo": "est_nodos",
+   "cantidad": 1,
+   "medidas": [
+    43.2,
+    65.2,
+    43.2
+   ],
+   "gramos": 23.0,
+   "minutos": 40.0,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_nodos_1"
+   ]
+  },
+  {
+   "pieza": "C4",
+   "grupo": "est_nodos",
+   "cantidad": 1,
+   "medidas": [
+    46.4,
+    65.2,
+    43.2
+   ],
+   "gramos": 23.5,
+   "minutos": 40.6,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_nodos_1"
+   ]
+  },
+  {
+   "pieza": "K1",
+   "grupo": "est_nodos",
+   "cantidad": 1,
+   "medidas": [
+    24.4,
+    43.2,
+    43.2
+   ],
+   "gramos": 14.5,
+   "minutos": 28.5,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_nodos_1"
+   ]
+  },
+  {
+   "pieza": "M1",
+   "grupo": "est_nodos",
+   "cantidad": 1,
+   "medidas": [
+    43.2,
+    43.2,
+    24.4
+   ],
+   "gramos": 14.7,
+   "minutos": 24.8,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_nodos_1"
+   ]
+  },
+  {
+   "pieza": "M2",
+   "grupo": "est_nodos",
+   "cantidad": 1,
+   "medidas": [
+    43.2,
+    43.2,
+    24.4
+   ],
+   "gramos": 14.7,
+   "minutos": 24.8,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_nodos_1"
+   ]
+  },
+  {
+   "pieza": "T1",
+   "grupo": "est_nodos",
+   "cantidad": 1,
+   "medidas": [
+    43.2,
+    43.2,
+    43.2
+   ],
+   "gramos": 18.5,
+   "minutos": 33.9,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_nodos_2"
+   ]
+  },
+  {
+   "pieza": "T2",
+   "grupo": "est_nodos",
+   "cantidad": 1,
+   "medidas": [
+    43.2,
+    43.2,
+    43.2
+   ],
+   "gramos": 18.5,
+   "minutos": 33.9,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_nodos_2"
+   ]
+  },
+  {
+   "pieza": "T3",
+   "grupo": "est_nodos",
+   "cantidad": 1,
+   "medidas": [
+    65.2,
+    65.2,
+    24.4
+   ],
+   "gramos": 23.7,
+   "minutos": 36.9,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_nodos_2"
+   ]
+  },
+  {
+   "pieza": "Q2",
+   "grupo": "est_nodos",
+   "cantidad": 1,
+   "medidas": [
+    24.4,
+    43.2,
+    43.2
+   ],
+   "gramos": 14.5,
+   "minutos": 28.5,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_nodos_2"
+   ]
+  },
+  {
+   "pieza": "P1",
+   "grupo": "est_nodos",
+   "cantidad": 1,
+   "medidas": [
+    43.2,
+    21.2,
+    43.2
+   ],
+   "gramos": 14.1,
+   "minutos": 27.9,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_nodos_2"
+   ]
+  },
+  {
+   "pieza": "P2",
+   "grupo": "est_nodos",
+   "cantidad": 1,
+   "medidas": [
+    46.4,
+    21.2,
+    43.2
+   ],
+   "gramos": 14.5,
+   "minutos": 28.5,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_nodos_2"
+   ]
+  },
+  {
+   "pieza": "t_F1-F4",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    98.8,
+    16.0,
+    16.0
+   ],
+   "gramos": 12.3,
+   "minutos": 19.8,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_1"
+   ]
+  },
+  {
+   "pieza": "t_F4-F6",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    58.8,
+    16.0,
+    16.0
+   ],
+   "gramos": 7.3,
+   "minutos": 13.1,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_1"
+   ]
+  },
+  {
+   "pieza": "t_F6-F5_1",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    129.9,
+    16.0,
+    16.0
+   ],
+   "gramos": 16.2,
+   "minutos": 25.1,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_1"
+   ]
+  },
+  {
+   "pieza": "t_F6-F5_2",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    129.9,
+    16.0,
+    16.0
+   ],
+   "gramos": 16.2,
+   "minutos": 25.1,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_1"
+   ]
+  },
+  {
+   "pieza": "t_F1-F2",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    59.8,
+    16.0,
+    16.0
+   ],
+   "gramos": 7.4,
+   "minutos": 13.3,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_1"
+   ]
+  },
+  {
+   "pieza": "t_F2-F3",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    178.8,
+    16.0,
+    16.0
+   ],
+   "gramos": 22.3,
+   "minutos": 33.3,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_1"
+   ]
+  },
+  {
+   "pieza": "t_F3-F6",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    59.8,
+    16.0,
+    16.0
+   ],
+   "gramos": 7.4,
+   "minutos": 13.3,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_1"
+   ]
+  },
+  {
+   "pieza": "t_F5-V4",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    90.8,
+    16.0,
+    16.0
+   ],
+   "gramos": 11.3,
+   "minutos": 18.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_1"
+   ]
+  },
+  {
+   "pieza": "t_V2-K0",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    98.8,
+    16.0,
+    16.0
+   ],
+   "gramos": 12.3,
+   "minutos": 19.8,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_1"
+   ]
+  },
+  {
+   "pieza": "t_K0-V4",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    133.8,
+    16.0,
+    16.0
+   ],
+   "gramos": 16.7,
+   "minutos": 25.7,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_1"
+   ]
+  },
+  {
+   "pieza": "t_K0-K1_1",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    122.2,
+    16.0,
+    16.0
+   ],
+   "gramos": 15.2,
+   "minutos": 23.8,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_1"
+   ]
+  },
+  {
+   "pieza": "t_K0-K1_2",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    122.1,
+    16.0,
+    16.0
+   ],
+   "gramos": 15.2,
+   "minutos": 23.8,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_1"
+   ]
+  },
+  {
+   "pieza": "t_C1-C3",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    77.2,
+    16.0,
+    16.0
+   ],
+   "gramos": 9.6,
+   "minutos": 16.2,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_1"
+   ]
+  },
+  {
+   "pieza": "t_C1-C2",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    103.8,
+    16.0,
+    16.0
+   ],
+   "gramos": 12.9,
+   "minutos": 20.7,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_1"
+   ]
+  },
+  {
+   "pieza": "t_C3-C4",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    103.8,
+    16.0,
+    16.0
+   ],
+   "gramos": 12.9,
+   "minutos": 20.7,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_1"
+   ]
+  },
+  {
+   "pieza": "t_C2-C4",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    77.2,
+    16.0,
+    16.0
+   ],
+   "gramos": 9.6,
+   "minutos": 16.2,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_1"
+   ]
+  },
+  {
+   "pieza": "t_C3-M1",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    64.3,
+    16.0,
+    16.0
+   ],
+   "gramos": 7.9,
+   "minutos": 13.9,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_1"
+   ]
+  },
+  {
+   "pieza": "t_C4-M2",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    64.3,
+    16.0,
+    16.0
+   ],
+   "gramos": 7.8,
+   "minutos": 13.9,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_2"
+   ]
+  },
+  {
+   "pieza": "t_M1-M2",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    103.8,
+    16.0,
+    16.0
+   ],
+   "gramos": 12.8,
+   "minutos": 20.6,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_2"
+   ]
+  },
+  {
+   "pieza": "t_F1-T1_1",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    202.1,
+    16.0,
+    16.0
+   ],
+   "gramos": 25.2,
+   "minutos": 37.2,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_2"
+   ]
+  },
+  {
+   "pieza": "t_F1-T1_2",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    202.1,
+    16.0,
+    16.0
+   ],
+   "gramos": 25.2,
+   "minutos": 37.2,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_2"
+   ]
+  },
+  {
+   "pieza": "t_F2-T2_1",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    202.1,
+    16.0,
+    16.0
+   ],
+   "gramos": 25.2,
+   "minutos": 37.2,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_2"
+   ]
+  },
+  {
+   "pieza": "t_F2-T2_2",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    202.1,
+    16.0,
+    16.0
+   ],
+   "gramos": 25.2,
+   "minutos": 37.2,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_2"
+   ]
+  },
+  {
+   "pieza": "t_F3-T3_1",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    202.1,
+    16.0,
+    16.0
+   ],
+   "gramos": 25.2,
+   "minutos": 37.2,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_2"
+   ]
+  },
+  {
+   "pieza": "t_F3-T3_2",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    202.1,
+    16.0,
+    16.0
+   ],
+   "gramos": 25.2,
+   "minutos": 37.2,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_2"
+   ]
+  },
+  {
+   "pieza": "t_T3-Q2",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    220.8,
+    16.0,
+    16.0
+   ],
+   "gramos": 27.6,
+   "minutos": 40.4,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_2"
+   ]
+  },
+  {
+   "pieza": "t_T1-L_1",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    130.7,
+    16.0,
+    16.0
+   ],
+   "gramos": 15.8,
+   "minutos": 24.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_2"
+   ]
+  },
+  {
+   "pieza": "t_T1-L_2",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    130.7,
+    16.0,
+    16.0
+   ],
+   "gramos": 15.7,
+   "minutos": 24.4,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_2"
+   ]
+  },
+  {
+   "pieza": "t_T2-T3",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    178.8,
+    16.0,
+    16.0
+   ],
+   "gramos": 21.8,
+   "minutos": 32.6,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_3"
+   ]
+  },
+  {
+   "pieza": "t_T3-L",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    65.4,
+    16.0,
+    16.0
+   ],
+   "gramos": 7.7,
+   "minutos": 13.7,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_3"
+   ]
+  },
+  {
+   "pieza": "t_T1-T2",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    59.8,
+    16.0,
+    16.0
+   ],
+   "gramos": 7.4,
+   "minutos": 13.3,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_3"
+   ]
+  },
+  {
+   "pieza": "t_Q2-L",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    44.9,
+    16.0,
+    16.0
+   ],
+   "gramos": 5.5,
+   "minutos": 10.7,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_3"
+   ]
+  },
+  {
+   "pieza": "t_F4-P1_1",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    182.1,
+    16.0,
+    16.0
+   ],
+   "gramos": 22.7,
+   "minutos": 33.8,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_3"
+   ]
+  },
+  {
+   "pieza": "t_F4-P1_2",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    182.1,
+    16.0,
+    16.0
+   ],
+   "gramos": 22.7,
+   "minutos": 33.9,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_3"
+   ]
+  },
+  {
+   "pieza": "t_F5-P2_1",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    182.1,
+    16.0,
+    16.0
+   ],
+   "gramos": 22.6,
+   "minutos": 33.7,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_3"
+   ]
+  },
+  {
+   "pieza": "t_F5-P2_2",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    182.1,
+    16.0,
+    16.0
+   ],
+   "gramos": 22.6,
+   "minutos": 33.8,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_3"
+   ]
+  },
+  {
+   "pieza": "t_P1-P2_1",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    169.9,
+    16.0,
+    16.0
+   ],
+   "gramos": 21.0,
+   "minutos": 31.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_3"
+   ]
+  },
+  {
+   "pieza": "t_P1-P2_2",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    169.9,
+    16.0,
+    16.0
+   ],
+   "gramos": 20.9,
+   "minutos": 31.4,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_3"
+   ]
+  },
+  {
+   "pieza": "t_F6-L",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    98.8,
+    16.0,
+    16.0
+   ],
+   "gramos": 12.3,
+   "minutos": 19.8,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_3"
+   ]
+  },
+  {
+   "pieza": "t_V2-L",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    98.8,
+    16.0,
+    16.0
+   ],
+   "gramos": 12.3,
+   "minutos": 19.8,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_3"
+   ]
+  },
+  {
+   "pieza": "t_V4-L",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    98.8,
+    16.0,
+    16.0
+   ],
+   "gramos": 12.2,
+   "minutos": 19.8,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_3"
+   ]
+  },
+  {
+   "pieza": "t_C1-L",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    154.1,
+    16.0,
+    16.0
+   ],
+   "gramos": 19.2,
+   "minutos": 29.2,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_4"
+   ]
+  },
+  {
+   "pieza": "t_C2-L",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    154.1,
+    16.0,
+    16.0
+   ],
+   "gramos": 19.2,
+   "minutos": 29.2,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_4"
+   ]
+  },
+  {
+   "pieza": "t_C3-L",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    127.7,
+    16.0,
+    16.0
+   ],
+   "gramos": 15.9,
+   "minutos": 24.7,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_4"
+   ]
+  },
+  {
+   "pieza": "t_C4-L",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    127.7,
+    16.0,
+    16.0
+   ],
+   "gramos": 15.9,
+   "minutos": 24.7,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_4"
+   ]
+  },
+  {
+   "pieza": "t_K1-L",
+   "grupo": "est_tubos",
+   "cantidad": 1,
+   "medidas": [
+    168.8,
+    16.0,
+    16.0
+   ],
+   "gramos": 21.1,
+   "minutos": 31.6,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "est_tubos_4"
+   ]
+  },
+  {
+   "pieza": "e_F6-F5_1",
+   "grupo": "est_uniones",
+   "cantidad": 1,
+   "medidas": [
+    48.0,
+    21.2,
+    24.4
+   ],
+   "gramos": 10.9,
+   "minutos": 19.7,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_uniones_1"
+   ]
+  },
+  {
+   "pieza": "e_K0-K1_1",
+   "grupo": "est_uniones",
+   "cantidad": 1,
+   "medidas": [
+    48.0,
+    21.2,
+    24.4
+   ],
+   "gramos": 10.9,
+   "minutos": 19.7,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_uniones_1"
+   ]
+  },
+  {
+   "pieza": "e_F1-T1_1",
+   "grupo": "est_uniones",
+   "cantidad": 1,
+   "medidas": [
+    48.0,
+    21.2,
+    24.4
+   ],
+   "gramos": 10.9,
+   "minutos": 19.7,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_uniones_1"
+   ]
+  },
+  {
+   "pieza": "e_F2-T2_1",
+   "grupo": "est_uniones",
+   "cantidad": 1,
+   "medidas": [
+    48.0,
+    21.2,
+    24.4
+   ],
+   "gramos": 10.9,
+   "minutos": 19.7,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_uniones_1"
+   ]
+  },
+  {
+   "pieza": "e_F3-T3_1",
+   "grupo": "est_uniones",
+   "cantidad": 1,
+   "medidas": [
+    48.0,
+    21.2,
+    24.4
+   ],
+   "gramos": 10.9,
+   "minutos": 19.7,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_uniones_1"
+   ]
+  },
+  {
+   "pieza": "e_T1-L_1",
+   "grupo": "est_uniones",
+   "cantidad": 1,
+   "medidas": [
+    48.0,
+    21.2,
+    24.4
+   ],
+   "gramos": 10.9,
+   "minutos": 19.7,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_uniones_1"
+   ]
+  },
+  {
+   "pieza": "e_F4-P1_1",
+   "grupo": "est_uniones",
+   "cantidad": 1,
+   "medidas": [
+    48.0,
+    21.2,
+    24.4
+   ],
+   "gramos": 10.9,
+   "minutos": 19.7,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_uniones_1"
+   ]
+  },
+  {
+   "pieza": "e_F5-P2_1",
+   "grupo": "est_uniones",
+   "cantidad": 1,
+   "medidas": [
+    48.0,
+    21.2,
+    24.4
+   ],
+   "gramos": 10.9,
+   "minutos": 19.7,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_uniones_1"
+   ]
+  },
+  {
+   "pieza": "e_P1-P2_1",
+   "grupo": "est_uniones",
+   "cantidad": 1,
+   "medidas": [
+    48.0,
+    21.2,
+    24.4
+   ],
+   "gramos": 10.9,
+   "minutos": 19.7,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_uniones_1"
+   ]
+  },
+  {
+   "pieza": "taco_1",
+   "grupo": "est_uniones",
+   "cantidad": 1,
+   "medidas": [
+    30.0,
+    56.0,
+    19.0
+   ],
+   "gramos": 8.1,
+   "minutos": 14.8,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_uniones_1"
+   ]
+  },
+  {
+   "pieza": "taco_2",
+   "grupo": "est_uniones",
+   "cantidad": 1,
+   "medidas": [
+    30.0,
+    56.0,
+    19.0
+   ],
+   "gramos": 8.1,
+   "minutos": 14.8,
+   "parametros": [
+    0.2,
+    4,
+    20
+   ],
+   "tandas": [
+    "est_uniones_1"
+   ]
+  },
+  {
+   "pieza": "alm_placa_fija",
+   "grupo": "alm",
+   "cantidad": 1,
+   "medidas": [
+    124.0,
+    111.1,
+    12.0
+   ],
+   "gramos": 29.3,
+   "minutos": 41.8,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "alm_1"
+   ]
+  },
+  {
+   "pieza": "alm_tambor",
+   "grupo": "alm",
+   "cantidad": 1,
+   "medidas": [
+    95.9,
+    100.0,
+    57.5
+   ],
+   "gramos": 55.9,
+   "minutos": 87.1,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "alm_1"
+   ]
+  },
+  {
+   "pieza": "alm_disco",
+   "grupo": "alm",
+   "cantidad": 1,
+   "medidas": [
+    105.0,
+    104.0,
+    10.0
+   ],
+   "gramos": 16.8,
+   "minutos": 24.6,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "alm_1"
+   ]
+  },
+  {
+   "pieza": "alm_embudo",
+   "grupo": "alm",
+   "cantidad": 1,
+   "medidas": [
+    121.0,
+    39.6,
+    9.0
+   ],
+   "gramos": 5.3,
+   "minutos": 9.0,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "alm_2"
+   ]
+  },
+  {
+   "pieza": "alm_tolva",
+   "grupo": "alm",
+   "cantidad": 1,
+   "medidas": [
+    81.0,
+    66.8,
+    36.0
+   ],
+   "gramos": 24.0,
+   "minutos": 39.7,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "alm_2"
+   ]
+  },
+  {
+   "pieza": "alm_obturador",
+   "grupo": "alm",
+   "cantidad": 1,
+   "medidas": [
+    50.9,
+    38.5,
+    5.2
+   ],
+   "gramos": 2.8,
+   "minutos": 4.9,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "alm_2"
+   ]
+  },
+  {
+   "pieza": "alm_columna_1",
+   "grupo": "alm",
+   "cantidad": 1,
+   "medidas": [
+    82.0,
+    49.0,
+    8.0
+   ],
+   "gramos": 6.1,
+   "minutos": 9.9,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "alm_2"
+   ]
+  },
+  {
+   "pieza": "alm_columna_2",
+   "grupo": "alm",
+   "cantidad": 1,
+   "medidas": [
+    82.0,
+    49.0,
+    8.0
+   ],
+   "gramos": 7.0,
+   "minutos": 11.0,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "alm_2"
+   ]
+  },
+  {
+   "pieza": "alm_puente",
+   "grupo": "alm",
+   "cantidad": 1,
+   "medidas": [
+    140.0,
+    58.7,
+    56.0
+   ],
+   "gramos": 25.7,
+   "minutos": 46.1,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "alm_3"
+   ]
+  },
+  {
+   "pieza": "mon_bancada",
+   "grupo": "mon",
+   "cantidad": 1,
+   "medidas": [
+    170.5,
+    96.6,
+    6.0
+   ],
+   "gramos": 40.0,
+   "minutos": 55.0,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "mon_1"
+   ]
+  },
+  {
+   "pieza": "mon_guia_m",
+   "grupo": "mon",
+   "cantidad": 1,
+   "medidas": [
+    170.5,
+    20.5,
+    8.0
+   ],
+   "gramos": 8.6,
+   "minutos": 13.2,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "mon_1"
+   ]
+  },
+  {
+   "pieza": "mon_guia_p",
+   "grupo": "mon",
+   "cantidad": 1,
+   "medidas": [
+    170.5,
+    20.5,
+    8.0
+   ],
+   "gramos": 7.8,
+   "minutos": 12.1,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "mon_1"
+   ]
+  },
+  {
+   "pieza": "mon_platina_e1",
+   "grupo": "mon",
+   "cantidad": 1,
+   "medidas": [
+    36.0,
+    48.0,
+    3.0
+   ],
+   "gramos": 4.8,
+   "minutos": 7.0,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "mon_1"
+   ]
+  },
+  {
+   "pieza": "mon_platina_e2",
+   "grupo": "mon",
+   "cantidad": 1,
+   "medidas": [
+    36.0,
+    48.0,
+    3.0
+   ],
+   "gramos": 4.8,
+   "minutos": 7.0,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "mon_1"
+   ]
+  },
+  {
+   "pieza": "mon_rod_mot_m",
+   "grupo": "mon",
+   "cantidad": 1,
+   "medidas": [
+    30.0,
+    23.5,
+    50.0
+   ],
+   "gramos": 9.4,
+   "minutos": 23.1,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "mon_1"
+   ]
+  },
+  {
+   "pieza": "mon_jaula_nema",
+   "grupo": "mon",
+   "cantidad": 1,
+   "medidas": [
+    50.0,
+    63.0,
+    50.0
+   ],
+   "gramos": 31.0,
+   "minutos": 52.0,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "mon_1"
+   ]
+  },
+  {
+   "pieza": "mon_rod_ten_m",
+   "grupo": "mon",
+   "cantidad": 1,
+   "medidas": [
+    30.0,
+    23.5,
+    46.3
+   ],
+   "gramos": 7.4,
+   "minutos": 19.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "mon_2"
+   ]
+  },
+  {
+   "pieza": "mon_rod_ten_p",
+   "grupo": "mon",
+   "cantidad": 1,
+   "medidas": [
+    30.0,
+    23.5,
+    46.3
+   ],
+   "gramos": 7.4,
+   "minutos": 19.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "mon_2"
+   ]
+  },
+  {
+   "pieza": "mon_ret_a_m",
+   "grupo": "mon",
+   "cantidad": 1,
+   "medidas": [
+    30.0,
+    106.8,
+    2.6
+   ],
+   "gramos": 4.9,
+   "minutos": 7.1,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "mon_2"
+   ]
+  },
+  {
+   "pieza": "mon_ret_a_p",
+   "grupo": "mon",
+   "cantidad": 1,
+   "medidas": [
+    30.0,
+    106.8,
+    2.6
+   ],
+   "gramos": 4.9,
+   "minutos": 7.1,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "mon_2"
+   ]
+  },
+  {
+   "pieza": "mon_ret_b_m",
+   "grupo": "mon",
+   "cantidad": 1,
+   "medidas": [
+    19.0,
+    106.8,
+    2.6
+   ],
+   "gramos": 5.3,
+   "minutos": 7.7,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "mon_2"
+   ]
+  },
+  {
+   "pieza": "mon_ret_b_p",
+   "grupo": "mon",
+   "cantidad": 1,
+   "medidas": [
+    56.0,
+    106.8,
+    2.6
+   ],
+   "gramos": 5.2,
+   "minutos": 7.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "mon_2"
+   ]
+  },
+  {
+   "pieza": "mon_ret_c_m",
+   "grupo": "mon",
+   "cantidad": 1,
+   "medidas": [
+    21.5,
+    31.5,
+    2.6
+   ],
+   "gramos": 1.1,
+   "minutos": 2.0,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "mon_2"
+   ]
+  },
+  {
+   "pieza": "mon_ret_c_p",
+   "grupo": "mon",
+   "cantidad": 1,
+   "medidas": [
+    21.5,
+    31.5,
+    2.6
+   ],
+   "gramos": 1.1,
+   "minutos": 2.0,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "mon_2"
+   ]
+  },
+  {
+   "pieza": "mon_fc51",
+   "grupo": "mon",
+   "cantidad": 1,
+   "medidas": [
+    25.1,
+    59.5,
+    111.0
+   ],
+   "gramos": 11.3,
+   "minutos": 38.3,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "mon_2"
+   ]
+  },
+  {
+   "pieza": "mon_camara",
+   "grupo": "mon",
+   "cantidad": 1,
+   "medidas": [
+    30.0,
+    27.0,
+    49.7
+   ],
+   "gramos": 10.7,
+   "minutos": 24.8,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "mon_2"
+   ]
+  },
+  {
+   "pieza": "mon_e4",
+   "grupo": "mon",
+   "cantidad": 1,
+   "medidas": [
+    48.6,
+    115.0,
+    198.5
+   ],
+   "gramos": 39.6,
+   "minutos": 94.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "mon_3"
+   ]
+  },
+  {
+   "pieza": "mon_aleta",
+   "grupo": "mon",
+   "cantidad": 1,
+   "medidas": [
+    19.5,
+    7.0,
+    26.4
+   ],
+   "gramos": 1.5,
+   "minutos": 7.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "mon_3"
+   ]
+  },
+  {
+   "pieza": "mon_canal_b",
+   "grupo": "mon",
+   "cantidad": 1,
+   "medidas": [
+    36.8,
+    223.8,
+    13.6
+   ],
+   "gramos": 26.9,
+   "minutos": 39.0,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "mon_3"
+   ]
+  },
+  {
+   "pieza": "mon_soporte_b",
+   "grupo": "mon",
+   "cantidad": 1,
+   "medidas": [
+    48.6,
+    59.6,
+    53.9
+   ],
+   "gramos": 6.9,
+   "minutos": 20.6,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "mon_3"
+   ]
+  },
+  {
+   "pieza": "mon_bandeja",
+   "grupo": "mon",
+   "cantidad": 1,
+   "medidas": [
+    90.0,
+    90.0,
+    35.0
+   ],
+   "gramos": 43.2,
+   "minutos": 65.4,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "mon_3"
+   ]
+  },
+  {
+   "pieza": "vas_lat_s_a",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    235.9,
+    64.0,
+    32.8
+   ],
+   "gramos": 47.4,
+   "minutos": 70.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_1"
+   ]
+  },
+  {
+   "pieza": "vas_lat_s_b",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    214.9,
+    52.5,
+    8.0
+   ],
+   "gramos": 27.5,
+   "minutos": 38.7,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_1"
+   ]
+  },
+  {
+   "pieza": "vas_lat_n_a",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    214.9,
+    52.5,
+    10.8
+   ],
+   "gramos": 30.3,
+   "minutos": 43.0,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_1"
+   ]
+  },
+  {
+   "pieza": "vas_lat_n_b",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    214.9,
+    52.5,
+    10.8
+   ],
+   "gramos": 30.3,
+   "minutos": 43.0,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_2"
+   ]
+  },
+  {
+   "pieza": "vas_bancada_a",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    136.9,
+    80.6,
+    15.9
+   ],
+   "gramos": 45.0,
+   "minutos": 63.8,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_2"
+   ]
+  },
+  {
+   "pieza": "vas_bancada_b",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    236.9,
+    80.6,
+    15.9
+   ],
+   "gramos": 74.1,
+   "minutos": 103.0,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_2"
+   ]
+  },
+  {
+   "pieza": "vas_placa_motor",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    68.0,
+    46.0,
+    5.0
+   ],
+   "gramos": 10.4,
+   "minutos": 15.0,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_2"
+   ]
+  },
+  {
+   "pieza": "vas_taco_1_a",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    21.9,
+    44.0,
+    10.0
+   ],
+   "gramos": 4.1,
+   "minutos": 7.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_3"
+   ]
+  },
+  {
+   "pieza": "vas_taco_1_b",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    21.9,
+    44.0,
+    10.0
+   ],
+   "gramos": 4.1,
+   "minutos": 7.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_3"
+   ]
+  },
+  {
+   "pieza": "vas_taco_2_a",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    21.9,
+    44.0,
+    10.0
+   ],
+   "gramos": 4.1,
+   "minutos": 7.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_3"
+   ]
+  },
+  {
+   "pieza": "vas_taco_2_b",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    21.9,
+    44.0,
+    10.0
+   ],
+   "gramos": 4.1,
+   "minutos": 7.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_3"
+   ]
+  },
+  {
+   "pieza": "vas_taco_3_a",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    21.9,
+    44.0,
+    10.0
+   ],
+   "gramos": 4.1,
+   "minutos": 7.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_3"
+   ]
+  },
+  {
+   "pieza": "vas_taco_3_b",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    21.9,
+    44.0,
+    10.0
+   ],
+   "gramos": 4.1,
+   "minutos": 7.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_3"
+   ]
+  },
+  {
+   "pieza": "vas_taco_4_a",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    21.9,
+    44.0,
+    10.0
+   ],
+   "gramos": 4.1,
+   "minutos": 7.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_3"
+   ]
+  },
+  {
+   "pieza": "vas_taco_4_b",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    21.9,
+    44.0,
+    10.0
+   ],
+   "gramos": 4.1,
+   "minutos": 7.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_3"
+   ]
+  },
+  {
+   "pieza": "vas_taco_5_a",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    21.9,
+    44.0,
+    10.0
+   ],
+   "gramos": 4.1,
+   "minutos": 7.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_3"
+   ]
+  },
+  {
+   "pieza": "vas_taco_5_b",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    21.9,
+    44.0,
+    10.0
+   ],
+   "gramos": 4.1,
+   "minutos": 7.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_3"
+   ]
+  },
+  {
+   "pieza": "vas_taco_6_a",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    21.9,
+    44.0,
+    10.0
+   ],
+   "gramos": 4.1,
+   "minutos": 7.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_3"
+   ]
+  },
+  {
+   "pieza": "vas_taco_6_b",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    21.9,
+    44.0,
+    10.0
+   ],
+   "gramos": 4.1,
+   "minutos": 7.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_3"
+   ]
+  },
+  {
+   "pieza": "vas_taco_7_a",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    21.9,
+    44.0,
+    10.0
+   ],
+   "gramos": 4.1,
+   "minutos": 7.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_3"
+   ]
+  },
+  {
+   "pieza": "vas_taco_7_b",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    21.9,
+    44.0,
+    10.0
+   ],
+   "gramos": 4.1,
+   "minutos": 7.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_3"
+   ]
+  },
+  {
+   "pieza": "vas_panel_a",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    207.9,
+    97.0,
+    11.3
+   ],
+   "gramos": 50.2,
+   "minutos": 69.8,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_3"
+   ]
+  },
+  {
+   "pieza": "vas_panel_b",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    172.9,
+    97.0,
+    11.3
+   ],
+   "gramos": 47.2,
+   "minutos": 65.8,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_4"
+   ]
+  },
+  {
+   "pieza": "vas_placa_camara",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    32.0,
+    39.9,
+    31.9
+   ],
+   "gramos": 10.2,
+   "minutos": 20.4,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_4"
+   ]
+  },
+  {
+   "pieza": "vas_cortina",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    109.0,
+    38.8,
+    18.2
+   ],
+   "gramos": 15.9,
+   "minutos": 25.1,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_4"
+   ]
+  },
+  {
+   "pieza": "vas_bandeja",
+   "grupo": "vas",
+   "cantidad": 1,
+   "medidas": [
+    95.8,
+    115.8,
+    97.6
+   ],
+   "gramos": 78.5,
+   "minutos": 125.8,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "vas_5"
+   ]
+  },
+  {
+   "pieza": "tap_tubo",
+   "grupo": "tap",
+   "cantidad": 1,
+   "medidas": [
+    90.0,
+    90.0,
+    75.0
+   ],
+   "gramos": 51.9,
+   "minutos": 85.4,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "tap_1"
+   ]
+  },
+  {
+   "pieza": "tap_abr_servo",
+   "grupo": "tap",
+   "cantidad": 1,
+   "medidas": [
+    92.4,
+    127.3,
+    16.3
+   ],
+   "gramos": 18.0,
+   "minutos": 27.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "tap_1"
+   ]
+  },
+  {
+   "pieza": "tap_abr_sup",
+   "grupo": "tap",
+   "cantidad": 1,
+   "medidas": [
+    92.4,
+    105.5,
+    14.0
+   ],
+   "gramos": 9.7,
+   "minutos": 15.9,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "tap_1"
+   ]
+  },
+  {
+   "pieza": "tap_colgante",
+   "grupo": "tap",
+   "cantidad": 1,
+   "medidas": [
+    32.0,
+    164.5,
+    20.0
+   ],
+   "gramos": 14.5,
+   "minutos": 23.7,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "tap_1"
+   ]
+  },
+  {
+   "pieza": "tap_dedo_a",
+   "grupo": "tap",
+   "cantidad": 1,
+   "medidas": [
+    10.0,
+    24.5,
+    3.0
+   ],
+   "gramos": 0.6,
+   "minutos": 1.4,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "tap_1"
+   ]
+  },
+  {
+   "pieza": "tap_dedo_b",
+   "grupo": "tap",
+   "cantidad": 1,
+   "medidas": [
+    10.0,
+    24.5,
+    2.4
+   ],
+   "gramos": 0.5,
+   "minutos": 1.1,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "tap_2"
+   ]
+  },
+  {
+   "pieza": "tap_pre_placa",
+   "grupo": "tap",
+   "cantidad": 1,
+   "medidas": [
+    69.0,
+    149.0,
+    29.5
+   ],
+   "gramos": 30.2,
+   "minutos": 46.7,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "tap_2"
+   ]
+  },
+  {
+   "pieza": "tap_pre_leva",
+   "grupo": "tap",
+   "cantidad": 1,
+   "medidas": [
+    44.0,
+    44.0,
+    8.0
+   ],
+   "gramos": 7.0,
+   "minutos": 11.1,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "tap_2"
+   ]
+  },
+  {
+   "pieza": "tap_pre_buje",
+   "grupo": "tap",
+   "cantidad": 1,
+   "medidas": [
+    44.0,
+    16.0,
+    55.1
+   ],
+   "gramos": 8.8,
+   "minutos": 23.3,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "tap_2"
+   ]
+  },
+  {
+   "pieza": "tap_pre_plato",
+   "grupo": "tap",
+   "cantidad": 1,
+   "medidas": [
+    62.0,
+    62.0,
+    12.0
+   ],
+   "gramos": 12.1,
+   "minutos": 18.7,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "tap_2"
+   ]
+  },
+  {
+   "pieza": "tap_pre_horquilla",
+   "grupo": "tap",
+   "cantidad": 1,
+   "medidas": [
+    14.0,
+    14.4,
+    19.0
+   ],
+   "gramos": 2.1,
+   "minutos": 6.8,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "tap_2"
+   ]
+  },
+  {
+   "pieza": "tap_pre_rodillo",
+   "grupo": "tap",
+   "cantidad": 1,
+   "medidas": [
+    12.0,
+    12.0,
+    8.0
+   ],
+   "gramos": 0.8,
+   "minutos": 2.7,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "tap_2"
+   ]
+  },
+  {
+   "pieza": "tap_emp_soporte",
+   "grupo": "tap",
+   "cantidad": 1,
+   "medidas": [
+    78.0,
+    16.0,
+    58.8
+   ],
+   "gramos": 10.4,
+   "minutos": 26.2,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "tap_2"
+   ]
+  },
+  {
+   "pieza": "tap_emp_placa_servo",
+   "grupo": "tap",
+   "cantidad": 1,
+   "medidas": [
+    70.6,
+    30.1,
+    25.0
+   ],
+   "gramos": 6.2,
+   "minutos": 13.5,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "tap_2"
+   ]
+  },
+  {
+   "pieza": "tap_emp_carro",
+   "grupo": "tap",
+   "cantidad": 1,
+   "medidas": [
+    46.0,
+    18.0,
+    32.0
+   ],
+   "gramos": 8.0,
+   "minutos": 17.4,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "tap_2"
+   ]
+  },
+  {
+   "pieza": "tap_emp_paleta",
+   "grupo": "tap",
+   "cantidad": 1,
+   "medidas": [
+    56.0,
+    113.8,
+    4.0
+   ],
+   "gramos": 12.7,
+   "minutos": 18.0,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "tap_3"
+   ]
+  },
+  {
+   "pieza": "tap_emp_manivela",
+   "grupo": "tap",
+   "cantidad": 1,
+   "medidas": [
+    22.0,
+    49.8,
+    5.0
+   ],
+   "gramos": 2.9,
+   "minutos": 4.9,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "tap_3"
+   ]
+  },
+  {
+   "pieza": "tap_emp_biela",
+   "grupo": "tap",
+   "cantidad": 1,
+   "medidas": [
+    9.0,
+    59.0,
+    3.0
+   ],
+   "gramos": 1.8,
+   "minutos": 3.0,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "tap_3"
+   ]
+  },
+  {
+   "pieza": "tap_sens_porta",
+   "grupo": "tap",
+   "cantidad": 1,
+   "medidas": [
+    162.0,
+    79.8,
+    11.8
+   ],
+   "gramos": 9.6,
+   "minutos": 15.3,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "tap_3"
+   ]
+  },
+  {
+   "pieza": "can_cabezal_c1",
+   "grupo": "can",
+   "cantidad": 1,
+   "medidas": [
+    40.5,
+    21.2,
+    41.0
+   ],
+   "gramos": 12.5,
+   "minutos": 25.3,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "can_1"
+   ]
+  },
+  {
+   "pieza": "can_cabezal_c3",
+   "grupo": "can",
+   "cantidad": 1,
+   "medidas": [
+    40.5,
+    21.2,
+    41.0
+   ],
+   "gramos": 12.5,
+   "minutos": 25.3,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "can_1"
+   ]
+  },
+  {
+   "pieza": "can_cabezal_c2",
+   "grupo": "can",
+   "cantidad": 1,
+   "medidas": [
+    40.5,
+    21.2,
+    41.0
+   ],
+   "gramos": 12.5,
+   "minutos": 25.3,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "can_1"
+   ]
+  },
+  {
+   "pieza": "can_cabezal_c4",
+   "grupo": "can",
+   "cantidad": 1,
+   "medidas": [
+    40.5,
+    21.2,
+    41.0
+   ],
+   "gramos": 12.5,
+   "minutos": 25.3,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "can_1"
+   ]
+  },
+  {
+   "pieza": "can_prisionero_c1",
+   "grupo": "can",
+   "cantidad": 1,
+   "medidas": [
+    10.0,
+    8.7,
+    40.7
+   ],
+   "gramos": 1.2,
+   "minutos": 10.1,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "can_1"
+   ]
+  },
+  {
+   "pieza": "can_prisionero_c3",
+   "grupo": "can",
+   "cantidad": 1,
+   "medidas": [
+    10.0,
+    8.7,
+    40.7
+   ],
+   "gramos": 1.2,
+   "minutos": 10.1,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "can_1"
+   ]
+  },
+  {
+   "pieza": "can_prisionero_c2",
+   "grupo": "can",
+   "cantidad": 1,
+   "medidas": [
+    10.0,
+    8.7,
+    40.7
+   ],
+   "gramos": 1.2,
+   "minutos": 10.1,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "can_1"
+   ]
+  },
+  {
+   "pieza": "can_prisionero_c4",
+   "grupo": "can",
+   "cantidad": 1,
+   "medidas": [
+    10.0,
+    8.7,
+    40.7
+   ],
+   "gramos": 1.2,
+   "minutos": 10.1,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "can_1"
+   ]
+  },
+  {
+   "pieza": "can_soporte_escape",
+   "grupo": "can",
+   "cantidad": 1,
+   "medidas": [
+    90.2,
+    42.0,
+    14.6
+   ],
+   "gramos": 14.2,
+   "minutos": 22.1,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "can_1"
+   ]
+  },
+  {
+   "pieza": "can_balancin",
+   "grupo": "can",
+   "cantidad": 1,
+   "medidas": [
+    84.5,
+    38.6,
+    5.0
+   ],
+   "gramos": 3.7,
+   "minutos": 6.0,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "can_1"
+   ]
+  },
+  {
+   "pieza": "can_topes",
+   "grupo": "can",
+   "cantidad": 1,
+   "medidas": [
+    128.0,
+    44.5,
+    18.5
+   ],
+   "gramos": 20.1,
+   "minutos": 30.9,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "can_1"
+   ]
+  },
+  {
+   "pieza": "can_guia_recta_xn",
+   "grupo": "can",
+   "cantidad": 1,
+   "medidas": [
+    45.3,
+    179.9,
+    18.6
+   ],
+   "gramos": 21.8,
+   "minutos": 33.2,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "can_1"
+   ]
+  },
+  {
+   "pieza": "can_guia_recta_xp",
+   "grupo": "can",
+   "cantidad": 1,
+   "medidas": [
+    45.3,
+    179.9,
+    18.6
+   ],
+   "gramos": 21.8,
+   "minutos": 33.2,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "can_1"
+   ]
+  },
+  {
+   "pieza": "can_guia_v_xn",
+   "grupo": "can",
+   "cantidad": 1,
+   "medidas": [
+    65.0,
+    210.0,
+    16.0
+   ],
+   "gramos": 22.3,
+   "minutos": 33.3,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "can_2"
+   ]
+  },
+  {
+   "pieza": "can_guia_v_xp",
+   "grupo": "can",
+   "cantidad": 1,
+   "medidas": [
+    65.0,
+    210.0,
+    16.0
+   ],
+   "gramos": 22.3,
+   "minutos": 33.3,
+   "parametros": [
+    0.2,
+    4,
+    15
+   ],
+   "tandas": [
+    "can_2"
+   ]
+  },
+  {
+   "pieza": "rem_3_4",
+   "grupo": "rem",
+   "cantidad": 4,
+   "usados": 2,
+   "agarre": 3.4,
+   "medidas": [
+    8.0,
+    7.8,
+    3.2
+   ],
+   "gramos": 0.11,
+   "minutos": 1.3,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_1"
+   ]
+  },
+  {
+   "pieza": "rem_4_2",
+   "grupo": "rem",
+   "cantidad": 192,
+   "usados": 174,
+   "agarre": 4.2,
+   "medidas": [
+    8.0,
+    8.6,
+    3.2
+   ],
+   "gramos": 0.12,
+   "minutos": 1.3,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_1"
+   ]
+  },
+  {
+   "pieza": "rem_4_4",
+   "grupo": "rem",
+   "cantidad": 14,
+   "usados": 12,
+   "agarre": 4.4,
+   "medidas": [
+    8.0,
+    8.8,
+    3.2
+   ],
+   "gramos": 0.12,
+   "minutos": 1.3,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_1"
+   ]
+  },
+  {
+   "pieza": "rem_4_6",
+   "grupo": "rem",
+   "cantidad": 25,
+   "usados": 22,
+   "agarre": 4.6,
+   "medidas": [
+    8.0,
+    9.0,
+    3.2
+   ],
+   "gramos": 0.12,
+   "minutos": 1.3,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_2"
+   ]
+  },
+  {
+   "pieza": "rem_4_8",
+   "grupo": "rem",
+   "cantidad": 12,
+   "usados": 10,
+   "agarre": 4.8,
+   "medidas": [
+    8.0,
+    9.2,
+    3.2
+   ],
+   "gramos": 0.12,
+   "minutos": 1.3,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_2"
+   ]
+  },
+  {
+   "pieza": "rem_5_0",
+   "grupo": "rem",
+   "cantidad": 4,
+   "usados": 2,
+   "agarre": 5.0,
+   "medidas": [
+    8.0,
+    9.4,
+    3.2
+   ],
+   "gramos": 0.13,
+   "minutos": 1.3,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_2"
+   ]
+  },
+  {
+   "pieza": "rem_5_5",
+   "grupo": "rem",
+   "cantidad": 6,
+   "usados": 4,
+   "agarre": 5.5,
+   "medidas": [
+    8.0,
+    9.9,
+    3.2
+   ],
+   "gramos": 0.13,
+   "minutos": 1.3,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_2"
+   ]
+  },
+  {
+   "pieza": "rem_5_6",
+   "grupo": "rem",
+   "cantidad": 14,
+   "usados": 12,
+   "agarre": 5.6,
+   "medidas": [
+    8.0,
+    10.0,
+    3.2
+   ],
+   "gramos": 0.13,
+   "minutos": 1.3,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_2"
+   ]
+  },
+  {
+   "pieza": "rem_5_8",
+   "grupo": "rem",
+   "cantidad": 13,
+   "usados": 11,
+   "agarre": 5.8,
+   "medidas": [
+    8.0,
+    10.2,
+    3.2
+   ],
+   "gramos": 0.13,
+   "minutos": 1.3,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_2"
+   ]
+  },
+  {
+   "pieza": "rem_6_0",
+   "grupo": "rem",
+   "cantidad": 11,
+   "usados": 9,
+   "agarre": 6.0,
+   "medidas": [
+    8.0,
+    10.4,
+    3.2
+   ],
+   "gramos": 0.14,
+   "minutos": 1.3,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_2"
+   ]
+  },
+  {
+   "pieza": "rem_7_0",
+   "grupo": "rem",
+   "cantidad": 8,
+   "usados": 6,
+   "agarre": 7.0,
+   "medidas": [
+    8.0,
+    11.4,
+    3.2
+   ],
+   "gramos": 0.15,
+   "minutos": 1.3,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_2"
+   ]
+  },
+  {
+   "pieza": "rem_7_2",
+   "grupo": "rem",
+   "cantidad": 17,
+   "usados": 15,
+   "agarre": 7.2,
+   "medidas": [
+    8.0,
+    11.6,
+    3.2
+   ],
+   "gramos": 0.15,
+   "minutos": 1.3,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_2"
+   ]
+  },
+  {
+   "pieza": "rem_7_8",
+   "grupo": "rem",
+   "cantidad": 7,
+   "usados": 5,
+   "agarre": 7.8,
+   "medidas": [
+    8.0,
+    12.2,
+    3.2
+   ],
+   "gramos": 0.16,
+   "minutos": 1.3,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_2"
+   ]
+  },
+  {
+   "pieza": "rem_8_0",
+   "grupo": "rem",
+   "cantidad": 8,
+   "usados": 6,
+   "agarre": 8.0,
+   "medidas": [
+    8.0,
+    12.4,
+    3.2
+   ],
+   "gramos": 0.16,
+   "minutos": 1.3,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_2"
+   ]
+  },
+  {
+   "pieza": "rem_8_2",
+   "grupo": "rem",
+   "cantidad": 4,
+   "usados": 2,
+   "agarre": 8.2,
+   "medidas": [
+    8.0,
+    12.6,
+    3.2
+   ],
+   "gramos": 0.16,
+   "minutos": 1.3,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_2"
+   ]
+  },
+  {
+   "pieza": "rem_10_2",
+   "grupo": "rem",
+   "cantidad": 4,
+   "usados": 2,
+   "agarre": 10.2,
+   "medidas": [
+    8.0,
+    14.6,
+    3.2
+   ],
+   "gramos": 0.18,
+   "minutos": 1.4,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_2"
+   ]
+  },
+  {
+   "pieza": "rem_12_6",
+   "grupo": "rem",
+   "cantidad": 6,
+   "usados": 4,
+   "agarre": 12.6,
+   "medidas": [
+    8.0,
+    17.0,
+    3.2
+   ],
+   "gramos": 0.21,
+   "minutos": 1.4,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_2"
+   ]
+  },
+  {
+   "pieza": "rem_13_0",
+   "grupo": "rem",
+   "cantidad": 4,
+   "usados": 2,
+   "agarre": 13.0,
+   "medidas": [
+    8.0,
+    17.4,
+    3.2
+   ],
+   "gramos": 0.21,
+   "minutos": 1.4,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_2"
+   ]
+  },
+  {
+   "pieza": "rem_13_1",
+   "grupo": "rem",
+   "cantidad": 6,
+   "usados": 4,
+   "agarre": 13.1,
+   "medidas": [
+    8.0,
+    17.5,
+    3.2
+   ],
+   "gramos": 0.21,
+   "minutos": 1.4,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_2"
+   ]
+  },
+  {
+   "pieza": "rem_18_4",
+   "grupo": "rem",
+   "cantidad": 6,
+   "usados": 4,
+   "agarre": 18.4,
+   "medidas": [
+    8.0,
+    22.8,
+    3.2
+   ],
+   "gramos": 0.27,
+   "minutos": 1.5,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_2"
+   ]
+  },
+  {
+   "pieza": "rem_19_2",
+   "grupo": "rem",
+   "cantidad": 4,
+   "usados": 2,
+   "agarre": 19.2,
+   "medidas": [
+    8.0,
+    23.6,
+    3.2
+   ],
+   "gramos": 0.28,
+   "minutos": 1.5,
+   "parametros": [
+    0.12,
+    4,
+    100
+   ],
+   "tandas": [
+    "rem_2"
+   ]
+  }
+ ],
+ "tandas": [
+  {
+   "tanda": "alm_1",
+   "grupo": "Almacén de monedas",
+   "piezas": 3,
+   "gramos": 102,
+   "horas": 2.6
+  },
+  {
+   "tanda": "alm_2",
+   "grupo": "Almacén de monedas",
+   "piezas": 5,
+   "gramos": 45,
+   "horas": 1.2
+  },
+  {
+   "tanda": "alm_3",
+   "grupo": "Almacén de monedas",
+   "piezas": 1,
+   "gramos": 26,
+   "horas": 0.8
+  },
+  {
+   "tanda": "can_1",
+   "grupo": "Canaleta y muelle",
+   "piezas": 13,
+   "gramos": 136,
+   "horas": 4.5
+  },
+  {
+   "tanda": "can_2",
+   "grupo": "Canaleta y muelle",
+   "piezas": 2,
+   "gramos": 45,
+   "horas": 1.1
+  },
+  {
+   "tanda": "est_nodos_1",
+   "grupo": "Estructura: nodos",
+   "piezas": 16,
+   "gramos": 297,
+   "horas": 8.9
+  },
+  {
+   "tanda": "est_nodos_2",
+   "grupo": "Estructura: nodos",
+   "piezas": 6,
+   "gramos": 104,
+   "horas": 3.2
+  },
+  {
+   "tanda": "est_tubos_1",
+   "grupo": "Estructura: tubos",
+   "piezas": 17,
+   "gramos": 213,
+   "horas": 5.7
+  },
+  {
+   "tanda": "est_tubos_2",
+   "grupo": "Estructura: tubos",
+   "piezas": 11,
+   "gramos": 231,
+   "horas": 5.8
+  },
+  {
+   "tanda": "est_tubos_3",
+   "grupo": "Estructura: tubos",
+   "piezas": 13,
+   "gramos": 212,
+   "horas": 5.5
+  },
+  {
+   "tanda": "est_tubos_4",
+   "grupo": "Estructura: tubos",
+   "piezas": 5,
+   "gramos": 91,
+   "horas": 2.3
+  },
+  {
+   "tanda": "est_uniones_1",
+   "grupo": "Estructura: empalmes y tacos",
+   "piezas": 11,
+   "gramos": 114,
+   "horas": 3.4
+  },
+  {
+   "tanda": "mon_1",
+   "grupo": "Cinta de monedas",
+   "piezas": 7,
+   "gramos": 106,
+   "horas": 2.8
+  },
+  {
+   "tanda": "mon_2",
+   "grupo": "Cinta de monedas",
+   "piezas": 10,
+   "gramos": 59,
+   "horas": 2.3
+  },
+  {
+   "tanda": "mon_3",
+   "grupo": "Cinta de monedas",
+   "piezas": 5,
+   "gramos": 118,
+   "horas": 3.8
+  },
+  {
+   "tanda": "rem_1",
+   "grupo": "Remaches",
+   "piezas": 210,
+   "gramos": 25,
+   "horas": 4.6
+  },
+  {
+   "tanda": "rem_2",
+   "grupo": "Remaches",
+   "piezas": 159,
+   "gramos": 24,
+   "horas": 3.5
+  },
+  {
+   "tanda": "tap_1",
+   "grupo": "Tapas, prensa y empujador",
+   "piezas": 5,
+   "gramos": 95,
+   "horas": 2.6
+  },
+  {
+   "tanda": "tap_2",
+   "grupo": "Tapas, prensa y empujador",
+   "piezas": 10,
+   "gramos": 86,
+   "horas": 2.8
+  },
+  {
+   "tanda": "tap_3",
+   "grupo": "Tapas, prensa y empujador",
+   "piezas": 4,
+   "gramos": 27,
+   "horas": 0.7
+  },
+  {
+   "tanda": "vas_1",
+   "grupo": "Cinta de vasos",
+   "piezas": 3,
+   "gramos": 105,
+   "horas": 2.5
+  },
+  {
+   "tanda": "vas_2",
+   "grupo": "Cinta de vasos",
+   "piezas": 4,
+   "gramos": 160,
+   "horas": 3.7
+  },
+  {
+   "tanda": "vas_3",
+   "grupo": "Cinta de vasos",
+   "piezas": 15,
+   "gramos": 108,
+   "horas": 2.9
+  },
+  {
+   "tanda": "vas_4",
+   "grupo": "Cinta de vasos",
+   "piezas": 3,
+   "gramos": 73,
+   "horas": 1.9
+  },
+  {
+   "tanda": "vas_5",
+   "grupo": "Cinta de vasos",
+   "piezas": 1,
+   "gramos": 78,
+   "horas": 2.1
+  }
+ ],
+ "total_gramos": 2681,
+ "total_horas": 81.0
+}
