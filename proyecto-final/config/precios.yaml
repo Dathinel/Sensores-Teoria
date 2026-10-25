@@ -71,7 +71,7 @@ items:
   empalmes: {subsistema: Control y potencia, precio: 1000, tienda: ferretronica, fuente: estimado, producto: "2 diodos Schottky BAT85 + 2 resistencias de 10 kΩ + 2 de 2,2 kΩ (el estaño y el termoencogible van en Cables)"}
   cable_red: {subsistema: Control y potencia, precio: 6000, tienda: mercadolibre, fuente: estimado, producto: "Cable de poder de 3 hilos con enchufe, 1,5 m (o el de un aparato viejo); va a una multitoma con interruptor del grupo"}
   uln2003: {subsistema: Control y potencia, precio: 0, fuente: tienda, producto: "Viene con el 28BYJ-48 (ya contado en el motor del carrusel)"}
-  bridas_caja: {subsistema: Control y potencia, precio: 14000, tienda: mercadolibre, fuente: estimado, producto: "100 bridas de 10 cm (~4 000) + 10 bases adhesivas (~4 000) + ventilador 4010 de 5 V (~6 000)"}
+  bridas_caja: {subsistema: Control y potencia, precio: 19000, tienda: mercadolibre, fuente: estimado, producto: "100 bridas de 10 cm (~4 000) + 10 bases adhesivas (~4 000) + ventilador 4010 de 5 V (~6 000) + 8 separadores de nailon de 3 mm para los NEMA 17, cinta de aluminio y resistencia o dimmer de la tira LED (~5 000; esfuerzos.md: calor)"}
   pc: {subsistema: Control y potencia, precio: 0, fuente: tienda, producto: "El portátil del grupo (no se compra)"}
   # ------------------------------------------------------------------ estructura
   # Desde el 2026-10-24 la estructura es la maqueta impresa (maqueta_impresa/, sin perfil 2020,
@@ -233,10 +233,10 @@ ahorros:
     detalle: "Hacen falta 3 puertos USB libres en el portátil; ninguno pide más de 0,35 A (un USB 2.0 da 0,5 A)."
   - id: bridas
     titulo: "Bridas con bases adhesivas en vez de canaletas ranuradas y prensaestopas"
-    ahorro: 11000
+    ahorro: 6000
     riesgo: bajo
     aplicado: true
-    detalle: "25 000 de canaleta y prensaestopas contra 14 000 de bridas, bases y el ventilador (que antes no estaba contado). El ventilador se queda: los A4988 van a 1 A por fase, el límite sin aire forzado (docs/electrica.md)."
+    detalle: "25 000 de canaleta y prensaestopas contra 19 000 de bridas, bases, el ventilador (que antes no estaba contado) y lo térmico de esfuerzos.md (separadores de nailon de los NEMA 17, cinta de aluminio y dimmer de la tira LED). El ventilador se queda: los A4988 van a 1 A por fase, el límite sin aire forzado (docs/electrica.md)."
   - id: un_fusible
     titulo: "Un fusible principal y cable de poder a una multitoma con interruptor (sin IEC ni 4 portafusibles)"
     ahorro: 6900

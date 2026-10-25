@@ -17,7 +17,8 @@ todo adentro:
   También los nombres del importmap de index.html que apunten a archivos de la carpeta.
 - Three.js (`three`), las hojas de estilo locales (`<link rel="stylesheet" href="./x.css">` pasa
   a `<style>`), el visor y la demo.
-- La maqueta impresa (`maqueta_impresa.glb`) en base64, `window.__MAQUETA`.
+- La maqueta impresa (`maqueta_impresa.glb`) en base64, `window.__MAQUETA`, y el carro impreso
+  (`carro_armado.glb`), `window.__CARRO`.
 
     python -m app.portable            # escribe visor-portable.html en la raíz del proyecto
 """
@@ -116,9 +117,13 @@ def generar() -> Path:
     demo = {n: json.loads((VISOR / "demo" / f"{n}.json").read_text(encoding="utf-8"))
             for n in ("geometria", "pasos", "grabacion")}
     importmap = {"three": _modulo(three), **{n: _modulo(c) for n, c in locales.items()}}
-    # Maqueta impresa (python maqueta_impresa/modelo_3d.py): desde file:// el visor no la puede pedir.
-    glb = VISOR / "maqueta_impresa.glb"
-    maqueta = f"window.__MAQUETA = '{base64.b64encode(glb.read_bytes()).decode('ascii')}';\n" if glb.is_file() else ""
+    # Maqueta y carro impresos (python maqueta_impresa/modelo_3d.py, chasis_impreso/modelo_3d.py): desde
+    # file:// el visor no los puede pedir.
+    maqueta = ""
+    for archivo, variable in (("maqueta_impresa.glb", "__MAQUETA"), ("carro_armado.glb", "__CARRO")):
+        glb = VISOR / archivo
+        if glb.is_file():
+            maqueta += f"window.{variable} = '{base64.b64encode(glb.read_bytes()).decode('ascii')}';\n"
 
     html = _estilos_adentro(html)
     inicio = html.index('<script type="importmap">')

@@ -68,6 +68,10 @@ let G = null;          // geometria
 // escuadras, pies, placas de aluminio, acrilico, soportes) se marca con reemplazar() y se saca al
 // terminar de construir (montarMaqueta). Si no carga, queda el modelo de antes, igual que siempre.
 let MAQ = null;
+// Carro impreso (chasis_impreso/carro_armado.glb, usuario 2026-10-24: "igual al impreso irl"): las
+// piezas de PLA del carro en su lugar; construirCarro las usa en vez de las dibujadas a mano.
+let CARRO_IMP = null;
+const REMACHES = [];            // mallas de remaches (maqueta y carro): la casilla "Remaches" las muestra u oculta
 const REEMPLAZADAS = new Set();
 let PASOS = [];        // docs/paso-a-paso.yaml
 let estado = null;     // ultimo /api/estado
@@ -2424,6 +2428,40 @@ function construirCarro() {
   const zArriba = D.zBaseArriba;
   const xCola = -L / 2;               // extremo trasero: ahi empieza la cuna
   const mallas = (g) => { const ms = []; g.traverse((o) => { if (o.isMesh) ms.push(o); }); return ms; };
+  // ---- Carro impreso (chasis_impreso/carro_armado.glb; usuario, 2026-10-24: "igual al impreso irl").
+  // Las 20 piezas de PLA y lo comprado que el visor no detalla (rueda loca, rodamientos 623, espumas) y los
+  // remaches vienen del GLB ya en el marco del carro; lo que se anima o lleva pines (ruedas, motores,
+  // placas, sensores) lo sigue dibujando el visor, puesto donde lo pone el chasis impreso (F, cotas de
+  // chasis.scad en mm que trae el GLB). Sin GLB (o ?sinmaqueta), el carro dibujado a mano de antes.
+  const IMP = CARRO_IMP && CARRO_IMP.piezas;
+  const F = IMP ? CARRO_IMP.extras.funcional_mm : null;
+  const Fm = (k, i) => (i === undefined ? F[k] : F[k][i]) * MM;
+  if (IMP) {
+    const componente = [[/^(chasis|remaches)$/, 'chasis_carro'], [/^porta_baterias/, 'bateria_carro'],
+      [/^(pared_cuna|mampara|zapata|lengueta|comp_espumas)/, 'cuna_carro'], [/^soporte_motor/, 'motores_carro'],
+      [/^(soporte_rodillo|comp_rodillos)/, 'rodillos_guia'], [/^(caja_|comp_cajas)/, 'interruptor_carro'],
+      [/^piso2_esp32/, 'esp32_carro'], [/^soporte_tb6612/, 'puente_h_carro']];
+    const comprados = ['comp_loca', 'comp_rodillos', 'comp_espumas', 'comp_cajas'];
+    for (const [n, m] of IMP) {
+      if (n.startsWith('comp_') && !comprados.includes(n)) continue;   // motores, ruedas, placas, sensores: los dibuja el visor
+      if (m.userData.tipo === 'impresa') m.material.color.setHex(COLOR.impreso);
+      carro.add(m);
+      if (m.userData.tipo === 'remache') REMACHES.push(m);
+      const id = (componente.find(([re]) => re.test(n)) || [])[1];
+      if (id) { m.userData.idComponente = id; registrar(id, m); }
+    }
+    // La lengueta gira sobre su remache (extras.pivote), como la de antes (abrirLengueta).
+    const l = IMP.get('lengueta');
+    if (l && l.userData.pivote) {
+      const piv = new THREE.Group();
+      piv.name = 'lengueta';
+      piv.position.copy(V(l.userData.pivote));
+      carro.add(piv);
+      carro.updateMatrixWorld(true);
+      piv.attach(l);
+      P.lengueta = piv;
+    }
+  }
   // Orientacion de una pieza "de ficha": hacia donde van sus ejes x, y, z (en la simulacion).
   const base = (fx, fy, fz) => new THREE.Quaternion().setFromRotationMatrix(
     new THREE.Matrix4().makeBasis(Vxyz(...fx), Vxyz(...fz), Vxyz(...fy).negate()));
@@ -2473,7 +2511,7 @@ function construirCarro() {
   // sobre 4 separadores de laton, solo en la mitad delantera: la de atras es la
   // bahia de carga donde cuelga el vaso.
   const wIr = (v.sensores_linea - 1) * v.separacion_sensores_linea / MM + 14;   // largo del modulo de 5 TCRT5000
-  try {
+  if (!IMP) try {
     const mm = (x) => x / MM;
     const huecos = [
       ...D.separadoresPiso2.map(([x, y]) => [mm(x), mm(y), 3.2]),
@@ -2515,7 +2553,8 @@ function construirCarro() {
   P.ruedas = [];
   for (const lado of [-1, 1]) {
     const motor = lado > 0 ? 'motor_izq' : 'motor_der';
-    montar(motor, pieza(PIEZAS_CARRO.crearMotorTT, { id: motor, lado, hastaPlaca: (D.zBaseAbajo - r) / MM, espesorPlaca: D.eBase / MM }),
+    // Con el carro impreso el soporte del motor es la pieza soporte_motor_* del GLB (sin soportes en T).
+    montar(motor, pieza(PIEZAS_CARRO.crearMotorTT, { id: motor, lado, soportes: !IMP, hastaPlaca: (D.zBaseAbajo - r) / MM, espesorPlaca: D.eBase / MM }),
       Vxyz(xRueda, lado * D.yMotor, r), new THREE.Quaternion(), { idComponente: 'motores_carro' });
     const etMotor = etiqueta(`Motor TT ${lado > 0 ? 'izq.' : 'der.'}`, { alto: 0.0042, alcance: 0.3 });
     etMotor.position.copy(Vxyz(xRueda + 0.045, lado * D.yMotor, 0.012));
@@ -2550,7 +2589,7 @@ function construirCarro() {
     const enc = lado > 0 ? 'enc_izq' : 'enc_der';
     montar(enc, pieza(PIEZAS_SENSORES_CARRO.crearEncoderH206, { id: enc, sensorId: 'encoders' }),
       Vxyz(xRueda - 0.0085, lado * D.yEncoder, D.zEncoder), yaw(180), { sensorId: 'encoders', espejo: lado < 0, etiquetaSobre: 0.012 });
-    try {
+    if (!IMP) try {
       const sop = PIEZAS_CARRO.crearSoporteEncoder({ alto: (D.zBaseAbajo - D.zEncoder + 0.002) / MM, lado });
       sop.position.copy(Vxyz(xRueda - 0.0231, lado * (D.yEncoder - 0.011), D.zEncoder - 0.002));
       carro.add(sop);
@@ -2559,8 +2598,9 @@ function construirCarro() {
 
   // Rodillos guia (rodamiento 623) en las esquinas traseras, un poco mas
   // afuera que las llantas: son lo que empujan las guias del muelle. Su bloque
-  // impreso queda al ras de la cola: es lo que toca el tope con espuma.
-  for (const lado of [-1, 1]) {
+  // impreso queda al ras de la cola: es lo que toca el tope con espuma. (Impreso: soporte_rodillo_* y
+  // comp_rodillos del GLB.)
+  if (!IMP) for (const lado of [-1, 1]) {
     try {
       const rod = PIEZAS_CARRO.crearRodilloGuia623({ lado, subir: (D.zBaseAbajo - 0.012) / MM,
         adentro: [(v.rodillo_guia_y - 0.058) / MM, (v.rodillo_guia_y - 0.046) / MM], atras: 8, adelante: 4 });
@@ -2575,8 +2615,8 @@ function construirCarro() {
     }
   }
 
-  // ---- Rueda loca de bola (acero) con su brida, bajo el frente.
-  try {
+  // ---- Rueda loca de bola (acero) con su brida, bajo el frente (impreso: torre_rueda_loca + comp_loca).
+  if (!IMP) try {
     const loca = PIEZAS_CARRO.crearRuedaLocaBola({ alto: D.zBaseAbajo / MM });
     loca.position.copy(Vxyz(D.xLoca, 0, D.zBaseAbajo));
     carro.add(loca);
@@ -2590,11 +2630,14 @@ function construirCarro() {
   // ---- Energia: porta-baterias 2 x 18650 (7,4 V) sobre la placa, bajo el
   // segundo piso (celdas a lo ancho, delante de la mampara de la cuna), e
   // interruptor con fusible de 3 A al costado izquierdo (se alcanza desde afuera).
-  const [xBat, yBat] = D.bateria;
-  montar('bateria', pieza(PIEZAS_ELECTRONICA.crearPortaBaterias18650x2, { id: 'bateria' }), Vxyz(xBat, yBat, zArriba), yaw(0), {
+  // Impreso: el pack va en la cuna porta_baterias, con las celdas a 2 mm del plano de montaje (la base
+  // del porta del visor mide 1,5 mm, asi que apoya 1,5 mas abajo).
+  const [xBat, yBat] = IMP ? [Fm('x_bateria'), 0] : D.bateria;
+  const zBat0 = IMP ? Fm('z_plano') + 0.0005 : zArriba;
+  montar('bateria', pieza(PIEZAS_ELECTRONICA.crearPortaBaterias18650x2, { id: 'bateria' }), Vxyz(xBat, yBat, zBat0), yaw(0), {
     idComponente: 'bateria_carro',
     respaldo: () => {
-      const zBat = zArriba + 0.006;
+      const zBat = zBat0 + 0.006;
       const portaBat = caja(0.041, 0.077, 0.012, 0x151515, Vxyz(xBat, yBat, zBat));
       carro.add(portaBat);
       registrar('bateria_carro', portaBat);
@@ -2604,31 +2647,45 @@ function construirCarro() {
     },
   });
   const etBat = etiqueta('2 × 18650 (7,4 V) con BMS', { alto: 0.0042, alcance: 0.3 });
-  etBat.position.copy(Vxyz(xBat, 0, zArriba + 0.024));
+  etBat.position.copy(Vxyz(xBat, 0, zBat0 + 0.024));
   carro.add(etBat);
-  montar('interruptor', pieza(PIEZAS_ELECTRONICA.crearInterruptorFusible, { id: 'interruptor' }),
-    Vxyz(D.interruptor[0], D.interruptor[1], zArriba), yaw(0), { idComponente: 'interruptor_carro', etiquetaSobre: 0.02 });
+  if (IMP) {
+    // Impreso: el balancin KCD1 va en caja_interruptor (costado izquierdo) y el portafusible en caja_fusible
+    // (derecho), los dos del GLB (comp_cajas); aqui solo quedan los pines del interruptor para los cables.
+    const [xK, yK, zK] = F.kcd1.map((c) => c * MM);
+    for (const [p, s] of [[plantilla('interruptor').pines[0], -1], [plantilla('interruptor').pines[1], 1]]) {
+      pinSuelto(`interruptor.${p.n}`, carro, Vxyz(xK + s * 0.008, yK, zK), new THREE.Vector3(s, 0, 0), p.tipo);
+    }
+    const etInt = etiqueta(G.conexiones.dispositivos.interruptor.nombre, { alto: 0.0042, alcance: 0.55 });
+    etInt.position.copy(Vxyz(xK, yK, zK + 0.02));
+    carro.add(etInt);
+  } else {
+    montar('interruptor', pieza(PIEZAS_ELECTRONICA.crearInterruptorFusible, { id: 'interruptor' }),
+      Vxyz(D.interruptor[0], D.interruptor[1], zArriba), yaw(0), { idComponente: 'interruptor_carro', etiquetaSobre: 0.02 });
+  }
 
   // ---- Electronica: el ESP32 DevKit de 30 pines en su placa GVS (la de los
-  // labs), en el segundo piso; el puente H TB6612, en el de abajo, sobre dos separadores.
-  const xEsp = 0.05;
-  construirModulo('esp32_carro', carro, Vxyz(xEsp, 0, zPiso2 + 0.0008), yaw(90), { idComponente: 'esp32_carro', etiquetaSobre: 0.03 });
-  const [xTb, yTb] = D.tb6612;
-  montar('tb6612', pieza(PIEZAS_ELECTRONICA.crearTB6612FNG, { id: 'tb6612' }), Vxyz(xTb, yTb, zArriba + 0.002), yaw(0),
+  // labs), en el segundo piso; el puente H TB6612, en el de abajo, sobre dos separadores
+  // (impreso: la GVS sobre los separadores de piso2_esp32 y el TB6612 en soporte_tb6612, sobre el piso 2).
+  const posEsp = IMP ? Vxyz(Fm('gvs_centro', 0), Fm('gvs_centro', 1), Fm('z_gvs')) : Vxyz(0.05, 0, zPiso2 + 0.0008);
+  construirModulo('esp32_carro', carro, posEsp, yaw(90), { idComponente: 'esp32_carro', etiquetaSobre: 0.03 });
+  const [xTb, yTb, zTb] = IMP ? [Fm('tb_centro', 0), Fm('tb_centro', 1), Fm('z_tb')] : [...D.tb6612, zArriba + 0.002];
+  montar('tb6612', pieza(PIEZAS_ELECTRONICA.crearTB6612FNG, { id: 'tb6612' }), Vxyz(xTb, yTb, zTb), yaw(0),
     { idComponente: 'puente_h_carro', etiquetaSobre: 0.022 });
-  for (const [dx, dy] of [[-0.008, -0.008], [0.008, 0.008]]) carro.add(cilindro(0.0015, 0.002, 0xc8a24a, Vxyz(xTb + dx, yTb + dy, zArriba + 0.001)));
+  if (!IMP) for (const [dx, dy] of [[-0.008, -0.008], [0.008, 0.008]]) carro.add(cilindro(0.0015, 0.002, 0xc8a24a, Vxyz(xTb + dx, yTb + dy, zArriba + 0.001)));
 
   // ---- Arreglo de 5 infrarrojos TCRT5000 bajo el frente, colgado de dos
   // separadores de laton: la cara de los sensores queda a 7 mm del piso.
   P.irLinea = [];
   const n = v.sensores_linea, sep = v.separacion_sensores_linea;
   const xIr = D.xIr;
-  const zIr = 0.007 + 0.0078;          // cara de abajo de la placa (el TCRT5000 baja 7,8 mm)
+  const zIr = IMP ? Fm('z_pcb_ir') : 0.007 + 0.0078;   // cara de abajo de la placa (el TCRT5000 baja 7,8 mm)
+  // Impreso: la placa va clavada en los pernos de barra_tcrt5000 (centro en x_pcb_ir), sin separadores.
   const ir5 = montar('ir_linea', pieza(PIEZAS_SENSORES_CARRO.crearArregloTCRT5000, { id: 'ir_linea', sensorId: 'linea_ir', n, paso: sep / MM }),
-    Vxyz(xIr + 0.003, 0, zIr), new THREE.Quaternion(), { sensorId: 'linea_ir' });
+    Vxyz(IMP ? Fm('x_pcb_ir') : xIr + 0.003, 0, zIr), new THREE.Quaternion(), { sensorId: 'linea_ir' });
   if (ir5.userData.leds) {
     P.irLinea = ir5.userData.leds;
-    for (const k of [-1, 1]) {
+    if (!IMP) for (const k of [-1, 1]) {
       const sepIr = PIEZAS_CARRO.crearSeparadorM3({ alto: (D.zBaseAbajo - zIr - 0.0016) / MM });
       sepIr.position.copy(Vxyz(xIr + 0.003, k * (wIr / 2 - 3) * MM, zIr + 0.0016));
       carro.add(sepIr);
@@ -2649,8 +2706,10 @@ function construirCarro() {
   // ---- Adelante, en una escuadra impresa: ultrasonico HC-SR04 (respaldo) y
   // encima el laser VL53L0X (principal: mide cada 33 ms, hasta ~1,2 m). Los
   // dos miran hacia adelante; el header del laser sale por la ventana de la escuadra.
-  const xFrente = D.xFrente, zUs = D.zUs;
-  try {
+  // Impreso: las dos placas van en los pines de escuadra_frontal (cara de atras en x_pcb_frente), a las
+  // mismas alturas (z_us, z_tof) que la simulacion.
+  const xFrente = IMP ? Fm('x_pcb_frente') : D.xFrente, zUs = D.zUs;
+  if (!IMP) try {
     const z = (zz) => (zz - zArriba) / MM;
     const esc = PIEZAS_CARRO.crearEscuadraFrontal({ alto: 33, ancho: 50, pie: 14, ventana: [-9, 9, z(0.066), z(0.0715)],
       separadores: [[-21, z(zUs - 0.001 + 0.0085), 2.5], [21, z(zUs - 0.001 + 0.0085), 2.5],
@@ -2719,7 +2778,8 @@ function construirCarro() {
   const yOptIr = G.vaso.diametro / 2 + 0.006;
   const zIrCuna = zRiel - 0.03;
   const xIrCuna = xCola / 2 + 0.012;
-  try {
+  // Impreso: paredes, mampara, zapatas y lengueta del GLB (y las espumas, comp_espumas); P.lengueta ya quedo.
+  if (!IMP) try {
     const cuna = PIEZAS_CARRO.crearCunaCarro({ xCola, zBase: zArriba, zRiel, sepR, sepE, dRiel: c.diametro_riel, xEmb,
       xMampara: D.xMampara, zMedio: D.zMedio, rCuerpo: G.vaso.diametro / 2,
       irCol: { x: xIrCuna - 0.001, y: yOptIr + 0.0078 + 0.0082, z: zIrCuna, yModulo: yOptIr + 0.0078 + 0.0016 } });
@@ -5820,23 +5880,29 @@ let resumenOptimizacion = null;
 // maqueta impresa (maqueta_impresa/modelo_3d.py -> maqueta_impresa.glb)
 // ---------------------------------------------------------------------------
 
-// El GLB viene embebido en visor-portable.html (window.__MAQUETA, base64) o se pide a la carpeta del
-// visor. ?sinmaqueta deja el modelo de antes (perfil 2020, aluminio, acrilico) para comparar.
-async function cargarMaqueta() {
+// Un GLB de piezas impresas (maqueta_impresa.glb o carro_armado.glb): viene embebido en
+// visor-portable.html (window.__MAQUETA / window.__CARRO, base64) o se pide a la carpeta del visor.
+// ?sinmaqueta deja el modelo de antes (perfil 2020, aluminio, acrilico, carro dibujado a mano) para comparar.
+async function cargarGLB(archivo, embebido) {
   if (new URLSearchParams(location.search).has('sinmaqueta')) return null;
   try {
     let buf;
-    if (window.__MAQUETA) buf = PIEZAS_MAQUETA.base64ABuffer(window.__MAQUETA);
+    if (window[embebido]) buf = PIEZAS_MAQUETA.base64ABuffer(window[embebido]);
     else {
-      const r = await fetch('./maqueta_impresa.glb', { cache: 'no-store' });
-      if (!r.ok) throw new Error(`maqueta_impresa.glb: ${r.status}`);
+      const r = await fetch(`./${archivo}`, { cache: 'no-store' });
+      if (!r.ok) throw new Error(`${archivo}: ${r.status}`);
       buf = await r.arrayBuffer();
     }
     return PIEZAS_MAQUETA.leerMaquetaGLB(buf);
   } catch (e) {
-    console.warn('maqueta impresa: se deja el modelo de antes', e);
+    console.warn(`${archivo}: se deja el modelo de antes`, e);
     return null;
   }
+}
+
+// Casilla "Remaches" de la barra (interfaz.js): los remaches impresos de la maqueta y del carro.
+function mostrarRemaches(si) {
+  for (const m of REMACHES) m.visible = si;
 }
 
 // Componente (pestana Componentes, resaltado) de cada pieza impresa, por su nombre.
@@ -5867,6 +5933,7 @@ function montarMaqueta() {
   };
   const centro = (m) => { m.geometry.computeBoundingBox(); return m.geometry.boundingBox.getCenter(new THREE.Vector3()); };
   for (const m of [...MAQ.piezas.values()]) {
+    if (m.userData.tipo === 'remache') { REMACHES.push(m); continue; }
     const id = componenteDePieza(m.name);
     m.userData.idComponente = id;
     registrar(id, m);
@@ -5910,7 +5977,7 @@ function optimizar() {
       auditar: new URLSearchParams(location.search).has('auditar'),
       comp: COMP,
       // Todo lo que las animaciones, los sensores y los botones mueven, ocultan o recolorean.
-      referencias: [P, SENS, CINTAS, CAPAS_CABLES, fichas, vasos],
+      referencias: [P, SENS, CINTAS, CAPAS_CABLES, REMACHES, fichas, vasos],
       // Se buscan por nombre mientras corre (el cuerno del servo del empujador).
       nombresVivos: ['cuerno'],
       // Listas que solo se usan al construir (componentes de cada pieza, partes de cada sensor):
@@ -6030,7 +6097,8 @@ async function iniciar() {
   if (EN_ARCHIVO) ui.vigilarSimulacion();
   ui.vigilarInternet();
   ui.pintarModo();
-  MAQ = await cargarMaqueta();
+  MAQ = await cargarGLB('maqueta_impresa.glb', '__MAQUETA');
+  CARRO_IMP = await cargarGLB('carro_armado.glb', '__CARRO');
   construirCintaMonedas();
   construirCintaVasos();
   construirCanaleta();
@@ -6042,6 +6110,7 @@ async function iniciar() {
   construirCables();
   ui.iniciarCables();
   montarMaqueta();
+  ui.iniciarRemaches();
   for (const s of Object.values(SENS)) s.marcador.userData.baseX = s.marcador.scale.x, s.marcador.userData.baseY = s.marcador.scale.y;
   ajustarSombra();
   optimizar();
@@ -6075,7 +6144,7 @@ async function iniciar() {
 if (new URLSearchParams(location.search).has('auditar')) window.__visor = { THREE, escena, COMP, SENS, P, CABLES, G: () => G, camara, controles, PIN, PINES_REALES, renderer, vista, vuelo: () => vuelo,
   // Rendimiento: renderer.info (llamadas de dibujo, triangulos, geometrias, texturas) y lo que unio optimizar().
   info: () => ({ calls: renderer.info.render.calls, triangulos: renderer.info.render.triangles, ...renderer.info.memory, programas: renderer.info.programs.length }),
-  optimizacion: () => resumenOptimizacion, ETIQUETAS, MAQ: () => MAQ, REEMPLAZADAS };
+  optimizacion: () => resumenOptimizacion, ETIQUETAS, MAQ: () => MAQ, CARRO_IMP: () => CARRO_IMP, REMACHES, REEMPLAZADAS };
 
 // La interfaz: le pasa lo que necesita de la escena (interfaz.js no toca Three.js).
 const ui = crearInterfaz({
@@ -6086,6 +6155,7 @@ const ui = crearInterfaz({
   tiene3D: (id) => !!COMP[id], sensorEn3D: (id) => mallasDeSensor(id).length > 0,
   sensorActivo, sensorEnAlarma,
   mostrarCables3D: mostrarCables, datosCables: () => ({ cables: CABLES, tipos: TIPOS_CABLE }),
+  mostrarRemaches3D: mostrarRemaches, hayRemaches: () => REMACHES.length > 0,
   alCambiarInternet: nubeSinInternet,
 });
 

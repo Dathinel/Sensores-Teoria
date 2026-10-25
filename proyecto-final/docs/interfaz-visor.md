@@ -32,6 +32,10 @@ Dónde está cada cosa después de rehacerla:
   internet"): la interfaz avisa a la escena (`ctx.alCambiarInternet`).
 - [x] Botón **Cables** (muestra/oculta todo el cableado 3D y su leyenda; se recuerda en
   `localStorage.verCables`; `?cables` en la URL lo abre).
+- [x] Casilla **Remaches** (2026-10-24; botón que se marca y desmarca, como Cables): muestra u oculta los
+  remaches impresos de la maqueta (310) y del carro (27), que vienen en los GLB en rojo (`#d1001f`).
+  Marcada por defecto; se recuerda en `localStorage.verRemaches`; `?sinremaches` en la URL la desmarca. Si
+  no cargó ningún GLB (`?sinmaqueta`) el botón se esconde.
 - [x] Botón **Panel** (muestra/oculta el panel lateral).
 
 ## Vistas y cámara
@@ -165,7 +169,8 @@ Dónde está cada cosa después de rehacerla:
   `vision`, que no tienen botón), `?paso=<n>`, `?sensor=<id>`, `?componente=<id>`,
   `?cam=x,y,z&mira=x,y,z` (toma exacta, en coordenadas de la simulación), `?auditar`
   (`window.__visor` con la escena para scripts de revisión), `?sinmaqueta` (sin la maqueta impresa
-  `maqueta_impresa.glb`: el modelo de antes con perfil 2020, aluminio y acrílico, para comparar).
+  `maqueta_impresa.glb` ni el carro impreso `carro_armado.glb`: el modelo de antes con perfil 2020, aluminio,
+  acrílico y el carro dibujado a mano, para comparar), `?sinremaches` (la casilla Remaches desmarcada).
 
 ## Pantalla angosta (< 900 px)
 

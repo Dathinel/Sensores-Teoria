@@ -989,9 +989,9 @@ La historia completa, sesión por sesión, está en la [bitácora](docs/bitacora
 
 ## Costo y peso
 
-**Costo: $1.387.143 COP** en total, sin el portátil (que es del grupo), con precios consultados el
+**Costo: $1.392.143 COP** en total, sin el portátil (que es del grupo), con precios consultados el
 2026-09-27 en Ferretrónica, Electronilab, Didácticas Electrónicas y Mercado Libre. Antes de los ahorros
-aprobados el 2026-10-24 eran $1.998.921 (se ahorraron $611.778: la estructura impresa, la fuente y el
+aprobados el 2026-10-24 eran $1.998.921 (se ahorraron $606.778: la estructura impresa, la fuente y el
 buck de 5 A, empalmes en vez de bornera y optoacopladores, sin hub USB, bridas y un solo fusible). El
 49 % son estimados: banda de las cintas, piezas impresas, la fuente de 5 A y el buck no tienen un
 producto igual publicado.
@@ -1002,7 +1002,7 @@ producto igual publicado.
 | Cinta de vasos | $351.656 | 25 % |
 | Canaleta y muelle | $55.283 | 4 % |
 | Carro | $253.036 | 18 % |
-| Control y potencia | $197.152 | 14 % |
+| Control y potencia | $202.152 | 15 % |
 | Estructura | $237.079 | 17 % |
 
 La **estructura 3D** es la maqueta impresa (sin perfil de aluminio, escuadras, pies, acrílico ni MDF):

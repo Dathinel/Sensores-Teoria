@@ -146,7 +146,7 @@ def test_el_glb_tiene_las_piezas_de_maqueta_scad(glb):
                                str(MAQUETA / "maqueta.scad")], capture_output=True, text=True).stdout)
     piezas = re.findall(r'ECHO: PIEZA = "([^"]+)"', str(eco))
     assert piezas, "OpenSCAD no listo piezas"
-    en_glb = [n["name"] for n in glb["nodes"]]
+    en_glb = [n["name"] for n in glb["nodes"] if n["extras"]["tipo"] == "impresa"]
     assert sorted(en_glb) == sorted(piezas), (
         f"el GLB no esta al dia (correr python maqueta_impresa/modelo_3d.py): faltan "
         f"{sorted(set(piezas) - set(en_glb))[:8]}, sobran {sorted(set(en_glb) - set(piezas))[:8]}")
@@ -166,6 +166,8 @@ def test_cada_malla_del_glb_es_su_stl(glb):
     cajas = glb["scenes"][0]["extras"]["cajas_mm"]
     malas = []
     for n in glb["nodes"]:
+        if n["extras"]["tipo"] != "impresa":   # los remaches no tienen STL propio en _cache/ens
+            continue
         stl = ens / f"{n['name']}.stl"
         if not stl.exists():
             malas.append(f"{n['name']}: no hay STL")
@@ -178,6 +180,19 @@ def test_cada_malla_del_glb_es_su_stl(glb):
         if acc["count"] // 3 != tri or max(abs(a - b) for a, b in zip(lo, cajas[n["name"]][0])) > 0.05:
             malas.append(f"{n['name']}: {acc['count'] // 3} triangulos en el GLB, {tri} en el STL")
     assert not malas, "GLB viejo respecto de los STL (correr python maqueta_impresa/modelo_3d.py):\n" + "\n".join(malas[:10])
+
+
+def test_el_glb_trae_los_310_remaches_en_rojo(glb, F):
+    """Usuario (2026-10-24): los remaches son parte de como se vera la maqueta; el visor los muestra con la
+    casilla "Remaches". Un nodo por subsistema, con cuantos trae, y entre todos los de REM_TODOS."""
+    rem = [n for n in glb["nodes"] if n["extras"]["tipo"] == "remache"]
+    assert sorted(n["extras"]["grupo"] for n in rem) == ["alm", "can", "estructura", "mon", "tap", "vas"]
+    assert sum(n["extras"]["cantidad"] for n in rem) == sum(F["n_remaches"]) == glb["scenes"][0]["extras"]["remaches"] == 310
+    for n in rem:
+        prim = glb["meshes"][n["mesh"]]["primitives"][0]
+        assert glb["accessors"][prim["indices"]]["count"] >= n["extras"]["cantidad"] * 3 * 20, n["name"]
+        color = glb["materials"][prim["material"]]["pbrMetallicRoughness"]["baseColorFactor"]
+        assert [round(c * 255) for c in color[:3]] == [0xD1, 0x00, 0x1F]
 
 
 def test_las_partes_moviles_traen_su_pivote(glb, F):

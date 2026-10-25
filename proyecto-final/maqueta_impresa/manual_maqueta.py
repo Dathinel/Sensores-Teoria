@@ -54,12 +54,16 @@ PASOS = [
         "lado -y; del lado +y, el taco de cada lateral llena el hueco hasta el poste de x 30 y la columna de x 315.",
         "Corta 3 mm del extremo -y de los separadores de la banda (dejan pasar el vaso que baja a la canaleta).",
         "Rodillos con sus ejes Ø8: 608 en las laterales y KFL08 del lado del motor; NEMA 17 en su placa, sobre los 4 "
-        "postes huecos de la lateral -y, con el acople al rodillo de x 0.",
+        "postes huecos de la lateral -y, con el acople al rodillo de x 0. El motor NO apoya directo en la placa: lleva 4 "
+        "separadores de nailon de 3 mm en sus M3 (aire entre la brida y el PLA: el motor se calienta; ver esfuerzos.md).",
         "Tacos de casilla: dos mitades pegadas a cada lado de cada separador.",
-        "Panel de luz (dos mitades remachadas) a las columnas; cortina VL53L0X en el poste de (315, -152,5); la "
-        "webcam de vasos en su placa sobre el poste de (160, -422); la bandeja de rechazo suelta en el piso.",
+        "Panel de luz (dos mitades remachadas) a las columnas: la tira LED va sobre cinta de aluminio pegada al marco "
+        "(reparte el calor) y alimentada a MEDIA potencia (resistencia en serie o dimmer): pegada directo al PLA y a "
+        "plena potencia lo calienta hasta 45-65 °C. Cortina VL53L0X en el poste de (315, -152,5); la webcam de vasos "
+        "en su placa sobre el poste de (160, -422); la bandeja de rechazo suelta en el piso.",
     ], "Banda 400 × 75 × 2 con 7 separadores, 2 rodillos Ø22 × 79 con ejes Ø8, 3 rodamientos 608 y 1 KFL08, acople Ø19 × 20, "
-       "NEMA 17, webcam 720p (tornillo de 1/4\"), VL53L0X, tira LED de 5 V (2 tramos).",
+       "NEMA 17 con 4 separadores de nailon de 3 mm, webcam 720p (tornillo de 1/4\"), VL53L0X, tira LED de 5 V (2 tramos) "
+       "con cinta de aluminio y resistencia o dimmer.",
      ["motor_vasos", "vl53_cortina", "panel_luz", "cam_vasos"]),
     ("Almacén de monedas (carrusel)", "alm_", "100,-70,300,55,0,330,620", [
         "Puente del motor colgado de la viga con sus dos horquillas (6 remaches); 28BYJ-48 sobre el puente (2 remaches "
@@ -87,7 +91,8 @@ PASOS = [
     ("Cinta de monedas y compuerta E4", "mon_", "0,0,420,55,0,330,800", [
         "Bancada entre los rieles con las guías laterales (8 remaches desde arriba); platinas de los M18 bajo la bancada.",
         "Bloques del rodillo motriz (el +y es también la jaula del NEMA 17) y del tensor, con los rodamientos 608; los "
-        "ejes Ø8 pasan por los agujeros de los rieles.",
+        "ejes Ø8 pasan por los agujeros de los rieles. El NEMA 17 va con 4 separadores de nailon de 3 mm en sus M3: la "
+        "brida no toca el PLA (el motor se calienta; ver esfuerzos.md).",
         "Placas colgantes de los rodillos de retorno A, B y C; banda puesta en los cinco rodillos.",
         "Compuerta E4: placa bajo los labios de los bloques del tensor, embudo, SG90 y aleta; canal A al embudo de carga "
         "del almacén y canal B (dos tramos) a la bandeja de rechazo, con su soporte al poste de la cámara.",

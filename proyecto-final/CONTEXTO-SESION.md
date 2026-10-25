@@ -61,7 +61,13 @@ Puntos:
   visor con maqueta_impresa.glb + tests/sim/test_maqueta_impresa.py; costo $1.998.921 -> $1.387.143 (ahorro $611.778,
   calculado en app/costos.py), diodo Schottky BAT85 en los M18 (con 1N4148 el ESP32 no leía el 0), ventilador se queda;
   maqueta aligerada 2,74 -> 2,68 kg (3 rollos) con revisión completa en TODO OK y probar_revisor 39/39.
-- [ ] 9. Actualizar TODA la carpeta proyecto-final (README, docs, contexto) y SUBIRLA a GitHub (usuario, 2026-10-24:
+  HECHO (2026-10-24): commits 6006bae y 8de40b8 en main (940 pruebas en verde; .gitattributes con PDF/STL/3MF/GLB binarios).
+- [x] 9. Actualizar TODA la carpeta proyecto-final (README, docs, contexto) y SUBIRLA a GitHub.
+- [x] 10. (usuario, 2026-10-24) El carro del visor igual al impreso; los remaches como parte del modelo (con casilla);
+  verificar esfuerzo, deformación permanente (fluencia) y calor del PLA: maqueta_impresa/esfuerzos.py -> esfuerzos.md
+  (todo cumple; condiciones nuevas: NEMA 17 con separadores de nailon, tira LED sobre cinta de aluminio a media potencia).
+  HECHO: carro_armado.glb en el visor (cotas funcionales = física, tests/sim/test_carro_impreso.py), 337 remaches en los GLB
+  con casilla "Remaches", demo regrabada (app.grabar_demo) y portable regenerado (9,3 MB); 945 pruebas. (README, docs, contexto) y SUBIRLA a GitHub (usuario, 2026-10-24:
   "junto a su github no se le olvide"): commit y push al terminar, con la suite en verde.
 - Coordinación: la sesión "cambios en general de la carpeta" trabaja en paralelo; se le avisó (mensaje retenido sin leer,
   2026-10-24). Esta sesión solo crea `maqueta_impresa/` y lee lo demás; antes de editar visor/sim/config, avisar.

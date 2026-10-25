@@ -6,6 +6,8 @@ marco del visor (sim (x, y, z) -> glTF/three (x, z, -y)). Las partes que se muev
 simulacion, metros y grados): el visor las cuelga del objeto que ya anima (carrusel, obturador, aleta E4,
 dedos de tapas, leva y piston de la prensa, empujador, escape de la canaleta, tacos de la banda de vasos).
 Lo comprado (motores, servos, bandas, sensores...) NO va: lo sigue dibujando el visor.
+Los 310 remaches impresos van en su lugar como un nodo por subsistema (`rem_<sub>`, extras.tipo "remache", rojo
+#d1001f como en los manuales): el visor los muestra u oculta con la casilla "Remaches" (usuario, 2026-10-24).
 
 En las extras de la escena va `funcional_mm`: las medidas funcionales tal como las define cada .scad
 (leidas con echo de OpenSCAD), que tests/sim/test_maqueta_impresa.py compara con sim/geometria.py.
@@ -18,6 +20,7 @@ import struct
 import subprocess
 import sys
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
@@ -32,6 +35,8 @@ ENS = R.CACHE / "ens"
 COLORES = {"est_tubos": "#8a919b", "est_nodos": "#5f6672", "est_uniones": "#6f7782", "alm": "#2f9e8f",
            "mon": "#3d7cc9", "vas": "#d39236", "tap": "#8a63c9", "can": "#c4553f"}
 COLOR_PIEZA = {"vas_panel_a": "#f4f6f8", "vas_panel_b": "#f4f6f8"}   # caja de luz en PLA blanco (difusor)
+COLOR_REMACHE = "#d1001f"
+REM_SUB = {"estructura": "REM_ESTRUCTURA", "alm": "REM_ALM", "mon": "REM_MON", "vas": "REM_VAS", "tap": "REM_TAP", "can": "REM_CAN"}
 
 # Medidas funcionales que se leen de los .scad (echo). Expresiones de OpenSCAD.
 ECO = {
@@ -51,6 +56,7 @@ ECO = {
     "tap_sens": "tap_sens", "tap_carrera_dedo": "tap_carrera_dedo", "tap_sg": "[tap_sg_eje[0], tap_sg_eje[1], tap_sg_z]",
     "can_riel_m": "can_pts_riel(-1)", "can_riel_p": "can_pts_riel(1)", "can_piv": "can_piv", "can_ME": "CAN_ME",
     "can_th0": "can_th0", "can_y_primero": "can_y_primero", "can_y_ret": "can_y_ret",
+    "n_remaches": "[" + ", ".join(f"len({v})" for v in REM_SUB.values()) + "]",
 }
 
 
@@ -73,6 +79,16 @@ def leer_eco():
 
 def mm_a_m(p):
     return [round(v / 1000, 6) for v in p]
+
+
+def stl_remaches(sub, lista, tmp):
+    """STL con los remaches de un subsistema en su lugar (remache_en de comun.scad sobre su lista REM_*)."""
+    scad, stl = Path(tmp) / f"rem_{sub}.scad", Path(tmp) / f"rem_{sub}.stl"
+    scad.write_text(f'include <{(AQUI / "maqueta.scad").as_posix()}>\nmodo = "nada";\nfor (r = {lista}) remache_en(r);\n')
+    r = subprocess.run([str(R.OPENSCAD), "-o", str(stl), str(scad)], capture_output=True, text=True)
+    if not stl.exists():
+        raise SystemExit(f"OpenSCAD fallo con los remaches de {sub}:\n" + (r.stdout + r.stderr)[-2000:])
+    return stl
 
 
 def moviles(F):
@@ -194,7 +210,7 @@ def vertices_mm(ruta, nombre):
 
 
 def main():
-    piezas, _, _ = R.listas()
+    piezas, rem, _ = R.listas()
     faltan = [n for n in piezas if not (ENS / f"{n}.stl").exists()]
     if faltan:
         raise SystemExit(f"faltan {len(faltan)} STL en _cache/ens ({faltan[:5]}...): correr antes python revisar.py")
@@ -213,16 +229,22 @@ def main():
         objetos.append((n, v, i, COLOR_PIEZA.get(n, COLORES[g]), extras))
         p = tri.reshape(-1, 3)
         cajas[n] = [np.round(p.min(0), 2).tolist(), np.round(p.max(0), 2).tolist()]
+    assert sum(F["n_remaches"]) == len(rem), f"REM_TODOS tiene {len(rem)} remaches y las listas suman {sum(F['n_remaches'])}"
+    with tempfile.TemporaryDirectory() as t, ThreadPoolExecutor(R.HILOS) as ej:
+        stls = list(ej.map(lambda s: stl_remaches(s[0], s[1], t), REM_SUB.items()))
+        for sub, n_rem, stl in zip(REM_SUB, F["n_remaches"], stls):
+            v, i, _ = malla(stl)
+            objetos.append((f"rem_{sub}", v, i, COLOR_REMACHE, {"tipo": "remache", "grupo": sub, "cantidad": n_rem}))
     extras_escena = {"marco": "visor: sim (x, y, z) en m -> three (x, z, -y)", "piezas": len(piezas),
-                     "funcional_mm": F, "cajas_mm": cajas,
+                     "remaches": len(rem), "funcional_mm": F, "cajas_mm": cajas,
                      "moviles": sorted({m["movil"] for m in mov.values()})}
     datos = escribir_glb(SALIDA, objetos, extras_escena)
-    leido = leer_glb(SALIDA)       # autocomprobacion: un nodo por pieza, cada uno con su malla
-    assert len(leido["nodes"]) == len(piezas) == len(set(piezas))
+    leido = leer_glb(SALIDA)       # autocomprobacion: un nodo por pieza (mas uno de remaches por subsistema)
+    assert len(leido["nodes"]) == len(piezas) + len(REM_SUB) and len(piezas) == len(set(piezas))
     assert all(n["name"] in mov for n in leido["nodes"] if "movil" in n["extras"])
     assert set(mov) <= set(piezas), f"moviles sin pieza: {set(mov) - set(piezas)}"
-    print(f"GLB: {SALIDA} ({len(datos) / 1e6:.2f} MB, {len(objetos)} piezas, {len(mov)} moviles, "
-          f"{sum(len(o[2]) for o in objetos) // 3} triangulos)")
+    print(f"GLB: {SALIDA} ({len(datos) / 1e6:.2f} MB, {len(piezas)} piezas, {len(rem)} remaches en {len(REM_SUB)} nodos, "
+          f"{len(mov)} moviles, {sum(len(o[2]) for o in objetos) // 3} triangulos)")
 
 
 if __name__ == "__main__":

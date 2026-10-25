@@ -946,6 +946,25 @@ export function crearInterfaz(ctx) {
     });
   }
 
+  // ---------- remaches impresos: casilla ----------
+
+  // Marcada por defecto; se recuerda en localStorage.verRemaches y ?sinremaches la desmarca. Si no hay
+  // remaches en la escena (sin GLB de la maqueta ni del carro) el botón se esconde.
+  function iniciarRemaches() {
+    const b = $('#btnRemaches');
+    if (!ctx.hayRemaches()) { b.hidden = true; return; }
+    let si = true;
+    try { si = localStorage.getItem('verRemaches') !== '0'; } catch { /* sin almacenamiento */ }
+    if (new URLSearchParams(location.search).has('sinremaches')) si = false;
+    const poner = (v) => { ctx.mostrarRemaches3D(v); b.classList.toggle('activo', v); b.setAttribute('aria-pressed', String(v)); };
+    poner(si);
+    b.addEventListener('click', () => {
+      si = !si;
+      try { localStorage.setItem('verRemaches', si ? '1' : '0'); } catch { /* nada */ }
+      poner(si);
+    });
+  }
+
   // ---------- parámetros de la URL ----------
 
   // ?panel=0, ?paso=3, ?componente=<id> o ?sensor=<id>. Devuelve true si ya ubicó la cámara.
@@ -992,7 +1011,7 @@ export function crearInterfaz(ctx) {
     marcarVista,
     zonasArriba: () => zonasArriba,
     // arranque
-    pintarPanel, pintarModo, vigilarInternet, vigilarSimulacion, iniciarCables, aplicarURL,
+    pintarPanel, pintarModo, vigilarInternet, vigilarSimulacion, iniciarCables, iniciarRemaches, aplicarURL,
     // simulación
     estadoNuevo, falloConexion, eventos, limpiarBitacora: () => { bitacora.length = 0; },
     // clic en la escena

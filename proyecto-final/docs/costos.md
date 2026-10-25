@@ -4,7 +4,7 @@
 > Precios consultados el 2026-09-27 en pesos colombianos, sin envío. Cambian:
 > verificarlos antes de comprar.
 
-**Total del proyecto: $1.387.143** (sin el portátil, que es del grupo). De eso, $688.197 (49 %) son **estimados** (materiales sin un producto
+**Total del proyecto: $1.392.143** (sin el portátil, que es del grupo). De eso, $693.197 (49 %) son **estimados** (materiales sin un producto
 igual publicado: banda de las cintas, tornillería, cables, piezas impresas, la fuente de 5 A y el buck XL4015): el resto es precio de tienda.
 
 La **estructura 3D** (la maqueta impresa, las piezas impresas del carro y de la caja y la tornillería) cuesta **$306.197** (22 % del total): detalle más abajo.
@@ -17,9 +17,9 @@ La **estructura 3D** (la maqueta impresa, las piezas impresas del carro y de la 
 | Cinta de vasos | $351.656 | 25 % |
 | Canaleta y muelle | $55.283 | 4 % |
 | Carro | $253.036 | 18 % |
-| Control y potencia | $197.152 | 14 % |
+| Control y potencia | $202.152 | 15 % |
 | Estructura | $237.079 | 17 % |
-| **Total** | **$1.387.143** | **100 %** |
+| **Total** | **$1.392.143** | **100 %** |
 
 ## Ahorros ya aplicados (aprobados el 2026-10-24)
 
@@ -32,9 +32,9 @@ La **estructura 3D** (la maqueta impresa, las piezas impresas del carro y de la 
 | Empalmes soldados en vez de la bornera X2, los optoacopladores y el reparto I2C | $27.000 | bajo | Misma topología (GND en estrella en los bornes -V de la fuente). Los M18 van al GPIO con un diodo BAT85 y una pull-up de 10 kΩ (sigue activo en bajo); el bus I2C 1 con sus dos pull-ups de 2,2 kΩ en línea. Se pierde el aislamiento del optoacoplador y desarmar es con cautín. |
 | Sin hub USB: ESP32 y webcams directo al portátil | $23.500 | bajo | Hacen falta 3 puertos USB libres en el portátil; ninguno pide más de 0,35 A (un USB 2.0 da 0,5 A). |
 | Buck de 5 A (XL4015) en vez del XL4016 de 9 A para los servos | $16.900 | medio | Pico simulado del riel de 6 V: 3,9 A (prensa apretando la tapa). Prensa y empujador nunca arrancan a la vez (firmware/fijo/estacion.py, EXCLUYENTES, con su prueba). Medir el pico real en el montaje. |
-| Bridas con bases adhesivas en vez de canaletas ranuradas y prensaestopas | $11.000 | bajo | 25 000 de canaleta y prensaestopas contra 14 000 de bridas, bases y el ventilador (que antes no estaba contado). El ventilador se queda: los A4988 van a 1 A por fase, el límite sin aire forzado (docs/electrica.md). |
 | Un fusible principal y cable de poder a una multitoma con interruptor (sin IEC ni 4 portafusibles) | $6.900 | bajo | 9 200 de 4 portafusibles + 6 000 de la entrada IEC contra 2 300 de un portafusible + 6 000 del cable con enchufe. El fusible de 5 A cubre el pico simulado del +12 V (3,3 A) y el peor caso (4,1 A). |
-| **Total ahorrado** | **$611.778** | | |
+| Bridas con bases adhesivas en vez de canaletas ranuradas y prensaestopas | $6.000 | bajo | 25 000 de canaleta y prensaestopas contra 19 000 de bridas, bases, el ventilador (que antes no estaba contado) y lo térmico de esfuerzos.md (separadores de nailon de los NEMA 17, cinta de aluminio y dimmer de la tira LED). El ventilador se queda: los A4988 van a 1 A por fase, el límite sin aire forzado (docs/electrica.md). |
+| **Total ahorrado** | **$606.778** | | |
 
 ## Dónde abaratar (propuestas, NO aplicadas)
 
@@ -215,11 +215,11 @@ Por zona (contados, sin repuesto):
 | Empalmes soldados | 2 diodos Schottky BAT85 + 2 resistencias de 10 kΩ + 2 de 2,2 kΩ (el estaño y el termoencogible van en Cables) *(estimado)* | 1 | $1.000 | $1.000 | [Ferretrónica (Tunja](https://www.ferretronica.com) |
 | Cable de poder de la fuente | Cable de poder de 3 hilos con enchufe, 1,5 m (o el de un aparato viejo); va a una multitoma con interruptor del grupo *(estimado)* | 1 | $6.000 | $6.000 | [Mercado Libre Colombia](https://www.mercadolibre.com.co) |
 | Driver del carrusel | Viene con el 28BYJ-48 (ya contado en el motor del carrusel) | 1 | $0 | $0 | — |
-| Bridas y ventilador | 100 bridas de 10 cm (~4 000) + 10 bases adhesivas (~4 000) + ventilador 4010 de 5 V (~6 000) *(estimado)* | 1 | $14.000 | $14.000 | [Mercado Libre Colombia](https://www.mercadolibre.com.co) |
+| Bridas y ventilador | 100 bridas de 10 cm (~4 000) + 10 bases adhesivas (~4 000) + ventilador 4010 de 5 V (~6 000) + 8 separadores de nailon de 3 mm para los NEMA 17, cinta de aluminio y resistencia o dimmer de la tira LED (~5 000; esfuerzos.md: calor) *(estimado)* | 1 | $19.000 | $19.000 | [Mercado Libre Colombia](https://www.mercadolibre.com.co) |
 | Portátil | El portátil del grupo (no se compra) | 1 | $0 | $0 | — |
 | Cables | Cables dupont, cable 18 AWG, termoencogible, conectores JST *(estimado)* | 1 | $30.000 | $30.000 | — |
 | Otras piezas impresas | 4 piezas en PLA (8 g, 0,8 h de impresora): soportes, bridas, bloques (tabla de piezas impresas) *(estimado)* | 1 | $852 | $852 | [Electronilab (Bogotá)](https://electronilab.co) |
-| **Subtotal** | | | | **$197.152** | |
+| **Subtotal** | | | | **$202.152** | |
 
 ### Estructura
 

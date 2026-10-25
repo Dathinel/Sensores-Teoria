@@ -5,7 +5,8 @@
 // malla con su nombre (`alm_disco`, `t_F1-F4`...) y en `userData` las extras del GLB: grupo, y en las que
 // se mueven `movil` (que objeto del visor siguen), `pivote`, `eje` y `recorrido` (marco sim, m y grados).
 // Lector propio y minimo (sin GLTFLoader): el GLB lo escribe nuestro script con un formato fijo (una
-// primitiva por malla: POSITION float32 + indices uint16/uint32, color por material).
+// primitiva por malla: POSITION float32 + indices uint16/uint32, color por material). Sirve igual para
+// chasis_impreso/carro_armado.glb (mismo formato, marco del carro).
 import * as THREE from 'three';
 
 const TIPOS = { 5123: Uint16Array, 5125: Uint32Array, 5126: Float32Array };
@@ -21,7 +22,7 @@ export function base64ABuffer(b64) {
 // GLB -> { grupo, piezas: Map(nombre -> malla), extras (de la escena) }.
 export function leerMaquetaGLB(buffer) {
   const dv = new DataView(buffer);
-  if (dv.getUint32(0, true) !== 0x46546c67) throw new Error('maqueta_impresa.glb: no es un GLB');
+  if (dv.getUint32(0, true) !== 0x46546c67) throw new Error('no es un GLB');
   const largoJson = dv.getUint32(12, true);
   const gltf = JSON.parse(new TextDecoder().decode(new Uint8Array(buffer, 20, largoJson)));
   const bin = 20 + largoJson + 8;                    // inicio del bloque BIN

@@ -51,6 +51,7 @@ python estructura.py      # estructura_gen.scad y estructura_resumen.md (con sus
 python revisar.py         # todo (≈ 6 min); con --sub alm solo un subsistema
 python probar_revisor.py  # el revisor contra errores puestos a propósito
 python exportar.py        # stl/, 3mf/, piezas.json y material.md
+python esfuerzos.py       # esfuerzos.md: flexión, pandeo, remaches, cajeras y calor
 python manual_maqueta.py  # manual_maqueta.pdf
 ```
 
@@ -68,10 +69,20 @@ Lo funcional no se movió (estaciones, alturas de bandas, carrusel, tolva, canal
   canaleta tocaba el borde.
 - El vaso retenido por el escape queda ~17 mm más abajo que lo que dibujaba el visor.
 
+## Esfuerzo, deformación y calor
+
+`esfuerzos.py` → [esfuerzos.md](esfuerzos.md): cada tubo cargado (flexión y flecha), cada columna (pandeo), cada
+unión de remaches (cortante y arranque de la uña), el aplastamiento en las cajeras y cada fuente de calor que toca
+PLA, contra el PLA impreso (admisible 10 MPa en cargas cortas, 5 MPa sostenidas por fluencia, nada que cargue por
+encima de 45 °C). Todo cumple; lo más exigido es la viga del pórtico cuando la prensa asienta una tapa (4,7 MPa de
+10, 1,6 mm de flecha momentánea). Dos condiciones salen de ahí y están en el manual: el NEMA 17 **no apoya directo**
+en su placa (separadores de nailon: a 1 A/fase llega a 46 °C en una prueba continua) y la tira LED del panel va
+sobre cinta de aluminio y a media potencia. Son modelos simples del lado seguro, no elementos finitos.
+
 ## Lo que no está verificado
 
-- La **resistencia** no se calculó pieza por pieza: solo la flecha de la viga y del riel más cargados (0,5 mm con
-  900 g). Los remaches y los encajes se prueban al imprimir.
+- Los remaches y los encajes se prueban al imprimir; los esfuerzos son calculados, no ensayados. Hay que medir la
+  carcasa del NEMA 17 en la prueba de banco.
 - La rosca impresa de los prisioneros de la canaleta y la cola de milano de las bocas del muelle.
 - Las medidas marcadas `MEDIR` en cada `.scad` (servos, sensores, webcam): medirlas antes de imprimir esas piezas.
 - La caja de control no es parte de esta carpeta (su cableado sí está en el manual).

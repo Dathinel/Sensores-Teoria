@@ -94,7 +94,7 @@ su fila en `CATALOGO_COMPONENTES.md`, sección "Piezas Three.js": función, qué
 | `control.js` | `crearGabineteControl(...)`, `crearPasoConBrida({ tipo })`, `crearPrensaestopas({ tipo })`, `crearVentilador4010`, `crearLaptopTUFA15`, `cajaRedonda` | Caja de control de acrílico 360 × 240 × 80 mm (placa de montaje, esquineros de aluminio, tapa de policarbonato atornillada, pasos de cable con brida —`conBridas: true`, ahorro 2026-10-24; antes prensaestopas PG7/PG9/PG16—, ventilador 40 mm, rejilla) y el portátil ASUS TUF A15 con la pantalla del asistente. Las placas de la caja son las de `electronica.js` (en `construirCajaControl`, con `conPieza`). |
 | `linea_monedas.js` | `crearRodilloCinta`, `crearCojinete608`, `crearAcople`, `crearSoporteNEMA17`, `crearPlatinaM18`, `crearCompuertaDesvio`, `crearOrejaBisagra`, `crearBridaServo`, `crearBandejaRechazo`, `crearPlacaFijaAlmacen`, `crearDiscoCarrusel`, `crearTuboMonedas`, `crearObturadorAlmacen`, `crearSoporteMotorCarrusel`, `crearListon`, `crearPosteCamaraCenital` | Cinta de monedas (rodillo motriz con goma y tensor, 608ZZ en bloques impresos, jaula del NEMA17 con acople flexible, platinas M18 bajo E1/E2), descarga (compuerta en Y coaxial con el SG90, bandeja de rechazo) y almacén revólver (placa fija con un agujero, disco de acrílico con imán, 6 tubos de policarbonato rotulados, obturador coaxial con su SG90, placa del 28BYJ-48). Se usa en `construirCintaMonedas`, `construirBanda` y `construirAlmacen`. |
 | `linea_vasos.js` | `crearVaso`, `crearTapa`, `crearTacoCasilla`, `crearTuboTapas`, `crearPrensaLeva`, `crearEmpujador`, `crearAccionamientoCinta`, `crearPanelLuz`, `crearPosteCamara`, `crearCamaraVasos`, `crearPortaVL53Interior` | Cinta de vasos: vaso con pestaña y cinta ArUco, tapa con cono (apilable), tacos de casilla, tubo de tapas con escape de SG90, prensa de leva en MG996R (resorte que se comprime en vivo), empujador biela-manivela, NEMA17 con acople, panel de luz, cámara de vasos en su poste, porta del VL53L0X del interior. Los que se mueven traen `userData.poner(u)`. |
-| `carro.js` | `disposicionCarro`, `crearChasisCarro`, `crearPerfboard`, `crearSeparadorM3`, `crearMotorTT`, `crearRuedaTT`, `crearRuedaLocaBola`, `crearRodilloGuia623`, `crearSoporteEncoder`, `crearEscuadraFrontal`, `crearCunaCarro`, `crearMuelleCarga` | Carro de entrega y muelle de carga: chasis de acrílico con hueco del vaso y ranuras, motorreductores TT en soportes en T, ruedas de 65 mm con dibujo, disco de encoder en el eje, rueda loca de bola, rodillos 623, escuadra de los sensores del frente, cuna (rieles con PTFE, mampara con espumas, lengüeta) y guías en V con topes. Cotas en `disposicionCarro` (placa 11,5 mm sobre el eje). |
+| `carro.js` | `disposicionCarro`, `crearChasisCarro`, `crearPerfboard`, `crearSeparadorM3`, `crearMotorTT`, `crearRuedaTT`, `crearRuedaLocaBola`, `crearRodilloGuia623`, `crearSoporteEncoder`, `crearEscuadraFrontal`, `crearCunaCarro`, `crearMuelleCarga` | Carro de entrega y muelle de carga: chasis de acrílico con hueco del vaso y ranuras, motorreductores TT en soportes en T, ruedas de 65 mm con dibujo, disco de encoder en el eje, rueda loca de bola, rodillos 623, escuadra de los sensores del frente, cuna (rieles con PTFE, mampara con espumas, lengüeta) y guías en V con topes. Cotas en `disposicionCarro` (placa 11,5 mm sobre el eje). **Desde el 2026-10-24 el carro se dibuja con el chasis impreso** (`carro_armado.glb`, abajo): de aquí siguen en uso `disposicionCarro` (las cotas que comparte con la física), `crearMotorTT` (sin soportes), `crearRuedaTT` y `crearMuelleCarga`; el resto queda de respaldo si el GLB no carga (`?sinmaqueta`). |
 
 ## `maqueta_impresa.js` (no es una pieza)
 
@@ -106,6 +106,23 @@ anima (carrusel, aleta E4, dedos, leva, piston, paleta, manivela, biela, escape,
 obturador gira en horizontal) y saca lo que la maqueta reemplaza (perfil 2020, escuadras, pies, aluminio,
 acrilico, soportes: lo marcado con `reemplazar()`). En `visor-portable.html` va en base64 (`window.__MAQUETA`).
 `?sinmaqueta` en la URL deja el modelo de antes.
+
+El GLB trae ademas los **310 remaches impresos** en su lugar (un nodo por subsistema, `rem_<sub>`,
+`userData.tipo = 'remache'`, rojo `#d1001f` como en los manuales): `visor.js` los junta en `REMACHES` y la
+casilla **Remaches** de la barra (`interfaz.js`, `iniciarRemaches`) los muestra u oculta.
+
+### `carro_armado.glb` (el carro impreso, 2026-10-24)
+
+El mismo lector lee `app/visor3d/carro_armado.glb` (lo genera `python chasis_impreso/modelo_3d.py`, que lo deja
+también en `chasis_impreso/`): las 20 piezas de PLA del carro (`userData.tipo = 'impresa'`), lo comprado en
+grupos `comp_*` y el nodo `remaches` (los 27 de `REM_LISTA`), ya en el marco del carro (origen en el piso bajo el
+centro del chasis, x adelante). `construirCarro` (`visor.js`) agrega las impresas (en `COLOR.impreso`), las
+espumas, la rueda loca, los rodamientos 623 y el interruptor/portafusible del GLB, cuelga la lengüeta de un
+grupo en su pivote (`extras.pivote`, la anima `abrirLengueta`) y pone lo que sigue dibujando el visor (ruedas,
+motores TT sin soportes, encoders, pack 2S, GVS con el ESP32, TB6612, TCRT5000, HC-SR04, VL53L0X, vaso) donde
+lo pone el chasis impreso, con las cotas de `chasis.scad` que vienen en `extras.funcional_mm` (mm). Sin GLB
+queda el carro dibujado a mano de `carro.js`. `tests/sim/test_carro_impreso.py` comprueba que esas cotas son
+las de `disposicionCarro` y de la simulación. En el portable va como `window.__CARRO`.
 
 ## `optimizar.js` (no es una pieza)
 
