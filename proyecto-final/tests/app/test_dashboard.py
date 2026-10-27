@@ -35,9 +35,9 @@ def _sin_red_ni_modelos(monkeypatch):
     """Sin esperar a Internet, a Ollama ni a cargar Whisper (lo prueban tests/app/test_voz.py y test_asistente*)."""
     from app import asistente
 
-    monkeypatch.setattr(asistente, "hay_internet", lambda *a, **k: True)
-    monkeypatch.setattr(asistente, "cliente_local", lambda: None)
-    monkeypatch.setattr(asistente, "_whisper_modelo", lambda: None)
+    monkeypatch.setattr(asistente.audio, "hay_internet", lambda *a, **k: True)
+    monkeypatch.setattr(asistente.llm, "cliente_local", lambda: None)
+    monkeypatch.setattr(asistente.audio, "_whisper_modelo", lambda: None)
 
 
 def _correr(monkeypatch, bd, pestana: str | None = None) -> AppTest:
@@ -167,7 +167,7 @@ def test_sin_internet_y_sin_simulacion_se_ve_de_lejos(monkeypatch, tmp_path):
     from app import asistente
 
     ruta = _corrida_corta(tmp_path)
-    monkeypatch.setattr(asistente, "hay_internet", lambda *a, **k: False)
+    monkeypatch.setattr(asistente.audio, "hay_internet", lambda *a, **k: False)
 
     def sin_supervisor(*a, **k):
         raise OSError("nada escuchando")

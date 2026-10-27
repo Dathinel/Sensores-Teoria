@@ -9,7 +9,7 @@ import pytest
 
 from control import reglas
 from control.embalaje import EmbalajeVasos
-from control.hal.backend_sim import EstacionBackendSim
+from sim.backend_sim import EstacionBackendSim
 from control.linea import Destino, LineaMonedas
 from sim.sensores_sim import CamaraOraculo
 from sim.carga_escenarios import cargar_escenario, listar_escenarios

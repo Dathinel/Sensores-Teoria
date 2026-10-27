@@ -1,6 +1,6 @@
 """Charla de prueba con el asistente, por consola (la usa la app de la práctica,
 app-practica/index.html, con una caja de texto). Sin clave y sin internet: responde
-el interprete de reglas (app/asistente.py, `responder_local`), con las cifras de la
+el interprete de reglas (app/asistente/respuestas.py, `responder_local`), con las cifras de la
 ultima corrida guardada en datos/planta.db.
 
     python -m app.charla            # reglas (siempre funciona)
@@ -22,21 +22,6 @@ from pathlib import Path
 from app import asistente, configuracion, db
 
 
-def _copia_de_la_base(carpeta: Path) -> sqlite3.Connection:
-    """Copia de datos/planta.db en una carpeta temporal (con la API de respaldo de
-    SQLite: sirve aunque la simulacion este escribiendo). Si no hay base, una vacia."""
-    destino = carpeta / "planta.db"
-    origen = configuracion.ruta_bd()
-    copia = db.conectar(destino)
-    if origen.exists():
-        fuente = sqlite3.connect(f"file:{origen}?mode=ro", uri=True)
-        try:
-            fuente.backup(copia)
-        finally:
-            fuente.close()
-    return copia
-
-
 def main() -> None:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", line_buffering=True)
@@ -48,7 +33,11 @@ def main() -> None:
     for vieja in configuracion.ruta_bd().parent.glob("charla-*"):
         shutil.rmtree(vieja, ignore_errors=True)
     carpeta = Path(tempfile.mkdtemp(prefix="charla-", dir=configuracion.ruta_bd().parent))
-    conexion = _copia_de_la_base(carpeta)
+    # Copia de datos/planta.db en la carpeta temporal; si no hay base, la charla sigue sobre una vacia.
+    origen = configuracion.ruta_bd()
+    conexion = db.conectar(carpeta / "planta.db")
+    if origen.exists():
+        db.copiar_base(conexion, origen)
     try:
         _charlar(conexion, usar)
     finally:

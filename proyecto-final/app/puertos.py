@@ -23,11 +23,12 @@ import json
 import os
 import socket
 import urllib.request
-from pathlib import Path
+
+from app.rutas import DATOS
 
 VARIABLE = "PLANTA_PUERTO_VISOR"
-# Cuantos puertos seguidos se prueban despues del pedido (el visor portable
-# busca en el mismo rango: app/visor3d/interfaz.js, PUERTOS_EXTRA).
+# Cuantos puertos seguidos se prueban despues del pedido. El visor portable
+# busca en el mismo rango: app/portable.py se lo pasa (interfaz.js, PUERTOS_EXTRA).
 INTENTOS = 20
 
 
@@ -109,7 +110,7 @@ def primer_libre(pedido: int, intentos: int = INTENTOS) -> tuple[int, list[int]]
 
 # La corrida en marcha deja anotados sus puertos reales (lo leen app.lanzar
 # cuando la simulacion ya estaba corriendo y app.chequeo). No se versiona.
-ARCHIVO = Path(__file__).resolve().parent.parent / "datos" / "puertos.json"
+ARCHIVO = DATOS / "puertos.json"
 
 
 def guardar(visor: int, dashboard: int) -> None:

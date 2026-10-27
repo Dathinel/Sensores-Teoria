@@ -20,7 +20,9 @@ const $$ = (sel, raiz = document) => [...raiz.querySelectorAll(sel)];
 // Devuelve la URL donde responde, o null. Si otro programa del PC tiene el puerto configurado
 // (8765), app.lanzar usa el siguiente libre (app/puertos.py): por eso se pregunta también en los
 // PUERTOS_EXTRA siguientes y gana el más bajo que conteste con un estado JSON de la planta.
-const PUERTOS_EXTRA = 20;
+// Solo se usa abierto como archivo (el portable): app/portable.py deja escrito el mismo rango que
+// usa app.lanzar (app/puertos.py, INTENTOS), como deja __URL_VIVO.
+const PUERTOS_EXTRA = window.__PUERTOS_EXTRA || 0;
 async function respondeEn(url) {
   try {
     const r = await fetch(url + 'api/estado', { cache: 'no-store', signal: AbortSignal.timeout(1500) });

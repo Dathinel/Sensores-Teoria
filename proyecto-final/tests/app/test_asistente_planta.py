@@ -25,8 +25,8 @@ def test_con_cualquier_proveedor_dice_que_no_y_no_mueve_nada(monkeypatch, tmp_pa
     def no_llamar(*a, **k):
         raise AssertionError("no hace falta preguntarle a ningun modelo")
 
-    monkeypatch.setattr(asistente, "preguntar_deepseek", no_llamar)
-    monkeypatch.setattr(asistente, "preguntar_llm", no_llamar)
+    monkeypatch.setattr(asistente.llm, "preguntar_deepseek", no_llamar)
+    monkeypatch.setattr(asistente.llm, "preguntar_llm", no_llamar)
     r = asistente.atender(FRASE_REAL, db.conectar(tmp_path / "a.db"), usar=usar)
     assert r.ordenes == [] and "no se puede" in r.texto.lower()
 
@@ -35,7 +35,7 @@ def test_un_destino_dentro_de_la_planta_no_se_manda(monkeypatch, tmp_path):
     """Lo que paso de verdad: el modelo propuso ir_a (-0,5; 0) prometiendo el movimiento."""
     propuesta = {"respuesta": "El carro se moverá a la posición del filtro de monedas.",
                  "acciones": [{"cmd": "carro", "accion": "ir_a", "x": -0.5, "y": 0.0}]}
-    monkeypatch.setattr(asistente, "preguntar_deepseek", lambda *a, **k: dict(propuesta))
+    monkeypatch.setattr(asistente.llm, "preguntar_deepseek", lambda *a, **k: dict(propuesta))
     r = asistente.atender("vaya al punto -0.5, 0", db.conectar(tmp_path / "a.db"), usar="deepseek", cliente=object())
     assert r.ordenes == []
     assert r.texto.startswith("No lo muevo") and "(-0.50, 0.00)" in r.texto
@@ -43,7 +43,7 @@ def test_un_destino_dentro_de_la_planta_no_se_manda(monkeypatch, tmp_path):
 
 def test_un_destino_en_la_pista_si_se_manda(monkeypatch, tmp_path):
     propuesta = {"respuesta": "Voy.", "acciones": [{"cmd": "carro", "accion": "ir_a", "x": 1.2, "y": -0.3}]}
-    monkeypatch.setattr(asistente, "preguntar_deepseek", lambda *a, **k: dict(propuesta))
+    monkeypatch.setattr(asistente.llm, "preguntar_deepseek", lambda *a, **k: dict(propuesta))
     r = asistente.atender("vaya al punto 1.2, -0.3", db.conectar(tmp_path / "a.db"), usar="deepseek", cliente=object())
     assert [o["accion"] for o in r.ordenes] == ["ir_a"]
 

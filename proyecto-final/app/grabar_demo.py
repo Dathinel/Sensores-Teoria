@@ -23,53 +23,29 @@ Escribe app/visor3d/demo/{geometria,pasos,grabacion}.json.
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 import yaml
 
 from app import configuracion
-from control.embalaje import EmbalajeVasos
-from control.hal.backend_sim import EstacionBackendSim
-from control.linea import LineaMonedas
-from sim.sensores_sim import CamaraOraculo
-from sim.carga_escenarios import cargar_escenario, listar_escenarios
+from app.rutas import DOCS, RAIZ, VISOR
+from sim.carga_escenarios import listar_escenarios
 from sim.geometria import geometria_completa
 from sim.mundo import EscenaEstacion
-from sim.planta import PlantaSimulada, opciones_desde_config
+from sim.planta import GUION_SABOTAJES, LOTE_DEMO, crear_planta_simulada
 
-RAIZ = Path(__file__).resolve().parent.parent
-DESTINO = RAIZ / "app" / "visor3d" / "demo"
+DESTINO = VISOR / "demo"
 ESCENARIO = "prueba_completa"
-# Lote propio de la demo, no el de config (hoy 10): con 30 elementos, lotes
-# de 10 casi no llenan vasos durante la produccion y la demo no mostraria
-# el llenado (punto 9). En la planta real se ajusta desde el dashboard.
-LOTE_DEMO = 5
-GUION = {
-    6: "sabotaje_cambiar_vaso",
-    12: "sabotaje_vaso_con_contenido",
-    25: "sabotaje_cambiar_por_vaso_igual",
-    22: "sabotaje_poner_intruso",
-    27: "sabotaje_quitar_intruso",
-    36: "sabotaje_mano_saca_vaso",
-}
 CUADROS_FINALES = 8  # el ultimo estado se sostiene un rato antes de repetir
 
 
 def grabar() -> list[dict]:
     parametros = configuracion.cargar_parametros()
-    p = parametros["planta"]
     escena = EscenaEstacion()
     try:
-        backend = EstacionBackendSim(escena, camara=CamaraOraculo())
-        sim = parametros.get("simulacion", {})
-        if sim.get("errores_sensores"):
-            # Igual que el supervisor: cada sensor con su error individual.
-            backend.aplicar_errores(parametros["errores_sensores"], sim.get("semilla"),
-                                    errores_actuadores=parametros.get("errores_actuadores"))
-        planta = PlantaSimulada(
-            escena, backend, LineaMonedas(configuracion.parametros_filtrado(parametros)), EmbalajeVasos(),
-            cargar_escenario(ESCENARIO), **dict(opciones_desde_config(parametros), monedas_por_vaso=LOTE_DEMO),
-        )
+        # Igual que el supervisor (cada sensor con su error individual), pero el carro sin
+        # los errores de config y con el lote de la demo.
+        planta = crear_planta_simulada(escena, parametros, ESCENARIO, errores_carro=False,
+                                       monedas_por_vaso=LOTE_DEMO)
         t = parametros["tiempos_ms"]
         comun = {"escenario": ESCENARIO, "escenarios_disponibles": listar_escenarios(), "backend": "sim",
                  "monedas_por_vaso": LOTE_DEMO, "velocidad": 1.0,
@@ -80,8 +56,8 @@ def grabar() -> list[dict]:
         embalo_parciales = False
         ya_entrego = False
         while planta.ticks < 1200:
-            if planta.ticks in GUION:
-                getattr(planta, GUION[planta.ticks])()
+            if planta.ticks in GUION_SABOTAJES:
+                getattr(planta, GUION_SABOTAJES[planta.ticks])()
             eventos = planta.paso()
             # Con el carro fisico: la demo termina cuando el carro vuelve al
             # muelle despues de entregar su primer vaso (toda la produccion +
@@ -120,7 +96,7 @@ def main() -> None:
     (DESTINO / "grabacion.json").write_text(json.dumps(cuadros, ensure_ascii=False), encoding="utf-8")
     (DESTINO / "geometria.json").write_text(
         json.dumps(geometria_completa(configuracion.cargar_parametros()), ensure_ascii=False), encoding="utf-8")
-    with open(RAIZ / "docs" / "paso-a-paso.yaml", encoding="utf-8") as archivo:
+    with open(DOCS / "paso-a-paso.yaml", encoding="utf-8") as archivo:
         pasos = yaml.safe_load(archivo)["pasos"]
     (DESTINO / "pasos.json").write_text(json.dumps(pasos, ensure_ascii=False), encoding="utf-8")
     print(f"{len(cuadros)} cuadros grabados en {DESTINO.relative_to(RAIZ)}")

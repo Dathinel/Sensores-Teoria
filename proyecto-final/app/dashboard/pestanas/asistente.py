@@ -1,6 +1,6 @@
 """Pestaña Asistente (fase 7, docs/especificacion.md §14): se le pregunta por escrito o por
 voz por las cifras de la corrida o por cualquier parte del proyecto, y se le
-puede pedir que mueva el carro o la línea. La lógica está en `app/asistente.py`
+puede pedir que mueva el carro o la línea. La lógica está en `app/asistente/`
 (DeepSeek → modelo local → reglas, lista blanca de órdenes, voz); aquí solo
 está la conversación en pantalla."""
 
@@ -56,7 +56,7 @@ def pestana() -> None:
 
     con = datos.conexion()
     hay_clave = asistente.cliente_deepseek() is not None
-    hay_local = asistente.cliente_local() is not None
+    hay_local = asistente.llm.cliente_local() is not None   # en su modulo: las pruebas lo cambian ahi
     if hay_local and not st.session_state.get("local_precargado"):
         # La primera respuesta del modelo local tarda ~1 min si no está en la GPU.
         st.session_state["local_precargado"] = True
@@ -84,7 +84,7 @@ def pestana() -> None:
             if not st.session_state.get("voz_precargada"):
                 # Whisper tarda unos segundos en cargarse: se carga por detrás al abrir la pestaña.
                 st.session_state["voz_precargada"] = True
-                threading.Thread(target=lambda: _sin_error(asistente._whisper_modelo), daemon=True).start()
+                threading.Thread(target=lambda: _sin_error(asistente.audio._whisper_modelo), daemon=True).start()
             if audio is not None:
                 crudo = audio.getvalue()
                 if st.session_state.get("audio_procesado") != hash(crudo):

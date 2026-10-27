@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import pybullet as p
 
-from app import configuracion
+from control import configuracion
 from sim.vehiculo_sim import SimCarro
 from sim.ver.carro_vista import PanelCarro, camara_siguiendo, decorar_pista, minimapa
 from sim.ver.comun import Vista, ejecutar, salir_limpio

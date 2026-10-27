@@ -1,4 +1,4 @@
-"""Backend REAL de la HAL (fase 8): las mismas interfaces que backend_sim.py,
+"""Backend REAL de la HAL (fase 8): las mismas interfaces que sim/backend_sim.py,
 pero cada lectura sale de la telemetria del ESP32 fijo y cada accion es un
 comando numerado por el USB serial (docs/especificacion.md 10.1).
 
@@ -122,7 +122,7 @@ class DispensadorReal(_ConPuente, DispensadorTapas):
 
 class BackendReal:
     """Todo el hardware de la estacion, como lo ve la capa de control. Los nombres y
-    los tipos son los MISMOS de backend_sim.EstacionBackendSim (auditoria 2026-09-27:
+    los tipos son los MISMOS de sim.backend_sim.EstacionBackendSim (auditoria 2026-09-27:
     antes el sensor del interior era una distancia aqui y un si/no alla)."""
 
     def __init__(self, puente, reloj, vasos: dict | None = None):

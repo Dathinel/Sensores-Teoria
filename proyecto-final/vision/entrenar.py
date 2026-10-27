@@ -27,10 +27,10 @@ from pathlib import Path
 # Python 3.14). Con TensorFlow instalado en otro entorno también correría igual.
 os.environ.setdefault("KERAS_BACKEND", "torch")
 
-RAIZ = Path(__file__).resolve().parent.parent
-DATASET = RAIZ / "vision" / "dataset"
-MODELOS = RAIZ / "vision" / "modelos"
-RESULTADOS = RAIZ / "vision" / "resultados"
+AQUI = Path(__file__).resolve().parent
+DATASET = AQUI / "dataset"
+MODELOS = AQUI / "modelos"
+RESULTADOS = AQUI / "resultados"
 
 # 96x96 píxeles (docs/especificacion.md sección 12): la cámara, la distancia y la luz son siempre las mismas, así
 # que el modelo no necesita ver la moneda en grande; con 96 px una moneda de 17 mm (la más chica)

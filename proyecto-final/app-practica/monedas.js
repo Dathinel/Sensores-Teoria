@@ -176,6 +176,9 @@ const CAUSAS = {
   no_metalico: 'no metálico', fuera_de_rango: 'diámetro fuera', no_circular: 'no circular', perforado: 'perforado',
   no_reconocida: 'no reconocida', incoherente: 'incoherente', vacia: 'vacía',
 };
+// Donde se busca la simulación si datos/puertos.json no dice el puerto real: 8765 es supervisor.puerto_http
+// (config/parametros.yaml) y 8766-8768, el principio del rango de app/puertos.py (INTENTOS = 20). Esta
+// página no lee la configuración (no hay build): si el puerto cambia allá, se cambia también aquí.
 const vivo = { puerto: null, candidatos: new Set([8765, 8766, 8767, 8768]), ultimo: null, fallos: 0 };
 
 function fichaDe(c) {

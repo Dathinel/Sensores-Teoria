@@ -16,6 +16,7 @@ import pytest
 from firmware.preparar import pines
 from sim import conexiones as cx
 from sim import electrica as el
+from sim import electrica_informe
 
 RAIZ = Path(__file__).resolve().parents[2]
 WOKWI = RAIZ / "wokwi"
@@ -132,7 +133,7 @@ def test_panel_de_luz_con_su_resistencia_no_pasa_de_15_w():
 
 
 def test_markdown_se_genera_sin_graficas():
-    texto = el.generar_markdown(graficas=False)
+    texto = electrica_informe.generar_markdown(graficas=False)
     assert "## 6. Cada conexión, punto por punto" in texto
     assert texto.count("\n| ") > sum(len(c["hilos"]) for c in cx.CABLES)
 

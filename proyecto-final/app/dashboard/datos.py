@@ -9,17 +9,15 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
-from pathlib import Path
 
 import pandas as pd
 import streamlit as st
 
 from app import configuracion, db
+from app.rutas import VISOR
 from control import monedas as tabla_monedas
 
 from .textos import NOMBRE_CAUSA, NOMBRE_TIPO_REAL, TUBOS, frase_evento
-
-RAIZ = Path(__file__).resolve().parents[2]
 
 
 def parametros() -> dict:
@@ -98,7 +96,7 @@ def geometria_pista() -> dict | None:
         with urllib.request.urlopen(f"{url_supervisor()}/api/geometria", timeout=1.5) as r:
             return json.loads(r.read())["pista"]
     except (OSError, ValueError, KeyError):
-        demo = RAIZ / "app" / "visor3d" / "demo" / "geometria.json"
+        demo = VISOR / "demo" / "geometria.json"
         return json.loads(demo.read_text(encoding="utf-8"))["pista"] if demo.exists() else None
 
 

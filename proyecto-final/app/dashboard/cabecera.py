@@ -25,11 +25,11 @@ def origen_datos(tel: dict) -> tuple[str, str, bool]:
 
 @st.fragment(run_every=datos.REFRESCO_S)
 def cabecera() -> None:
-    from app import asistente   # se busca en cada llamada: las pruebas cambian hay_internet
+    from app.asistente import audio   # se busca en cada llamada: las pruebas cambian hay_internet
 
     tel = datos.telemetria()
     viva = datos.simulacion_viva()
-    internet = asistente.hay_internet()
+    internet = audio.hay_internet()
     estado = tel["linea"] if tel else "sin supervisor"
 
     chips = [html_chip(ESTADO_LINEA_TXT.get(estado, estado), TONO_ESTADO_LINEA.get(estado, "") if viva else "")]

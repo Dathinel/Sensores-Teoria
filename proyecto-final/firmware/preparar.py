@@ -31,6 +31,9 @@ import urllib.request
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
+# sim/ y control/ se importan desde la raiz aunque el script se corra sin -m.
+if str(RAIZ) not in sys.path:
+    sys.path.insert(0, str(RAIZ))
 FIRMWARE = RAIZ / "firmware"
 SALIDA = FIRMWARE / "salida"
 URL_VL53L0X = "https://raw.githubusercontent.com/uceeatz/VL53L0X/master/VL53L0X.py"
@@ -51,7 +54,6 @@ PLACA = {"fijo": "esp32_fijo", "carro": "esp32_carro"}
 
 def pines(placa: str) -> dict[str, int]:
     """GPIO de senal de la placa: {"DRIVERS_M_STEP": 25, ...} (sim/conexiones.py)."""
-    sys.path.insert(0, str(RAIZ))
     from sim.conexiones import CABLES, DISPOSITIVOS
 
     out = {}
@@ -69,7 +71,6 @@ def pines(placa: str) -> dict[str, int]:
 
 
 def config_fijo(p: dict) -> dict:
-    sys.path.insert(0, str(RAIZ))
     from sim.sensores_sim import ventana_cortina_mm
 
     f = p["firmware"]
@@ -101,7 +102,6 @@ def config_carro(p: dict) -> tuple[dict, list, tuple]:
     """(CFG, LINEA, POSE_MUELLE). La linea de la pista va cada 2 puntos
     (~4 cm): la usa solo para llegar CERCA de ella; despues la siguen los
     infrarrojos. Asi ocupa ~1/2 de RAM."""
-    sys.path.insert(0, str(RAIZ))
     from sim.geometria import geometria_completa, zonas_carro
     from sim.pista import generar_linea_central
 
@@ -147,8 +147,7 @@ def compilar(origen: Path, destino: Path) -> None:
 
 def preparar(placa: str, parametros: dict | None = None, *, descargar: bool = True) -> Path:
     if parametros is None:
-        sys.path.insert(0, str(RAIZ))
-        from app.configuracion import cargar_parametros
+        from control.configuracion import cargar_parametros
 
         parametros = cargar_parametros()
     destino = SALIDA / placa

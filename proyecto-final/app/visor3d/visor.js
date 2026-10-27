@@ -28,8 +28,8 @@ import * as PIEZAS_LINEA_MONEDAS from './piezas/linea_monedas.js';
 import * as PIEZAS_CARRO from './piezas/carro.js';
 import * as PIEZAS_SENSORES_CARRO from './piezas/sensores.js';
 import * as PIEZAS_VASOS from './piezas/linea_vasos.js';
-import * as PIEZAS_OPTIMIZAR from './piezas/optimizar.js';
-import * as PIEZAS_MAQUETA from './piezas/maqueta_impresa.js';
+import * as PIEZAS_OPTIMIZAR from './optimizar.js';
+import * as PIEZAS_MAQUETA from './maqueta_impresa.js';
 // La interfaz (barra, vistas, panel, avisos, bitacora): ver interfaz.js y docs/interfaz-visor.md.
 import { crearInterfaz, SEL, simulacionCorriendo } from './interfaz.js';
 
@@ -5970,7 +5970,7 @@ async function consultar() {
 
 // Menos llamadas de dibujo con el MISMO detalle (usuario, 2026-09-28: "quedo algo pesado").
 // Al terminar de construir, las mallas quietas que se ven igual se unen en una sola
-// (piezas/optimizar.js explica que se une y que no). ?sinoptimizar deja la escena como se
+// (optimizar.js explica que se une y que no). ?sinoptimizar deja la escena como se
 // construyo (para comparar); ?auditar muestra el resumen en window.__visor.optimizacion.
 let resumenOptimizacion = null;
 

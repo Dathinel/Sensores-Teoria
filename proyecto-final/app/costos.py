@@ -15,12 +15,12 @@ from __future__ import annotations
 
 import math
 import re
-from pathlib import Path
 
 import yaml
 
-RAIZ = Path(__file__).resolve().parent.parent
-RUTA = RAIZ / "config" / "precios.yaml"
+from app.rutas import CONFIG, RAIZ
+
+RUTA = CONFIG / "precios.yaml"
 ORDEN_SUBSISTEMAS = ["Cinta de monedas", "Cinta de vasos", "Canaleta y muelle", "Carro", "Control y potencia",
                      "Estructura"]
 

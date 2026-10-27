@@ -24,21 +24,12 @@ empujador si gira su junta, y el vaso pasa a colgar al inicio de la canaleta.
 
 from __future__ import annotations
 
+from sim.planta import GUION_SABOTAJES, LOTE_DEMO
 from sim.ver.comun import Camara, Vista, ejecutar, salir_limpio
 from sim.ver.planta_vista import PanelVasos, armar_planta
 
 ESCENARIO = "prueba_completa"
-LOTE = 5
 TITULO = "Embalaje de vasos - prueba_completa (lote de 5, sabotajes de la demo)"
-# El mismo guion de sabotajes de app/grabar_demo.py (tick -> metodo de la planta).
-GUION = {
-    6: "sabotaje_cambiar_vaso",
-    12: "sabotaje_vaso_con_contenido",
-    22: "sabotaje_poner_intruso",
-    25: "sabotaje_cambiar_por_vaso_igual",
-    27: "sabotaje_quitar_intruso",
-    36: "sabotaje_mano_saca_vaso",
-}
 # Desde el lado del operador (-y), un poco arriba: las 5 estaciones de la
 # cinta de vasos (x 0.04 a 0.36), el almacen encima del llenado y el comienzo
 # de la canaleta.
@@ -47,13 +38,13 @@ LIMITE_TICKS = 600
 
 
 def correr(vista: Vista) -> None:
-    _, escena, planta = armar_planta(vista, ESCENARIO, CAMARA, carro_fisico=False, monedas_por_vaso=LOTE)
+    _, escena, planta = armar_planta(vista, ESCENARIO, CAMARA, carro_fisico=False, monedas_por_vaso=LOTE_DEMO)
     try:
         panel = PanelVasos(vista, planta)
         vista.componer = lambda: CAMARA.foto(escena.cliente, vista.ancho, vista.alto)
         while not planta.terminado and planta.ticks < LIMITE_TICKS:
-            if planta.ticks in GUION:
-                getattr(planta, GUION[planta.ticks])()
+            if planta.ticks in GUION_SABOTAJES:
+                getattr(planta, GUION_SABOTAJES[planta.ticks])()
             desde = escena.pasos_dados
             panel.actualizar(planta.paso())
             # Igual que en filtro_monedas: en los ciclos en que la cinta de

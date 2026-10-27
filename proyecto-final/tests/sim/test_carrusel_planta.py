@@ -19,7 +19,7 @@ import pytest
 
 from app.configuracion import cargar_parametros
 from control.embalaje import EmbalajeVasos
-from control.hal.backend_sim import EstacionBackendSim
+from sim.backend_sim import EstacionBackendSim
 from control.linea import LineaMonedas
 from sim.carga_escenarios import cargar_escenario
 from sim.mundo import EscenaEstacion

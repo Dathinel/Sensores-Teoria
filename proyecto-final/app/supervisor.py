@@ -32,16 +32,11 @@ import time
 from pathlib import Path
 
 from app import configuracion, db, servidor
-from control.embalaje import EmbalajeVasos
-from control.hal.backend_sim import EstacionBackendSim
-from control.linea import LineaMonedas
-from sim.sensores_sim import CamaraOraculo
-from sim.carga_escenarios import (ESCENARIO_UNICO, PIEZAS, PRUEBAS_DE_UN_FILTRO, cargar_escenario,
-                                  escenarios_validos, especificacion_pieza, listar_escenarios,
-                                  prueba_de_un_filtro)
+from sim.carga_escenarios import (ESCENARIO_UNICO, PIEZAS, PRUEBAS_DE_UN_FILTRO, escenarios_validos,
+                                  especificacion_pieza, listar_escenarios, prueba_de_un_filtro)
 from sim.geometria import geometria_completa
 from sim.mundo import EscenaEstacion
-from sim.planta import PlantaSimulada, opciones_desde_config
+from sim.planta import PlantaSimulada, crear_planta_simulada
 
 # Estados de la linea que ve el dashboard.
 DETENIDA = "detenida"
@@ -140,18 +135,6 @@ class Supervisor:
         cliente_anterior = self._escena.cliente if self._escena is not None else None
         # Sin ventana: el ritmo real (tiempos_ms) lo da la espera de `correr`.
         self._escena = EscenaEstacion(reusar_cliente=cliente_anterior)
-        backend = EstacionBackendSim(
-            self._escena, camara=CamaraOraculo(probabilidad_error=self.probabilidad_error)
-        )
-        sim = self.parametros.get("simulacion", {})
-        if sim.get("errores_sensores"):
-            # Cada sensor con su error individual (config: errores_sensores),
-            # como en el montaje real. Semilla fija: corrida repetible.
-            backend.aplicar_errores(self.parametros["errores_sensores"], sim.get("semilla"),
-                                    errores_actuadores=self.parametros.get("errores_actuadores"))
-        linea = LineaMonedas(
-            configuracion.parametros_filtrado(self.parametros, confianza_minima=self.confianza_minima)
-        )
         p_planta = self.parametros["planta"]
         if self.planta is not None:
             self.planta.cerrar()   # el mundo propio del carro de la corrida anterior
@@ -159,11 +142,11 @@ class Supervisor:
         db.reiniciar_corrida(self.conexion)
         self._ts_vasos = {}
         self.escenario_nombre = escenario
-        self.planta = PlantaSimulada(
-            self._escena, backend, linea, EmbalajeVasos(), cargar_escenario(escenario),
-            **opciones_desde_config(self.parametros),
-            errores_carro=bool(sim.get("errores_sensores")), semilla_carro=sim.get("semilla"),
-        )
+        # Cada sensor con su error individual (config: errores_sensores), como en
+        # el montaje real. Semilla fija: corrida repetible.
+        self.planta = crear_planta_simulada(self._escena, self.parametros, escenario,
+                                            probabilidad_error=self.probabilidad_error,
+                                            confianza_minima=self.confianza_minima)
         # Turno nuevo: los tubos arrancan con lo que dejo el anterior (si el
         # grupo no lo empaco con "Embalar lo guardado").
         if conservar_almacen is None:

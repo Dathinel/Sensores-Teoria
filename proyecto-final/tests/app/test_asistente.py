@@ -1,4 +1,4 @@
-"""Fase 7: el asistente (app/asistente.py). Sin internet: DeepSeek se
+"""Fase 7: el asistente (app/asistente/). Sin internet: DeepSeek se
 reemplaza por un cliente falso que devuelve el JSON que devolveria la API."""
 
 import json
@@ -12,7 +12,7 @@ from app import asistente, db
 @pytest.fixture(autouse=True)
 def sin_ollama(monkeypatch):
     """Las pruebas no dependen de que Ollama este corriendo en el PC."""
-    monkeypatch.setattr(asistente, "cliente_local", lambda: None)
+    monkeypatch.setattr(asistente.llm, "cliente_local", lambda: None)
 
 
 @pytest.fixture

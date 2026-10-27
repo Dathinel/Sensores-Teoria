@@ -15,13 +15,13 @@ documento lo dice en grande: no se esconde.
 from __future__ import annotations
 
 import math
-from pathlib import Path
 
 import yaml
 
 from app import costos
+from app.rutas import CONFIG
 
-RUTA = Path(__file__).resolve().parent.parent / "config" / "masas.yaml"
+RUTA = CONFIG / "masas.yaml"
 ORDEN_ZONAS = ["Cinta de monedas", "Almacén", "Cinta de vasos", "Pórtico", "Canaleta y muelle", "Estructura impresa",
                "Carro", "Caja de control", "Pista"]
 FACTOR_SEGURIDAD = 2.0      # un motor "alcanza" si da al menos el doble de lo que se le pide

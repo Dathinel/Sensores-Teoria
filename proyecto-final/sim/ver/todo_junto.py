@@ -31,9 +31,9 @@ from __future__ import annotations
 
 import numpy as np
 
+from sim.planta import GUION_SABOTAJES, LOTE_DEMO
 from sim.ver.carro_vista import PanelCarro, camara_siguiendo, decorar_pista, minimapa
 from sim.ver.comun import Camara, Vista, ejecutar, escribir, salir_limpio
-from sim.ver.embalaje_vasos import GUION, LOTE
 from sim.ver.planta_vista import PanelMonedas, PanelVasos, armar_planta
 
 TITULO = "Todo junto: prueba_completa (planta + carro con física real)"
@@ -49,7 +49,7 @@ def correr(vista: Vista) -> None:
     import cv2
 
     parametros, escena, planta = armar_planta(vista, "prueba_completa", CAMARA_PLANTA, carro_fisico=True,
-                                              monedas_por_vaso=LOTE)
+                                              monedas_por_vaso=LOTE_DEMO)
     carro = planta.carro
     ventana_carro = "Carro (su propio mundo de PyBullet)"
     try:
@@ -118,8 +118,8 @@ def correr(vista: Vista) -> None:
 
         ya_entrego = False
         while not planta.terminado and planta.ticks < LIMITE_TICKS:
-            if planta.ticks in GUION:
-                getattr(planta, GUION[planta.ticks])()
+            if planta.ticks in GUION_SABOTAJES:
+                getattr(planta, GUION_SABOTAJES[planta.ticks])()
             ciclo.update(t0=vista.t, t0_carro=carro.tiempo, cuadros=[], mostrado=-1)
             desde = escena.pasos_dados
             eventos = planta.paso()

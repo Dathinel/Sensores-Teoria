@@ -32,10 +32,8 @@ import re
 import sys
 from pathlib import Path
 
-import yaml
+from app.rutas import RAIZ, VISOR
 
-RAIZ = Path(__file__).resolve().parent.parent
-VISOR = RAIZ / "app" / "visor3d"
 SALIDA = RAIZ / "visor-portable.html"
 
 
@@ -109,8 +107,11 @@ def _json_en_script(datos) -> str:
     return json.dumps(datos, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
 
 
-def generar() -> Path:
-    puerto = yaml.safe_load((RAIZ / "config" / "parametros.yaml").read_text(encoding="utf-8"))["supervisor"]["puerto_http"]
+def generar(destino: Path = SALIDA) -> Path:
+    from app.configuracion import cargar_parametros
+    from app.puertos import INTENTOS
+
+    puerto = cargar_parametros()["supervisor"]["puerto_http"]
     html = (VISOR / "index.html").read_text(encoding="utf-8")
     visor, locales = _modulos(html)
     three = (VISOR / "vendor" / "three.module.min.js").read_text(encoding="utf-8")
@@ -130,15 +131,15 @@ def generar() -> Path:
     fin = html.index("</script>", html.index('<script type="module"')) + len("</script>")
     scripts = (
         "<!-- visor-portable.html: GENERADO por `python -m app.portable` (no editar a mano). -->\n"
-        f"<script>window.__URL_VIVO = 'http://127.0.0.1:{puerto}/';\n{maqueta}"
+        f"<script>window.__URL_VIVO = 'http://127.0.0.1:{puerto}/';\nwindow.__PUERTOS_EXTRA = {INTENTOS};\n{maqueta}"
         f"window.__DEMO = {_json_en_script(demo)};</script>\n"
         '<script type="importmap">\n'
         + json.dumps({"imports": importmap})
         + "\n</script>\n"
         f'<script type="module">\n{visor.replace("</script", "<" + chr(92) + "/script")}\n</script>'
     )
-    SALIDA.write_text(html[:inicio] + scripts + html[fin:], encoding="utf-8")
-    return SALIDA
+    destino.write_text(html[:inicio] + scripts + html[fin:], encoding="utf-8")
+    return destino
 
 
 def main() -> None:

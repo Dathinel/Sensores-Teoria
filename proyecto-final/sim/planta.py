@@ -43,13 +43,14 @@ from collections import deque
 from control import reglas
 from control.almacen import OTRAS, AlmacenDenominaciones, MonedaAlmacenada
 from control.carrusel import AGUJERO, CARGA, Carrusel
+from control.configuracion import cargar_parametros, parametros_filtrado
 from control.embalaje import EmbalajeVasos
-from control.hal.backend_sim import EstacionBackendSim
 from control.linea import Destino, LineaMonedas
 from control.monedas import buscar_por_clase
 
 from control.registro import EstadoVaso
-from sim.carga_escenarios import Escenario, EspecificacionElemento
+from sim.backend_sim import EstacionBackendSim
+from sim.carga_escenarios import Escenario, EspecificacionElemento, cargar_escenario
 from sim.mundo import (
     ANGULO_AGUJERO_CARRUSEL,
     ANGULO_CARGA_CARRUSEL,
@@ -67,6 +68,7 @@ from sim.mundo import (
     Elemento,
     EscenaEstacion,
 )
+from sim.sensores_sim import CamaraOraculo
 
 
 
@@ -236,7 +238,6 @@ class PlantaSimulada:
         self._t_en_meta = 0.0
         self._carro_anunciado = False
         if parametros is None:
-            from app.configuracion import cargar_parametros
             parametros = cargar_parametros()
 
         # Carrusel del almacen con su TIEMPO REAL (usuario, 2026-09-28: "la
@@ -1685,3 +1686,46 @@ class PlantaSimulada:
             "camara_vasos_alarma": any(z["borde"] for z in zonas_vasos.values()),
             "camara_vasos_zonas": zonas_vasos,
         }
+
+
+# ----------------------------------------------------------------------
+# Armado comun: supervisor, demo grabada y escenas en ventana
+# ----------------------------------------------------------------------
+
+# Guion de sabotajes de la demo grabada (app/grabar_demo.py), que las escenas en ventana
+# (sim/ver/embalaje_vasos.py, sim/ver/todo_junto.py) repiten en el mismo tick: tick -> metodo
+# de la planta. Uno solo, para que el video y la demo sean la misma corrida. Los sabotajes de
+# vasos no estan en el YAML del escenario: en vivo los disparan botones del visor o del dashboard.
+GUION_SABOTAJES = {
+    6: "sabotaje_cambiar_vaso",
+    12: "sabotaje_vaso_con_contenido",
+    22: "sabotaje_poner_intruso",
+    25: "sabotaje_cambiar_por_vaso_igual",
+    27: "sabotaje_quitar_intruso",
+    36: "sabotaje_mano_saca_vaso",
+}
+# Lote propio de la demo, no el de config (hoy 10): con 30 elementos, lotes
+# de 10 casi no llenan vasos durante la produccion y la demo no mostraria
+# el llenado (punto 9). En la planta real se ajusta desde el dashboard.
+LOTE_DEMO = 5
+
+
+def crear_planta_simulada(escena: EscenaEstacion, parametros: dict, escenario: str, *,
+                          probabilidad_error: float = 0.0, confianza_minima: float | None = None,
+                          errores_carro: bool = True, **opciones) -> PlantaSimulada:
+    """La planta sobre una escena ya creada, como la arman el supervisor, la demo grabada y
+    las escenas de sim/ver/: backend simulado con la camara oraculo, cada sensor con su error
+    individual de la configuracion (semilla fija: la misma corrida cada vez) y el filtro con
+    los umbrales de config. `opciones` pisa las de `opciones_desde_config`.
+
+    `errores_carro=False` deja al carro con sensores perfectos, como siempre lo grabo la demo."""
+    backend = EstacionBackendSim(escena, camara=CamaraOraculo(probabilidad_error=probabilidad_error))
+    sim = parametros.get("simulacion", {})
+    if sim.get("errores_sensores"):
+        backend.aplicar_errores(parametros["errores_sensores"], sim.get("semilla"),
+                                errores_actuadores=parametros.get("errores_actuadores"))
+    if errores_carro:
+        opciones = dict(opciones, errores_carro=bool(sim.get("errores_sensores")), semilla_carro=sim.get("semilla"))
+    linea = LineaMonedas(parametros_filtrado(parametros, confianza_minima=confianza_minima))
+    return PlantaSimulada(escena, backend, linea, EmbalajeVasos(), cargar_escenario(escenario),
+                          **dict(opciones_desde_config(parametros), **opciones))

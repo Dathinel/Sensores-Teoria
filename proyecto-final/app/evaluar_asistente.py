@@ -22,8 +22,7 @@ import time
 from pathlib import Path
 
 from app import asistente, configuracion, db
-
-RAIZ = Path(__file__).resolve().parent.parent
+from app.rutas import DOCS
 
 
 def _numeros(texto: str) -> set[float]:
@@ -266,7 +265,7 @@ def _peso_montaje_kg() -> float:
 
 
 def _consumo_w() -> float:
-    texto = (RAIZ / "docs" / "electrica.md").read_text(encoding="utf-8")
+    texto = (DOCS / "electrica.md").read_text(encoding="utf-8")
     return float(re.search(r"Consumo desde la red\*\*:\s*([\d,]+) W", texto).group(1).replace(",", "."))
 
 
@@ -279,17 +278,14 @@ def _verdad(conexion) -> dict:
     return {"ultima_vision": json.loads(fila[0]) if fila else {}}
 
 
-def copiar_base() -> Path:
-    """UNA copia coherente de datos/planta.db aunque el supervisor esté escribiendo (API de respaldo
-    de SQLite). Se hace UNA sola vez para todos los proveedores (revisión 2026-09-29): antes cada
-    proveedor sacaba su propia copia con la simulación corriendo, así que local y reglas se
-    comparaban contra datos distintos (a la copia del local le faltaban los viajes del carro)."""
-    origen = configuracion.ruta_bd(configuracion.cargar_parametros())
+def copia_temporal() -> Path:
+    """UNA copia coherente de datos/planta.db (db.copiar_base) en una carpeta temporal. Se hace UNA
+    sola vez para todos los proveedores (revisión 2026-09-29): antes cada proveedor sacaba su propia
+    copia con la simulación corriendo, así que local y reglas se comparaban contra datos distintos
+    (a la copia del local le faltaban los viajes del carro)."""
     copia = Path(tempfile.mkdtemp()) / "copia.db"
-    fuente = sqlite3.connect(origen)
     destino = sqlite3.connect(copia)
-    fuente.backup(destino)
-    fuente.close()
+    db.copiar_base(destino, configuracion.ruta_bd(configuracion.cargar_parametros()), solo_lectura=False)
     destino.close()
     return copia
 
@@ -297,7 +293,7 @@ def copiar_base() -> Path:
 def evaluar(usar: str = "ollama", copia: Path | None = None) -> dict:
     """Corre la batería con un proveedor sobre `copia` (si no se da, saca una propia)."""
     propia = copia is None
-    copia = copiar_base() if propia else copia
+    copia = copia_temporal() if propia else copia
     conexion = db.conectar_lectura(copia)
     estado = asistente.estado_en_vivo(conexion)
     estado["_verdad"] = _verdad(conexion)
@@ -347,13 +343,13 @@ def main() -> None:
     a = argparse.ArgumentParser(description="Batería de pruebas reales del asistente.")
     a.add_argument("--usar", action="append", choices=["ollama", "reglas", "deepseek", "auto"])
     args = a.parse_args()
-    copia = copiar_base()
+    copia = copia_temporal()
     try:
         resultados = [evaluar(u, copia) for u in (args.usar or ["ollama", "reglas"])]
     finally:
         shutil.rmtree(copia.parent, ignore_errors=True)
     texto = informe(resultados)
-    (RAIZ / "docs" / "pruebas-asistente.md").write_text(texto, encoding="utf-8")
+    (DOCS / "pruebas-asistente.md").write_text(texto, encoding="utf-8")
     for res in resultados:
         print(res["usar"], sum(f["ok"] for f in res["filas"]), "/", len(res["filas"]))
 

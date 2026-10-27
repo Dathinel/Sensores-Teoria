@@ -25,9 +25,8 @@ import sys
 import time
 import urllib.request
 import webbrowser
-from pathlib import Path
 
-RAIZ = Path(__file__).resolve().parent.parent
+from app.rutas import RAIZ
 
 
 def _cerrar_instancia_anterior(puertos: list[int]) -> None:

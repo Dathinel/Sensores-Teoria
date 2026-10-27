@@ -1,3 +1,7 @@
+import sqlite3
+
+import pytest
+
 from app import db
 
 
@@ -60,3 +64,20 @@ def test_ultima_telemetria_salta_un_payload_vacio(tmp_path):
         assert db.ultima_telemetria(conexion)["linea"] == "run"
     finally:
         conexion.close()
+
+
+def test_copiar_base_copia_todo_y_en_solo_lectura_no_crea_el_origen(tmp_path):
+    origen = db.conectar(tmp_path / "origen.db")
+    db.registrar_evento(origen, "planta", "tel", {"linea": "run"})
+    origen.commit()
+    origen.close()
+    copia = db.conectar(tmp_path / "copia.db")
+    try:
+        db.copiar_base(copia, tmp_path / "origen.db")
+        assert db.ultima_telemetria(copia)["linea"] == "run"
+        falta = tmp_path / "no-existe.db"
+        with pytest.raises(sqlite3.OperationalError):
+            db.copiar_base(copia, falta)
+        assert not falta.exists()
+    finally:
+        copia.close()

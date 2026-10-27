@@ -1,12 +1,9 @@
 """Backend `sim` de la HAL (docs/especificacion.md, seccion 8).
 
 Traduce cada interfaz abstracta de `control/hal/interfaces.py` a comandos
-sobre `sim/mundo.py`, `sim/sensores_sim.py`. Junto con
-el resto de `sim/`, este es el unico lugar del paquete `control` al que se
-le permite importar PyBullet (regla 17 de `CLAUDE.md`: la prohibicion es
-para la logica de control pura -- `linea.py`, `embalaje.py`, `reglas.py`,
-`registro.py`, `monedas.py` -- no para el backend que la conecta con un
-mundo concreto).
+sobre `sim/mundo.py`, `sim/sensores_sim.py`. Vive en sim/ y no en
+control/hal/ porque depende de PyBullet: asi `control/` queda sin PyBullet
+(regla 17 de `CLAUDE.md`) y sin importar nada de sim/.
 
 `EstacionBackendSim` agrupa los sensores y actuadores de las 4 estaciones
 de la cinta de monedas y las 5 de la cinta de vasos sobre una escena ya
@@ -19,6 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from control.hal.interfaces import BandaIndexada, DispensadorTapas, MotorPrensa, Servo
 from sim import sensores_sim
 from sim.sensores_sim import CamaraOraculo
 from sim.mundo import (
@@ -31,8 +29,6 @@ from sim.mundo import (
     ESTACION_VERIFICACION_VASOS,
     EscenaEstacion,
 )
-
-from .interfaces import BandaIndexada, DispensadorTapas, MotorPrensa, Servo
 
 
 class BandaIndexadaSim(BandaIndexada):
@@ -137,10 +133,8 @@ class EstacionBackendSim:
         if cortina is None or vasos is None:
             # config/parametros.yaml: cortina_seguridad (altura, cono y desplazamiento
             # del VL53L0X) y vasos (las dos franjas de la camara de vasos).
-            import yaml
-            from pathlib import Path
-            ruta = Path(__file__).resolve().parents[2] / "config" / "parametros.yaml"
-            cfg = yaml.safe_load(ruta.read_text(encoding="utf-8"))
+            from control.configuracion import cargar_parametros
+            cfg = cargar_parametros()
             cortina = cortina or cfg["cortina_seguridad"]
             vasos = vasos or cfg["vasos"]
         # Auditoria 2026-09-27: estaban escritas a mano (0.5 y 1.05) aunque el comentario de

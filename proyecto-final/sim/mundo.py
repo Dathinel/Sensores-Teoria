@@ -791,7 +791,7 @@ class EscenaEstacion:
     def _canaleta(self) -> dict:
         """Rieles de la canaleta, de config/parametros.yaml (se lee una vez)."""
         if self._canaleta_cache is None:
-            from app.configuracion import cargar_parametros
+            from control.configuracion import cargar_parametros
 
             self._canaleta_cache = geometria_canaleta(cargar_parametros())
         return self._canaleta_cache

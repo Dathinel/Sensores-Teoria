@@ -7,16 +7,17 @@ import re
 from app import portable
 
 
-def _html():
-    return portable.generar().read_text(encoding="utf-8")
+def _html(carpeta):
+    # En una carpeta temporal: la prueba no reescribe el visor-portable.html versionado.
+    return portable.generar(carpeta / "visor-portable.html").read_text(encoding="utf-8")
 
 
 def _mapa(html):
     return json.loads(re.search(r'<script type="importmap">\s*(.*?)\s*</script>', html, re.S).group(1))["imports"]
 
 
-def test_todo_va_adentro_del_archivo():
-    html = _html()
+def test_todo_va_adentro_del_archivo(tmp_path):
+    html = _html(tmp_path)
     # Nada que el navegador tenga que ir a buscar a la carpeta (file:// no lo deja).
     assert "./vendor/" not in html and "src=\"./visor.js\"" not in html
     assert '<link rel="stylesheet" href="./' not in html
@@ -24,25 +25,26 @@ def test_todo_va_adentro_del_archivo():
     fuente = (portable.VISOR / "visor.js").read_text(encoding="utf-8")
     piezas = set(re.findall(r"from '\./(piezas/[\w-]+\.js)'", fuente)) | {"piezas/base.js"}
     assert "piezas/electronica.js" in piezas
-    # La interfaz, las piezas y OrbitControls: todo modulo local que visor.js alcanza.
-    assert {"three", "interfaz.js", "vendor/OrbitControls.js"} | piezas <= set(mapa)
+    # La interfaz, las piezas, los dos modulos que no son piezas y OrbitControls: todo modulo local
+    # que visor.js alcanza.
+    assert {"three", "interfaz.js", "optimizar.js", "maqueta_impresa.js", "vendor/OrbitControls.js"} | piezas <= set(mapa)
     orbit = base64.b64decode(mapa["vendor/OrbitControls.js"].split(",", 1)[1]).decode()
     assert "OrbitControls" in orbit
     assert "from 'vendor/OrbitControls.js'" in html
     assert "from 'interfaz.js'" in html
 
 
-def test_el_estilo_va_adentro():
+def test_el_estilo_va_adentro(tmp_path):
     # estilo.css (el sistema de diseno de la interfaz) pasa a un <style> dentro del archivo.
-    html = _html()
+    html = _html(tmp_path)
     css = (portable.VISOR / "estilo.css").read_text(encoding="utf-8")
     assert "--ambar: #f2b134" in css
     assert css.strip()[-60:] in html
 
 
-def test_los_modulos_van_embebidos_sin_rutas_relativas():
+def test_los_modulos_van_embebidos_sin_rutas_relativas(tmp_path):
     # Un modulo de una data: URL no resuelve './x.js': todo import local pasa al importmap.
-    html = _html()
+    html = _html(tmp_path)
     mapa = _mapa(html)
     visor = html[html.index('<script type="module">'):]
     assert "from 'piezas/electronica.js'" in visor
@@ -81,8 +83,8 @@ def test_un_modulo_nuevo_entra_solo(tmp_path, monkeypatch):
     assert "body { color: red; }" in portable._estilos_adentro(html)
 
 
-def test_la_demo_embebida_es_la_grabada():
-    html = _html()
+def test_la_demo_embebida_es_la_grabada(tmp_path):
+    html = _html(tmp_path)
     datos = re.search(r"window.__DEMO = (.*?);</script>", html, re.S).group(1)
     demo = json.loads(datos.replace("<\\/", "</"))
     for nombre in ("geometria", "pasos", "grabacion"):
@@ -90,15 +92,19 @@ def test_la_demo_embebida_es_la_grabada():
         assert demo[nombre] == original
 
 
-def test_apunta_al_puerto_de_la_configuracion():
+def test_apunta_al_puerto_de_la_configuracion(tmp_path):
     from app.configuracion import cargar_parametros
     puerto = cargar_parametros()["supervisor"]["puerto_http"]
-    assert f"window.__URL_VIVO = 'http://127.0.0.1:{puerto}/'" in _html()
+    html = _html(tmp_path)
+    assert f"window.__URL_VIVO = 'http://127.0.0.1:{puerto}/'" in html
+    # Y busca en el mismo rango de puertos que usa app.lanzar si el configurado esta ocupado.
+    from app.puertos import INTENTOS
+    assert f"window.__PUERTOS_EXTRA = {INTENTOS};" in html
 
 
-def test_solo_cierran_los_tres_scripts():
+def test_solo_cierran_los_tres_scripts(tmp_path):
     # Un "</script" dentro de la demo o del visor cortaria la pagina.
-    assert _html().count("</script") == 3
+    assert _html(tmp_path).count("</script") == 3
 
 
 def test_el_bat_abre_el_portable_y_arranca_la_simulacion():

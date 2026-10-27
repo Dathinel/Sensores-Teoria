@@ -54,17 +54,21 @@ CLAUDE.md, docs/, .gitattributes del repo) solo los toca la sesión principal o 
 - [x] Textos viejos: "Nada de esto está impreso todavía", exportar.py:8, manual.py:10, revisar_remaches.py en el README.
 - Verificar: pytest tests/sim/test_carro_impreso.py y de la maqueta (usa chasis_impreso/exportar.py como biblioteca).
 
-### D. Código (mismo comportamiento; pytest completo después de cada punto)
-- [ ] `app/rutas.py` con RAIZ, DOCS, CONFIG, DATOS, VISOR: reemplaza los 13 `Path(__file__).parent.parent` de app/.
-- [ ] Un solo lector de config fuera de app/ (`control/configuracion.py`; app/configuracion.py lo reexporta): corta sim → app.
-- [ ] `control/hal/backend_sim.py` → `sim/backend_sim.py` (es la HAL sobre PyBullet: control/ queda sin PyBullet, como pide la regla 17).
-- [ ] Duplicados: una sola fábrica de planta simulada (supervisor, grabar_demo, sim/ver/planta_vista), un solo guion de sabotajes,
+### D. Código — HECHA (951 pruebas; demo, docs y salida eléctrica idénticas; revisor sin cambios de comportamiento)
+- [x] `app/rutas.py` con RAIZ, DOCS, CONFIG, DATOS, VISOR: reemplaza los 13 `Path(__file__).parent.parent` de app/.
+- [x] Un solo lector de config fuera de app/ (`control/configuracion.py`; app/configuracion.py lo reexporta): corta sim → app.
+- [x] `control/hal/backend_sim.py` → `sim/backend_sim.py` (es la HAL sobre PyBullet: control/ queda sin PyBullet, como pide la regla 17).
+- [x] Duplicados: una sola fábrica de planta simulada (supervisor, grabar_demo, sim/ver/planta_vista), un solo guion de sabotajes,
   `db.copiar_base` (charla y evaluar_asistente), firmware/preparar.py con un solo sys.path, vision/ con AQUI propia,
   exportar.py lee el precio del PLA de config/precios.yaml.
-- [ ] `sim/electrica.py`: el informe (§8, 460 líneas) a `sim/electrica_informe.py`.
-- [ ] `app/asistente.py` (1638 líneas) a un paquete `app/asistente/` por secciones (aprobado).
-- [ ] `tests/visor/test_portable.py` escribe el portable en una carpeta temporal (hoy reescribe el archivo versionado de 9,4 MB).
+- [x] `sim/electrica.py`: el informe (§8, 460 líneas) a `sim/electrica_informe.py`.
+- [x] `app/asistente.py` (1638 líneas) a un paquete `app/asistente/` por secciones (aprobado).
+- [x] `tests/visor/test_portable.py` escribe el portable en una carpeta temporal (hoy reescribe el archivo versionado de 9,4 MB).
 - Verificar: pytest completo; `python -m app.grabar_demo` solo si cambia la demo; `python -m app.portable`; captura del visor.
+- Para la tanda E (textos): resultado de los agentes en el scratchpad `tandaD/resultado.txt` (para_docs). Nuevos: `app/rutas.py`,
+  `app/asistente/` (paquete), `control/configuracion.py`, `sim/backend_sim.py`, `sim/electrica_informe.py`; `optimizar.js` y
+  `maqueta_impresa.js` pasaron de `app/visor3d/piezas/` a `app/visor3d/`. `docs/paso-a-paso.yaml:648` nombra `app/asistente.py`:
+  si se cambia, regenerar con `python -m app.documentos` y `python -m app.grabar_demo`.
 
 ### E. Documentos para personas y para Claude
 - [ ] Un README.md por carpeta donde falta: app/, app/dashboard/, app/visor3d/ (y corregir piezas/README.md), app-practica/,

@@ -6,7 +6,7 @@ fuentes que usa la simulacion:
 
 - posiciones de estaciones: `sim.mundo.posicion_estacion_*`;
 - rayos de los sensores: los propios `SensorRayo` que arma
-  `control.hal.backend_sim.EstacionBackendSim` (origen y destino exactos del
+  `sim.backend_sim.EstacionBackendSim` (origen y destino exactos del
   `rayTest`), construidos sobre una escena "solo geometria" que no abre
   PyBullet;
 - pista, canaleta y vehiculo: `config/parametros.yaml` + `sim/pista.py`.
@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import math
 
-from control.hal.backend_sim import EstacionBackendSim
+from sim.backend_sim import EstacionBackendSim
 from sim import conexiones, mundo
 from sim.catalogos import CATEGORIAS, COMPONENTES
 from sim.catalogos import CATALOGO_SENSORES

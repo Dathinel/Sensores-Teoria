@@ -147,6 +147,17 @@ def conectar_lectura(ruta_bd: str | Path) -> sqlite3.Connection:
     return conexion
 
 
+def copiar_base(destino: sqlite3.Connection, origen: str | Path, *, solo_lectura: bool = True) -> None:
+    """Copia coherente de la base `origen` en `destino` con la API de respaldo de SQLite: sirve
+    aunque el supervisor este escribiendo en ella. Con `solo_lectura`, el origen se abre sin poder
+    tocarlo; sin el, sqlite3 crea un archivo vacio si el origen no existe."""
+    fuente = sqlite3.connect(f"file:{origen}?mode=ro", uri=True) if solo_lectura else sqlite3.connect(origen)
+    try:
+        fuente.backup(destino)
+    finally:
+        fuente.close()
+
+
 def activar_wal(conexion: sqlite3.Connection) -> None:
     """Modo WAL: el dashboard puede leer mientras el supervisor escribe sin
     que ninguno de los dos se bloquee con 'database is locked'."""

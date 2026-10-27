@@ -183,7 +183,7 @@ def test_servidor_dice_si_hay_internet(tmp_path, geo, monkeypatch, hay):
     chequeo del asistente y el dashboard). Antes decia "sin internet" con internet."""
     from app import asistente
 
-    monkeypatch.setattr(asistente, "hay_internet", lambda *a, **k: hay)
+    monkeypatch.setattr(asistente.audio, "hay_internet", lambda *a, **k: hay)
     puerto = _puerto_libre()
     srv = servidor.arrancar(servidor.EstadoCompartido(geo, tmp_path / "planta.db"), puerto)
     try:

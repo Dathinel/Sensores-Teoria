@@ -568,7 +568,7 @@ Con todo lo anterior resuelto, esta es una corrida real dando los comandos por v
 
 ## Dónde se reutilizó
 
-La misma lógica (frase → DeepSeek → JSON de intención → validar → actuar) es la del asistente del [proyecto final](../proyecto-final/app/asistente.py): ahí el JSON trae una respuesta con los datos de la planta y órdenes para el carro, y pasa por una lista blanca antes de ejecutar nada.
+La misma lógica (frase → DeepSeek → JSON de intención → validar → actuar) es la del asistente del [proyecto final](../proyecto-final/app/asistente/): ahí el JSON trae una respuesta con los datos de la planta y órdenes para el carro, y pasa por una lista blanca antes de ejecutar nada.
 
 ## Pendiente
 

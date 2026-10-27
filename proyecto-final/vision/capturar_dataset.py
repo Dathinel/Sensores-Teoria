@@ -25,8 +25,9 @@ import argparse
 import sys
 from pathlib import Path
 
-RAIZ = Path(__file__).resolve().parent.parent
-DATASET = RAIZ / "vision" / "dataset"
+AQUI = Path(__file__).resolve().parent
+RAIZ = AQUI.parent
+DATASET = AQUI / "dataset"
 
 
 def clases() -> list[str]:

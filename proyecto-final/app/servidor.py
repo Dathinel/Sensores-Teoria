@@ -43,9 +43,9 @@ from pathlib import Path
 import yaml
 
 from app import db
+from app.rutas import DOCS, VISOR as DIRECTORIO_VISOR
 
-DIRECTORIO_VISOR = Path(__file__).resolve().parent / "visor3d"
-RUTA_PASOS = Path(__file__).resolve().parent.parent / "docs" / "paso-a-paso.yaml"
+RUTA_PASOS = DOCS / "paso-a-paso.yaml"
 
 # Windows a veces no conoce el tipo de los .js y los sirve como text/plain,
 # y el navegador se niega a ejecutar un modulo ES asi.
@@ -157,7 +157,7 @@ def _crear_manejador(compartido: EstadoCompartido):
                 return self._responder(200, json.dumps(pasos, ensure_ascii=False).encode("utf-8"), "application/json")
 
             if ruta == "/api/internet":
-                from app.asistente import hay_internet
+                from app.asistente.audio import hay_internet
 
                 return self._responder(200, json.dumps({"internet": hay_internet()}).encode(), "application/json")
             if ruta == "/api/asistente":

@@ -22,10 +22,9 @@ from pathlib import Path
 
 import yaml
 
+from app.rutas import DOCS, RAIZ
 from sim.catalogos import CATALOGO_SENSORES
 
-RAIZ = Path(__file__).resolve().parent.parent
-DOCS = RAIZ / "docs"
 AVISO = "<!-- Generado por `python -m app.documentos`. No editar a mano. -->\n\n"
 ICONO = {"pendiente": "⏳ pendiente", "preaprobado": "🔵 preaprobado", "aprobado": "✅ aprobado", "cambiar": "✏️ por cambiar", "pausa": "⏸️ en pausa (montaje real)"}
 
@@ -339,16 +338,12 @@ def generar_todo() -> list[Path]:
     destino = DOCS / "peso.md"
     destino.write_text(masas.generar_md(), encoding="utf-8")
     escritos.append(destino)
-    # Parte eléctrica (consumos, fuentes, cables): la escribe sim/electrica.py. Si ese módulo todavía
-    # no existe (lo hace otra persona/agente), se salta sin romper la generación de lo demás.
-    try:
-        from sim import electrica
-    except ImportError:
-        electrica = None
-    if electrica is not None and hasattr(electrica, "generar_markdown"):
-        destino = DOCS / "electrica.md"
-        destino.write_text(electrica.generar_markdown(), encoding="utf-8")
-        escritos.append(destino)
+    # Parte eléctrica (consumos, fuentes, cables): el informe de sim/electrica.py.
+    from sim import electrica_informe
+
+    destino = DOCS / "electrica.md"
+    destino.write_text(electrica_informe.generar_markdown(), encoding="utf-8")
+    escritos.append(destino)
     return escritos
 
 

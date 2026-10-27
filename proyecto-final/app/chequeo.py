@@ -17,7 +17,8 @@ import platform
 import sys
 from pathlib import Path
 
-RAIZ = Path(__file__).resolve().parent.parent
+from app.rutas import DATOS, RAIZ, VISOR
+
 BIEN, AVISO, FALLA = "✓", "!", "✗"
 
 
@@ -103,7 +104,7 @@ def asistente(rapido: bool) -> list[tuple[str, str, str]]:
     from app import asistente as a
 
     out = []
-    local = a.cliente_local()
+    local = a.llm.cliente_local()
     if local is None:
         out.append((FALLA, "Modelo local (Ollama)", "no responde: abrir Ollama y `ollama pull qwen2.5:3b` (ver README)"))
     elif a.MODELO_LOCAL != "qwen2.5-proyecto":
@@ -128,7 +129,7 @@ def asistente(rapido: bool) -> list[tuple[str, str, str]]:
         out.append((AVISO, "Voz de Windows", f"no se pudo revisar ({type(error).__name__})"))
     if rapido:
         return out
-    internet = a.hay_internet()
+    internet = a.audio.hay_internet()
     out.append((BIEN, "Internet", "hay: responde DeepSeek (si la clave sirve)") if internet
                else (AVISO, "Internet", "no hay: todo sigue funcionando; el asistente usa el modelo local"))
     cliente = a.cliente_deepseek()
@@ -155,11 +156,13 @@ def asistente(rapido: bool) -> list[tuple[str, str, str]]:
 def hardware() -> list[tuple[str, str, str]]:
     from serial.tools import list_ports
 
+    from firmware.preparar import SALIDA
+
     # CP210x (Silicon Labs) y CH340 (WCH): los puentes USB de los ESP32 DevKit.
     placas = [f"{p.device} ({p.description})" for p in list_ports.comports() if p.vid in (0x10C4, 0x1A86)]
     out = [(BIEN, "ESP32 por USB", ", ".join(placas)) if placas else
            (AVISO, "ESP32 por USB", "ninguno conectado: en simulación no hace falta (hardware.backend: sim)")]
-    driver = RAIZ / "firmware" / "salida" / "_descargas" / "vl53l0x.py"
+    driver = SALIDA / "_descargas" / "vl53l0x.py"
     out.append((BIEN, "Driver del VL53L0X", "descargado: el firmware se arma sin internet") if driver.exists()
                else (AVISO, "Driver del VL53L0X", "no está: armar el firmware una vez CON internet "
                      "(`python -m firmware.preparar`)"))
@@ -168,7 +171,7 @@ def hardware() -> list[tuple[str, str, str]]:
 
 def archivos() -> list[tuple[str, str, str]]:
     out = []
-    bd = RAIZ / "datos" / "planta.db"
+    bd = DATOS / "planta.db"
     if bd.exists():
         mb = sum(f.stat().st_size for f in bd.parent.glob("planta.db*")) / 1e6
         out.append((AVISO if mb > 50 else BIEN, "Base de datos", f"{mb:.1f} MB"
@@ -176,9 +179,8 @@ def archivos() -> list[tuple[str, str, str]]:
     else:
         out.append((BIEN, "Base de datos", "se crea sola al arrancar"))
     portable = RAIZ / "visor-portable.html"
-    visor = RAIZ / "app" / "visor3d"
-    fuentes = [visor / "index.html"] + list(visor.glob("*.js")) + list(visor.glob("*.css")) + \
-        list((visor / "piezas").glob("*.js")) + list((visor / "demo").glob("*.json"))
+    fuentes = [VISOR / "index.html"] + list(VISOR.glob("*.js")) + list(VISOR.glob("*.css")) + \
+        list((VISOR / "piezas").glob("*.js")) + list((VISOR / "demo").glob("*.json"))
     if not portable.exists():
         out.append((AVISO, "visor-portable.html", "no está: lo arma visor.bat (o `python -m app.portable`)"))
     elif portable.stat().st_mtime < max(f.stat().st_mtime for f in fuentes):

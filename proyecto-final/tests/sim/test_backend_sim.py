@@ -4,7 +4,7 @@ import math
 
 import pytest
 
-from control.hal.backend_sim import EstacionBackendSim
+from sim.backend_sim import EstacionBackendSim
 from sim.mundo import (
     ESTACION_MATERIAL_MONEDAS,
     ESTACION_PRESENCIA_MONEDAS,

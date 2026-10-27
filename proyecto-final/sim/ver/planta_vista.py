@@ -18,16 +18,11 @@ from __future__ import annotations
 
 import pybullet as p
 
-from app import configuracion
-from control.embalaje import EmbalajeVasos
-from control.hal.backend_sim import EstacionBackendSim
-from control.linea import LineaMonedas
+from control import configuracion
 from sim import mundo
-from sim.carga_escenarios import cargar_escenario
 from sim.geometria import geometria_completa
 from sim.mundo import PASOS_POR_SEGUNDO, EscenaEstacion
-from sim.planta import PlantaSimulada, opciones_desde_config
-from sim.sensores_sim import CamaraOraculo
+from sim.planta import PlantaSimulada, crear_planta_simulada
 from sim.ver.comun import Camara, Vista, barra_visual, caja_visual, escribir, medir
 
 # Colores de los rotulos: (r, g, b) 0-1 para la ventana; el video usa BGR 0-255.
@@ -101,25 +96,17 @@ def decorar_planta(cliente: int, parametros: dict) -> None:
 
 def armar_planta(vista: Vista, escenario: str, camara: Camara, *, carro_fisico: bool,
                  monedas_por_vaso: int | None = None):
-    """Igual que `app/supervisor.py` (iniciar) y `app/grabar_demo.py`: backend
-    simulado con la camara oraculo, errores de sensores de la configuracion
-    (semilla fija: la misma corrida cada vez), filtro con los parametros de
-    config. Devuelve (parametros, escena, planta)."""
+    """La misma planta que `app/supervisor.py` (iniciar), armada con
+    `sim.planta.crear_planta_simulada` sobre la escena visible. Devuelve
+    (parametros, escena, planta)."""
     parametros = configuracion.cargar_parametros()
     escena = EscenaVisible(vista, parametros)
     vista.preparar(escena.cliente, camara)
     decorar_planta(escena.cliente, parametros)
-    backend = EstacionBackendSim(escena, camara=CamaraOraculo())
-    sim = parametros.get("simulacion", {})
-    if sim.get("errores_sensores"):
-        backend.aplicar_errores(parametros["errores_sensores"], sim.get("semilla"),
-                                errores_actuadores=parametros.get("errores_actuadores"))
-    opciones = dict(opciones_desde_config(parametros), carro_fisico=carro_fisico)
+    opciones = {"carro_fisico": carro_fisico}
     if monedas_por_vaso is not None:
         opciones["monedas_por_vaso"] = monedas_por_vaso
-    planta = PlantaSimulada(escena, backend, LineaMonedas(configuracion.parametros_filtrado(parametros)),
-                            EmbalajeVasos(), cargar_escenario(escenario), **opciones,
-                            errores_carro=bool(sim.get("errores_sensores")), semilla_carro=sim.get("semilla"))
+    planta = crear_planta_simulada(escena, parametros, escenario, **opciones)
     return parametros, escena, planta
 
 

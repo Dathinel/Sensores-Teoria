@@ -2,7 +2,7 @@
 
 `control/` no importa PyBullet, pyserial ni OpenCV directamente (CLAUDE.md,
 seccion 17). Todo acceso a sensores o actuadores pasa por estas interfaces;
-las implementaciones concretas viven en `backend_sim.py` (fase 3, traduce a
+las implementaciones concretas viven en `sim/backend_sim.py` (fase 3, traduce a
 PyBullet) y `backend_real.py` (fase 8, traduce a mensajes seriales hacia el
 ESP32). Si algo en `control/` necesita hardware o percepcion y no hay un
 metodo aqui que lo cubra, falta agregarlo a esta interfaz, no importar la

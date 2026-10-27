@@ -1,8 +1,8 @@
 // Optimizacion de la escena del visor 3D: MENOS llamadas de dibujo, el MISMO detalle.
 //
 // No es una pieza: es el paso que visor.js corre una vez, al terminar de construir la escena y
-// antes del primer cuadro en vivo. Vive en esta carpeta porque app/portable.py ya mete todos los
-// `piezas/*.js` en el HTML de un solo archivo (y solo importa `three`, como las piezas).
+// antes del primer cuadro en vivo. Por eso vive junto a visor.js y no en piezas/ (app/portable.py
+// sigue los imports de visor.js y lo mete igual en el HTML de un solo archivo).
 //
 // Por que hace falta (medido el 2026-09-28 con ?demo&auditar): la escena tenia 3.257 mallas y
 // 2.629 materiales para solo 0,62 M triangulos. La tarjeta de video dibuja 0,6 M triangulos sin
