@@ -1,6 +1,6 @@
 # Cada práctica se abre con <carpeta>/ABRIR.bat (con CRLF: cmd.exe se confunde con LF) o con
 # <carpeta>/abrir.sh (con LF: sh no acepta el retorno de carro). Los dos llaman a _lanzador/lanzador.py.
-ABRIR.bat text eol=crlf
+*.bat text eol=crlf
 abrir.sh text eol=lf
 
 # --- Estadísticas de lenguajes de GitHub (Linguist) ---------------------------------------

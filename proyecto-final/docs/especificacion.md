@@ -385,7 +385,7 @@ y un índice de `docs/` (`docs/README.md`).
   visor-portable.html           visor en UN archivo (demo embebida); pasa solo al vivo (generado)
   instalar.bat                  deja todo listo en un PC nuevo (entorno, firmware, Ollama, Whisper, chequeo)
   .env.example                  cómo poner DEEPSEEK_API_KEY (el .env real queda fuera de git)
-  requirements.txt              dependencias; requirements-lock.txt: versiones exactas con las que se probó
+  requirements-minimo.txt       lo mínimo; requirements-lock.txt: versiones exactas con las que se probó
   pytest.ini                    testpaths = tests y pythonpath = . (la raíz importable sin instalar nada)
   datos/                        planta.db, la base SQLite local (fuera de git)
   config/parametros.yaml        umbrales, valores físicos, tiempos y errores de sensores

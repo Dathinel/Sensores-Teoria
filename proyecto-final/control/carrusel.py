@@ -53,7 +53,6 @@ from __future__ import annotations
 
 CARGA = "carga"
 AGUJERO = "agujero"
-LUGARES = (CARGA, AGUJERO)
 
 
 def _normalizar_180(grados: float) -> float:

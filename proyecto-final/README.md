@@ -1196,7 +1196,7 @@ Aquí está cada archivo, qué hace y cuándo se usa.
 | `app-practica/` | La app amigable del proyecto (se abre con `ABRIR.bat`; por dentro `python _lanzador/lanzador.py --practica proyecto-final`), organizada como Docker Desktop (barra lateral, lista de programas con su estado y su detalle al lado): qué hace, la prueba visual (el recorrido animado de una pieza por las 4 estaciones junto al estado real de la simulación, leído de `/api/estado` del visor), y el visor en vivo, las escenas, el asistente, las pruebas y el chequeo con su barra y el tiempo que tardan. Va aparte porque `app/` es el paquete de Python. |
 | `requirements-minimo.txt` | Los 13 paquetes de la instalación mínima (`instalar.bat`, opción 1). |
 | `visor-portable.html` | El visor 3D en un solo archivo (Three.js + demo grabada). Funciona sin Python ni internet y pasa solo al vivo si la simulación responde. Se genera con `python -m app.portable`. |
-| `requirements.txt` / `requirements-lock.txt` | Dependencias, y las versiones exactas con las que se probó todo. |
+| `requirements-minimo.txt` / `requirements-lock.txt` | Lo mínimo para correr la simulación, y las versiones exactas de la instalación completa (las que usa `instalar.bat`). |
 | `pytest.ini` | Configura las pruebas: carpeta `tests/` y la raíz importable sin instalar nada. |
 | `.env.example` | Cómo poner la clave de DeepSeek (el `.env` real no se sube). |
 | `docs/especificacion.md` | El documento maestro de diseño: requisitos, secuencia de operación, contratos de datos, reglas. |

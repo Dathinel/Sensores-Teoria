@@ -1,23 +1,8 @@
-# El entorno virtual se autoexcluye con su propio .gitignore (entorno/.gitignore)
-__pycache__/
-*.pyc
-.pytest_cache/
-
-# bases de datos locales generadas por el supervisor / las pruebas
-*.db
-*.sqlite3
-
-# pesos entrenados y datasets grandes: se documentan, no se versionan aqui
-vision/modelos/*.h5
-vision/modelos/*.tflite
-vision/modelos/*.onnx
+# __pycache__, .pytest_cache, entorno/ y las bases SQLite (*.db, *.sqlite3, -shm, -wal) ya los ignora el .gitignore de la raiz del repo
 
 # claves y variables de entorno (seccion 14: la API key nunca va en el repo)
 .env
 
-# base de datos en modo WAL (archivos auxiliares)
-*.db-shm
-*.db-wal
 
 # firmware armado para subir (firmware/preparar.py): se genera, no se versiona
 firmware/salida/
@@ -25,7 +10,6 @@ firmware/salida/
 # vision (fase 5): las fotos del dataset pesan y el entrenamiento usa el mismo `entorno` (Keras 3 + torch, Python 3.14);
 # los resultados (matriz de confusion, curva, metricas) SI se versionan
 vision/dataset/
-vision/entorno/
 vision/modelos/
 
 # puertos reales de la corrida en marcha (app/puertos.py): se escribe al arrancar

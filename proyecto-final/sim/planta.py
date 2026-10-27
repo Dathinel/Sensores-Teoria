@@ -48,9 +48,6 @@ from control.hal.backend_sim import EstacionBackendSim
 from control.linea import Destino, LineaMonedas
 from control.monedas import buscar_por_clase
 
-# Cubeta de rechazo final en la descarga, E4 (ver `_a_rechazo`).
-# Una sola bandeja de rechazo de monedas (grupo, 2026-09-25).
-RECHAZO_FINAL = Destino.RECHAZO
 from control.registro import EstadoVaso
 from sim.carga_escenarios import Escenario, EspecificacionElemento
 from sim.mundo import (
@@ -71,11 +68,6 @@ from sim.mundo import (
     EscenaEstacion,
 )
 
-# Nombres cortos de cada estacion para los eventos (`src`), en el mismo
-# estilo del protocolo de la seccion 10.1 ("e2", "e4", "vasos"...).
-NOMBRES_ESTACIONES_MONEDAS = ("e1", "e2", "e3", "e4")
-ETIQUETAS_ESTACIONES_MONEDAS = ("Presencia", "Material", "Vision", "Descarga")
-ETIQUETAS_ESTACIONES_VASOS = ("Verificacion", "Llenado", "Tapa", "Prensa", "Descarga")
 
 
 

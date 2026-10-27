@@ -136,7 +136,7 @@ def guardar(fig, salida, titulo):
 
 
 def guia(tanda):
-    """img/corte_<tanda>.png (toda la tanda) e img/corte/<pieza>.png (una por pieza, para el manual)."""
+    """img/corte_<tanda>.png: toda la tanda, vista desde la cara que apoya en la cama."""
     nombres = [n for n, v in ex.PIEZAS.items() if v[1] == tanda and not n.startswith(("remache", "pasador"))]
     if not nombres:
         return
@@ -147,14 +147,6 @@ def guia(tanda):
     for eje, nom in zip(ejes[0], nombres):
         dibujar(eje, nom, *geo[nom])
     guardar(fig, ex.AQUI / "img" / f"corte_{ex.NOMBRE_TANDA[tanda]}.png", f"{ex.NOMBRE_TANDA[tanda]}: {vista}")
-    for nom in nombres:
-        fig, eje = plt.subplots(figsize=(11, 7.5))
-        salida = ex.AQUI / "img" / "corte" / f"{nom}.png"
-        if dibujar(eje, nom, *geo[nom]):
-            guardar(fig, salida, vista)
-        else:   # nada que abrir: no va al manual
-            plt.close(fig)
-            salida.unlink(missing_ok=True)
     print("guia:", ex.NOMBRE_TANDA[tanda])
 
 

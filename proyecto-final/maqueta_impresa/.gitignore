@@ -1,6 +1,6 @@
 _cache/
-img/manual/*.scad
-__pycache__/
 img/manual/
+# salida de la linea de comandos de primera_capa.py (revisar.py usa primera_capa.medir directo)
+primera_capa.json
 # proyectos guardados desde Creality Print por el usuario (traen su configuracion y la MAC de su impresora)
 3mf/guardados/

@@ -11,6 +11,22 @@ puntos; al terminar cada punto, marcarlo. Si se pierde un mensaje, está complet
 transcript de Claude Code: `~/.claude/projects/D--cosas-uni-Micros/<sesion>.jsonl`
 (líneas con `"type":"user"`; el más reciente por fecha de modificación).
 
+### Pedido EN CURSO del 2026-10-26 — orden de carpetas, nombres y código de todo el proyecto
+
+Textual del usuario:
+> "haga un orden tanto de código como de nombres en todas las carpetas de el proyecto, revisando que ninguna ruta se rompa al cambiar el nombre y la ubicación, hay demasiadas carpetas con demasiadas cosas, deje los .md de el general y el .md de cada carpeta para que claude también sepa de forma ordenada y organizar de forma profesional tanto los archivos como el código, deje el paso a paso por si se corta a mitad de la tarea, después los borra"
+
+Alcance tomado: `proyecto-final/` (no Sensores, Proteus ni Word). Puntos:
+- [x] 1. Mapa de qué hay y qué depende de cada ruta (imports, rutas en código, .bat, pruebas, enlaces de docs y de
+  GitHub, visor, portable, firmware, CLAUDE.md y reglas de afuera).
+- [x] 2. Plan de orden (carpetas, nombres, código) escrito en `ORDEN-PASO-A-PASO.md`; aprobado con: código "Todo, incluso
+  asistente.py", "README + CLAUDE.md con reglas", "Borrarlos", "Commit local por tanda"; mostrárselo ANTES de mover nada
+  (regla del usuario: "primero digame antes de hacer cualquier cambio").
+- [ ] 3. Mover y renombrar por tandas, arreglando cada ruta; pruebas después de cada tanda.
+- [ ] 4. Ordenar el código sin cambiar lo que hace.
+- [ ] 5. CLAUDE.md general y uno por carpeta.
+- [ ] 6. Verificar todo (pytest, revisor de la maqueta, visor, portable, enlaces) y borrar `ORDEN-PASO-A-PASO.md`.
+
 ### Pedido EN CURSO del 2026-10-24 (tarde) — ahorros de costo aprobados (agente de ahorros)
 
 Textual del usuario:

@@ -308,7 +308,6 @@ for _s in CATALOGO_SENSORES:
 # Lista de materiales
 # =====================================================================
 
-PENDIENTE_CONEXION = "Pendiente: sección de conexiones y voltajes (fase 8)."
 
 CATEGORIAS = ("Actuadores", "Control y potencia", "Estructura", "Carro", "Sensores")
 
