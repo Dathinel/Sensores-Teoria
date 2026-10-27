@@ -48,7 +48,7 @@ def filas(datos: dict | None = None, precios: dict | None = None) -> list[dict]:
 
     origen dice de dónde salió: "catálogo" (componente de sim/catalogos.py), "impresa" (pieza de
     precios.yaml: volumen x densidad x llenado, SIN el desperdicio, que se queda en la impresora),
-    "maqueta" (grupo de maqueta_impresa/piezas.json: gramos de la pieza, sin desperdicio), "tornillería"
+    "maqueta" (grupo de maqueta_impresa/salida/piezas.json: gramos de la pieza, sin desperdicio), "tornillería"
     (contada por zona) u "otro" (masas.yaml: otros).
     """
     from sim.catalogos import CATALOGO_SENSORES, COMPONENTES
@@ -80,7 +80,7 @@ def filas(datos: dict | None = None, precios: dict | None = None) -> list[dict]:
     # 3. Maqueta impresa por grupo (la masa de las piezas, sin el desperdicio de la impresora).
     for g in costos.maqueta(precios):
         fila(g["zona"], f"Maqueta impresa: {g['nombre'][0].lower() + g['nombre'][1:]} (PLA)", 1, g["gramos"], "estimado",
-             "maqueta", f"{g['piezas']} piezas, gramos del exportador de la maqueta (maqueta_impresa/piezas.json)")
+             "maqueta", f"{g['piezas']} piezas, gramos del exportador de la maqueta ({precios['estructura_3d']['maqueta']['archivo']})")
     # 4. Tornillería contada por zona (sin el repuesto, que no se monta).
     tipos = precios["estructura_3d"]["tornilleria"]["tipos"]
     for zona, cuenta in costos.tornillos_por_zona(precios).items():

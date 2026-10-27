@@ -151,7 +151,7 @@ RIELES = {
                 "ESP32 del carro (VIN) y el HC-SR04; del 3,3 V del ESP32 salen los demás sensores."),
 }
 
-# Panel de luz (auditoria 2026-10-25, maqueta_impresa/esfuerzos.md): 2 tiras 2835 de 20 LED a ~20 mA son 0,40 A
+# Panel de luz (auditoria 2026-10-25, maqueta_impresa/informes/esfuerzos.md): 2 tiras 2835 de 20 LED a ~20 mA son 0,40 A
 # por tira a 5 V, 4 W las dos, y el marco de PLA de 1,6 mm de la caja de luz llegaria a ~65 °C (Tg del PLA
 # 55-60 °C). Por eso el +5 V del panel pasa por UNA resistencia en serie, soldada en linea del lado de la caja
 # (lejos del PLA), que deja las tiras en <= 1,5 W (~40 °C). Equivale a 6,8 Ω por tira (las dos en paralelo).

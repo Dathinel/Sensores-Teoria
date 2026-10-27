@@ -6,7 +6,7 @@ cama), lanza un rayo hacia abajo desde su centro:
   - si toca la pieza -> PUENTE (techo de un agujero o una ranura): sale si es corto (PUENTE_MAX mm).
 Las zonas angostas (lado corto < ZONA_MAX) se ignoran: son techos de agujeros o pernos acostados.
 
-Uso: python revisar_voladizos.py [carpeta]   (por defecto stl_sin_membrana; sale 1 si alguna pieza falla)
+Uso: python revisar_voladizos.py [carpeta]   (dentro de salida/, por defecto stl_sin_membrana; sale 1 si alguna pieza falla)
 """
 import sys
 from pathlib import Path
@@ -113,7 +113,7 @@ def agrupar(idx, centro, tri):
 
 
 def main():
-    carpeta = ex.AQUI / (sys.argv[1] if len(sys.argv) > 1 else "stl_sin_membrana")
+    carpeta = ex.SALIDA / (sys.argv[1] if len(sys.argv) > 1 else "stl_sin_membrana")
     malas = []
     for ruta in sorted(carpeta.glob("*.stl")):
         r = revisar(ruta)

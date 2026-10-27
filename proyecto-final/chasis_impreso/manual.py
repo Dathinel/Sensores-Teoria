@@ -6,8 +6,9 @@ sim/conexiones.py (de ahi sale tambien firmware/pines.py: el manual y el firmwar
 comprobar() revisa que cada componente, cable, remache y compra del carro salga en algun paso.
 Los renders salen de manual.scad.
 
-Uso: python manual.py   -> manual_armado.pdf (renders en img/manual/)
-Se regenera solo desde el modelo: si cambia una pieza, se corre otra vez (despues de guia_corte.py).
+Uso: python manual.py   -> salida/manual_armado.pdf (renders en img/manual/)
+Se regenera solo desde el modelo: si cambia una pieza, se corre otra vez (despues de exportar.py, que deja
+salida/piezas.json y los STL del ensamble que usan materiales.py y diagramas.py).
 Los datos de PIEZAS_INFO tambien los usa modelo_3d.py (visor 3D).
 """
 import subprocess
@@ -283,7 +284,7 @@ def main():
     nota = ParagraphStyle("n", parent=cuerpo, fontSize=10, textColor=colors.HexColor("#555555"))
     lleva = ParagraphStyle("l", parent=cuerpo, backColor=colors.HexColor("#fff1e6"), borderPadding=6, spaceBefore=8)
     ancho = landscape(A4)[0] - 30 * mm
-    doc = SimpleDocTemplate(str(AQUI / "manual_armado.pdf"), pagesize=landscape(A4), leftMargin=15 * mm,
+    doc = SimpleDocTemplate(str(ex.SALIDA / "manual_armado.pdf"), pagesize=landscape(A4), leftMargin=15 * mm,
                             rightMargin=15 * mm, topMargin=12 * mm, bottomMargin=12 * mm,
                             title="Manual de armado del carro", author="Proyecto final, grupo 7")
     nombre_tanda = {t: ex.NOMBRE_TANDA[t].split("_", 1)[1].replace("_", " ") for t in ex.NOMBRE_TANDA}
@@ -319,6 +320,7 @@ def main():
     for tanda in ORDEN_TANDAS:
         piezas = [n for n in ex.PIEZAS if ex.PIEZAS[n][1] == tanda and n in PIEZAS_INFO]
         h.append(Paragraph(f"Tanda {tanda}: {nombre_tanda[tanda]}", h0))
+        # ruta relativa al PDF, que queda en salida/ junto a los 3MF
         h.append(Paragraph(f"Archivo: 3mf_sin_membrana/{ex.NOMBRE_TANDA[tanda]}.3mf. "
                            "Abajo, dónde va cada pieza de esta tanda en el carro.", nota))
         if tanda == 5:
@@ -424,7 +426,7 @@ def main():
                     "Enciende con el interruptor: el LED de la GVS prende y los motores no deben moverse solos.")]
                 h.append(PageBreak())
     doc.build(h[:-1])
-    print("manual:", AQUI / "manual_armado.pdf")
+    print("manual:", ex.SALIDA / "manual_armado.pdf")
 
 
 if __name__ == "__main__":

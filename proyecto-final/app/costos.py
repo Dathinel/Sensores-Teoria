@@ -6,7 +6,7 @@ asistente (lee docs/costos.md y responde "cuánto cuesta" con el intérprete loc
 
 La estructura 3D (usuario, 2026-09-28: "costos en estructura 3D completos, en tablas y todo") sale
 de `estructura_3d` en precios.yaml. Desde el 2026-10-24 (ahorros aprobados) la estructura de la
-planta es la MAQUETA IMPRESA (maqueta_impresa/piezas.json: gramos y minutos de cada pieza, medidos
+planta es la MAQUETA IMPRESA (maqueta_impresa/salida/piezas.json: gramos y minutos de cada pieza, medidos
 por su exportador): ya no hay perfil 2020, escuadras, pies ni MDF. Las piezas impresas sueltas que
 quedan en el YAML son las del carro y de la caja de control.
 """
@@ -86,7 +86,7 @@ def piezas_impresas(datos: dict | None = None) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------------------------
-# Maqueta impresa (maqueta_impresa/piezas.json)
+# Maqueta impresa (maqueta_impresa/salida/piezas.json)
 # ---------------------------------------------------------------------------------------------
 
 def maqueta(datos: dict | None = None) -> list[dict]:

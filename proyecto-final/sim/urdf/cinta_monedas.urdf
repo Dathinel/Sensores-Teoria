@@ -31,7 +31,7 @@
     <!-- Placa de la bancada: de x=-0.12 a x=0.08 (200 mm): la banda arranca UNA casilla antes de
          E1, como en el visor (revision 2026-09-26: el rodillo de cola a 2 cm de E1 no dejaba
          lugar al capacitivo debajo). Corregido aqui el 2026-09-28 (fisica vs 3D): antes 160 mm. -->
-    <!-- Maqueta impresa (2026-10-25, maqueta_impresa/cinta_monedas.scad, mon_bancada): bancada de PLA
+    <!-- Maqueta impresa (2026-10-25, maqueta_impresa/scad/cinta_monedas.scad, mon_bancada): bancada de PLA
          de x -97 a 73,5 mm del mundo (170,5 mm) ENTRE los rieles (y +-32,3: 64,6 de ancho), piel de
          2 mm y nervios de 4 debajo (z 444-450); sus pestanas cuelgan por dentro de los rieles hasta
          z 432 (no se modelan: no tocan nada de la simulacion). Antes 96,6 de ancho, con las pestanas
@@ -48,7 +48,7 @@
       <origin xyz="-0.02175 0 0.017" rpy="0 0 0"/>
     </collision>
 
-    <!-- Estructura impresa (maqueta_impresa/estructura_resumen.md): la mesa va a 43 cm del piso
+    <!-- Estructura impresa (maqueta_impresa/informes/estructura_resumen.md): la mesa va a 43 cm del piso
          (sim/mundo.py, ALTURA_MESA_MONEDAS) sobre dos rieles de tubo 16 x 16 (eje en y +-40,5,
          z 440, de x -170 a 106) y tres patas de tubo 16 x 16 hasta los nodos T1, T2 (x -170) y
          T3 (x 30, lado +y); el extremo -y de la descarga apoya en la viga del portico con dos

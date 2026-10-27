@@ -9,8 +9,11 @@ no pasaban y 2 de los rodillos no agarraban nada porque su agarre se sacó de f�
 
 ## Archivos
 
+Las fuentes OpenSCAD están en `scad/` (se incluyen entre sí por nombre: van siempre juntas); lo generado, en
+`informes/` y `salida/` (ver la tabla "Carpetas" del [README](README.md)).
+
 - `comun.scad`: marco, tolerancias, `remache(agarre)`, `en_marco(p0, p1, arriba)`, tubo y cajeras. **No se edita.**
-- `estructura.py` → `estructura_gen.scad` + `estructura_resumen.md`: tubos 16×16, nodos, empalmes y tacos.
+- `estructura.py` → `scad/estructura_gen.scad` + `informes/estructura_resumen.md`: tubos 16×16, nodos, empalmes y tacos.
   **No se edita** (si un subsistema necesita un tubo o un nodo nuevo, se pide en el informe).
 - `maqueta.scad`: junta todo. **No se edita.**
 - Un `.scad` por subsistema; cada agente edita **solo el suyo**:
@@ -61,7 +64,7 @@ ubicarse, y `remache(agarre)`, `en_marco`, `tol`, `rem_agujero`, `rem_cabeza`, `
   hacer agujeros a mano (y no hay que hacerlos, para que no queden corridos).
 - Remachar a un tubo de la estructura: atraviesa la pieza y una pared del tubo (1,6): agarre = e + 1,6.
   Lejos (≥ 5 mm) de las bocas de los nodos, de los empalmes y de los remaches de la estructura
-  (`estructura_resumen.md`, `REM_ESTRUCTURA`). Mínimo 2 remaches por pieza que carga algo.
+  (`informes/estructura_resumen.md`, `REM_ESTRUCTURA`). Mínimo 2 remaches por pieza que carga algo.
 - Remache vs. encaje: también valen pernos a presión, colas de milano y clips impresos, siempre que
   `revisar.py` los pueda comprobar (si son encajes, que no choquen y que la holgura sea `tol`).
 
@@ -121,7 +124,7 @@ Revisa los remaches del subsistema (agarre medido por pata, hueco para la uña, 
 contra remache), los choques de sus piezas contra TODO (estructura, otros subsistemas, lo comprado), lo que se mueve
 (barridos, recorrido completo, fases y contactos), sin soportes, que quepan y la primera capa. Al final, una corrida
 completa (`python revisar.py`, sin `--sub`) con TODO OK: sin eso `exportar.py` no exporta.
-Renderizar también una vista para mirar (`openscad.com -D 'modo="ensamble"' -o vista.png --camera=...`).
+Renderizar también una vista para mirar (`openscad.com -D 'modo="ensamble"' -o vista.png --camera=... scad/maqueta.scad`).
 
 OpenSCAD: `D:\cosas uni\Micros\instalados\openscad\openscad.com` (2026, backend Manifold).
 Python: el del sistema (`python`), con numpy.
@@ -148,7 +151,7 @@ primera capa NO es opción (obliga a recortar). Regla:
 - Una **ranura de aire o una tira de material de menos de 1,2 mm** en la cara de apoyo es tan mala como un agujero
   chico (sus puntas son igual de cerradas), y una ranura cerrada se mide por 4 A / P (una de 4,4 × 16 es un agujero
   de 7,2).
-- Se mide con `python primera_capa.py stl/<pieza>.stl` (o un STL en orientación de cama): "islas" tiene que ser 1, y
+- Se mide con `python primera_capa.py salida/stl/<pieza>.stl` (o un STL en orientación de cama): "islas" tiene que ser 1, y
   "chicos" (agujeros < 8 mm) más "angostas" (ranuras y tiras < 1,2 mm), 0 o casi: revisar.py acepta hasta 2 entre
   los dos.
 - **La base**: una pieza de pie se tambalea con la boquilla y se despega. Esbeltez = alto / (base mínima de la

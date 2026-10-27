@@ -35,7 +35,7 @@ COLORES = {"est_tubos": "#8a919b", "est_nodos": "#5f6672", "est_uniones": "#6f77
            "mon": "#3d7cc9", "vas": "#d39236", "tap": "#8a63c9", "can": "#c4553f"}
 COLOR_PIEZA = {"vas_panel_a": "#f4f6f8", "vas_panel_b": "#f4f6f8"}   # caja de luz en PLA blanco (difusor)
 COLOR_REMACHE = "#d1001f"
-REM_SUB = {"estructura": "REM_ESTRUCTURA", "alm": "REM_ALM", "mon": "REM_MON", "vas": "REM_VAS", "tap": "REM_TAP", "can": "REM_CAN"}
+REM_SUB = {"estructura": "REM_ESTRUCTURA"} | {s: f"REM_{s.upper()}" for s in R.SUBS}   # en este orden van los nodos del GLB
 
 # Medidas funcionales que se leen de los .scad (echo). Expresiones de OpenSCAD.
 ECO = {
@@ -63,7 +63,7 @@ def leer_eco():
     """Valores de ECO evaluados por OpenSCAD con todo maqueta.scad incluido (nada se copia a mano)."""
     with tempfile.TemporaryDirectory(dir=R.CACHE) as t:       # en C: OpenSCAD daba avisos falsos (como revisar.scad)
         scad, eco = Path(t) / "eco.scad", Path(t) / "eco.echo"
-        scad.write_text(f'include <{(AQUI / "maqueta.scad").as_posix()}>\n'
+        scad.write_text(f'include <{R.SCAD.as_posix()}>\n'
                         + "".join(f"echo({k} = {v});\n" for k, v in ECO.items()))
         r = subprocess.run([str(R.OPENSCAD), "-D", 'modo="nada"', "-o", str(eco), str(scad)],
                            capture_output=True, text=True)
@@ -83,7 +83,7 @@ def mm_a_m(p):
 def stl_remaches(sub, lista, tmp):
     """STL con los remaches de un subsistema en su lugar (remache_en de comun.scad sobre su lista REM_*)."""
     scad, stl = Path(tmp) / f"rem_{sub}.scad", Path(tmp) / f"rem_{sub}.stl"
-    scad.write_text(f'include <{(AQUI / "maqueta.scad").as_posix()}>\nmodo = "nada";\nfor (r = {lista}) remache_en(r);\n')
+    scad.write_text(f'include <{R.SCAD.as_posix()}>\nmodo = "nada";\nfor (r = {lista}) remache_en(r);\n')
     r = subprocess.run([str(R.OPENSCAD), "-o", str(stl), str(scad)], capture_output=True, text=True)
     if not stl.exists():
         raise SystemExit(f"OpenSCAD fallo con los remaches de {sub}:\n" + (r.stdout + r.stderr)[-2000:])
@@ -133,7 +133,7 @@ def moviles(F, piezas):
 
 def grupo_de(n):
     pre = n.split("_", 1)[0]
-    if pre in ("alm", "mon", "vas", "tap", "can"):
+    if pre in R.SUBS:
         return pre
     return {"t": "est_tubos", "e": "est_uniones", "taco": "est_uniones"}.get(pre, "est_nodos")
 

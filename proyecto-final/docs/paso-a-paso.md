@@ -201,7 +201,7 @@ Se repite la verificación EN ESE INSTANTE con la cámara de vasos (no se confí
 
 **Revisión:** ✅ aprobado
 
-Con la cinta quieta, un servo MG996R gira una leva excéntrica de 0 a 180 grados y la devuelve: el pistón baja 14 mm (2 × 7 mm de excentricidad) y asienta la tapa a presión. No hay resorte limitador: la fuerza la da el apriete de 0,5 mm al final de la carrera (más los suplementos impresos que se pegan bajo el plato) contra la rigidez de la estructura (maqueta_impresa/tapas_prensa_empujador.scad). Antes de prensar, la cámara de vasos (que también ve esta casilla) revisa que el vaso siga ahí, que sea el mismo y que tenga tapa.
+Con la cinta quieta, un servo MG996R gira una leva excéntrica de 0 a 180 grados y la devuelve: el pistón baja 14 mm (2 × 7 mm de excentricidad) y asienta la tapa a presión. No hay resorte limitador: la fuerza la da el apriete de 0,5 mm al final de la carrera (más los suplementos impresos que se pegan bajo el plato) contra la rigidez de la estructura (maqueta_impresa/scad/tapas_prensa_empujador.scad). Antes de prensar, la cámara de vasos (que también ve esta casilla) revisa que el vaso siga ahí, que sea el mismo y que tenga tapa.
 
 - **Entra:** Estado del vaso (tapada) + lo que ve la cámara en la casilla de prensa.
 - **Decide:** Tapado y la cámara lo confirma → prensar. Retirado, cambiado o sin tapa → no se prensa, el vaso queda inválido. Vacío → no se prensa (se desecha).

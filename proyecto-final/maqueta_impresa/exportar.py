@@ -12,7 +12,7 @@ del sistema, y la sincronizacion con la nube borro los perfiles hechos a mano). 
 
 Uso: python exportar.py   (correr antes python revisar.py completo: si su ultima corrida no dio TODO OK con los .scad
                            de ahora, no se exporta; revisar.py deja el sello en _cache/revision_ok.huella)
-Salida: stl/<pieza>.stl, 3mf/<tanda>.3mf, piezas.json y material.md
+Salida: salida/stl/<pieza>.stl, 3mf/<tanda>.3mf, salida/piezas.json e informes/material.md
 """
 import json
 import math
@@ -28,23 +28,25 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
+import yaml
 
 import primera_capa as PC
 import revisar as R
 from revisar import ex_carro
 
 AQUI = R.AQUI
-D_STL, D_3MF = AQUI / "stl", AQUI / "3mf"
+D_STL, D_3MF = R.D_SALIDA / "stl", AQUI / "3mf"
 CAMA = ex_carro.CAMA
 MARGEN = ex_carro.MARGEN
 PLA = ex_carro.PLA_G_CM3
 CAUDAL = ex_carro.CAUDAL_MM3_S
 S_CAPA = ex_carro.S_POR_CAPA
-PRECIO_KG = 93900      # COP, config/precios.yaml (estructura_3d.impresion.precio_kg)
+# COP por kg, el mismo de docs/costos.md (app/costos.py): copiado a mano se desfasaba sin aviso
+PRECIO_KG = yaml.safe_load((AQUI.parent / "config" / "precios.yaml").read_text(encoding="utf-8"))[
+    "estructura_3d"]["impresion"]["precio_kg"]
 PERFIL = AQUI / "perfil_creality.json"   # project_settings de Creality Print 7.3 (sin la MAC de la impresora)
 VERSION_CP = "Creality_Print V7.3.0.6157 Release"
-SUBSISTEMAS = {"alm": "Almacén de monedas", "mon": "Cinta de monedas", "vas": "Cinta de vasos",
-               "tap": "Tapas, prensa y empujador", "can": "Canaleta y muelle", "rem": "Remaches"}
+SUBSISTEMAS = {s: nombre for s, (_, nombre) in R.TABLA_SUBSISTEMAS.items()} | {"rem": "Remaches"}
 
 
 def subsistema(n):
@@ -89,7 +91,7 @@ def remaches_stl(rem):
         nombre = f"rem_{str(a).replace('.', '_')}"
         with tempfile.TemporaryDirectory() as t:
             s, o = Path(t) / "r.scad", Path(t) / "r.stl"
-            s.write_text(f'include <{(AQUI / "comun.scad").as_posix()}>\nrotate([90, 0, 0]) remache({a});\n')
+            s.write_text(f'include <{(R.D_SCAD / "comun.scad").as_posix()}>\nrotate([90, 0, 0]) remache({a});\n')
             subprocess.run([str(R.OPENSCAD), "-o", str(o), str(s)], capture_output=True)
             out[nombre] = (cama(ex_carro.leer_stl(o)), n + max(2, math.ceil(n * 0.1)), a, n)
     return out
@@ -189,7 +191,7 @@ def main():
         raise SystemExit("NO SE EXPORTA: la ultima corrida completa de revisar.py no dio TODO OK con los .scad de ahora "
                          "(o un .scad cambio despues). Correr python revisar.py (sin --sub) hasta TODO OK.")
     piezas, rem, _ = R.listas()
-    D_STL.mkdir(exist_ok=True)
+    D_STL.mkdir(parents=True, exist_ok=True)
     D_3MF.mkdir(exist_ok=True)
     guardar_proyectos_del_usuario()
     for f in list(D_STL.glob("*.stl")) + list(D_3MF.glob("*.3mf")):
@@ -248,7 +250,7 @@ def main():
                     fila["tandas"].append(nombre)
     total_g = sum(f["gramos"] * f["cantidad"] for f in filas)
     total_h = sum(f["minutos"] * f["cantidad"] for f in filas) / 60
-    (AQUI / "piezas.json").write_text(json.dumps(dict(piezas=filas, tandas=tandas, total_gramos=round(total_g),
+    (R.D_SALIDA / "piezas.json").write_text(json.dumps(dict(piezas=filas, tandas=tandas, total_gramos=round(total_g),
                                                       total_horas=round(total_h, 1)), indent=1, ensure_ascii=False), encoding="utf-8")
     # material.md
     L = ["# Material de la maqueta impresa (GENERADO por exportar.py)", "",
@@ -281,10 +283,10 @@ def main():
     L += ["", "## Piezas", "", "| Pieza | Medidas en la cama (mm) | Gramos | Minutos |", "|---|---|---:|---:|"]
     L += [f"| {f['pieza']} | {' × '.join(f'{m:g}' for m in f['medidas'])} | {f['gramos']} | {f['minutos']} |"
           for f in sorted(filas, key=lambda f: f["pieza"]) if f["grupo"] != "rem"]
-    (AQUI / "material.md").write_text("\n".join(L) + "\n", encoding="utf-8")
+    (R.D_INFORMES / "material.md").write_text("\n".join(L) + "\n", encoding="utf-8")
     print(f"{len(filas)} STL, {len(tandas)} tandas, {total_g / 1000:.2f} kg, {total_h:.0f} h")
     if R.huella() != huella0:
-        raise SystemExit("MAL: un .scad cambio mientras se exportaba: stl/ y 3mf/ pueden mezclar dos versiones. Revisar y exportar otra vez.")
+        raise SystemExit("MAL: un .scad cambio mientras se exportaba: salida/stl/ y 3mf/ pueden mezclar dos versiones. Revisar y exportar otra vez.")
 
 
 if __name__ == "__main__":

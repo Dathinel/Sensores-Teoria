@@ -5,7 +5,8 @@ Uso (Python 3.14 global, solo numpy):
     python exportar.py              # todo
     python exportar.py --sin-choques
     python exportar.py --solo prueba_tolerancias
-Cambiar medidas: en chasis.scad (o -D) y volver a correr. Salida en stl/, 3mf/ y piezas.md.
+Cambiar medidas: en chasis.scad (o -D) y volver a correr. Todo sale en salida/: stl_con_membrana/,
+stl_sin_membrana/ (con _ensamble/, ignorado por git), 3mf_con_membrana/, 3mf_sin_membrana/ y piezas.json.
 """
 import argparse
 import json
@@ -20,6 +21,7 @@ from pathlib import Path
 import numpy as np
 
 AQUI = Path(__file__).resolve().parent
+SALIDA = AQUI / "salida"     # lo generado; en AQUI quedan las fuentes y los scripts
 SCAD = AQUI / "chasis.scad"
 OPENSCAD = Path(r"D:\cosas uni\Micros\instalados\openscad\openscad.com")
 CAMA = (260.0, 260.0, 300.0)
@@ -197,8 +199,8 @@ def main():
     args = ap.parse_args()
     # Dos versiones (usuario, 2026-10-21): con la membrana de la primera capa (sin saltos, hay que abrir los
     # agujeros despues: guia_corte.py) y sin ella (los agujeros salen abiertos, la primera capa tiene saltos).
-    d_stl, d_3mf = AQUI / "stl_con_membrana", AQUI / "3mf_con_membrana"
-    d_stl_sin, d_3mf_sin = AQUI / "stl_sin_membrana", AQUI / "3mf_sin_membrana"
+    d_stl, d_3mf = SALIDA / "stl_con_membrana", SALIDA / "3mf_con_membrana"
+    d_stl_sin, d_3mf_sin = SALIDA / "stl_sin_membrana", SALIDA / "3mf_sin_membrana"
     d_ens = d_stl_sin / "_ensamble"
     for d in (d_stl, d_3mf, d_stl_sin, d_3mf_sin, d_ens):
         d.mkdir(parents=True, exist_ok=True)
@@ -299,7 +301,7 @@ def main():
             hallados = choques(d_ens, [n for n in nombres if not n.startswith(("prueba", "remache", "pasador"))])
             for a, b, v in hallados:
                 avisos.append(f"choque {a} <-> {b}: {v:.1f} mm3")
-    (AQUI / "piezas.json").write_text(json.dumps(dict(piezas=filas, avisos=avisos), indent=1, ensure_ascii=False), encoding="utf-8")
+    (SALIDA / "piezas.json").write_text(json.dumps(dict(piezas=filas, avisos=avisos), indent=1, ensure_ascii=False), encoding="utf-8")
     tot_g = sum(f["gramos"] * f["cantidad"] for f in filas if f["pieza"] != "prueba_tolerancias")
     tot_min = sum(f["minutos"] * f["cantidad"] for f in filas if f["pieza"] != "prueba_tolerancias")
     for f in filas:

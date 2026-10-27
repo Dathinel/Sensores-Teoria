@@ -85,7 +85,7 @@ def test_cada_pieza_impresa_cuenta_una_sola_vez_en_el_total():
 
 def test_maqueta_impresa_desde_su_exportador():
     """La estructura de la planta es la maqueta impresa (2026-10-24): sus gramos y horas son los de
-    maqueta_impresa/piezas.json y el costo es gramos x PLA + energia, con el desperdicio."""
+    maqueta_impresa/salida/piezas.json y el costo es gramos x PLA + energia, con el desperdicio."""
     import json
 
     datos = costos.cargar()

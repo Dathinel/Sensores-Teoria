@@ -18,7 +18,7 @@ estructura (antes eran mesas sueltas sobre el MDF; ya no hay tablero). Las posic
 sim/mundo.py y del visor; lo funcional (alturas de bandas, carrusel, canaleta) no se mueve, lo de soporte si se
 movio para que entre.
 
-Uso: python estructura.py -> estructura_gen.scad (lo incluye maqueta.scad) y un resumen con largos,
+Uso: python estructura.py -> scad/estructura_gen.scad (lo incluye maqueta.scad) e informes/estructura_resumen.md con largos,
 masa estimada y las comprobaciones (espacio entre nodos, zonas libres, flechas por carga).
 """
 import math
@@ -27,6 +27,7 @@ from pathlib import Path
 import numpy as np
 
 AQUI = Path(__file__).resolve().parent
+D_SCAD, D_INFORMES = AQUI / "scad", AQUI / "informes"   # las de revisar.py (este no lo importa)
 
 # ----------------------------------------------------------------- seccion (igual que comun.scad)
 LADO = 16.0
@@ -362,7 +363,7 @@ def escribir(nodos, tubos, empalmes, tacos, rem):
     lineas.append("REM_ESTRUCTURA = [")
     lineas += [f'  ["{n}", {a:.2f}, {f(c)}, {f(e)}],' for n, a, c, e in rem]
     lineas.append("];")
-    (AQUI / "estructura_gen.scad").write_text("\n".join(lineas) + "\n", encoding="utf-8")
+    (D_SCAD / "estructura_gen.scad").write_text("\n".join(lineas) + "\n", encoding="utf-8")
 
 
 def resumen(nodos, tubos, empalmes, tacos):
@@ -387,7 +388,7 @@ def resumen(nodos, tubos, empalmes, tacos):
           "| Empalme | centro | dirección |", "|---|---|---|"]
     L += [f"| {n} | {f(c)} | {f(d)} |" for n, c, d, _ in empalmes]
     L += ["", "## Tacos entre riel -y de monedas y viga", "", ", ".join(f"{n} en x = {x:g} (x ± 15)" for n, x in tacos), ""]
-    (AQUI / "estructura_resumen.md").write_text("\n".join(L), encoding="utf-8")
+    (D_INFORMES / "estructura_resumen.md").write_text("\n".join(L), encoding="utf-8")
 
 
 def main():

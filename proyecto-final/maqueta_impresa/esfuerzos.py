@@ -23,7 +23,7 @@ PLA impreso (valores publicados para PLA FDM, con 4 perimetros, a 20-25 C):
 Admisibles usados: corta duracion 10 MPa (SF 3 sobre la rotura entre capas); sostenida 5 MPa; la una de un remache
 trabaja entre capas: 0,6 de eso; temperatura de cualquier PLA cargado <= 45 C.
 
-Uso: python esfuerzos.py  -> esfuerzos.md y sale con 1 si algo no cumple. Necesita _cache/ens (revisar.py) y
+Uso: python esfuerzos.py  -> informes/esfuerzos.md y sale con 1 si algo no cumple. Necesita _cache/ens al dia (revisar.py) y
 ../config/masas.yaml.
 """
 import math
@@ -34,6 +34,7 @@ import numpy as np
 import estructura as E
 
 AQUI = Path(__file__).resolve().parent
+D_INFORMES = AQUI / "informes"           # la de revisar.py (revisar se importa recien al leer una malla)
 CONFIG = AQUI.parent / "config"
 G = 9.81e-3                     # N por gramo
 E_PLA = 3500.0                  # MPa
@@ -72,7 +73,9 @@ def fila(que, carga, esfuerzo, adm, nota, largo_="-", flecha=0.0, f_adm=math.inf
 def malla(pieza):
     import revisar as R      # solo para leer el STL del ensamble
     ruta = R.CACHE / "ens" / f"{pieza}.stl"
-    assert ruta.exists(), f"falta {ruta}: correr revisar.py antes"
+    # como auditar.py: con un STL que falta o que se dibujo con otros .scad las secciones serian de otra geometria
+    if R.viejos([ruta]):
+        raise SystemExit(f"{ruta} falta o se dibujo con otros .scad: correr antes python revisar.py")
     return R.ex_carro.leer_stl(ruta)
 
 
@@ -584,7 +587,7 @@ def main():
           "- Los valores del PLA son los publicados para piezas impresas con 4 perímetros a 20-25 °C; el filamento húmedo o "
           "las capas mal pegadas bajan la resistencia entre capas (por eso el factor 3). El arranque real de la uña no está medido.",
           "- Las temperaturas son estimadas con resistencias térmicas típicas; hay que MEDIR la carcasa del NEMA 17 y el panel."]
-    (AQUI / "esfuerzos.md").write_text("\n".join(L) + "\n", encoding="utf-8")
+    (D_INFORMES / "esfuerzos.md").write_text("\n".join(L) + "\n", encoding="utf-8")
     for f in filas:
         print(f"{'ok ' if f['ok'] else 'MAL'} {f['que'][:60]:60s} {f['esfuerzo']:6.2f} / {f['adm']:.1f} MPa  flecha {f['flecha']:.2f} mm")
     for t in termicas:

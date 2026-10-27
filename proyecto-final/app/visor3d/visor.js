@@ -73,7 +73,7 @@ let G = null;          // geometria
 // escuadras, pies, placas de aluminio, acrilico, soportes) se marca con reemplazar() y se saca al
 // terminar de construir (montarMaqueta). Si no carga, queda el modelo de antes, igual que siempre.
 let MAQ = null;
-// Carro impreso (chasis_impreso/carro_armado.glb, usuario 2026-10-24: "igual al impreso irl"): las
+// Carro impreso (carro_armado.glb, de chasis_impreso/modelo_3d.py; usuario 2026-10-24: "igual al impreso irl"): las
 // piezas de PLA del carro en su lugar; construirCarro las usa en vez de las dibujadas a mano.
 let CARRO_IMP = null;
 const REMACHES = [];            // mallas de remaches (maqueta y carro): la casilla "Remaches" las muestra u oculta
@@ -2487,7 +2487,7 @@ function construirCarro() {
   const zArriba = D.zBaseArriba;
   const xCola = -L / 2;               // extremo trasero: ahi empieza la cuna
   const mallas = (g) => { const ms = []; g.traverse((o) => { if (o.isMesh) ms.push(o); }); return ms; };
-  // ---- Carro impreso (chasis_impreso/carro_armado.glb; usuario, 2026-10-24: "igual al impreso irl").
+  // ---- Carro impreso (carro_armado.glb, de chasis_impreso/modelo_3d.py; usuario, 2026-10-24: "igual al impreso irl").
   // Las 20 piezas de PLA y lo comprado que el visor no detalla (rueda loca, rodamientos 623, espumas) y los
   // remaches vienen del GLB ya en el marco del carro; lo que se anima o lleva pines (ruedas, motores,
   // placas, sensores) lo sigue dibujando el visor, puesto donde lo pone el chasis impreso (F, cotas de

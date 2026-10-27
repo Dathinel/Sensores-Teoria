@@ -2,12 +2,12 @@
 
 Comprueba lo que fallo en alm_1: que use el proceso y el filamento "maqueta" (no los del sistema), un solo filamento,
 cama a 65, sin repaso en seco (;WIPE_START) en la primera capa, y que la capa sea la de su grupo. De paso saca del
-G-code el tiempo y los gramos que calcula el laminador (los de material.md son una estimacion de +-30 %).
+G-code el tiempo y los gramos que calcula el laminador (los de informes/material.md son una estimacion de +-30 %).
 
 El CLI corre con --datadir en _cache/cp_datadir: NO usa ni toca los perfiles del usuario. Nunca abrir
 CrealityPrint.exe sin --cli: la interfaz se sincroniza con la nube y borro los perfiles hechos a mano.
 
-Uso: python laminar.py [3mf/alm_1.3mf ...]   (sin argumentos, todas)  -> laminado.json y sale con 1 si algo falla
+Uso: python laminar.py [3mf/alm_1.3mf ...]   (sin argumentos, todas)  -> salida/laminado.json y sale con 1 si algo falla
 """
 import json
 import re
@@ -17,10 +17,11 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-AQUI = Path(__file__).resolve().parent
+import revisar as R           # antes que exportar: revisar carga el exportar.py del carro con ese mismo nombre
+import exportar as EX         # PARAM: la capa de cada grupo, la misma que lleva su 3MF
+
 EXE = Path(r"C:\Program Files\Creality\Creality Print 7.0\CrealityPrint.exe")
-DATADIR = AQUI / "_cache" / "cp_datadir"
-CAPA = {"rem": 0.12}          # capa por grupo (el resto 0,2): la misma de PARAM en exportar.py
+DATADIR = R.CACHE / "cp_datadir"
 A_LA_VEZ = 2                  # el laminador usa todos los nucleos: dos a la vez ya cargan la CPU
 
 
@@ -45,7 +46,7 @@ def revisar_gcode(nombre, gcode):
         problemas.append(f"filamento {a.get('filament_settings_id')}")
     if a.get("wipe_on_loops") != "0":
         problemas.append(f"wipe_on_loops {a.get('wipe_on_loops')}")
-    if abs(float(a.get("layer_height", 0)) - CAPA.get(grupo, 0.2)) > 1e-6:
+    if abs(float(a.get("layer_height", 0)) - EX.PARAM.get(grupo, EX.PARAM_DEF)[0]) > 1e-6:
         problemas.append(f"capa {a.get('layer_height')}")
     herramientas = set(re.findall(r"^T(\d)\s*$", gcode, flags=re.M))
     if len(herramientas) > 1:
@@ -75,13 +76,13 @@ def laminar(ruta):
 
 def main():
     assert EXE.exists(), f"no esta {EXE}"
-    rutas = [Path(a) for a in sys.argv[1:]] or sorted((AQUI / "3mf").glob("*.3mf"))
+    rutas = [Path(a) for a in sys.argv[1:]] or sorted(EX.D_3MF.glob("*.3mf"))
     with ThreadPoolExecutor(A_LA_VEZ) as ej:
         res = list(ej.map(laminar, rutas))
     for r in res:
         print(f"{'MAL ' if r['problemas'] else 'ok  '} {r['tanda']:16s} {r.get('tiempo') or '':>14s} {r.get('gramos') or 0:7.1f} g  "
               f"{'; '.join(r['problemas'])}")
-    (AQUI / "laminado.json").write_text(json.dumps(res, indent=1, ensure_ascii=False), encoding="utf-8")
+    (R.D_SALIDA / "laminado.json").write_text(json.dumps(res, indent=1, ensure_ascii=False), encoding="utf-8")
     malas = [r for r in res if r["problemas"]]
     print(f"{len(res) - len(malas)} de {len(res)} tandas bien laminadas")
     return 1 if malas else 0

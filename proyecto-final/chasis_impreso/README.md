@@ -19,6 +19,34 @@ Colores del render: chasis en naranja, soportes de motor y rodillos en amarillo,
 sensores en azul y electrónica en gris. Las piezas compradas (motores, ruedas, pack, placas, vaso) solo se
 dibujan para comparar.
 
+## Archivos y qué genera qué
+
+El carro ya está impreso y armado (2026-10-24) con lo que hay en `salida/`: no hace falta regenerar nada. Si se
+cambia una medida, este es el orden.
+
+| Qué | Archivos |
+|---|---|
+| Fuentes (se editan a mano) | [`chasis.scad`](chasis.scad) (piezas y medidas), [`manual.scad`](manual.scad) (escenas del manual y `REM_LISTA`; incluye `chasis.scad`), [`primera_capa.scad`](primera_capa.scad) (la membrana), [`visor_carro_plantilla.html`](visor_carro_plantilla.html) |
+| Scripts | `exportar.py`, `revisar_voladizos.py`, `revisar_remaches.py`, `guia_corte.py`, `materiales.py`, `diagramas.py`, `manual.py`, `modelo_3d.py` |
+| `salida/` (generado: no se edita a mano) | `stl_con_membrana/`, `stl_sin_membrana/` (con `_ensamble/`, ignorado por git), `3mf_con_membrana/`, `3mf_sin_membrana/`, `piezas.json`, `lista_materiales.md`, `manual_armado.pdf`, `visor_carro.html` |
+| `img/` | Las imágenes de este README (`ensamble_*.png`, `comparacion_visor.png`, `corte_tanda*.png`); `manual.py` pone `ensamble_iso.png` en la portada y deja sus renders en `img/manual/` (ignorado por git) |
+
+1. `python exportar.py` → `salida/stl_*/`, `salida/3mf_*/` y `salida/piezas.json`. Corre `revisar_voladizos.py`
+   en cada exportación.
+2. `python guia_corte.py` → `img/corte_tanda*.png` (la guía de corte de este README).
+3. `python materiales.py` → `salida/lista_materiales.md` (lee `salida/piezas.json`).
+4. `python manual.py` → `salida/manual_armado.pdf` (usa `materiales.py` y `diagramas.py`, que lee
+   `salida/stl_sin_membrana/_ensamble/`).
+5. `python modelo_3d.py` → `app/visor3d/carro_armado.glb` (el que dibuja el visor) y `salida/visor_carro.html`.
+
+`python revisar_voladizos.py` y `python revisar_remaches.py` también se corren solos: revisan y no escriben nada.
+
+Lo que usa de fuera de esta carpeta: `sim/conexiones.py` (el conexionado, en `diagramas.py` y `manual.py`),
+`config/precios.yaml` (precios y PLA, en `materiales.py` y `manual.py`), `docs/electrica.md` (los hilos del carro,
+en `materiales.py`) y `app/visor3d/` (donde `modelo_3d.py` deja el GLB; lo comprueba
+`tests/sim/test_carro_impreso.py`). Al revés, `maqueta_impresa/revisar.py` importa `exportar.py` como biblioteca
+(STL, 3MF, OpenSCAD, cama): sus nombres no se cambian.
+
 ## Cómo regenerar todo
 
 ```bash
@@ -30,11 +58,11 @@ pieza y un 3MF por tanda, con las piezas acomodadas en la cama.
 
 | Carpetas | Primera capa | Después de imprimir |
 |---|---|---|
-| `stl_con_membrana/`, `3mf_con_membrana/` | Un solo contorno, sin saltos (para PLA húmedo) | Hay que abrir los agujeros: ver la guía de corte |
-| `stl_sin_membrana/`, `3mf_sin_membrana/` | Con todos los agujeros y vaciados abiertos (más saltos) | No hay que cortar nada |
+| `salida/stl_con_membrana/`, `salida/3mf_con_membrana/` | Un solo contorno, sin saltos (para PLA húmedo) | Hay que abrir los agujeros: ver la guía de corte |
+| `salida/stl_sin_membrana/`, `salida/3mf_sin_membrana/` | Con todos los agujeros y vaciados abiertos (más saltos) | No hay que cortar nada |
 
 También revisa choques entre piezas y contra los componentes
-comprados, y estima masa y tiempo (lo deja en `piezas.json`). Tarda menos de un minuto. Usa el OpenSCAD portátil
+comprados, y estima masa y tiempo (lo deja en `salida/piezas.json`). Tarda menos de un minuto. Usa el OpenSCAD portátil
 de `D:\cosas uni\Micros\instalados\openscad` (versión 2026.10.02, 202 MB) y numpy del Python global.
 
 Para ver el carro completo, abre `chasis.scad` en OpenSCAD con `pieza = "ensamble"`. Para cambiar una medida,
@@ -196,7 +224,7 @@ Vienen de fichas o del visor. Mídelas con calibrador antes de imprimir las piez
 
 ## Pieza de prueba (imprimirla antes que todo)
 
-Imprime `3mf_con_membrana/tanda0_prueba.3mf` (o la versión sin membrana) (unos 12 minutos y 7 g). Trae un tramo de cola de milano macho y hembra, un
+Imprime `salida/3mf_con_membrana/tanda0_prueba.3mf` (o la versión sin membrana) (unos 12 minutos y 7 g). Trae un tramo de cola de milano macho y hembra, un
 remache de 8 mm de agarre con su agujero, un perno a presión de 4 mm con su agujero ciego y un pasador de la
 caja TT con su agujero que aprieta.
 
@@ -207,8 +235,8 @@ caja TT con su agujero que aprieta.
 | Perno a presión de 4 mm | Entra con un golpe suave (mango del destornillador) y no sale con la mano | Duro: `presion_holgura = 0.1`. Suelto: `presion_holgura = -0.1` |
 | Pasador | Entra empujando fuerte y queda firme | Duro: `pasador_aprieto = 0.1`. Suelto: `pasador_aprieto = 0.2` |
 
-Después corre otra vez `python exportar.py`. Los STL y 3MF que hay ahora se generaron con los valores por
-defecto.
+Si hay que cambiar un valor, corre otra vez `python exportar.py`. Los STL y 3MF de `salida/` se generaron con los
+valores por defecto, y con ellos se imprimió y armó el carro (2026-10-24).
 
 ## Tandas, parámetros de impresión, tiempo y gramos
 
@@ -222,6 +250,10 @@ pieza, es un voladizo que necesitaría soporte; si toca la pieza, es un puente (
 pasan todas las piezas, en las dos versiones. Antes del 21/10 no pasaban 4: el soporte del motor (por la repisa
 del encoder), la escuadra frontal (pie y escuadras en el aire al imprimirla de costado) y el soporte del TB6612
 (puente de 20 mm). Ninguna de las tres está en las tandas 1 y 2.
+
+**Agarre de los remaches, verificado:** `python revisar_remaches.py` corta las piezas armadas con un tubo alrededor
+del eje de cada remache de `REM_LISTA` (`manual.scad`) y mide el material que junta de verdad. Sale con error si
+alguno no coincide con el agarre de su medida (2026-10-24: antes el agarre salía de fórmulas, no del modelo).
 
 | Pieza | Cant. | Tanda | Medidas en la cama (mm) | Capa | Paredes | Relleno | Orientación | Esfuerzo | min c/u | g c/u |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -273,7 +305,7 @@ laminar.
 
 ## Lo que hay que comprar (además de lo impreso)
 
-La lista completa del carro (piezas impresas con gramos y tiempo, electrónica con precio, cables por calibre y esta ferretería) está en [lista_materiales.md](lista_materiales.md) y al comienzo del manual; se regenera con `python materiales.py`.
+La lista completa del carro (piezas impresas con gramos y tiempo, electrónica con precio, cables por calibre y esta ferretería) está en [`salida/lista_materiales.md`](salida/lista_materiales.md) y al comienzo del manual; se regenera con `python materiales.py`.
 
 | Ítem | Cant. | Dónde |
 |---|---|---|
@@ -294,15 +326,16 @@ Antes eran 62 tornillos con sus tuercas; ahora son 4.
 
 ## Orden de ensamble
 
-El manual ilustrado está en [`manual_armado.pdf`](manual_armado.pdf), **ordenado por tandas de impresión**
-(1, 5, 2, 3, 4: los remaches de la tanda 5 se necesitan desde el primer armado). Para cada tanda trae dónde va
-cada pieza, resaltada sobre el carro; qué abrir si se imprimió con membrana; y los pasos de armado que esa tanda
-permite. Se regenera con `python guia_corte.py` y después `python manual.py`.
+El manual ilustrado está en [`salida/manual_armado.pdf`](salida/manual_armado.pdf), **ordenado por tandas de
+impresión** (1, 5, 2, 3, 4: los remaches de la tanda 5 se necesitan desde el primer armado). Para cada tanda trae
+dónde va cada pieza, resaltada sobre el carro, y los pasos de armado que esa tanda permite; qué abrir si se
+imprimió con membrana está en la guía de corte, arriba. Se regenera con `python manual.py` (después de
+`exportar.py`).
 
-**Modelo 3D del carro armado:** [`carro_armado.glb`](carro_armado.glb) se abre con el Visor 3D de Windows,
-Blender o Creality Print (cada pieza es un objeto con su nombre). [`visor_carro.html`](visor_carro.html) lo
-muestra en el navegador: filtro por tanda, tocar una pieza para ver qué es y dónde va, despiezar y vistas
-rápidas. Se regeneran con `python modelo_3d.py`.
+**Modelo 3D del carro armado:** [`app/visor3d/carro_armado.glb`](../app/visor3d/carro_armado.glb) se abre con el
+Visor 3D de Windows, Blender o Creality Print (cada pieza es un objeto con su nombre).
+[`salida/visor_carro.html`](salida/visor_carro.html) lo muestra en el navegador: filtro por tanda, tocar una pieza
+para ver qué es y dónde va, despiezar y vistas rápidas. Se regeneran con `python modelo_3d.py`.
 
 El resumen de abajo sigue el orden del diseño, no el de las tandas:
 
@@ -339,11 +372,13 @@ Para desarmar, aprieta las patas del remache con un alicate de punta del lado de
 
 ## Qué falta y qué no está verificado
 
-- Nada de esto está impreso todavía. La pieza de prueba dice si los encajes sirven con tu Hi.
+- El carro ya está impreso y armado (2026-10-24) con los archivos de `salida/`. Si se reimprime una pieza, la de
+  prueba dice si los encajes sirven con tu Hi.
 - Lo que más se juega en las uniones a presión son los pernos partidos de la GVS y de los TCRT5000 (2,9 mm,
   impresos de pie) y los pasadores de la caja TT. Si fallan, el plan B está arriba.
-- Faltan las medidas MEDIR de la tabla de arriba, sobre todo los agujeros de la caja TT, las placas de los
-  sensores y la altura de la rueda loca.
+- Las variables MEDIR de la tabla de arriba siguen en `chasis.scad` con el valor de la ficha o del visor: antes
+  de reimprimir una pieza, mide las suyas (sobre todo los agujeros de la caja TT, las placas de los sensores y la
+  altura de la rueda loca).
 - Los tiempos y gramos no salen del laminador: lamina los 3MF en Creality Print para tener los reales.
 - La lengüeta es un trinquete simple con elástico; en el visor tenía un resorte de torsión. Hay que probarla con
   un vaso real.

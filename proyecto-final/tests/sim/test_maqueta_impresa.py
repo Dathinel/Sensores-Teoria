@@ -145,7 +145,7 @@ def lista():
         pytest.skip("sin OpenSCAD en este PC")
     exe = str(OPENSCAD if OPENSCAD.exists() else shutil.which("openscad"))
     return subprocess.run([exe, "-D", 'modo="lista"', "-o", "-", "--export-format", "echo",
-                           str(MAQUETA / "maqueta.scad")], capture_output=True, text=True).stdout
+                           str(modelo_3d.R.SCAD)], capture_output=True, text=True).stdout
 
 
 def test_el_glb_tiene_las_piezas_de_maqueta_scad(glb, lista):

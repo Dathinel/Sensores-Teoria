@@ -80,7 +80,7 @@ items:
   pc: {subsistema: Control y potencia, precio: 0, fuente: tienda, producto: "El portátil del grupo (no se compra)"}
   # ------------------------------------------------------------------ estructura
   # Desde el 2026-10-24 la estructura es la maqueta impresa (maqueta_impresa/, sin perfil 2020,
-  # escuadras, pies ni MDF): app/costos.py la cuenta desde maqueta_impresa/piezas.json (gramos x PLA
+  # escuadras, pies ni MDF): app/costos.py la cuenta desde maqueta_impresa/salida/piezas.json (gramos x PLA
   # + energia). Esta fila es la estructura (tubos, nodos, empalmes y remaches); las piezas impresas de
   # cada subsistema van a la fila "Maqueta impresa" de su subsistema.
   estructura: {subsistema: Estructura, calculado: maqueta, fuente: estimado, producto: "Maqueta impresa: tubos, nodos, empalmes y remaches de PLA"}
@@ -103,7 +103,7 @@ extras:
   # lateral -y de la de vasos (el eje motriz; antes decía 4). Precios estimados como el 623 del carro: VERIFICAR.
   rodamientos_608: {subsistema: Estructura, precio: 3000, cantidad: 8, tienda: mercadolibre, fuente: estimado, producto: "Rodamiento 608ZZ (8 x 22 x 7)"}
   rodamiento_kfl08: {subsistema: Cinta de vasos, precio: 10000, cantidad: 1, tienda: mercadolibre, fuente: estimado, producto: "Rodamiento con brida KFL08 (eje de 8 mm)"}
-  # Lo que el manual de armado (maqueta_impresa/manual_maqueta.pdf, "Lleva comprado") manda comprar y no tenia precio
+  # Lo que el manual de armado (maqueta_impresa/salida/manual_maqueta.pdf, "Lleva comprado") manda comprar y no tenia precio
   # (segunda opinion, 2026-10-25). Precios estimados: VERIFICAR.
   acoples_flexibles: {subsistema: Estructura, precio: 8000, cantidad: 2, tienda: mercadolibre, fuente: estimado, producto: "Acople flexible de aluminio de 5 a 8 mm (NEMA 17 → rodillo motriz: Ø19 x 25 en monedas, Ø19 x 20 en vasos)"}
   acople_rigido_carrusel: {subsistema: Cinta de monedas, precio: 6000, cantidad: 1, tienda: mercadolibre, fuente: estimado, producto: "Acople rígido de 5 a 8 mm Ø12 x 16 (28BYJ-48 → eje del carrusel)"}
@@ -169,7 +169,7 @@ estructura_3d:
   # paredes y relleno del laminador). Aquí solo se dice a qué subsistema (costos) y zona (peso) va cada
   # grupo; app/costos.py lee el archivo y suma gramos x precio_kg (con el desperdicio) + horas x energía.
   maqueta:
-    archivo: maqueta_impresa/piezas.json
+    archivo: maqueta_impresa/salida/piezas.json
     grupos:
       est_nodos: {nombre: "Estructura: nodos", subsistema: Estructura, zona: Estructura impresa}
       est_tubos: {nombre: "Estructura: tubos de 16 x 16", subsistema: Estructura, zona: Estructura impresa}
@@ -241,7 +241,7 @@ ahorros:
     antes: 813087
     riesgo: medio
     aplicado: true
-    detalle: "Antes: 7 barras de V-Slot (398 300), tornillería con 24 escuadras, 15 pies y tuercas en T (219 280), las piezas impresas sueltas de la planta (90 507), tubos de acrílico (45 000), tablero MDF (40 000) y el acrílico opalino del panel de luz (20 000, ahora la caja de luz impresa) = 813 087. Ahora: la maqueta impresa (los gramos y horas de maqueta_impresa/piezas.json, a precio de PLA + energía) y la tornillería que no va remachada (15 200). Lo funcional no cambia; los remaches se prueban al imprimir (maqueta_impresa/README.md)."
+    detalle: "Antes: 7 barras de V-Slot (398 300), tornillería con 24 escuadras, 15 pies y tuercas en T (219 280), las piezas impresas sueltas de la planta (90 507), tubos de acrílico (45 000), tablero MDF (40 000) y el acrílico opalino del panel de luz (20 000, ahora la caja de luz impresa) = 813 087. Ahora: la maqueta impresa (los gramos y horas de maqueta_impresa/salida/piezas.json, a precio de PLA + energía) y la tornillería que no va remachada (15 200). Lo funcional no cambia; los remaches se prueban al imprimir (maqueta_impresa/README.md)."
   - id: pca9685_directo
     titulo: "Servos directo al PWM del ESP32 (sin PCA9685)"
     ahorro: 29500

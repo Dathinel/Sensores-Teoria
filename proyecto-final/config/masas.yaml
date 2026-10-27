@@ -2,7 +2,7 @@
 #
 # Fuente única: app/masas.py suma esto y app/documentos.py genera docs/peso.md. Lo que YA está
 # contado en config/precios.yaml no se repite aquí: las piezas impresas (sus gramos salen de la
-# misma cuenta del costo), la maqueta impresa (gramos de maqueta_impresa/piezas.json, por grupo) y la
+# misma cuenta del costo), la maqueta impresa (gramos de maqueta_impresa/salida/piezas.json, por grupo) y la
 # tornillería contada (cantidad x masa de cada tipo). Desde el 2026-10-24 no hay perfil 2020, ni
 # placas de aluminio, ni acrílico en la planta, ni tablero MDF: todo eso es la maqueta impresa.
 #
@@ -58,7 +58,7 @@ componentes:
   bandeja_rechazo_vasos: {zona: Cinta de vasos, masa_g: 0, fuente: estimado, como: "impresa: va en la maqueta impresa (grupo Cinta de vasos)"}
   cinta_vasos: {zona: Cinta de vasos, masa_g: 0, fuente: estimado, como: "banda, rodillos y bastidor van desglosados en `otros`"}
   # --- estructura (el perfil 2020 se cuenta por tramo, desde precios.yaml)
-  estructura: {zona: Estructura impresa, masa_g: 0, fuente: estimado, como: "la maqueta impresa va por grupo (maqueta_impresa/piezas.json)"}
+  estructura: {zona: Estructura impresa, masa_g: 0, fuente: estimado, como: "la maqueta impresa va por grupo (maqueta_impresa/salida/piezas.json)"}
   # --- canaleta y muelle
   servo_compuerta_canaleta: {zona: Canaleta y muelle, masa_g: 9, fuente: hoja_de_datos, como: "SG90: 9 g"}
   canaleta_entrega: {zona: Canaleta y muelle, masa_g: 55, fuente: estimado, como: "2 varillas de acero Ø4 x 284 mm: π·2²·284 = 3,6 cm³ x 7,85 = 28 g c/u, + cinta de PTFE"}

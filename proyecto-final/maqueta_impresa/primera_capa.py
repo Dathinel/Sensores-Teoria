@@ -1,11 +1,11 @@
 """Primera capa de cada pieza (usuario, 2026-10-24: se levanta y se despega en los circulos chicos; la membrana NO es
-solucion). Mide la cara que apoya en la cama de cada STL de stl/: cuantas islas (contornos sueltos: cada una es un
+solucion). Mide la cara que apoya en la cama de cada STL de salida/stl/: cuantas islas (contornos sueltos: cada una es un
 viaje con retraccion), cuantos agujeros chicos (cada circulo chico es un bucle que al cerrarse con retraccion y
 limpieza arranca el material), cuantas ranuras de aire o tiras de material de menos de 1,2 mm (igual de malas), el
 agujero mas chico y el ancho minimo de material. Con eso se decide pieza por
 pieza: girarla (otra cara abajo), sacar los agujeros de esa cara o reforzar la base.
 
-Uso: python primera_capa.py [stl/...]  -> tabla ordenada de peor a mejor y primera_capa.json
+Uso: python primera_capa.py [salida/stl/...]  -> tabla ordenada de peor a mejor y salida/primera_capa.json
 """
 import json
 import re
@@ -20,7 +20,6 @@ from scipy import ndimage
 
 import revisar as R
 
-AQUI = R.AQUI
 D_CHICO = 8.0      # mm: un agujero mas chico que esto es un bucle corto (el que se levanta); diametro por area o 4 A / P
 CHICOS_MAX = 2     # revisar.py acepta hasta 2 entre agujeros chicos y angostas (un riel con remaches por las 4 caras no baja de 1 o 2)
 # Ranuras de aire y tiras de material mas angostas que ANCHO_MIN en la primera capa (2026-10-25): sus puntas son tan
@@ -197,7 +196,7 @@ def medir(ruta):
     de 2,6 mm salian OK porque solo se contaban islas y agujeros)."""
     with tempfile.TemporaryDirectory() as t:
         tmp = Path(t)
-        # la pieza se apoya en z = 0 (exportar.py lo hace al escribir stl/; un STL suelto puede venir sin apoyar)
+        # la pieza se apoya en z = 0 (exportar.py lo hace al escribir salida/stl/; un STL suelto puede venir sin apoyar)
         tri = R.ex_carro.leer_stl(ruta)
         tri = tri - np.array([0, 0, tri.reshape(-1, 3)[:, 2].min()])
         apoyada = tmp / "apoyada.stl"
@@ -254,7 +253,7 @@ def puntaje(m):
 
 
 def main():
-    rutas = [Path(a) for a in sys.argv[1:]] or sorted((AQUI / "stl").glob("*.stl"))
+    rutas = [Path(a) for a in sys.argv[1:]] or sorted((R.D_SALIDA / "stl").glob("*.stl"))
     rutas = [r for r in rutas if not r.stem.startswith("rem_")]
     with ThreadPoolExecutor(R.HILOS) as ej:
         res = dict(zip([r.stem for r in rutas], ej.map(medir, rutas)))
@@ -266,7 +265,7 @@ def main():
               f"{str(m['d_min']):>6s} {m['finos_mm2']:6.0f} {puntaje(m):7d}")
     malas = [n for n in orden if puntaje(res[n]) > 0]
     print(f"\n{len(malas)} de {len(res)} piezas con bucles chicos, ranuras o tiras angostas o islas en la primera capa")
-    (AQUI / "primera_capa.json").write_text(json.dumps({n: dict(res[n], puntaje=puntaje(res[n])) for n in orden},
+    (R.D_SALIDA / "primera_capa.json").write_text(json.dumps({n: dict(res[n], puntaje=puntaje(res[n])) for n in orden},
                                                        indent=1, ensure_ascii=False), encoding="utf-8")
 
 

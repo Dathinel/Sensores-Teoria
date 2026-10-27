@@ -6,7 +6,7 @@ y los cables hilo por hilo de lo que se monta en ese paso (sim/conexiones.py: el
 comprobar() revisa que cada pieza impresa, cada remache y cada dispositivo de la planta salga en un paso, y se niega
 a seguir si piezas.json no es de la geometria de hoy (2026-10-25: el PDF pedia remaches de agarres que ya no existian,
 el mismo error del carro). En cada paso, "Antes de imprimir, mide:" sale de las lineas // MEDIR de su .scad.
-Uso: python manual_maqueta.py   (despues de revisar.py y exportar.py) -> manual_maqueta.pdf, renders en img/manual/
+Uso: python manual_maqueta.py   (despues de revisar.py y exportar.py) -> salida/manual_maqueta.pdf, renders en img/manual/
 """
 import json
 import re
@@ -32,8 +32,7 @@ from sim import conexiones as cx   # noqa: E402
 from sim import electrica as el    # noqa: E402  (la resistencia en serie del panel de luz y lo que deja pasar)
 
 POSTES = ("t_F6-L", "t_V2-L", "t_V4-L", "t_C1-L", "t_C2-L", "t_C3-L", "t_C4-L", "t_K1-L")
-SCAD = {"alm_": "almacen.scad", "mon_": "cinta_monedas.scad", "vas_": "cinta_vasos.scad",
-        "tap_": "tapas_prensa_empujador.scad", "can_": "canaleta_muelle.scad"}
+SCAD = {f"{s}_": archivo for s, (archivo, _) in R.TABLA_SUBSISTEMAS.items()}   # prefijo de PASOS -> su .scad
 
 # (titulo, prefijo de sus piezas o None para la estructura, camara "x,y,z,rx,ry,rz,dist", que hacer, que lleva comprado,
 #  dispositivos de la planta que se montan)
@@ -266,7 +265,7 @@ def a_medir(pre):
     if pre not in SCAD:
         return []
     out = []
-    lineas = (AQUI / SCAD[pre]).read_text(encoding="utf-8").splitlines()
+    lineas = (R.D_SCAD / SCAD[pre]).read_text(encoding="utf-8").splitlines()
     for k, linea in enumerate(lineas, start=1):
         if "MEDIR" not in linea or "//" not in linea:
             continue
@@ -313,7 +312,7 @@ def render(k, piezas, pasos, rem, rpasos):
     subs = [pre[:-1] for _, pre, *_r in PASOS[:k + 1] if pre and pre != "POSTES"]
     lista = lambda l: "[" + ", ".join(f'"{x}"' for x in l) + "]"
     scad = D_IMG / f"paso_{k}.scad"
-    scad.write_text(f'include <{(AQUI / "maqueta.scad").as_posix()}>\nmodo = "nada";\n'
+    scad.write_text(f'include <{R.SCAD.as_posix()}>\nmodo = "nada";\n'
                     f'GRIS = {lista(gris)};\nNARANJA = {lista(naranja)};\nRPASO = {lista(rems)};\n'
                     'color("#c9cdd1") for (n = GRIS) pieza(n);\ncolor("#ff7a1a") for (n = NARANJA) pieza(n);\n'
                     + "".join(f"{s}_comprados();\n" for s in subs) +
@@ -331,7 +330,7 @@ def portada(png=AQUI / "img" / "maqueta_iso.png"):
     comprado), dibujado en cada corrida con los .scad de hoy (2026-10-25: era del 24 y nadie la volvia a dibujar)."""
     png.unlink(missing_ok=True)
     subprocess.run([str(R.OPENSCAD), "-o", str(png), "--render", "--imgsize=1800,1300", "--camera=150,-190,300,55,0,320,2200",
-                    "--colorscheme=Tomorrow", str(AQUI / "maqueta.scad")], capture_output=True)
+                    "--colorscheme=Tomorrow", str(R.SCAD)], capture_output=True)
     assert png.exists(), "no salio el render de la portada"
     return png
 
@@ -343,10 +342,10 @@ def main():
     if viejas:
         raise SystemExit(f"{len(viejas)} STL de _cache/ens faltan o se dibujaron con otros .scad ({viejas[:5]}...): "
                          "correr antes python revisar.py")
-    datos = json.loads((AQUI / "piezas.json").read_text(encoding="utf-8"))
+    datos = json.loads((R.D_SALIDA / "piezas.json").read_text(encoding="utf-8"))
     lam = ""      # lo que da Creality Print al laminar (laminar.py), si ya se lamino
-    if (AQUI / "laminado.json").exists():
-        L = json.loads((AQUI / "laminado.json").read_text(encoding="utf-8"))
+    if (R.D_SALIDA / "laminado.json").exists():
+        L = json.loads((R.D_SALIDA / "laminado.json").read_text(encoding="utf-8"))
         horas = sum(int(v) * {"d": 24, "h": 1, "m": 1 / 60, "s": 1 / 3600}[u] for x in L for v, u in re.findall(r"(\d+)([dhms])", x["tiempo"]))
         lam = f"; Creality Print da {sum(x['gramos'] for x in L) / 1000:.2f} kg y ≈ {horas:.0f} h al laminar"
     tanda = {f["pieza"]: ", ".join(f.get("tandas", [])) for f in datos["piezas"]}
@@ -372,7 +371,7 @@ def main():
     nota = ParagraphStyle("n", parent=cuerpo, fontSize=9.5, textColor=colors.HexColor("#555555"))
     lleva = ParagraphStyle("l", parent=cuerpo, backColor=colors.HexColor("#fff1e6"), borderPadding=6, spaceBefore=8)
     ancho = landscape(A4)[0] - 30 * mm
-    doc = SimpleDocTemplate(str(AQUI / "manual_maqueta.pdf"), pagesize=landscape(A4), leftMargin=15 * mm, rightMargin=15 * mm,
+    doc = SimpleDocTemplate(str(R.D_SALIDA / "manual_maqueta.pdf"), pagesize=landscape(A4), leftMargin=15 * mm, rightMargin=15 * mm,
                             topMargin=12 * mm, bottomMargin=12 * mm, title="Manual de armado de la maqueta impresa",
                             author="Proyecto final, grupo 7")
     estilo_tabla = lambda: TableStyle([("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#cccccc")), ("VALIGN", (0, 0), (-1, -1), "TOP"),
@@ -384,8 +383,8 @@ def main():
                    "algunos sensores, y cada paso dice cuáles).", nota),
          Image(str(AQUI / "img" / "maqueta_iso.png"), width=170 * mm, height=170 * mm * 1300 / 1800),
          Paragraph(f"<b>Material:</b> {datos['total_gramos'] / 1000:.2f} kg de PLA en {len(datos['tandas'])} tandas "
-                   f"(≈ {datos['total_horas']:.0f} h estimadas{lam}). Detalle en material.md; archivos en 3mf/ (una cama cada uno) y "
-                   "stl/ (una pieza cada uno, ya girada para imprimir).", cuerpo),
+                   f"(≈ {datos['total_horas']:.0f} h estimadas{lam}). Detalle en informes/material.md; archivos en 3mf/ (una cama cada uno) y "
+                   "salida/stl/ (una pieza cada uno, ya girada para imprimir).", cuerpo),
          Paragraph("<b>Cómo leer cada paso:</b> en naranja lo que se agrega, en gris lo que ya está, en rojo los remaches del paso "
                    "y lo comprado con su color. Todo remache es de un agarre medido en el ensamble (revisar.py): no se cambian "
                    "entre medidas. Se meten empujando hasta el clic con un punzón o una varilla de Ø5 de punta plana: en "
@@ -488,7 +487,7 @@ def main():
         "de más solo deforma el vaso. Si con los dos no asienta, no apiles más: hace falta más carrera de la leva (cambio "
         "de diseño: leva, visor y simulación juntos).")]
     doc.build(h)
-    print("manual:", AQUI / "manual_maqueta.pdf")
+    print("manual:", R.D_SALIDA / "manual_maqueta.pdf")
 
 
 if __name__ == "__main__":

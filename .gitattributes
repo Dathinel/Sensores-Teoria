@@ -29,6 +29,6 @@ proyecto-final/app/visor3d/vendor/** linguist-vendored
 *.stl binary linguist-generated
 *.3mf binary linguist-generated
 *.glb binary linguist-generated
-proyecto-final/maqueta_impresa/estructura_gen.scad linguist-generated
-proyecto-final/maqueta_impresa/piezas.json linguist-generated
-proyecto-final/chasis_impreso/piezas.json linguist-generated
+proyecto-final/maqueta_impresa/scad/estructura_gen.scad linguist-generated
+proyecto-final/maqueta_impresa/salida/piezas.json linguist-generated
+proyecto-final/chasis_impreso/salida/piezas.json linguist-generated

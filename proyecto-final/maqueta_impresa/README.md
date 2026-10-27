@@ -13,21 +13,33 @@ Lo comprado sigue siendo comprado: motores, servos, sensores, cámaras, bandas, 
 |---|---|
 | Piezas impresas | 183 (más 382 remaches de 24 medidas: 316 que van y 10 % de repuesto) |
 | PLA | **2,98 kg** estimados (Creality Print da **2,95 kg** al laminar las 26 tandas): 4 rollos de 1 kg con el 10 % de desperdicio (≈ $308.000 de filamento). Aligerada donde no carga; los refuerzos de la auditoría del 2026-10-25 (puntal de la viga, bajadas del rodillo A, labios, costillas de la prensa, tambor de una isla) suman lo que hacía falta para que todo cumpla |
-| Tiempo de impresora | **≈ 101 h** según Creality Print (laminado.json), en 26 tandas de una cama cada una |
+| Tiempo de impresora | **≈ 101 h** según Creality Print (`salida/laminado.json`), en 26 tandas de una cama cada una |
 | Uniones | 316 remaches impresos, cada uno con su agarre **medido en el ensamble, pata por pata** |
 
-El detalle por pieza y por tanda está en [material.md](material.md); el armado, paso a paso, en
-[manual_maqueta.pdf](manual_maqueta.pdf).
+El detalle por pieza y por tanda está en [informes/material.md](informes/material.md); el armado, paso a paso, en
+[salida/manual_maqueta.pdf](salida/manual_maqueta.pdf).
+
+## Carpetas
+
+| Carpeta | Qué hay | Lo escribe |
+|---|---|---|
+| (esta) | las herramientas `.py`, este README, [CONVENCIONES.md](CONVENCIONES.md), `inventario_maqueta.md` y `perfil_creality.json` (la configuración de Creality Print que va dentro de cada 3MF) | a mano |
+| `scad/` | las fuentes OpenSCAD: `comun.scad`, la estructura, un archivo por subsistema y `maqueta.scad`, que junta todo (se incluyen entre sí por nombre: van siempre juntos) | a mano, salvo `estructura_gen.scad` (`estructura.py`) |
+| `informes/` | `material.md`, `auditoria.md`, `esfuerzos.md` y `estructura_resumen.md` | `exportar.py`, `auditar.py`, `esfuerzos.py` y `estructura.py` |
+| `salida/` | `stl/` (una pieza por archivo, ya girada para imprimir), `piezas.json`, `laminado.json` y `manual_maqueta.pdf` | `exportar.py`, `laminar.py` y `manual_maqueta.py` |
+| `3mf/` | las tandas para Creality Print, una cama cada una; los proyectos guardados desde Creality Print los mueve `exportar.py` a `3mf/guardados/` (no se versiona) | `exportar.py` |
+| `img/` | la imagen de arriba y los renders del manual (`img/manual/`, no se versiona) | `manual_maqueta.py` |
+| `_cache/` | los STL que mide `revisar.py`, cada uno con la huella de los `.scad`, y el sello `revision_ok.huella` (no se versiona) | `revisar.py` |
 
 ## Cómo está hecha
 
-- **Estructura** (`estructura.py` → `estructura_gen.scad`): tubos de 16 × 16 impresos acostados (hueco con
+- **Estructura** (`estructura.py` → `scad/estructura_gen.scad`): tubos de 16 × 16 impresos acostados (hueco con
   chaflanes de 45°: sale sin soportes), nodos con cajeras donde entra el tubo entero 22 mm, empalmes para los tramos
   de más de 240 mm y tacos entre la mesa de monedas y la viga. Un piso de tubos amarra todo en una sola pieza. Nada
   pasa bajo la banda de vasos (la vuelta de abajo con sus separadores baja a z 81).
-- **Subsistemas**, un archivo cada uno: `almacen.scad`, `cinta_monedas.scad`, `cinta_vasos.scad`,
+- **Subsistemas**, un archivo cada uno en `scad/`: `almacen.scad`, `cinta_monedas.scad`, `cinta_vasos.scad`,
   `tapas_prensa_empujador.scad`, `canaleta_muelle.scad`. Las reglas comunes están en [CONVENCIONES.md](CONVENCIONES.md).
-- `maqueta.scad` junta todo, en el mismo marco de `sim/mundo.py` pero en mm.
+- `scad/maqueta.scad` junta todo, en el mismo marco de `sim/mundo.py` pero en mm.
 
 ## Cómo se revisó (la lección del carro)
 
@@ -89,20 +101,20 @@ cerrar cada círculo), z hop normal, costura al punto más cercano y la primera 
 - `laminar.py` lamina cada tanda con el CLI de Creality Print (con una carpeta de datos propia: nunca abrir
   `CrealityPrint.exe` sin `--cli`, que se sincroniza con la nube y borra los perfiles hechos a mano) y revisa el
   G-code: perfiles "maqueta", un solo filamento, cama a 65, sin repaso en seco en la primera capa y la capa de su
-  grupo. De ahí salen el tiempo y los gramos reales (`laminado.json`).
+  grupo. De ahí salen el tiempo y los gramos reales (`salida/laminado.json`).
 
 ## Cómo regenerar
 
 ```
-python estructura.py      # estructura_gen.scad y estructura_resumen.md (con sus propias comprobaciones)
+python estructura.py      # scad/estructura_gen.scad e informes/estructura_resumen.md (con sus propias comprobaciones)
 python revisar.py         # todo; con TODO OK deja el sello para exportar.py (con --sub alm solo un subsistema, sin sello)
 python probar_revisor.py  # el revisor contra errores puestos a propósito
-python exportar.py        # stl/, 3mf/ (con la configuración adentro), piezas.json y material.md; pide el sello
-python laminar.py         # lamina las tandas con el CLI de Creality Print y revisa el G-code -> laminado.json
+python exportar.py        # salida/stl/, 3mf/ (con la configuración adentro), salida/piezas.json e informes/material.md; pide el sello
+python laminar.py         # lamina las tandas con el CLI de Creality Print y revisa el G-code -> salida/laminado.json
 python modelo_3d.py       # app/visor3d/maqueta_impresa.glb (el visor)
-python esfuerzos.py       # esfuerzos.md: flexión, pandeo, remaches, cajeras y calor
-python auditar.py         # auditoria.md: TODOS los criterios por pieza (primera capa, soportes, paredes, cama)
-python manual_maqueta.py  # manual_maqueta.pdf (usa piezas.json de exportar.py) y la imagen de arriba (img/maqueta_iso.png)
+python esfuerzos.py       # informes/esfuerzos.md: flexión, pandeo, remaches, cajeras y calor
+python auditar.py         # informes/auditoria.md: TODOS los criterios por pieza (primera capa, soportes, paredes, cama)
+python manual_maqueta.py  # salida/manual_maqueta.pdf (usa salida/piezas.json de exportar.py) y la imagen de arriba (img/maqueta_iso.png)
 ```
 
 Con varios agentes o procesos a la vez, `REVISAR_HILOS=3` limita los OpenSCAD en paralelo.
@@ -130,7 +142,7 @@ Lo funcional no se movió (estaciones, alturas de bandas, carrusel, tolva, canal
 
 ## Esfuerzo, deformación y calor
 
-`esfuerzos.py` → [esfuerzos.md](esfuerzos.md): cada tubo cargado (flexión y flecha), cada columna (pandeo), cada
+`esfuerzos.py` → [informes/esfuerzos.md](informes/esfuerzos.md): cada tubo cargado (flexión y flecha), cada columna (pandeo), cada
 unión de remaches (cortante y arranque de la uña), el aplastamiento en las cajeras y cada fuente de calor que toca
 PLA, contra el PLA impreso (admisible 10 MPa en cargas cortas, 5 MPa sostenidas por fluencia, nada que cargue por
 encima de 45 °C). Todo cumple; lo más exigido son los remaches del colgante del retorno B con la banda tensa (4,0 MPa

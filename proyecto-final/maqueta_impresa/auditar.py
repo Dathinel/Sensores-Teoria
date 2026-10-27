@@ -17,7 +17,7 @@ Por cada STL en orientacion de cama (_cache/cama, lo escribe revisar.py):
 Remaches, choques, barridos y mecanismos NO se revisan aqui: los mide revisar.py (TODO OK antes de exportar). Aqui
 solo cada pieza sola, sobre los STL de _cache/cama, que tienen que estar vigentes (si no, sale sin escribir nada).
 
-Uso: python auditar.py  -> auditoria.md (tabla por pieza) y sale con 1 si alguna pieza falla en algo.
+Uso: python auditar.py  -> informes/auditoria.md (tabla por pieza) y sale con 1 si alguna pieza falla en algo.
 """
 import sys
 import tempfile
@@ -30,7 +30,6 @@ import primera_capa as PC
 import revisar as R
 from revisar import CACHE, ex_carro, volad      # volad = voladizos.py de la maqueta
 
-AQUI = R.AQUI
 PARED_MIN = 1.1            # mm: una pared de 1,2 (3 perimetros de 0,4) tiene que pasar; menos de eso no sale
 CORTE_PASO = 1.0           # mm entre cortes de las paredes finas
 HUELLA_MIN = 0.15          # area NETA de la primera capa / area del rectangulo que ocupa: menos, se despega (patas sueltas)
@@ -133,7 +132,7 @@ def main():
     for f in sorted(filas, key=lambda f: (-len(f["fallas"]), -len(f["avisos"]), f["pieza"])):
         L.append(f"| {f['pieza']} | {f['medidas']} | {f['islas']} | {f['chicos']} | {f['huella']:.0%} | {f['esbeltez']:.1f} | "
                  f"{f['voladizo']:.0f} | {f['puente']:.1f} | {f['aire']} | {f['finos']:.0f} | {'; '.join(f['fallas']) or '—'} | {'; '.join(f['avisos']) or '—'} |")
-    (AQUI / "auditoria.md").write_text("\n".join(L) + "\n", encoding="utf-8")
+    (R.D_INFORMES / "auditoria.md").write_text("\n".join(L) + "\n", encoding="utf-8")
     for f in malas:
         print(f"MAL  {f['pieza']:24s} {'; '.join(f['fallas'])}")
     for f in filas:

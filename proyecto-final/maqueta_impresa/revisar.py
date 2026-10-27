@@ -52,8 +52,19 @@ del sys.modules["exportar"]
 import voladizos as volad              # noqa: E402  (el de la maqueta; revisar_voladizos.py del carro no se toca)
 
 OPENSCAD = ex_carro.OPENSCAD
-SCAD = AQUI / "maqueta.scad"
+# Las carpetas de la maqueta, en un solo lugar: las demas herramientas las toman de aqui (estructura.py y esfuerzos.py,
+# que no importan revisar, las arman igual en una linea).
+D_SCAD = AQUI / "scad"           # fuentes OpenSCAD (estructura_gen.scad lo escribe estructura.py)
+D_SALIDA = AQUI / "salida"       # lo generado para imprimir y armar: stl/, piezas.json, laminado.json, manual_maqueta.pdf
+D_INFORMES = AQUI / "informes"   # informes .md generados: material, auditoria, esfuerzos, estructura_resumen
+SCAD = D_SCAD / "maqueta.scad"
 CACHE = AQUI / "_cache"
+# Los subsistemas: prefijo -> (su .scad, nombre). Uno nuevo se agrega aqui (y en maqueta.scad y moviles_por_defecto.scad).
+TABLA_SUBSISTEMAS = {"alm": ("almacen.scad", "Almacén de monedas"), "mon": ("cinta_monedas.scad", "Cinta de monedas"),
+                     "vas": ("cinta_vasos.scad", "Cinta de vasos"),
+                     "tap": ("tapas_prensa_empujador.scad", "Tapas, prensa y empujador"),
+                     "can": ("canaleta_muelle.scad", "Canaleta y muelle")}
+SUBS = tuple(TABLA_SUBSISTEMAS)                  # ("alm", "mon", "vas", "tap", "can")
 # cara de salida de cada pata entre agarre - TOL_MENOS y agarre + TOL_MAS: el hombro de la una esta en agarre + 0,2
 # (2026-10-25: con +-0,3 pasaba una pila que deja el hombro adentro de la pared)
 TOL_MAS, TOL_MENOS = 0.15, 0.3
@@ -64,7 +75,7 @@ UMBRAL_FIJO, UMBRAL_MOVIL = 1.0, 0.05
 AGARRE_MAX = 20.0
 CAMA_UTIL = (240.0, 240.0, 290.0)
 HILOS = int(os.environ.get("REVISAR_HILOS", "6"))   # OpenSCAD a la vez (bajarlo si hay agentes usando la CPU)
-SUBSISTEMAS = ("alm_", "mon_", "vas_", "tap_", "can_")   # prefijos de las piezas que se montan despues de la estructura
+SUBSISTEMAS = tuple(f"{s}_" for s in SUBS)   # prefijos de las piezas que se montan despues de la estructura
 
 
 # ----------------------------------------------------------------- OpenSCAD
@@ -75,8 +86,11 @@ class ErrorOpenSCAD(RuntimeError):
 def huella():
     """Huella de todos los .scad de la carpeta. maqueta.scad los incluye todos y cualquiera puede cambiar los agujeros
     de cualquier pieza (REM_TODOS y AGUJEROS_* se restan en todas): un STL de _cache vale solo con la misma huella."""
+    fuentes = sorted(D_SCAD.glob("*.scad"))
+    # con la carpeta mal puesta la huella seria la de nada, la misma siempre: un sello viejo pasaria por vigente
+    assert fuentes, f"no hay .scad en {D_SCAD}"
     h = hashlib.sha1()
-    for f in sorted(AQUI.glob("*.scad")):
+    for f in fuentes:
         h.update(f.name.encode() + b"\0" + f.read_bytes())
     return h.hexdigest()
 
@@ -154,7 +168,7 @@ def listas():
     piezas, rem, hay_comprados = leer_listas(txt)
     # un subsistema con <sub>_barrido(n) tiene que declarar al menos un movil (si no, se salto sin avisar)
     for sub in SUBS:
-        archivo = next((f for f in AQUI.glob("*.scad") if f"module {sub}_barrido(" in f.read_text(encoding="utf-8")), None)
+        archivo = next((f for f in D_SCAD.glob("*.scad") if f"module {sub}_barrido(" in f.read_text(encoding="utf-8")), None)
         if archivo and not any(n.startswith(sub) for n, _ in MOVILES):
             raise SystemExit(f"{archivo.name} define {sub}_barrido pero MOVILES_{sub.upper()} salio vacia "
                              "(escribirla como lista literal: ver CONVENCIONES.md)")
@@ -186,7 +200,6 @@ def leer_listas(txt):
 
 MOVILES = []      # [(pieza o barrido, [lo que se mueve con ella])]: lo llena listas()
 SINCRONOS = []    # [(mecanismo, pasos)]: lo llena listas()
-SUBS = ("alm", "mon", "vas", "tap", "can")
 COMPRADOS = [f"_comprados_{s}" for s in SUBS]   # lo comprado, un STL por subsistema: asi tambien se cruzan entre si
 
 

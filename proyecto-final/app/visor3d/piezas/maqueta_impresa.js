@@ -6,7 +6,7 @@
 // se mueven `movil` (que objeto del visor siguen), `pivote`, `eje` y `recorrido` (marco sim, m y grados).
 // Lector propio y minimo (sin GLTFLoader): el GLB lo escribe nuestro script con un formato fijo (una
 // primitiva por malla: POSITION float32 + indices uint16/uint32, color por material). Sirve igual para
-// chasis_impreso/carro_armado.glb (mismo formato, marco del carro).
+// carro_armado.glb (lo escribe chasis_impreso/modelo_3d.py; mismo formato, marco del carro).
 import * as THREE from 'three';
 
 const TIPOS = { 5123: Uint16Array, 5125: Uint32Array, 5126: Float32Array };

@@ -26,32 +26,32 @@ CLAUDE.md, docs/, .gitattributes del repo) solo los toca la sesión principal o 
 
 ## Tandas (cada una: cambiar → verificar → marcar [x] → commit local si el usuario lo aprueba)
 
-### A. Limpieza sin riesgo
-- [ ] Borrar lo que nadie usa (grep sin resultados): `sim/urdf/.gitkeep`, `maqueta_impresa/img/maqueta_atras.png`,
+### A. Limpieza sin riesgo — HECHA (commit local 04130e1, 950 pruebas)
+- [x] Borrar lo que nadie usa (grep sin resultados): `sim/urdf/.gitkeep`, `maqueta_impresa/img/maqueta_atras.png`,
   `chasis_impreso/img/ensamble_iso_der.png`, `chasis_impreso/img/corte/` (17 PNG que guia_corte.py escribe y nadie lee; quitar ese
   bucle), `maqueta_impresa/primera_capa.json` (viejo, 19 de 183 piezas; a .gitignore), `requirements.txt` (nadie lo instala),
   `app/visor3d/piezas/muestrario.html` (página de desarrollo sin enlaces).
-- [ ] Constantes muertas: sim/planta.py RECHAZO_FINAL, NOMBRES_/ETIQUETAS_ESTACIONES_*; sim/catalogos.py PENDIENTE_CONEXION;
+- [x] Constantes muertas: sim/planta.py RECHAZO_FINAL, NOMBRES_/ETIQUETAS_ESTACIONES_*; sim/catalogos.py PENDIENTE_CONEXION;
   control/carrusel.py LUGARES.
-- [ ] .gitignore sin líneas repetidas (proyecto, chasis, maqueta); `.gitattributes`: `*.bat text eol=crlf` (hoy solo ABRIR.bat:
+- [x] .gitignore sin líneas repetidas (proyecto, chasis, maqueta); `.gitattributes`: `*.bat text eol=crlf` (hoy solo ABRIR.bat:
   visor.bat e instalar.bat llegan con LF en un ZIP de GitHub) y `git add --renormalize`.
 - Verificar: `git status --short --ignored` igual antes y después; pytest completo.
 
-### B. maqueta_impresa/ (37 archivos sueltos de 5 clases en la raíz)
-- [ ] Primero, sin mover nada: todas las rutas en un solo lugar en revisar.py (D_SCAD, D_SALIDA, D_INFORMES) y que las demás
+### B. maqueta_impresa/ — HECHA (scad/, informes/, salida/; huella igual, revisar TODO OK)
+- [x] Primero, sin mover nada: todas las rutas en un solo lugar en revisar.py (D_SCAD, D_SALIDA, D_INFORMES) y que las demás
   herramientas las usen; assert en huella() de que encontró los .scad.
-- [ ] `scad/`: las 10 fuentes OpenSCAD (incluido estructura_gen.scad). La huella hashea nombre + contenido: _cache y el sello
+- [x] `scad/`: las 10 fuentes OpenSCAD (incluido estructura_gen.scad). La huella hashea nombre + contenido: _cache y el sello
   siguen vigentes.
-- [ ] `informes/`: material.md, auditoria.md, esfuerzos.md, estructura_resumen.md (generados).
-- [ ] `salida/`: stl/, img/, piezas.json, laminado.json, manual_maqueta.pdf (generados). `3mf/` se queda donde está.
-- [ ] Las 11 herramientas .py, README.md, CONVENCIONES.md, inventario_maqueta.md y perfil_creality.json quedan en la raíz.
+- [x] `informes/`: material.md, auditoria.md, esfuerzos.md, estructura_resumen.md (generados).
+- [x] `salida/`: stl/, piezas.json, laminado.json, manual_maqueta.pdf (generados). `3mf/` e `img/` se quedan donde están.
+- [x] Las 11 herramientas .py, README.md, CONVENCIONES.md, inventario_maqueta.md y perfil_creality.json quedan en la raíz.
 - Verificar: `python revisar.py --sin-render` (TODO OK y sello), `python probar_revisor.py`, pytest de la maqueta y de costos,
   `python -m app.documentos` + `git diff --stat docs` (sin cambios), enlaces de los .md.
 
-### C. chasis_impreso/ (solo ordenar salidas y textos; nada se regenera)
-- [ ] `salida/` con git mv: stl_*/, 3mf_*/, piezas.json, lista_materiales.md, manual_armado.pdf, visor_carro.html; borrar la copia
+### C. chasis_impreso/ — HECHA (salida/, GLB único, textos)
+- [x] `salida/` con git mv: stl_*/, 3mf_*/, piezas.json, lista_materiales.md, manual_armado.pdf, visor_carro.html; borrar la copia
   chasis_impreso/carro_armado.glb (el visor usa la de app/visor3d/) y su comparación en la prueba.
-- [ ] Textos viejos: "Nada de esto está impreso todavía", exportar.py:8, manual.py:10, revisar_remaches.py en el README.
+- [x] Textos viejos: "Nada de esto está impreso todavía", exportar.py:8, manual.py:10, revisar_remaches.py en el README.
 - Verificar: pytest tests/sim/test_carro_impreso.py y de la maqueta (usa chasis_impreso/exportar.py como biblioteca).
 
 ### D. Código (mismo comportamiento; pytest completo después de cada punto)

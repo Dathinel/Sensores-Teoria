@@ -58,8 +58,6 @@ def test_el_glb_tiene_las_piezas_impresas_del_carro_y_sus_remaches(glb):
     assert glb["accessors"][glb["meshes"][rem["mesh"]]["primitives"][0]["indices"]]["count"] > 27 * 3 * 20
     color = glb["materials"][glb["meshes"][rem["mesh"]]["primitives"][0]["material"]]["pbrMetallicRoughness"]["baseColorFactor"]
     assert [round(c * 255) for c in color[:3]] == [0xD1, 0x00, 0x1F]
-    # el GLB de la carpeta del carro es el mismo que el del visor
-    assert (CHASIS / "carro_armado.glb").read_bytes() == GLB.read_bytes()
 
 
 def test_la_lengueta_gira_sobre_su_remache(glb, F):

@@ -27,7 +27,7 @@ La **estructura 3D** (la maqueta impresa, las piezas impresas del carro y de la 
 
 | Cambio | Ahorro | Riesgo | Por qué alcanza |
 |---|---:|---|---|
-| Estructura impresa (maqueta_impresa/) en vez de perfil 2020, escuadras, pies, placas de aluminio, acrílico y MDF | $480.588 | medio | Antes: 7 barras de V-Slot (398 300), tornillería con 24 escuadras, 15 pies y tuercas en T (219 280), las piezas impresas sueltas de la planta (90 507), tubos de acrílico (45 000), tablero MDF (40 000) y el acrílico opalino del panel de luz (20 000, ahora la caja de luz impresa) = 813 087. Ahora: la maqueta impresa (los gramos y horas de maqueta_impresa/piezas.json, a precio de PLA + energía) y la tornillería que no va remachada (15 200). Lo funcional no cambia; los remaches se prueban al imprimir (maqueta_impresa/README.md). |
+| Estructura impresa (maqueta_impresa/) en vez de perfil 2020, escuadras, pies, placas de aluminio, acrílico y MDF | $480.588 | medio | Antes: 7 barras de V-Slot (398 300), tornillería con 24 escuadras, 15 pies y tuercas en T (219 280), las piezas impresas sueltas de la planta (90 507), tubos de acrílico (45 000), tablero MDF (40 000) y el acrílico opalino del panel de luz (20 000, ahora la caja de luz impresa) = 813 087. Ahora: la maqueta impresa (los gramos y horas de maqueta_impresa/salida/piezas.json, a precio de PLA + energía) y la tornillería que no va remachada (15 200). Lo funcional no cambia; los remaches se prueban al imprimir (maqueta_impresa/README.md). |
 | Fuente de 12 V 5 A en vez de 10 A | $31.000 | bajo | Pico simulado del +12 V: 2,9 A; peor caso con el XL4015 en su límite de corriente: 3,9 A. El precio de la de 5 A es estimado. |
 | Empalmes soldados en vez de la bornera X2, los optoacopladores y el reparto I2C | $27.000 | bajo | Misma topología (GND en estrella en los bornes -V de la fuente). Los M18 van al GPIO con un diodo BAT85 y una pull-up de 10 kΩ (sigue activo en bajo); el bus I2C 1 con sus dos pull-ups de 2,2 kΩ en línea. Se pierde el aislamiento del optoacoplador y desarmar es con cautín. |
 | Sin hub USB: ESP32 y webcams directo al portátil | $23.500 | bajo | Hacen falta 3 puertos USB libres en el portátil; ninguno pide más de 0,35 A (un USB 2.0 da 0,5 A). |
@@ -61,7 +61,7 @@ Desde el 2026-10-24 la estructura de la planta es la **maqueta impresa** ([maque
 
 ### Maqueta impresa por grupo
 
-Gramos y horas del exportador de la maqueta (`maqueta_impresa/piezas.json`, la masa de cada pieza con sus parámetros de capa, paredes y relleno; el tiempo real lo da el laminador). Costo = gramos x (1 + desperdicio) x $93.900/kg + horas x (1 + desperdicio) x 0,12 kWh/h x $800/kWh, con el 10% de desperdicio (purga e impresiones fallidas).
+Gramos y horas del exportador de la maqueta (`maqueta_impresa/salida/piezas.json`, la masa de cada pieza con sus parámetros de capa, paredes y relleno; el tiempo real lo da el laminador). Costo = gramos x (1 + desperdicio) x $93.900/kg + horas x (1 + desperdicio) x 0,12 kWh/h x $800/kWh, con el 10% de desperdicio (purga e impresiones fallidas).
 
 | Grupo | Subsistema | Piezas | Gramos | Horas | Filamento | Energía | Costo |
 |---|---|---:|---:|---:|---:|---:|---:|

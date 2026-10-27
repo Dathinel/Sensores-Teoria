@@ -1,7 +1,7 @@
-"""Carro armado en 3D: carro_armado.glb (cada pieza impresa y cada grupo de componentes es un objeto con su
-nombre, tanda y donde va) y visor_carro.html (lo abre en el navegador, con el GLB adentro).
+"""Carro armado en 3D: app/visor3d/carro_armado.glb (cada pieza impresa y cada grupo de componentes es un objeto
+con su nombre, tanda y donde va) y salida/visor_carro.html (lo abre en el navegador, con el GLB adentro).
 
-El mismo GLB se copia a app/visor3d/carro_armado.glb: el visor del proyecto dibuja el carro con estas piezas
+El GLB va solo a app/visor3d/: el visor del proyecto dibuja el carro con estas piezas
 (usuario, 2026-10-24: "tiene que estar igual al impreso irl"). Para eso lleva ademas el nodo `remaches` (los 27
 de REM_LISTA en su lugar, rojo #d1001f), `extras.pivote` en la lengueta (gira sobre su remache) y, en las extras
 de la escena, `funcional_mm`: las cotas de chasis.scad donde el visor pone lo comprado que sigue dibujando el
@@ -14,7 +14,6 @@ El GLB tambien se abre con el Visor 3D de Windows, Blender o cualquier visor de 
 import base64
 import json
 import re
-import shutil
 import struct
 import subprocess
 import tempfile
@@ -147,7 +146,7 @@ def main():
         v, i = malla(rutas["remaches"])
         objetos.append(("remaches", v, i, COLOR_REMACHE, {"tipo": "remache", "pieza": "Remaches impresos", "tanda": 5,
                                                           "cantidad": F["n_remaches"], "donde": "Cada uno en su union (REM_LISTA)."}))
-    glb = AQUI / "carro_armado.glb"
+    glb = SALIDA_VISOR
     escribir_glb(glb, objetos, {"marco": "carro: x adelante, y izquierda, z arriba; GLB en m con y arriba (x, z, -y)",
                                 "funcional_mm": F})
     # autocomprobacion: el GLB se vuelve a leer y tiene un nodo por objeto con su malla
@@ -157,13 +156,12 @@ def main():
     leido = json.loads(datos[20:20 + n_js])
     assert magia == 0x46546C67 and version == 2 and largo == len(datos) and len(leido["nodes"]) == len(objetos)
     assert sum(1 for n in leido["nodes"] if n["extras"]["tipo"] == "impresa") == len(manual.PIEZAS_INFO)
-    shutil.copyfile(glb, SALIDA_VISOR)
-    print(f"GLB: {glb} y {SALIDA_VISOR} ({len(datos) / 1e6:.1f} MB, {len(objetos)} objetos, "
+    print(f"GLB: {glb} ({len(datos) / 1e6:.1f} MB, {len(objetos)} objetos, "
           f"{F['n_remaches']} remaches, {sum(len(o[2]) for o in objetos) // 3} triangulos)")
     plantilla = (AQUI / "visor_carro_plantilla.html").read_text(encoding="utf-8")
-    (AQUI / "visor_carro.html").write_text(plantilla.replace("__GLB_BASE64__", base64.b64encode(datos).decode()),
-                                           encoding="utf-8")
-    print("visor:", AQUI / "visor_carro.html")
+    (ex.SALIDA / "visor_carro.html").write_text(plantilla.replace("__GLB_BASE64__", base64.b64encode(datos).decode()),
+                                              encoding="utf-8")
+    print("visor:", ex.SALIDA / "visor_carro.html")
 
 
 if __name__ == "__main__":

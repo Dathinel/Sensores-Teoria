@@ -1,11 +1,11 @@
 """Lista de materiales del carro (usuario, 2026-10-22): piezas impresas con gramos y tiempo, electronica
 con precio, cables por calibre y ferreteria. Sale de los datos que ya hay, para que no se desfase:
-  - piezas.json (lo escribe exportar.py): gramos y minutos de cada pieza impresa
+  - salida/piezas.json (lo escribe exportar.py): gramos y minutos de cada pieza impresa
   - ../config/precios.yaml: componentes del carro con su precio y el precio del PLA
   - ../docs/electrica.md: un renglon por hilo del carro (grupo c_*), con calibre y largo
   - README.md, seccion "Lo que hay que comprar": ferreteria y consumibles
 
-Uso: python materiales.py -> lista_materiales.md. manual.py usa tablas() para la seccion del PDF.
+Uso: python materiales.py -> salida/lista_materiales.md. manual.py usa tablas() para la seccion del PDF.
 """
 import json
 import re
@@ -26,7 +26,7 @@ def pesos(v):
 
 
 def impresas():
-    piezas = json.loads((AQUI / "piezas.json").read_text(encoding="utf-8"))["piezas"]
+    piezas = json.loads((ex.SALIDA / "piezas.json").read_text(encoding="utf-8"))["piezas"]
     filas, g_tot, min_tot = [], 0.0, 0
     for p in piezas:
         if p["tanda"] == 0:
@@ -109,8 +109,8 @@ def main():
         salida += [f"## {titulo}", "", "| " + " | ".join(enc) + " |", "|" + "---|" * len(enc)]
         salida += ["| " + " | ".join(str(c) for c in f) + " |" for f in filas]
         salida += ["", nota, ""]
-    (AQUI / "lista_materiales.md").write_text("\n".join(salida), encoding="utf-8")
-    print("lista:", AQUI / "lista_materiales.md")
+    (ex.SALIDA / "lista_materiales.md").write_text("\n".join(salida), encoding="utf-8")
+    print("lista:", ex.SALIDA / "lista_materiales.md")
 
 
 if __name__ == "__main__":

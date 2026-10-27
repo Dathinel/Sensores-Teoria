@@ -1286,7 +1286,7 @@ hardware real, y el carro la lleva compilada en su ESP32.
 
 | Carpeta | Qué hay |
 |---|---|
-| `chasis_impreso/` | El carro impreso: `chasis.scad` (paramétrico), `exportar.py` (STL, 3MF por tanda, gramos y tiempo), revisores de voladizos y remaches, `manual_armado.pdf`, lista de materiales y visor del carro armado. |
+| `chasis_impreso/` | El carro impreso: `chasis.scad` (paramétrico), `exportar.py` (STL, 3MF por tanda, gramos y tiempo), revisores de voladizos y remaches, y en `salida/` lo generado: `manual_armado.pdf`, lista de materiales y visor del carro armado. |
 | `maqueta_impresa/` | La planta impresa: estructura (`estructura.py`), un `.scad` por subsistema, `revisar.py` (remaches medidos, choques, barridos de lo que se mueve, sin soportes), `exportar.py` (STL, 3MF, `material.md`), `manual_maqueta.pdf` y el GLB que usa el visor. |
 | `wokwi/` | El circuito del ESP32 fijo y del carro para abrir en wokwi.com (`diagram.json` + `main.py`). |
 | `vision/` | `capturar_dataset.py` (fotos del montaje) y `entrenar.py` (Keras + MobileNetV2, matriz de confusión). |

@@ -447,7 +447,7 @@ Total 6,10 m en 31 tramos (docs/costos.md:45). Escuadras: 5 + 9 + 2 + 8 = 24 (pr
 
 ## 20. Lo que la maqueta impresa cambió de este inventario (2026-10-25)
 
-Mandan las piezas físicas: el visor y la simulación se ajustan a esto (rutas en `maqueta_impresa/`).
+Mandan las piezas físicas: el visor y la simulación se ajustan a esto (los `.scad` están en `maqueta_impresa/scad/` y `esfuerzos.md` en `maqueta_impresa/informes/`).
 
 | § | Elemento | Aquí dice | En la maqueta impresa | Fuente |
 |---|---|---|---|---|

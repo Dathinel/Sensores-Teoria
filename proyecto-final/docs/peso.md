@@ -129,7 +129,7 @@ La cinta de monedas va primero y con todo su detalle: su NEMA 17 es el que más 
 
 | Qué | Cant. | c/u (g) | Total (g) | Fuente | Cómo |
 |---|---:|---:|---:|---|---|
-| Maqueta impresa: cinta de monedas (PLA) | 1 | 318,7 | 318,7 | *estimado* | 20 piezas, gramos del exportador de la maqueta (maqueta_impresa/piezas.json) |
+| Maqueta impresa: cinta de monedas (PLA) | 1 | 318,7 | 318,7 | *estimado* | 20 piezas, gramos del exportador de la maqueta (maqueta_impresa/salida/piezas.json) |
 | Motor de la cinta de monedas | 1 | 280,0 | 280,0 | hoja de datos | 17HS4401: 0,28 kg |
 | Cámara cenital | 1 | 110,0 | 110,0 | *estimado* | webcam 1080p con su cable (~80 g) + anillo LED (~30 g) |
 | Rodillos de retorno A y B (Ø22 x 59) con sus ejes Ø8 fijos | 1 | 100,0 | 100,0 | *estimado* | 2 tubos de aluminio Ø22 pared 1 mm: π·22·59·1 = 4,1 cm³ x 2,7 = 11 g c/u; ejes de acero Ø8 de 114 (A: cuelga de las bajadas de los bloques del motriz) y 84,3 mm (B) de cinta_monedas.scad: π·4²·198,3 = 10,0 cm³ x 7,85 = 78 g. Sin el retorno C (2026-10-25: quedaba dentro del lazo y no tocaba la banda) |
@@ -153,7 +153,7 @@ La cinta de monedas va primero y con todo su detalle: su NEMA 17 es el que más 
 
 | Qué | Cant. | c/u (g) | Total (g) | Fuente | Cómo |
 |---|---:|---:|---:|---|---|
-| Maqueta impresa: almacén de monedas (PLA) | 1 | 206,8 | 206,8 | *estimado* | 10 piezas, gramos del exportador de la maqueta (maqueta_impresa/piezas.json) |
+| Maqueta impresa: almacén de monedas (PLA) | 1 | 206,8 | 206,8 | *estimado* | 10 piezas, gramos del exportador de la maqueta (maqueta_impresa/salida/piezas.json) |
 | Motor del carrusel del almacén | 1 | 30,0 | 30,0 | hoja de datos | 28BYJ-48: ~30 g |
 | Rodamiento 608ZZ del eje del carrusel (en la placa fija) | 1 | 12,0 | 12,0 | hoja de datos | 608ZZ: 12 g (almacen.scad) |
 | Servo del obturador del almacén | 1 | 9,0 | 9,0 | hoja de datos | SG90: 9 g |
@@ -165,7 +165,7 @@ La cinta de monedas va primero y con todo su detalle: su NEMA 17 es el que más 
 
 | Qué | Cant. | c/u (g) | Total (g) | Fuente | Cómo |
 |---|---:|---:|---:|---|---|
-| Maqueta impresa: cinta de vasos (PLA) | 1 | 575,6 | 575,6 | *estimado* | 34 piezas, gramos del exportador de la maqueta (maqueta_impresa/piezas.json) |
+| Maqueta impresa: cinta de vasos (PLA) | 1 | 575,6 | 575,6 | *estimado* | 34 piezas, gramos del exportador de la maqueta (maqueta_impresa/salida/piezas.json) |
 | Motor de la cinta de vasos | 1 | 280,0 | 280,0 | hoja de datos | 17HS4401: 0,28 kg |
 | Banda de caucho de 75 mm (cerrada) | 1 | 127,9 | 127,9 | *estimado* | largo 2 x 400 + 2π x 12 = 875 mm (línea media de una banda de 2 sobre los Ø22) x 75 mm x 1,5 mm |
 | Rodillos Ø22 x 79 mm con su eje (x2) | 1 | 90,0 | 90,0 | *estimado* | igual que los de monedas pero de 79 mm: ~45 g por rodillo |
@@ -188,7 +188,7 @@ La cinta de monedas va primero y con todo su detalle: su NEMA 17 es el que más 
 
 | Qué | Cant. | c/u (g) | Total (g) | Fuente | Cómo |
 |---|---:|---:|---:|---|---|
-| Maqueta impresa: tapas, prensa y empujador (PLA) | 1 | 300,6 | 300,6 | *estimado* | 23 piezas, gramos del exportador de la maqueta (maqueta_impresa/piezas.json) |
+| Maqueta impresa: tapas, prensa y empujador (PLA) | 1 | 300,6 | 300,6 | *estimado* | 23 piezas, gramos del exportador de la maqueta (maqueta_impresa/salida/piezas.json) |
 | Servo de la prensa | 1 | 55,0 | 55,0 | hoja de datos | MG996R: 55 g |
 | Panel de luz de la cámara de vasos | 1 | 20,0 | 20,0 | *estimado* | tira LED de 1 m (~20 g); la caja de luz es de PLA blanco (vas_panel_a/b) y va en la maqueta impresa (antes 130 g de acrílico opalino) |
 | Servo del escape de tapas | 1 | 9,0 | 9,0 | hoja de datos | SG90: 9 g |
@@ -201,7 +201,7 @@ La cinta de monedas va primero y con todo su detalle: su NEMA 17 es el que más 
 
 | Qué | Cant. | c/u (g) | Total (g) | Fuente | Cómo |
 |---|---:|---:|---:|---|---|
-| Maqueta impresa: canaleta y muelle (PLA) | 1 | 194,6 | 194,6 | *estimado* | 17 piezas, gramos del exportador de la maqueta (maqueta_impresa/piezas.json) |
+| Maqueta impresa: canaleta y muelle (PLA) | 1 | 194,6 | 194,6 | *estimado* | 17 piezas, gramos del exportador de la maqueta (maqueta_impresa/salida/piezas.json) |
 | Canaleta de entrega | 1 | 55,0 | 55,0 | *estimado* | 2 varillas de acero Ø4 x 284 mm: π·2²·284 = 3,6 cm³ x 7,85 = 28 g c/u, + cinta de PTFE |
 | Servo del escape de la canaleta | 1 | 9,0 | 9,0 | hoja de datos | SG90: 9 g |
 | Espuma de los topes y cinta de PTFE | 1 | 8,0 | 8,0 | *estimado* |  |
@@ -211,10 +211,10 @@ La cinta de monedas va primero y con todo su detalle: su NEMA 17 es el que más 
 
 | Qué | Cant. | c/u (g) | Total (g) | Fuente | Cómo |
 |---|---:|---:|---:|---|---|
-| Maqueta impresa: estructura: tubos de 16 x 16 (PLA) | 1 | 813,0 | 813,0 | *estimado* | 46 piezas, gramos del exportador de la maqueta (maqueta_impresa/piezas.json) |
-| Maqueta impresa: estructura: nodos (PLA) | 1 | 400,5 | 400,5 | *estimado* | 22 piezas, gramos del exportador de la maqueta (maqueta_impresa/piezas.json) |
-| Maqueta impresa: estructura: empalmes y tacos (PLA) | 1 | 119,3 | 119,3 | *estimado* | 11 piezas, gramos del exportador de la maqueta (maqueta_impresa/piezas.json) |
-| Maqueta impresa: remaches impresos (PLA) | 1 | 49,8 | 49,8 | *estimado* | 382 piezas, gramos del exportador de la maqueta (maqueta_impresa/piezas.json) |
+| Maqueta impresa: estructura: tubos de 16 x 16 (PLA) | 1 | 813,0 | 813,0 | *estimado* | 46 piezas, gramos del exportador de la maqueta (maqueta_impresa/salida/piezas.json) |
+| Maqueta impresa: estructura: nodos (PLA) | 1 | 400,5 | 400,5 | *estimado* | 22 piezas, gramos del exportador de la maqueta (maqueta_impresa/salida/piezas.json) |
+| Maqueta impresa: estructura: empalmes y tacos (PLA) | 1 | 119,3 | 119,3 | *estimado* | 11 piezas, gramos del exportador de la maqueta (maqueta_impresa/salida/piezas.json) |
+| Maqueta impresa: remaches impresos (PLA) | 1 | 49,8 | 49,8 | *estimado* | 382 piezas, gramos del exportador de la maqueta (maqueta_impresa/salida/piezas.json) |
 | **Subtotal** | | | **1.382,6** | | |
 
 ### Carro: 0,51 kg

@@ -10,7 +10,7 @@
 // De donde salen las medidas:
 // - config/parametros.yaml (vasos): vaso de 62 mm x 90 mm (PROVISIONAL), pestana del reborde de
 //   8 mm (boca de 78 mm), casillas de 80 mm, separador de 15 mm; tapa que cae ~13 mm desde el tubo.
-// - maqueta_impresa/tapas_prensa_empujador.scad: prensa con leva de 7 mm de excentricidad en un
+// - maqueta_impresa/scad/tapas_prensa_empujador.scad: prensa con leva de 7 mm de excentricidad en un
 //   MG996R (carrera 14 mm, tap_exc), dedos del escape de tapas y sus ranuras.
 // - sim/geometria.py y visor.js: posiciones de estaciones, tubo, prensa, empujador y sensores.
 // - Servos y NEMA17: piezas/electronica.js (fichas TowerPro SG90/MG996R, 17HS4401).

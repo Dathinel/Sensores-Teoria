@@ -41,7 +41,7 @@
       <inertia ixx="0.02" ixy="0.0" ixz="0.0" iyy="0.06" iyz="0.0" izz="0.06"/>
     </inertial>
 
-    <!-- Maqueta impresa (2026-10-24, maqueta_impresa/cinta_vasos.scad): bancada de PLA (dos mitades,
+    <!-- Maqueta impresa (2026-10-24, maqueta_impresa/scad/cinta_vasos.scad): bancada de PLA (dos mitades,
          vas_bancada_a/b) de x 13 a 383 mm del mundo (2026-10-25: termina 4 mm antes para que el rodillo
          de x 400 corra en su tensor hasta x 396), entre las dos laterales (y -140,3 a -59,7) y de
          z 104 a 119,9 (dentro del lazo de la banda). Antes 400 x 80 x 20 (inventario 19.3). -->

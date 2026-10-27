@@ -113,8 +113,7 @@ casilla **Remaches** de la barra (`interfaz.js`, `iniciarRemaches`) los muestra 
 
 ### `carro_armado.glb` (el carro impreso, 2026-10-24)
 
-El mismo lector lee `app/visor3d/carro_armado.glb` (lo genera `python chasis_impreso/modelo_3d.py`, que lo deja
-también en `chasis_impreso/`): las 20 piezas de PLA del carro (`userData.tipo = 'impresa'`), lo comprado en
+El mismo lector lee `app/visor3d/carro_armado.glb` (lo genera `python chasis_impreso/modelo_3d.py`): las 20 piezas de PLA del carro (`userData.tipo = 'impresa'`), lo comprado en
 grupos `comp_*` y el nodo `remaches` (los 27 de `REM_LISTA`), ya en el marco del carro (origen en el piso bajo el
 centro del chasis, x adelante). `construirCarro` (`visor.js`) agrega las impresas (en `COLOR.impreso`), las
 espumas, la rueda loca, los rodamientos 623 y el interruptor/portafusible del GLB, cuelga la lengüeta de un

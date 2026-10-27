@@ -75,7 +75,7 @@ def a_plano(x, y):
 
 def fondo(ax):
     """Las piezas impresas armadas, vistas desde arriba en rayos X (lo de abajo se ve a traves)."""
-    for stl in sorted((AQUI / "stl_sin_membrana" / "_ensamble").glob("*.stl")):
+    for stl in sorted((ex.SALIDA / "stl_sin_membrana" / "_ensamble").glob("*.stl")):
         if stl.stem == "componentes":
             continue
         tri = ex.leer_stl(stl)
