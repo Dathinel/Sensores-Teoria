@@ -117,7 +117,7 @@ python auditar.py         # informes/auditoria.md: TODOS los criterios por pieza
 python manual_maqueta.py  # salida/manual_maqueta.pdf (usa salida/piezas.json de exportar.py) y la imagen de arriba (img/maqueta_iso.png)
 ```
 
-Con varios agentes o procesos a la vez, `REVISAR_HILOS=3` limita los OpenSCAD en paralelo.
+`REVISAR_HILOS` (6 por defecto) limita los OpenSCAD en paralelo; con varios agentes o procesos a la vez, `REVISAR_HILOS=2`.
 
 ## Lo que cambió respecto del diseño anterior (manda lo físico)
 

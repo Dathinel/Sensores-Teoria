@@ -10,7 +10,7 @@ una ventana tipo programa, con todo lo que pide el parcial en un solo lugar y ex
   las piezas reales en cada estación, el almacén y los rechazos por causa, actualizados cada segundo.
 - **Programas** (como en Docker Desktop: cada fila con su estado y cuánto tarda): la línea en vivo
   (visor 3D + dashboard de Streamlit; el visor tarda ~8-10 s en responder), las 4 escenas de PyBullet,
-  el asistente, las 951 pruebas automáticas (~4-5 min) y el chequeo del PC.
+  el asistente, las 951 pruebas automáticas (~4-6 min) y el chequeo del PC.
 - **Cómo funciona**, el **visor 3D sin instalar nada**, los **resultados** (videos y capturas), **qué pide
   el parcial** con qué se prueba cada punto, y el **estado honesto** del proyecto.
 
@@ -937,8 +937,8 @@ Reglas que cuidan el hardware y que viven **en la placa**, no solo en el PC:
 
 ### Pruebas automáticas
 
-Tenemos **951 pruebas** en `tests/` (todas pasan: `entorno\Scripts\python -m pytest -q`, 2026-10-26, unos 4-5
-minutos) (ordenadas por capa: `control/`, `sim/`, `visor/`,
+Tenemos **951 pruebas** en `tests/` (todas pasan en este PC: `entorno\Scripts\python -m pytest -q`, 2026-10-26, unos 4-6
+minutos; en un clon nuevo, sin `maqueta_impresa/_cache/`, 1 sale *skipped*) (ordenadas por capa: `control/`, `sim/`, `visor/`,
 `app/` y `firmware/`), y todas corren sin ventana (PyBullet en modo DIRECT):
 reglas de decisión, registro de casillas, máquinas de estado de las dos cintas, almacén, protocolo,
 control del carro (incluida la ida y vuelta con 20 semillas de error sin tocar muros), la planta
@@ -1200,7 +1200,6 @@ Aquí está cada archivo, qué hace y cuándo se usa; cada carpeta tiene además
 | `requirements-minimo.txt` / `requirements-lock.txt` | Los 13 paquetes de la instalación mínima (`instalar.bat`, opción 1), y las versiones exactas de la instalación completa (opción 2). |
 | `pytest.ini` | Configura las pruebas: carpeta `tests/` y la raíz importable sin instalar nada. |
 | `.env.example` | Cómo poner la clave de DeepSeek (el `.env` real no se sube). |
-| `docs/especificacion.md` | El documento maestro de diseño: requisitos, secuencia de operación, contratos de datos, reglas. |
 | `CLAUDE.md` | Instrucciones para Claude Code: dónde leer según la carpeta, reglas del agente (sección 17), lo que no se mueve, quién nos nombra desde afuera y qué verificar antes de terminar. |
 | `CONTEXTO-SESION.md` | Reglas del grupo y en qué va el trabajo, sesión a sesión. |
 
@@ -1307,7 +1306,7 @@ Pines, cómo se arma y cómo se sube: [`firmware/README.md`](firmware/README.md)
 | `wokwi/` ([README](wokwi/README.md)) | El circuito del ESP32 fijo y del carro para abrir en wokwi.com (`diagram.json` + `main.py`). |
 | `vision/` ([README](vision/README.md)) | `capturar_dataset.py` (fotos del montaje) y `entrenar.py` (Keras + MobileNetV2, matriz de confusión). |
 | `tests/` ([README](tests/README.md)) | Las pruebas automáticas por capa: `control/`, `sim/`, `visor/`, `app/`, `firmware/`. |
-| `docs/` ([README](docs/README.md)) | La documentación, capturas, videos y la guía del parcial. |
+| `docs/` ([README](docs/README.md)) | La documentación, capturas, videos y la guía del parcial. El documento maestro de diseño es `docs/especificacion.md` (requisitos, secuencia de operación, contratos de datos, reglas). |
 | `datos/` | La base SQLite de la corrida (no se sube). |
 | `.streamlit/config.toml` | El tema del dashboard. |
 | `firmware/salida/` | Lo que se sube a cada placa, generado por `firmware/preparar.py` (no se edita a mano). |

@@ -75,10 +75,9 @@ vértice) y deja una malla "solo sombra" por ancla: medido el 2026-09-28 (antes 
   `app/portable.py` sigue los imports desde `visor.js` y mete cada módulo que alcanza en el importmap
   del portable, con su ruta dentro de esta carpeta como nombre. Un módulo que nadie importa no entra; uno
   nuevo no obliga a tocar `portable.py`. `optimizar.js` y `maqueta_impresa.js` viven aquí, junto a
-  `visor.js` (no son piezas), aunque sus alias en `visor.js` conservan el nombre `PIEZAS_OPTIMIZAR` y
-  `PIEZAS_MAQUETA`.
+  `visor.js` (no son piezas; en `visor.js` se importan como `OPTIMIZAR` y `GLB_IMPRESOS`).
 - **Después de cambiar algo**: `node --check` del archivo, `python -m app.portable` (`visor.bat` lo hace
-  solo al arrancar; `python -m app.chequeo` avisa si el portable quedó más viejo que el visor) y
+  solo al arrancar; `python -m app.chequeo` avisa si el portable quedó más viejo que el código del visor; no mira los `.glb`) y
   `entorno\Scripts\python -m pytest -q tests/visor`. Si cambió lo que se graba, `python -m app.grabar_demo`.
 - **No editar a mano** `demo/`, los `.glb` ni `vendor/`: se regeneran o se copian de su fuente.
 

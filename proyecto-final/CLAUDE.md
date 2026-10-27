@@ -28,7 +28,7 @@ Elemento 7: detector de elementos de monedas y vasos (sección 2 de la especific
 
 ## Dónde leer según lo que se toque
 
-Secciones (§) de `docs/especificacion.md`. Cada carpeta tiene su `README.md` (qué hay, cómo se corre, contratos).
+Secciones (§) de `docs/especificacion.md`. Cada carpeta principal tiene su `README.md` (qué hay, cómo se corre, contratos); sus subcarpetas se describen ahí.
 
 | Si se toca | Leer |
 |---|---|
@@ -83,6 +83,8 @@ Secciones (§) de `docs/especificacion.md`. Cada carpeta tiene su `README.md` (q
 | `D:\cosas uni\Micros\.claude\rules\*.md` (globs) | `**/visor3d/piezas/**` (blender), `**/asistente*.py`, `**/*asistente*/**`, `**/evaluar_asistente.py`, `**/modelo-local.md` (modelos locales), `**/app/**`, `**/dashboard/**` (Streamlit), `**/firmware/**`, `**/wokwi/**` (MicroPython), `**/visor3d/**`, `**/visor-portable.html` (visor) |
 | 8 scripts de `D:\cosas uni\Modelado 3D` (`blender_helpers.py`, `herramientas/importar_pieza.py`, `componentes/**/revisar_pines.py`, `componentes/**/aplicar_ajustes.py`) | `sim/conexiones.py` (ruta absoluta) |
 | Las placas (vía `firmware/preparar.py`) | `control/protocolo.py` y `control/vehiculo.py` |
+| `D:\cosas uni\Modelado 3D\` (`CATALOGO_COMPONENTES.md`, `GUIA_BLENDER_MCP.md`, `piezas-threejs/`) | `app/visor3d/piezas/` (cada módulo se copia a `piezas-threejs/`; `optimizar.js` ya no es pieza: vive en `app/visor3d/`) |
+| `D:\cosas uni\Micros\.claude\herramientas\reglas-agente-zona-visor.md` | `node --check` de `app/visor3d/visor.js` y `app/visor3d/piezas/*.js` |
 
 Si se cambia algo de esta tabla, se corrige también del otro lado (o se avisa si está fuera del repo).
 
@@ -101,7 +103,7 @@ Si se cambia algo de esta tabla, se corrige también del otro lado (o se avisa s
 
 ## Antes de dar algo por terminado
 
-- [ ] `entorno\Scripts\python -m pytest -q` completo (951 pruebas, ~4-5 min).
+- [ ] `entorno\Scripts\python -m pytest -q` completo (951 pruebas, ~4-6 min).
 - [ ] Si se tocó la maqueta, desde `maqueta_impresa/`: `python revisar.py --sin-render` (TODO OK y sello vigente) y `python probar_revisor.py`.
 - [ ] Desde la raíz del repo: `python _lanzador/revisar_enlaces.py proyecto-final` y `python _lanzador/lanzador.py --comprobar`.
 - [ ] `entorno\Scripts\python -m app.documentos` y `git diff --stat docs`: solo cambia lo que se quiso cambiar.

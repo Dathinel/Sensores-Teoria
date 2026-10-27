@@ -49,7 +49,7 @@ remaches, sin soportes, primera capa, qué no hacer): [CONVENCIONES.md](CONVENCI
 - `revisar.py` importa `../chasis_impreso/exportar.py` como `ex_carro`. De ahí salen OpenSCAD, `leer_stl`,
   `escribir_stl`, `volumen_area`, `escribir_3mf`, `acomodar`, `CAMA`, `MARGEN` y los parámetros de masa y tiempo.
   `exportar.py` de aquí cambia `ex_carro.SEPARACION`. Esa API no se rompe allá. Aquí, `revisar` se importa antes que
-  `exportar`, porque los dos módulos se llaman igual (`revisar.py:46-50`).
+  `exportar`, porque los dos módulos se llaman igual (en `revisar.py`, el bloque que carga `ex_carro` y hace `del sys.modules["exportar"]`).
 
 ## Lo que no se hace sin que el usuario lo pida
 

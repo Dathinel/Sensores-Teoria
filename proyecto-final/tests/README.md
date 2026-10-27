@@ -10,7 +10,7 @@ Especificación: [§11 Simulación en PyBullet](../docs/especificacion.md#11-sim
 Desde `proyecto-final/`, con el Python del entorno:
 
 ```
-entorno\Scripts\python -m pytest -q                       # todas, unos 4 minutos
+entorno\Scripts\python -m pytest -q                       # todas, unos 4-6 minutos
 entorno\Scripts\python -m pytest -q tests/control         # una capa
 entorno\Scripts\python -m pytest -q tests/sim/test_planta.py
 ```
@@ -68,7 +68,7 @@ Si se cambia uno de estos textos o se mueve uno de estos archivos, la prueba fal
 - `sim/test_fisica_vs_3d.py`, `sim/test_carro_impreso.py` y `visor/test_portable.py` leen
   `app/visor3d/visor.js`, `piezas/*.js` y `app/portable.py` con regex. Por eso `visor.js` no se parte.
 - `app/test_dashboard.py` busca textos en `app/lanzar.py`. `control/test_carrusel.py` lee
-  `control/carrusel.py` con una ruta relativa, así que pytest se corre desde `proyecto-final/`.
+  `control/carrusel.py` (con `ast`, para ver que puede ir al firmware).
 - `control/test_tiempos.py` recorre todo el código de `control/`, `sim/`, `app/` y `firmware/`: cada
   clave de `tiempos_ms` y de `errores_sensores` tiene que usarse en alguna parte.
 - `sim/test_electrica.py` lee `wokwi/fijo|carro/diagram.json` y `main.py`.

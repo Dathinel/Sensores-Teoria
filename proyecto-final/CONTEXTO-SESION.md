@@ -20,7 +20,7 @@ Textual del usuario:
 Alcance tomado: `proyecto-final/` (no Sensores, Proteus ni Word). Puntos:
 - [x] 1. Mapa de qué hay y qué depende de cada ruta (imports, rutas en código, .bat, pruebas, enlaces de docs y de
   GitHub, visor, portable, firmware, CLAUDE.md y reglas de afuera).
-- [x] 2. Plan de orden (carpetas, nombres, código) escrito en `ORDEN-PASO-A-PASO.md`; aprobado con: código "Todo, incluso
+- [x] 2. Plan de orden (carpetas, nombres, código) escrito en `ORDEN-PASO-A-PASO.md` (temporal, ya borrado); aprobado con: código "Todo, incluso
   asistente.py", "README + CLAUDE.md con reglas", "Borrarlos", "Commit local por tanda"; mostrárselo ANTES de mover nada
   (regla del usuario: "primero digame antes de hacer cualquier cambio").
 - [x] 3. Mover y renombrar por tandas, arreglando cada ruta; pruebas después de cada tanda.
@@ -31,7 +31,9 @@ Alcance tomado: `proyecto-final/` (no Sensores, Proteus ni Word). Puntos:
   HECHO (2026-10-26): tanda E. README.md en cada carpeta (app/, app/asistente/, app/dashboard/, app/visor3d/,
   app-practica/, sim/, control/, config/, tests/, simulaciones/); CLAUDE.md general al día y CLAUDE.md en maqueta_impresa/
   y chasis_impreso/; pedidos cerrados a docs/historial-pedidos.md.
-- [ ] 6. Verificar todo (pytest, revisor de la maqueta, visor, portable, enlaces) y borrar `ORDEN-PASO-A-PASO.md`.
+- [x] 6. Verificar todo (pytest, revisor de la maqueta, visor, portable, enlaces) y borrar `ORDEN-PASO-A-PASO.md`.
+  HECHO (2026-10-27): tanda F, 4 verificadores (copia limpia de HEAD contra e78ac61 sin regresiones, árbol real, rutas de
+  afuera, completitud); arreglados los textos que encontraron; `ORDEN-PASO-A-PASO.md` borrado.
 
 ### Reglas permanentes del usuario
 
@@ -110,7 +112,7 @@ Salen de pedidos ya cerrados (textuales en `docs/historial-pedidos.md`) y de lo 
 ## 3. Estado actual
 
 Al 2026-10-26: el carro (`chasis_impreso/`) está impreso y armado; el usuario imprime la maqueta desde
-`maqueta_impresa/3mf/`; el orden de carpetas va por el punto 5 (§0).
+`maqueta_impresa/3mf/`; el orden de carpetas y código del 2026-10-26 está terminado (§0, tandas A-F; commits locales sin subir).
 
 Decisiones vigentes (2026-09-29): carrusel 28BYJ-48 con espera aceptada (media vuelta 4,22 s desde el 2026-10-25; la moneda espera en
 E4 y además la caída, `caida_moneda_tubo: 400`, ocupa el carrusel); pausa de vasos 1400 ms; rodillo Ø22

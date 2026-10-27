@@ -43,8 +43,9 @@ con `cwd` en `proyecto-final/`.
 
 ## Reglas
 
-- Este proceso **solo lee** SQLite y escribe órdenes por `datos.enviar()` (§8). No importa PyBullet
-  ni pyserial ni corre la línea: eso es del supervisor, en otro proceso.
+- Este proceso **solo lee** SQLite y escribe órdenes por `datos.enviar()` (§8). No abre un mundo
+  de PyBullet ni el puerto serial ni corre la línea: eso es del supervisor, en otro proceso (validar un `ir_a`
+  del asistente importa `sim.geometria`, y con eso PyBullet, sin conectar ningún mundo).
 - Las pestañas no escriben SQL: piden a `datos.py` lo que necesitan.
 - Refresco con `st.fragment(run_every=dashboard.refresco_s)` (1 s, `config/parametros.yaml`), sin
   bucles infinitos; gráficas con Plotly.

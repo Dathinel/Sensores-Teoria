@@ -15,7 +15,7 @@ Guion de la demo (escenario prueba_completa, lotes de 5):
 - tick 36: una mano entra a media altura y se lleva un vaso (cortina + camara);
 - al terminar: "embalar lo guardado" para empacar los tubos incompletos.
 
-Uso, desde la raiz del repo:
+Uso, desde proyecto-final/:
     python -m app.grabar_demo
 Escribe app/visor3d/demo/{geometria,pasos,grabacion}.json.
 """

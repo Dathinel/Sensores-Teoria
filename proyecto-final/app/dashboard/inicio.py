@@ -9,7 +9,7 @@ Refresco en vivo con `st.fragment(run_every=...)`: solo se reejecuta el bloque
 de la pestaña ABIERTA cada `dashboard.refresco_s` segundos (las pestañas se
 dibujan solo cuando están abiertas), y no hay ningún bucle infinito.
 
-Uso, desde la raíz del repo (con el supervisor corriendo en otra terminal):
+Uso, desde proyecto-final/ (con el supervisor corriendo en otra terminal):
     streamlit run app/dashboard/inicio.py      (o python -m app.dashboard)
 o todo junto con:
     python -m app.lanzar
@@ -20,7 +20,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-# Streamlit agrega al path la carpeta del script (app/dashboard/), no la raíz del repo;
+# Streamlit agrega al path la carpeta del script (app/dashboard/), no `proyecto-final/`;
 # sin esto no se encuentran los paquetes `app`, `control` y `sim`.
 RAIZ = Path(__file__).resolve().parents[2]
 if str(RAIZ) not in sys.path:

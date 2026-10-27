@@ -486,8 +486,8 @@ import * as PIEZAS_LINEA_MONEDAS from 'piezas/linea_monedas.js';
 import * as PIEZAS_CARRO from 'piezas/carro.js';
 import * as PIEZAS_SENSORES_CARRO from 'piezas/sensores.js';
 import * as PIEZAS_VASOS from 'piezas/linea_vasos.js';
-import * as PIEZAS_OPTIMIZAR from 'optimizar.js';
-import * as PIEZAS_MAQUETA from 'maqueta_impresa.js';
+import * as OPTIMIZAR from 'optimizar.js';
+import * as GLB_IMPRESOS from 'maqueta_impresa.js';
 // La interfaz (barra, vistas, panel, avisos, bitacora): ver interfaz.js y docs/interfaz-visor.md.
 import { crearInterfaz, SEL, simulacionCorriendo } from 'interfaz.js';
 
@@ -6443,13 +6443,13 @@ async function cargarGLB(archivo, embebido) {
   if (new URLSearchParams(location.search).has('sinmaqueta')) return null;
   try {
     let buf;
-    if (window[embebido]) buf = PIEZAS_MAQUETA.base64ABuffer(window[embebido]);
+    if (window[embebido]) buf = GLB_IMPRESOS.base64ABuffer(window[embebido]);
     else {
       const r = await fetch(`./${archivo}`, { cache: 'no-store' });
       if (!r.ok) throw new Error(`${archivo}: ${r.status}`);
       buf = await r.arrayBuffer();
     }
-    return PIEZAS_MAQUETA.leerMaquetaGLB(buf);
+    return GLB_IMPRESOS.leerMaquetaGLB(buf);
   } catch (e) {
     console.warn(`${archivo}: se deja el modelo de antes`, e);
     return null;
@@ -6555,7 +6555,7 @@ function montarMaqueta() {
 function optimizar() {
   if (new URLSearchParams(location.search).has('sinoptimizar')) return;
   try {
-    resumenOptimizacion = PIEZAS_OPTIMIZAR.optimizarEscena(escena, {
+    resumenOptimizacion = OPTIMIZAR.optimizarEscena(escena, {
       renderer,
       auditar: new URLSearchParams(location.search).has('auditar'),
       comp: COMP,

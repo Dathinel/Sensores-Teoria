@@ -105,7 +105,7 @@ def test_sin_cosas_que_micropython_no_tiene():
     """Mismas reglas que control/protocolo.py: puede ir al firmware."""
     import ast
     import pathlib
-    arbol = ast.parse(pathlib.Path("control/carrusel.py").read_text(encoding="utf-8"))
+    arbol = ast.parse((pathlib.Path(__file__).resolve().parents[2] / "control" / "carrusel.py").read_text(encoding="utf-8"))
     for nodo in ast.walk(arbol):
         assert not isinstance(nodo, ast.Starred), "[*x] no existe en MicroPython"
         if isinstance(nodo, ast.Dict):

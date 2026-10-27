@@ -1,5 +1,4 @@
-# Versiones EXACTAS del entorno que funciona (Python 3.14.3, Windows 11), 2026-09-27.
-# Versiones exactas de la instalacion completa (instalar.bat, opcion 2); requirements-minimo.txt es lo minimo.
+# Versiones EXACTAS del entorno que funciona (Python 3.14.3, Windows 11), 2026-09-27: la instalacion completa (instalar.bat, opcion 2).
 # Instalacion minima (solo para verlo): requirements-minimo.txt (instalar.bat, opcion 1).
 # Instalar con instalar.bat o: python -m pip install -r requirements-lock.txt
 # Regenerar despues de actualizar algo: python -m pip freeze > requirements-lock.txt (y conservar estas lineas).

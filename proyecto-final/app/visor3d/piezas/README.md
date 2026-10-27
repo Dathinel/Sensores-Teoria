@@ -18,8 +18,8 @@ está en la carpeta de arriba, [`app/visor3d/`](../README.md).
   ```
   Nada de `visor.js` (ni `G`, ni `PIN`, ni `escena`): la pieza no sabe dónde se va a usar.
   Imports locales siempre con la forma `from './archivo.js'` (una ruta simple, sin subcarpetas):
-  `app/portable.py` los reescribe para el HTML de un solo archivo, y `app/chequeo.py` solo mira
-  `piezas/*.js` (no subcarpetas) para saber si el portable quedó viejo.
+  `app/chequeo.py` solo mira `piezas/*.js` (no subcarpetas) para saber si el portable quedó viejo
+  (`app/portable.py` sí sigue subcarpetas y `../`).
 - **Exporta `crearX(opciones) → THREE.Group`**, con un comentario arriba que diga las medidas
   y DE DÓNDE salen (ficha técnica, `CATALOGO_COMPONENTES.md`, `config/parametros.yaml`).
 - **Metros**, y el marco de la simulación: x a lo largo, y a lo ancho, z hacia arriba.
@@ -91,7 +91,8 @@ y deja de moverse; y nada de caras en el MISMO plano con otra de distinto color 
 ## Copia fuera del repositorio
 
 Cada módulo terminado se copia tal cual (con `base.js`) a
-`D:\cosas uni\Modelado 3D\piezas-threejs\` y se agrega
+`D:\cosas uni\Modelado 3D\piezas-threejs\` (su `optimizar.js` es una copia vieja: el de verdad ya no es pieza y vive en
+`app/visor3d/`) y se agrega
 su fila en `CATALOGO_COMPONENTES.md`, sección "Piezas Three.js": función, qué es, medidas
 (y de dónde salen), origen y anclas.
 

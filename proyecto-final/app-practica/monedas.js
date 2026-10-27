@@ -500,7 +500,7 @@ function programas() {
   });
 
   panel('pruebas', '#pruebas', {
-    queDeberiasVer: 'Una fila de puntos que avanza hasta 100 % y al final "951 passed" (con la instalación mínima se omiten 2, "skipped": las que compilan el firmware con mpy-cross). Tarda unos 4-5 minutos.',
+    queDeberiasVer: 'Una fila de puntos que avanza hasta 100 % y al final "951 passed" en este PC. En otro, algunas salen "skipped": las 2 que compilan el firmware con mpy-cross (instalación mínima) y 1 de la maqueta si no está maqueta_impresa/_cache/. Tarda unos 4-6 minutos.',
   });
   panel('chequeo', '#chequeo', {
     queDeberiasVer: 'Una lista con ✓ (listo), ! (aviso) y ✗ (falta), cada una con cómo arreglarla. Con la instalación mínima es normal ver ✗ en Ollama, la voz o el firmware: no hacen falta para verlo. Si dice "Puerto 8765 … lo ocupa OTRO programa", no pasa nada: se usará el siguiente libre.',

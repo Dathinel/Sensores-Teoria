@@ -17,7 +17,7 @@ Bucle principal, una vuelta:
      (telemetria) para la pestana "Linea en vivo".
   4. Dormir lo necesario para que la linea avance a ritmo humano.
 
-Uso, desde la raiz del repo:
+Uso, desde proyecto-final/:
     python -m app.supervisor                      # espera la orden "iniciar" del dashboard
     python -m app.supervisor --auto prueba_completa      # arranca solo con ese escenario
 (normalmente lo arranca `visor.bat`, via app/lanzar.py). La simulacion corre

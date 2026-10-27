@@ -152,10 +152,10 @@
       "modulo": "pytest",
       "args": ["-q"],
       "cwd": ".",
-      "descripcion": "Corre las 951 pruebas de tests/ (control, simulación, visor, dashboard, asistente y firmware contra una estación emulada). Tarda unos 4 minutos; al final dice cuántas pasaron (probado el 2026-10-26 con el entorno del proyecto: 951 pasan).",
+      "descripcion": "Corre las 951 pruebas de tests/ (control, simulación, visor, dashboard, asistente y firmware contra una estación emulada). Tarda unos 4-6 minutos; al final dice cuántas pasaron (probado el 2026-10-26 con el entorno del proyecto: 951 pasan; en un clon nuevo, sin maqueta_impresa/_cache/, 1 sale skipped).",
       "cubre": ["Grupo 7 (elemento diferencial): detector de elementos de monedas y vasos, cada filtro demostrable por separado"],
-      "duracion": "~4-5 min",
-      "duracion_s": 270,
+      "duracion": "~4-6 min",
+      "duracion_s": 300,
       "progreso_regex": "\\[\\s*(\\d+)%\\]"
     },
     {

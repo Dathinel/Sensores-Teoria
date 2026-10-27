@@ -64,7 +64,8 @@ y el puerto real queda en `datos/puertos.json`.
   `ruta_bd`. Desde `sim/`, `control/` o `firmware/` se importa `control.configuracion`, no
   `app.configuracion`: esas carpetas no dependen de `app/`.
 - **Dos procesos** (§8): solo el supervisor toca la simulación y el puerto serial. El dashboard no
-  importa PyBullet ni pyserial y escribe en la base únicamente por la tabla `ordenes`.
+  abre un mundo de PyBullet ni el puerto serial, y escribe en la base únicamente por la tabla `ordenes`
+  (validar un `ir_a` del asistente importa `sim.geometria`, y con eso PyBullet, pero sin conectar ningún mundo).
 - **Generados iguales**: `python -m app.grabar_demo` y `python -m app.documentos` tienen que dejar
   `visor3d/demo/` y `docs/` sin cambios si no cambió el comportamiento
   (`git diff --stat -- app/visor3d/demo docs` vacío). `docs/paso-a-paso.yaml` es la fuente de
