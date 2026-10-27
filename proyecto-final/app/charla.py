@@ -30,14 +30,14 @@ def main() -> None:
     usar = "ollama" if "--ollama" in sys.argv else "reglas"
     # Junto a la base (en D:, no en el temporal de C:); git ignora los *.db. Si una charla anterior se
     # cerro a la fuerza (Detener mata el proceso y no llega al finally), su copia se borra ahora.
+    configuracion.ruta_bd().parent.mkdir(parents=True, exist_ok=True)   # en un clon nuevo datos/ no existe
     for vieja in configuracion.ruta_bd().parent.glob("charla-*"):
         shutil.rmtree(vieja, ignore_errors=True)
     carpeta = Path(tempfile.mkdtemp(prefix="charla-", dir=configuracion.ruta_bd().parent))
     # Copia de datos/planta.db en la carpeta temporal; si no hay base, la charla sigue sobre una vacia.
-    origen = configuracion.ruta_bd()
     conexion = db.conectar(carpeta / "planta.db")
-    if origen.exists():
-        db.copiar_base(conexion, origen)
+    db.copiar_base(conexion, configuracion.ruta_bd())
+    conexion.executescript(db.ESQUEMA)   # una base de 0 bytes (sin tablas) se copia encima del esquema
     try:
         _charlar(conexion, usar)
     finally:

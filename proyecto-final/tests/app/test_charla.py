@@ -6,7 +6,7 @@ from app import charla
 
 
 def test_responde_sin_clave_y_no_toca_la_base(monkeypatch, tmp_path, capsys):
-    base = tmp_path / "no-existe.db"
+    base = tmp_path / "datos" / "no-existe.db"   # como en un clon nuevo: ni la carpeta datos/ existe
     monkeypatch.setenv("PLANTA_BD", str(base))
     monkeypatch.setattr("sys.argv", ["charla"])
     monkeypatch.setattr("sys.stdin", io.StringIO("avanza 20 cm\nsalir\n"))

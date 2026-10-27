@@ -84,7 +84,7 @@ Secciones (§) de `docs/especificacion.md`. Cada carpeta principal tiene su `REA
 | 8 scripts de `D:\cosas uni\Modelado 3D` (`blender_helpers.py`, `herramientas/importar_pieza.py`, `componentes/**/revisar_pines.py`, `componentes/**/aplicar_ajustes.py`) | `sim/conexiones.py` (ruta absoluta) |
 | Las placas (vía `firmware/preparar.py`) | `control/protocolo.py` y `control/vehiculo.py` |
 | `D:\cosas uni\Modelado 3D\` (`CATALOGO_COMPONENTES.md`, `GUIA_BLENDER_MCP.md`, `piezas-threejs/`) | `app/visor3d/piezas/` (cada módulo se copia a `piezas-threejs/`; `optimizar.js` ya no es pieza: vive en `app/visor3d/`) |
-| `D:\cosas uni\Micros\.claude\herramientas\reglas-agente-zona-visor.md` | `node --check` de `app/visor3d/visor.js` y `app/visor3d/piezas/*.js` |
+| `D:\cosas uni\Micros\.claude\herramientas\reglas-agente-zona-visor.md` | chequeo de sintaxis (`node --input-type=module --check`) de cada `.js` de `app/visor3d/` y `app/visor3d/piezas/` |
 
 Si se cambia algo de esta tabla, se corrige también del otro lado (o se avisa si está fuera del repo).
 

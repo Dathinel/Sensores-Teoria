@@ -73,7 +73,7 @@ está en la carpeta de arriba, [`app/visor3d/`](../README.md).
    }
    ```
    Ejemplo real: el ESP32 de las placas GVS, en `construirModulo` (busca `PIEZAS_ELECTRONICA`).
-3. Verificar: `node --check` de `visor.js` y del módulo, `entorno\Scripts\python -m app.portable` y
+3. Verificar: `node --input-type=module --check < archivo.js` con `visor.js` y con el módulo (uno por llamada; `node --check` a secas no ve errores en ESM), `entorno\Scripts\python -m app.portable` y
    `entorno\Scripts\python -m pytest -q tests/visor`, y una captura del
    visor (servido con `?demo` y el `visor-portable.html`) sin errores de consola.
 
@@ -91,8 +91,8 @@ y deja de moverse; y nada de caras en el MISMO plano con otra de distinto color 
 ## Copia fuera del repositorio
 
 Cada módulo terminado se copia tal cual (con `base.js`) a
-`D:\cosas uni\Modelado 3D\piezas-threejs\` (su `optimizar.js` es una copia vieja: el de verdad ya no es pieza y vive en
-`app/visor3d/`) y se agrega
+`D:\cosas uni\Modelado 3D\piezas-threejs\` (también `optimizar.js`, que ya no es pieza: su fuente es
+`app/visor3d/optimizar.js`) y se agrega
 su fila en `CATALOGO_COMPONENTES.md`, sección "Piezas Three.js": función, qué es, medidas
 (y de dónde salen), origen y anclas.
 

@@ -282,7 +282,7 @@ def copia_temporal() -> Path:
     """UNA copia coherente de datos/planta.db (db.copiar_base) en una carpeta temporal. Se hace UNA
     sola vez para todos los proveedores (revisión 2026-09-29): antes cada proveedor sacaba su propia
     copia con la simulación corriendo, así que local y reglas se comparaban contra datos distintos
-    (a la copia del local le faltaban los viajes del carro)."""
+    (a la copia del local le faltaban los viajes del carro). Sin base, la copia queda vacia."""
     copia = Path(tempfile.mkdtemp()) / "copia.db"
     destino = sqlite3.connect(copia)
     db.copiar_base(destino, configuracion.ruta_bd(configuracion.cargar_parametros()), solo_lectura=False)
