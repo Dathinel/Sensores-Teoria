@@ -10,7 +10,7 @@ una ventana tipo programa, con todo lo que pide el parcial en un solo lugar y ex
   las piezas reales en cada estación, el almacén y los rechazos por causa, actualizados cada segundo.
 - **Programas** (como en Docker Desktop: cada fila con su estado y cuánto tarda): la línea en vivo
   (visor 3D + dashboard de Streamlit; el visor tarda ~8-10 s en responder), las 4 escenas de PyBullet,
-  el asistente, las 937 pruebas automáticas (~4-5 min) y el chequeo del PC.
+  el asistente, las 951 pruebas automáticas (~4-5 min) y el chequeo del PC.
 - **Cómo funciona**, el **visor 3D sin instalar nada**, los **resultados** (videos y capturas), **qué pide
   el parcial** con qué se prueba cada punto, y el **estado honesto** del proyecto.
 
@@ -132,7 +132,7 @@ lleva a la prueba visual), el estado del entorno y **Pantalla completa**.
 | **Prueba visual** | Izquierda: el recorrido animado de una pieza. Derecha: lo que pasa de verdad en la simulación | Elegir la pieza (moneda de $500, botón de plástico, arandela, bloque metálico o 1 euro) → **Reproducir el recorrido** (un paso cada 1,6 s, el ciclo real) o **Avanzar una casilla** de a una; **Poner otra pieza** vuelve a empezar. Abajo se explica qué decide cada estación y, si la rechaza, con qué causa. A la derecha, si la línea en vivo corre: las 4 casillas reales, el almacén y los rechazos por causa, cada segundo; **Abrir el visor 3D** o **Ver el visor 3D aquí**. Si no corre: **Arrancar la línea en vivo**. |
 | **Programas** | La lista de lo que se puede arrancar, con su estado, y el detalle del elegido | Elegir una fila → **Iniciar** (arriba a la derecha o el botón grande) → se ve "Preparando el entorno…" (solo la primera vez, con barra por pasos de pip) y luego "Se está ejecutando…" con lo que dice el programa. **Detener** lo cierra. Las filas: línea en vivo (visor + dashboard, ~10 s en responder), asistente (se le escribe en la caja de abajo o con las sugerencias), las 4 escenas de PyBullet (abren su propia ventana), las pruebas automáticas (~4-5 min, barra con el avance real) y el chequeo del PC (~15 s). |
 | **Cómo funciona** | Los 4 bloques de la línea y la arquitectura (esta misma sección del README, con sus diagramas) | Solo lectura. |
-| **Visor sin instalar** | El visor 3D portable con una corrida grabada | **Mostrar aquí el visor** (carga ~2,5 MB) o **Abrirlo en una pestaña**. Arriba dice DEMO GRABADA. |
+| **Visor sin instalar** | El visor 3D portable con una corrida grabada | **Mostrar aquí el visor** (carga ~9,4 MB) o **Abrirlo en una pestaña**. Arriba dice DEMO GRABADA. |
 | **Resultados** | Los 4 videos de PyBullet, capturas y las pruebas | Reproducir cada video; el enlace lleva a Programas → Pruebas automáticas. |
 | **Qué pide el parcial** | Los 9 puntos del enunciado y con qué programa se prueba cada uno | Cada casilla se marca sola cuando termina bien un programa que la cubre (o a mano). |
 | **Estado y documentos** | Lo hecho y lo que falta (la sección [Estado del proyecto](#estado-del-proyecto-lo-hecho-y-lo-que-falta)) y botones a los documentos | README, especificación, paso a paso, conexiones, firmware y el enunciado en PDF. |
@@ -163,7 +163,7 @@ comandos con `entorno\Scripts\python`:
    `FIN: 7 al almacen, 11 a rechazo, falsos rechazos 1, falsas aceptaciones 0`.
 5. `entorno\Scripts\python -m app.charla`: el asistente por consola (reglas, sin clave ni internet), sobre una copia
    de la base. Con la línea en vivo, la pestaña Asistente del dashboard sí ejecuta las órdenes.
-6. `entorno\Scripts\python -m pytest -q`: las [pruebas automáticas](#pruebas-automáticas) (~4 min); una sola capa:
+6. `entorno\Scripts\python -m pytest -q`: las [pruebas automáticas](#pruebas-automáticas) (~4-5 min); una sola capa:
    `... -m pytest -q tests/control`.
 7. `entorno\Scripts\python -m app.puente_serial`: el puente con el ESP32 fijo o, sin placa, con la estación emulada
    (telemetría, mensajes perdidos y la última línea cruda).
@@ -246,7 +246,7 @@ visor portable encuentra solo la simulación y el dashboard se abre en el puerto
 Para fijar otro: `entorno\Scripts\python -m app.lanzar --auto prueba_completa --puerto-visor 9000` o la
 variable de entorno `PLANTA_PUERTO_VISOR` (lo resuelve [`app/puertos.py`](app/puertos.py)).
 
-`visor-portable.html` es un solo archivo de unos 2,5 MB (Three.js, el visor y la demo van adentro).
+`visor-portable.html` es un solo archivo de unos 9,4 MB (Three.js, el visor, los modelos 3D del carro y de la maqueta impresos y la demo van adentro).
 Abierto en otro PC, sin Python y sin internet, muestra la demo grabada; si en ese PC sí está la
 simulación, pasa a vivo igual. Se rehace con `python -m app.portable` (y solo, cada vez que se abre
 `visor.bat` o se graba una demo nueva con `python -m app.grabar_demo`).
@@ -786,7 +786,7 @@ flowchart LR
   (cajas orientadas que se atraviesan) y un revisor de cables que muestrea cada uno cada 3 mm: así
   encontramos patas que atravesaban el carrusel, servos "posados" sin sujeción y cables cruzados, y
   los corregimos.
-- **Asistente** (`app/asistente.py`). Sigue la lógica del tema 4 del repositorio: la frase va a un
+- **Asistente** (`app/asistente/`, un paquete: [cómo está partido](app/asistente/README.md)). Sigue la lógica del tema 4 del repositorio: la frase va a un
   modelo, que responde solo con un JSON `{"respuesta", "acciones"}`; el programa lo valida y las
   órdenes permitidas van a la misma tabla que los botones. Detalles abajo.
 - **Firmware y puente serial** (`firmware/`, `app/puente_serial.py`). Detalles abajo.
@@ -937,7 +937,7 @@ Reglas que cuidan el hardware y que viven **en la placa**, no solo en el PC:
 
 ### Pruebas automáticas
 
-Tenemos **937 pruebas** en `tests/` (todas pasan: `entorno\Scripts\python -m pytest -q`, 2026-10-06, unos 4-5
+Tenemos **951 pruebas** en `tests/` (todas pasan: `entorno\Scripts\python -m pytest -q`, 2026-10-26, unos 4-5
 minutos) (ordenadas por capa: `control/`, `sim/`, `visor/`,
 `app/` y `firmware/`), y todas corren sin ventana (PyBullet en modo DIRECT):
 reglas de decisión, registro de casillas, máquinas de estado de las dos cintas, almacén, protocolo,
@@ -1077,7 +1077,7 @@ abaratar, ninguna aplicada sin aprobarla) y [`docs/peso.md`](docs/peso.md).
 
 **Falta, en físico:**
 
-- **Imprimir y armar la maqueta** (`maqueta_impresa/3mf/`, siguiendo `manual_maqueta.pdf`) y medir
+- **Imprimir y armar la maqueta** (`maqueta_impresa/3mf/`, siguiendo `maqueta_impresa/salida/manual_maqueta.pdf`) y medir
   las variables `MEDIR` de cada subsistema antes de imprimir sus piezas.
 - **Construir el resto del montaje**: bandas, motores, sensores, canaleta, pista.
 - **Medir los valores PROVISIONALES**: medidas del vaso y de las tapas, capacidad de los tubos,
@@ -1183,27 +1183,30 @@ local, son escritos a mano. Cuál es cuál está en [`docs/README.md`](docs/READ
 El proyecto está separado en capas (ver [La idea general](#la-idea-general) y
 [`docs/logica-interna.md`](docs/logica-interna.md)): `control/` decide, `sim/` simula el mundo,
 `app/` muestra y guarda, `firmware/` corre en las placas. Todo número del diseño vive en `config/`.
-Aquí está cada archivo, qué hace y cuándo se usa.
+Aquí está cada archivo, qué hace y cuándo se usa; cada carpeta tiene además su `README.md` con el detalle
+(enlazado al principio de cada bloque).
 
 ### En la raíz
 
 | Archivo | Qué hace |
 |---|---|
 | `visor.bat` | Doble clic para ver todo: abre `visor-portable.html` al instante, arranca la simulación por detrás y abre el dashboard cuando está listo. Sin instalar, avisa y abre solo la demo grabada; si un puerto está ocupado, dice cuál usa. |
-| `simulaciones.bat` y `simulaciones/` | Menú para abrir las simulaciones de PyBullet en su ventana real (filtro de monedas, vasos, carro, todo junto) o la carpeta de videos. Un `.bat` por escena. |
+| `simulaciones.bat` y `simulaciones/` ([README](simulaciones/README.md)) | Menú para abrir las simulaciones de PyBullet en su ventana real (filtro de monedas, vasos, carro, todo junto) o la carpeta de videos. Un `.bat` por escena. |
 | `instalar.bat` | Deja todo listo en un PC nuevo. Opción 1, mínima (`requirements-minimo.txt`): para verlo en vivo. Opción 2, completa: entorno con las versiones exactas, firmware, modelo local de Ollama, Whisper y el chequeo. |
 | `ABRIR.bat` / `abrir.sh` | Doble clic: abre la app del proyecto (`app-practica/`) con el lanzador de la raíz del repo (`_lanzador/`). |
-| `app-practica/` | La app amigable del proyecto (se abre con `ABRIR.bat`; por dentro `python _lanzador/lanzador.py --practica proyecto-final`), organizada como Docker Desktop (barra lateral, lista de programas con su estado y su detalle al lado): qué hace, la prueba visual (el recorrido animado de una pieza por las 4 estaciones junto al estado real de la simulación, leído de `/api/estado` del visor), y el visor en vivo, las escenas, el asistente, las pruebas y el chequeo con su barra y el tiempo que tardan. Va aparte porque `app/` es el paquete de Python. |
-| `requirements-minimo.txt` | Los 13 paquetes de la instalación mínima (`instalar.bat`, opción 1). |
-| `visor-portable.html` | El visor 3D en un solo archivo (Three.js + demo grabada). Funciona sin Python ni internet y pasa solo al vivo si la simulación responde. Se genera con `python -m app.portable`. |
-| `requirements-minimo.txt` / `requirements-lock.txt` | Lo mínimo para correr la simulación, y las versiones exactas de la instalación completa (las que usa `instalar.bat`). |
+| `probar.json` | Lo que la app del proyecto puede arrancar (línea en vivo, asistente, visor portable, las 4 escenas, pruebas, chequeo), con su comando, cuánto tarda y qué punto del parcial cubre. Lo lee `_lanzador/lanzador.py`; `python _lanzador/lanzador.py --comprobar` (desde la raíz del repo) lo revisa. |
+| `app-practica/` ([README](app-practica/README.md)) | La app amigable del proyecto (se abre con `ABRIR.bat`; por dentro `python _lanzador/lanzador.py --practica proyecto-final`), organizada como Docker Desktop (barra lateral, lista de programas con su estado y su detalle al lado): qué hace, la prueba visual (el recorrido animado de una pieza por las 4 estaciones junto al estado real de la simulación, leído de `/api/estado` del visor), y el visor en vivo, las escenas, el asistente, las pruebas y el chequeo con su barra y el tiempo que tardan. Va aparte porque `app/` es el paquete de Python. |
+| `visor-portable.html` | El visor 3D en un solo archivo (~9,4 MB: Three.js, los dos GLB impresos y la demo grabada). Funciona sin Python ni internet y pasa solo al vivo si la simulación responde. Se genera con `python -m app.portable` (y con `python -m app.grabar_demo`). |
+| `requirements-minimo.txt` / `requirements-lock.txt` | Los 13 paquetes de la instalación mínima (`instalar.bat`, opción 1), y las versiones exactas de la instalación completa (opción 2). |
 | `pytest.ini` | Configura las pruebas: carpeta `tests/` y la raíz importable sin instalar nada. |
 | `.env.example` | Cómo poner la clave de DeepSeek (el `.env` real no se sube). |
 | `docs/especificacion.md` | El documento maestro de diseño: requisitos, secuencia de operación, contratos de datos, reglas. |
-| `CLAUDE.md` | Instrucciones para Claude Code (reglas del agente, sección 17). |
+| `CLAUDE.md` | Instrucciones para Claude Code: dónde leer según la carpeta, reglas del agente (sección 17), lo que no se mueve, quién nos nombra desde afuera y qué verificar antes de terminar. |
 | `CONTEXTO-SESION.md` | Reglas del grupo y en qué va el trabajo, sesión a sesión. |
 
 ### `config/`: todos los números del diseño
+
+Detalle y quién lee cada archivo: [`config/README.md`](config/README.md).
 
 | Archivo | Qué hace |
 |---|---|
@@ -1215,62 +1218,75 @@ Aquí está cada archivo, qué hace y cuándo se usa.
 ### `control/`: la lógica que decide (Python puro)
 
 No importa PyBullet ni pyserial: por eso corre igual en la simulación, en las pruebas y contra el
-hardware real, y el carro la lleva compilada en su ESP32.
+hardware real, y el carro la lleva compilada en su ESP32. Detalle: [`control/README.md`](control/README.md).
 
 | Archivo | Qué hace |
 |---|---|
+| `configuracion.py` | Carga `config/parametros.yaml` y arma los umbrales del filtro (lo usan `sim/`, `firmware/preparar.py` y, por `app/configuracion.py`, `app/`). |
 | `reglas.py` | Las 6 causas de rechazo de monedas (material, rango, circularidad, perforado, reconocida, coherencia) y cómo se combinan las dos fotos. |
 | `linea.py` | La cinta de monedas: qué hace cada estación (E1 presencia, E2 material, E3 visión) con su lectura y a dónde va cada casilla en la descarga. |
 | `registro.py` | El registro de cada casilla (lo que cada estación descubre) y la regla de que un rechazo nunca se revierte. Estados del vaso. |
 | `almacen.py` | Los 6 tubos del almacén revólver: guardar por denominación, avisar tubo lleno, sacar un lote. |
+| `carrusel.py` | El giro del carrusel del almacén con su tiempo real: si el tubo ya está bajo la descarga y, si no, cuánto falta. |
 | `embalaje.py` | La cinta de vasos como máquina de estados: verificar, llenar, tapar, prensar, descargar; cortina que congela todo. |
 | `monedas.py` | Lee `monedas.yaml` y responde diámetro, masa y denominación de cada clase. |
 | `vehiculo.py` | El carro: seguir la línea (PD), frenar y detectar muros, esquivar por el lado libre, meta, vuelta, muelle, órdenes y odometría. |
 | `protocolo.py` | Mensajes JSON numerados con ack, latido y la regla para soltar un vaso al carro. Corre también en las dos placas. |
 | `tiempos.py` | Comprueba que cada acción del montaje real cabe en el tiempo que le da la cinta y calcula la producción por minuto. |
 | `hal/interfaces.py` | Qué es un sensor, un servo, una cinta o una cámara para la lógica (clases abstractas). |
-| `hal/backend_sim.py` | Esas interfaces sobre PyBullet. |
 | `hal/backend_real.py` | Esas interfaces sobre el ESP32 fijo (telemetría y comandos por el puente serial). |
 
 ### `sim/`: el mundo simulado (PyBullet)
+
+Detalle y comandos: [`sim/README.md`](sim/README.md).
 
 | Archivo | Qué hace |
 |---|---|
 | `planta.py` | LA simulación de la línea, tick a tick: las dos cintas, el almacén, la canaleta, el carro, los sabotajes y las alarmas. Llama a `control/` con lo que leen los sensores. |
 | `mundo.py` | La escena de PyBullet de las dos cintas (URDF de `urdf/`), los cuerpos de monedas, botones, bloques y vasos, y cómo se mueven. |
 | `sensores_sim.py` | Los sensores emulados: rayos (`rayTest`) para infrarrojos y franjas de cámara, cono de la cortina, material por bandera, cámara en modo oráculo con ruido. |
+| `backend_sim.py` | Las interfaces de `control/hal/` sobre PyBullet (vive aquí para que `control/` no importe PyBullet). |
 | `vehiculo_sim.py` | El carro con física real en su propio mundo: ruedas con torque limitado, muros, muelle, vaso que cabecea. |
 | `pista.py` | La línea central de la pista a partir de sus tramos. |
 | `urdf/` | Las dos cintas en URDF (bancada, separadores, estaciones, bandejas). |
 | `geometria.py` | La geometría que dibuja el visor 3D, sacada de las mismas fuentes que la simulación. |
 | `catalogos.py` | Los 13 sensores y la lista de materiales. |
 | `conexiones.py` | El conexionado pin a pin (fuente única de los cables del visor, `docs/conexiones.md` y los pines del firmware). |
-| `electrica.py` | La parte eléctrica simulada: corriente de cada riel en un ciclo real, caídas en cables, fusibles, pasivos y batería → `docs/electrica.md`. |
+| `electrica.py` | El modelo de la parte eléctrica simulada: corriente de cada riel en un ciclo real, caídas en cables, fusibles, pasivos y batería. |
+| `electrica_informe.py` | Escribe `docs/electrica.md` y las gráficas (`python -m sim.electrica`). |
 | `carga_escenarios.py` | Lee los escenarios YAML, las pruebas de un filtro y las piezas sueltas. |
 | `escenarios/` | `prueba_completa.yaml` (la corrida de la interfaz) y `pruebas_aisladas/` (un escenario por filtro y el mixto de 20). |
 | `ver/` | Las simulaciones para quien evalúa, en ventana de PyBullet, y el grabador de los videos. |
 
 ### `app/`: lo que se ve y se guarda
 
+Detalle y reglas del paquete: [`app/README.md`](app/README.md); el asistente en
+[`app/asistente/README.md`](app/asistente/README.md), el dashboard en [`app/dashboard/README.md`](app/dashboard/README.md)
+y el visor en [`app/visor3d/README.md`](app/visor3d/README.md) (sus piezas en [`app/visor3d/piezas/README.md`](app/visor3d/piezas/README.md)).
+
 | Archivo | Qué hace |
 |---|---|
+| `rutas.py` | Las carpetas del proyecto (`RAIZ`, `CONFIG`, `DATOS`, `DOCS`, `VISOR`) en un solo lugar; sin dependencias. |
 | `lanzar.py` | Arranca el supervisor y el dashboard en procesos separados (lo usa `visor.bat`). |
 | `puertos.py` | Qué puerto usa el visor en vivo: 8765, `PLANTA_PUERTO_VISOR` o `--puerto-visor`; si otro programa lo tiene, el siguiente libre (y lo dice). `python -m app.puertos` lo muestra. |
 | `supervisor.py` | El único proceso que toca la simulación (o las placas): corre la línea, consume órdenes, escribe en SQLite. |
 | `servidor.py` | HTTP del supervisor: sirve el visor 3D y `/api/estado`, `/api/geometria`, `/api/asistente`, `/api/internet`. |
 | `db.py` | Esquema de SQLite (eventos, elementos, vasos, ruta, órdenes, asistente, almacén entre turnos). |
-| `configuracion.py` | Carga `parametros.yaml`. |
-| `asistente.py` | El asistente: DeepSeek → modelo local (Ollama) → reglas; búsqueda en la documentación, estado en vivo, lista blanca de órdenes, voz con y sin internet. |
+| `configuracion.py` | Ruta de la base (`ruta_bd`); reexporta la carga de `control/configuracion.py`. |
+| `asistente/` | Paquete del asistente: `entrada.py` (`atender`: DeepSeek → modelo local (Ollama) → reglas), `conocimiento` (búsqueda en la documentación), `estado` (estado en vivo), `mensajes`, `ordenes` (lista blanca), `llm`, `reglas`, `respuestas`, `audio` (voz con y sin internet). `python -m app.asistente --preparar-local` / `--preparar-voz`. |
+| `charla.py` | El asistente por consola, con reglas y sobre una copia de la base (`python -m app.charla`; lo arranca la fila "asistente" de la app del proyecto). |
 | `evaluar_asistente.py` | La batería real de preguntas y órdenes al asistente → `docs/pruebas-asistente.md`. |
 | `puente_serial.py` | PC ↔ ESP32 fijo por USB (y una estación emulada si no hay placa); sirve también para diagnosticar. |
 | `costos.py`, `masas.py` | Totales de costo y de peso por subsistema. |
 | `documentos.py` | Genera los `.md` de `docs/` desde sus fuentes (no se editan a mano). |
 | `chequeo.py` | Revisión antes de la sustentación: versiones, puertos, Ollama, Whisper, internet, placas. |
 | `grabar_demo.py`, `portable.py` | Graban una corrida para la demo y arman `visor-portable.html`. |
-| `dashboard/` | El Streamlit: `inicio.py` (entrada), `estilo.py` (diseño común con el visor), `datos.py` (lee SQLite y manda órdenes), `textos.py` (frases simples), `cabecera.py` (avisos grandes), `controles.py` (barra lateral), `dibujos.py` (cintas y almacén) y `pestanas/` (una por pestaña: resumen, monedas, calidad, línea, carro, pruebas, montaje, asistente, ayuda). |
-| `visor3d/` | El visor en Three.js: `visor.js` (escena, cámara, animación), `interfaz.js` y `estilo.css` (panel), `piezas/` (un módulo por grupo de piezas, reutilizables), `vendor/` (Three.js local, sin CDN), `demo/`. |
+| `dashboard/` | El Streamlit (`python -m app.dashboard` lo abre solo, sin supervisor): `inicio.py` (entrada), `estilo.py` (diseño común con el visor), `datos.py` (lee SQLite y manda órdenes), `textos.py` (frases simples), `cabecera.py` (avisos grandes), `controles.py` (barra lateral), `dibujos.py` (cintas y almacén) y `pestanas/` (una por pestaña: resumen, monedas, calidad, línea, carro, pruebas, montaje, asistente, ayuda). |
+| `visor3d/` | El visor en Three.js: `visor.js` (escena, cámara, animación), `optimizar.js` (une mallas quietas antes del primer cuadro), `maqueta_impresa.js` (lee `maqueta_impresa.glb` y `carro_armado.glb`), `interfaz.js` y `estilo.css` (panel), `piezas/` (un módulo por grupo de piezas, reutilizables), `vendor/` (Three.js local, sin CDN), `demo/` (la corrida grabada). |
 
 ### `firmware/`: MicroPython de los dos ESP32
+
+Pines, cómo se arma y cómo se sube: [`firmware/README.md`](firmware/README.md).
 
 | Archivo | Qué hace |
 |---|---|
@@ -1286,13 +1302,12 @@ hardware real, y el carro la lleva compilada en su ESP32.
 
 | Carpeta | Qué hay |
 |---|---|
-| `chasis_impreso/` | El carro impreso: `chasis.scad` (paramétrico), `exportar.py` (STL, 3MF por tanda, gramos y tiempo), revisores de voladizos y remaches, y en `salida/` lo generado: `manual_armado.pdf`, lista de materiales y visor del carro armado. |
-| `maqueta_impresa/` | La planta impresa: estructura (`estructura.py`), un `.scad` por subsistema, `revisar.py` (remaches medidos, choques, barridos de lo que se mueve, sin soportes), `exportar.py` (STL, 3MF, `material.md`), `manual_maqueta.pdf` y el GLB que usa el visor. |
-| `wokwi/` | El circuito del ESP32 fijo y del carro para abrir en wokwi.com (`diagram.json` + `main.py`). |
-| `vision/` | `capturar_dataset.py` (fotos del montaje) y `entrenar.py` (Keras + MobileNetV2, matriz de confusión). |
-| `tests/` | Las pruebas automáticas por capa: `control/`, `sim/`, `visor/`, `app/`, `firmware/`. |
-| `docs/` | La documentación (índice en [`docs/README.md`](docs/README.md)), capturas, videos y la guía del parcial. |
+| `chasis_impreso/` ([README](chasis_impreso/README.md)) | El carro impreso (ya impreso y armado): `chasis.scad` (paramétrico), `exportar.py` (STL, 3MF por tanda, gramos y tiempo), revisores de voladizos y remaches, y en `salida/` lo generado: STL y 3MF con y sin membrana, `piezas.json`, `lista_materiales.md`, `manual_armado.pdf` y `visor_carro.html`. `modelo_3d.py` escribe `app/visor3d/carro_armado.glb`. |
+| `maqueta_impresa/` ([README](maqueta_impresa/README.md)) | La planta impresa. En la raíz, las herramientas: `estructura.py`, `revisar.py` (remaches medidos, choques, barridos de lo que se mueve, sin soportes), `exportar.py`, `laminar.py`, `manual_maqueta.py`, `modelo_3d.py` (escribe `app/visor3d/maqueta_impresa.glb`). `scad/`: las fuentes OpenSCAD; `informes/`: `material.md`, `auditoria.md`, `esfuerzos.md`, `estructura_resumen.md`; `salida/`: STL, `piezas.json`, `laminado.json`, `manual_maqueta.pdf`; `3mf/`: las tandas para Creality Print; `img/`: la imagen del README y los renders del manual. |
+| `wokwi/` ([README](wokwi/README.md)) | El circuito del ESP32 fijo y del carro para abrir en wokwi.com (`diagram.json` + `main.py`). |
+| `vision/` ([README](vision/README.md)) | `capturar_dataset.py` (fotos del montaje) y `entrenar.py` (Keras + MobileNetV2, matriz de confusión). |
+| `tests/` ([README](tests/README.md)) | Las pruebas automáticas por capa: `control/`, `sim/`, `visor/`, `app/`, `firmware/`. |
+| `docs/` ([README](docs/README.md)) | La documentación, capturas, videos y la guía del parcial. |
 | `datos/` | La base SQLite de la corrida (no se sube). |
 | `.streamlit/config.toml` | El tema del dashboard. |
-| `firmware/README.md`, `vision/README.md`, `wokwi/README.md` | Cómo se usa cada una de esas carpetas. |
 | `firmware/salida/` | Lo que se sube a cada placa, generado por `firmware/preparar.py` (no se edita a mano). |

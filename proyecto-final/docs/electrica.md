@@ -1,6 +1,6 @@
 # Parte eléctrica, punto por punto (simulada)
 
-> Generado por `python -m sim.electrica` desde `sim/electrica.py`, que lee el conexionado de `sim/conexiones.py` (la fuente única de cada hilo) y los tiempos de `config/parametros.yaml`. No editar a mano. Las corrientes son de hoja de datos (**PROVISIONALES** hasta medirlas con el multímetro en el montaje); la lista de lo que hay que medir está al final.
+> Generado por `python -m sim.electrica` desde `sim/electrica.py` (modelo) y `sim/electrica_informe.py` (informe), que lee el conexionado de `sim/conexiones.py` (la fuente única de cada hilo) y los tiempos de `config/parametros.yaml`. No editar a mano. Las corrientes son de hoja de datos (**PROVISIONALES** hasta medirlas con el multímetro en el montaje); la lista de lo que hay que medir está al final.
 
 Esta página responde, para cada fuente, regulador, fusible y cable: **¿aguanta lo que le piden en el peor momento real del ciclo?** Para eso se recorre en el tiempo, con paso de 10 ms, un ciclo real de la planta y un recorrido completo del carro, sumando la corriente de cada carga en su riel. El circuito también se puede ver y mover en el simulador Wokwi: [wokwi/](../wokwi/README.md).
 

@@ -344,7 +344,7 @@ Fase 7. En el dashboard (pestaña Asistente) se le pregunta al asistente por esc
 {"t":"cmd","id":57,"dst":"carro","act":"avanzar","distancia_m":0.3}
 ```
 
-**Cómo está implementado hoy:** app/asistente.py (búsqueda en la documentación, estado en vivo, DeepSeek con JSON, lista blanca, intérprete local, voz con SpeechRecognition y gTTS); control/vehiculo.py (`ordenar`, odometría, revisión del camino, atascado); pruebas en tests/app/test_asistente.py y tests/control/test_vehiculo.py, entre ellas un punto detrás de un muro (no lo toca) y, desde fuera de la línea, ir a la meta y volver al muelle (20 semillas de error sin tocar muros). Falta una clave de DeepSeek válida: la del tema 4 fue rechazada (401).
+**Cómo está implementado hoy:** app/asistente/ (búsqueda en la documentación, estado en vivo, DeepSeek con JSON, lista blanca, intérprete local, voz con SpeechRecognition y gTTS); control/vehiculo.py (`ordenar`, odometría, revisión del camino, atascado); pruebas en tests/app/test_asistente.py y tests/control/test_vehiculo.py, entre ellas un punto detrás de un muro (no lo toca) y, desde fuera de la línea, ir a la meta y volver al muelle (20 semillas de error sin tocar muros). Falta una clave de DeepSeek válida: la del tema 4 fue rechazada (401).
 
 **Nota de revisión:** En pausa, necesita el montaje real para probarse (usuario, 2026-09-27).
 

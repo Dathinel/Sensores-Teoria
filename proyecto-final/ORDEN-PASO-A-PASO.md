@@ -70,16 +70,16 @@ CLAUDE.md, docs/, .gitattributes del repo) solo los toca la sesión principal o 
   `maqueta_impresa.js` pasaron de `app/visor3d/piezas/` a `app/visor3d/`. `docs/paso-a-paso.yaml:648` nombra `app/asistente.py`:
   si se cambia, regenerar con `python -m app.documentos` y `python -m app.grabar_demo`.
 
-### E. Documentos para personas y para Claude
-- [ ] Un README.md por carpeta donde falta: app/, app/dashboard/, app/visor3d/ (y corregir piezas/README.md), app-practica/,
+### E. Documentos para personas y para Claude — HECHA (revisor aplicado)
+- [x] Un README.md por carpeta donde falta: app/, app/dashboard/, app/visor3d/ (y corregir piezas/README.md), app-practica/,
   sim/, control/, config/, tests/; chasis_impreso/ con una sección "archivos y qué genera qué".
-- [ ] CLAUDE.md solo donde hay reglas para el agente: el general (tabla "Dónde leer" con TODAS las carpetas, lo que no se mueve,
+- [x] CLAUDE.md solo donde hay reglas para el agente: el general (tabla "Dónde leer" con TODAS las carpetas, lo que no se mueve,
   quién nos nombra desde afuera, checklist de verificación), `maqueta_impresa/CLAUDE.md` (orden de trabajo, sello, Creality solo
   con --cli, 3mf/guardados) y `chasis_impreso/CLAUDE.md` (ya impreso: no regenerar).
-- [ ] CONTEXTO-SESION.md corto: los pedidos cerrados pasan a docs/historial-pedidos.md.
-- [ ] Árboles de carpetas al día: README.md (tabla "Qué hace cada archivo"), docs/especificacion.md §árbol, docs/README.md.
-- [ ] Cifras viejas: 937 pruebas → las de hoy; portable 2,5 MB → 9,4 MB (probar.json, README, app-practica, .gitattributes).
-- [ ] Enlace roto de la app de la práctica: "Enunciado (PDF)" da 403 (el lanzador bloquea "umng.pdf").
+- [x] CONTEXTO-SESION.md corto: los pedidos cerrados pasan a docs/historial-pedidos.md.
+- [x] Árboles de carpetas al día: README.md (tabla "Qué hace cada archivo"), docs/especificacion.md §árbol, docs/README.md.
+- [x] Cifras viejas: 937 pruebas → las de hoy; portable 2,5 MB → 9,4 MB (probar.json, README, app-practica, .gitattributes).
+- [x] Enlace roto de la app de la práctica: "Enunciado (PDF)" da 403 (el lanzador bloquea "umng.pdf").
 
 ### F. Verificación final y cierre
 - [ ] pytest completo; `revisar.py --sin-render` TODO OK; `python _lanzador/revisar_enlaces.py proyecto-final`;

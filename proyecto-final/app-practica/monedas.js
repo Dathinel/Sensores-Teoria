@@ -337,7 +337,7 @@ const PROGRAMAS = [
   { id: 'sim-carro', el: '#simCarro', nombre: 'Escena 3 · carro en la pista', sub: '~5 s · dura ~2,5 min' },
   { id: 'sim-todo', el: '#simTodo', nombre: 'Escena 4 · todo junto', sub: '~5 s · dura ~4,5 min · dos ventanas' },
   { grupo: 'Comprobar' },
-  { id: 'pruebas', el: '#pruebas', nombre: 'Pruebas automáticas (937)', sub: '~4-5 min' },
+  { id: 'pruebas', el: '#pruebas', nombre: 'Pruebas automáticas (951)', sub: '~4-5 min' },
   { id: 'chequeo', el: '#chequeo', nombre: 'Chequeo del PC', sub: '~10-20 s' },
 ];
 const ESTADOS = {
@@ -500,7 +500,7 @@ function programas() {
   });
 
   panel('pruebas', '#pruebas', {
-    queDeberiasVer: 'Una fila de puntos que avanza hasta 100 % y al final "937 passed" (con la instalación mínima se omiten 2, "skipped": las que compilan el firmware con mpy-cross). Tarda unos 4-5 minutos.',
+    queDeberiasVer: 'Una fila de puntos que avanza hasta 100 % y al final "951 passed" (con la instalación mínima se omiten 2, "skipped": las que compilan el firmware con mpy-cross). Tarda unos 4-5 minutos.',
   });
   panel('chequeo', '#chequeo', {
     queDeberiasVer: 'Una lista con ✓ (listo), ! (aviso) y ✗ (falta), cada una con cómo arreglarla. Con la instalación mínima es normal ver ✗ en Ollama, la voz o el firmware: no hacen falta para verlo. Si dice "Puerto 8765 … lo ocupa OTRO programa", no pasa nada: se usará el siguiente libre.',
@@ -550,7 +550,7 @@ async function main() {
     const marco = $('#marcoPortable');
     if (!marco.firstChild) {
       const nota = $('#portableCarga');
-      nota.textContent = 'Cargando 2,6 MB (Three.js + la demo)… unos segundos.';
+      nota.textContent = 'Cargando 9,4 MB (Three.js, los modelos impresos y la demo)… unos segundos.';
       const f = document.createElement('iframe');
       f.src = App.url('visor-portable.html');
       f.title = 'Visor 3D portable (demo grabada)';

@@ -372,13 +372,18 @@ es el visor 3D (`visor.bat`); el dashboard de Streamlit se mantiene porque lo pi
 enunciado. Las carpetas de fases futuras (cad/, docs de planos y esquemas) se crean cuando
 empiece esa fase, no antes. Ordenada otra vez el 2026-09-28: `tests/` por capa, los escenarios
 de un solo filtro en `sim/escenarios/pruebas_aisladas/`, `pytest.ini` en vez del `conftest.py` de la raíz
-y un índice de `docs/` (`docs/README.md`).
+y un índice de `docs/` (`docs/README.md`). Ordenada otra vez el 2026-10-26: un `README.md` por carpeta,
+`maqueta_impresa/` y `chasis_impreso/` con sus fuentes, informes y salidas separados, `app/rutas.py`, el
+asistente como paquete y `control/` sin PyBullet (`sim/backend_sim.py`).
 
 ```
 /
-  CLAUDE.md                     instrucciones para Claude Code (reglas del agente, sección 17)
+  CLAUDE.md                     instrucciones para Claude Code (dónde leer, reglas del agente, qué no se mueve, verificación)
   CONTEXTO-SESION.md            reglas del usuario y en qué quedó el trabajo (leer primero)
-  README.md                     resumen público y cómo verlo
+  README.md                     resumen público y cómo verlo (lo enlaza el Word entregado: no se mueve)
+  ABRIR.bat, abrir.sh           doble clic: la app del proyecto (app-practica/) con el lanzador del repo (_lanzador/)
+  probar.json                   lo que esa app puede arrancar (lo lee _lanzador/lanzador.py)
+  app-practica/                 la app del proyecto: index.html, monedas.js, monedas.css (sin build)
   visor.bat                     doble clic: abre visor-portable.html y arranca la simulación por detrás
   simulaciones.bat, simulaciones/   menú / un .bat por escena de PyBullet en ventana (sim/ver/)
   wokwi/                        el circuito de cada ESP32 para wokwi.com (diagram.json + main.py)
@@ -399,7 +404,7 @@ y un índice de `docs/` (`docs/README.md`).
     paso-a-paso.yaml            los 17 puntos con su estado de revisión (fuente única)
     paso-a-paso.md, sensores.md, componentes.md, replicacion.md, conexiones.md   generados (python -m app.documentos)
     costos.md                   generado desde config/precios.yaml; pruebas-asistente.md: python -m app.evaluar_asistente
-    peso.md, electrica.md       generados (app.documentos; electrica.md sale de sim/electrica.py)
+    peso.md, electrica.md       generados (app.documentos; electrica.md sale de sim/electrica_informe.py, también python -m sim.electrica)
     fisica-vs-3d.md             generado por python tests/sim/test_fisica_vs_3d.py
     logica-interna.md, modelo-local.md   escritos a mano: la lógica con el código, y el LLM local
     videos/                     simulaciones de PyBullet grabadas (python -m sim.ver.grabar)
@@ -409,14 +414,15 @@ y un índice de `docs/` (`docs/README.md`).
     capturas/                   capturas que usa el README.md
     enunciado/                  la guia del parcial (segundo-parcial-umng.pdf) y sus figuras, numeradas; README.md
   control/                      lógica pura (sin PyBullet ni pyserial)
+    configuracion.py            carga de config/parametros.yaml y umbrales del filtro
     hal/interfaces.py           clases abstractas de sensores y actuadores
-    hal/backend_sim.py          la HAL sobre la simulación
     hal/backend_real.py         la HAL sobre el ESP32 (telemetría y comandos del puente serial)
     linea.py                    máquina de estados de la cinta de monedas
     embalaje.py                 máquina de estados de la cinta de vasos
     registro.py                 registro de casillas y transiciones
     reglas.py                   reglas de decisión de la sección 7
     almacen.py                  tubos por denominación (ninguna moneda se descarta)
+    carrusel.py                 giro del carrusel con su tiempo real (si el tubo ya está bajo la descarga)
     vehiculo.py                 control del carro: línea, evasión, meta, vuelta y muelle; órdenes (fase 7) y odometría
     protocolo.py                mensajes numerados, ack, latido y reglas del enlace (punto 15)
     monedas.py                  tabla de referencia y utilidades
@@ -425,24 +431,29 @@ y un índice de `docs/` (`docs/README.md`).
     planta.py                   LA simulación de la línea: cintas, almacén, canaleta, carro
     mundo.py                    escena de PyBullet de las dos cintas (urdf/)
     sensores_sim.py             sensores emulados, incluida la cámara en modo oráculo
+    backend_sim.py              la HAL sobre la simulación (aquí y no en control/hal/: usa PyBullet)
     vehiculo_sim.py             el carro con física real, en su propio mundo
     pista.py                    línea central de la pista a partir de sus tramos
     geometria.py                geometría de todo el sistema para el visor 3D
     catalogos.py                sensores numerados y lista de materiales (sin dependencias)
     conexiones.py               conexionado pin a pin: módulos, pines, cada hilo (fuente única)
     electrica.py                parte eléctrica simulada: rieles, ciclo real, caídas, fusibles, pasivos
+    electrica_informe.py        docs/electrica.md y sus gráficas
     ver/                        escenas en ventana GUI de PyBullet (filtro, vasos, carro, todo) y grabar.py
     carga_escenarios.py         lectura de escenarios YAML, pruebas de un filtro y piezas sueltas
     escenarios/                 prueba_completa.yaml (la corrida normal de la interfaz)
       pruebas_aisladas/         un escenario por filtro + mixto_20 (pytest y "probar un filtro")
     urdf/                       las cintas en URDF
-  app/
+  app/                          (ver app/README.md)
+    rutas.py                    carpetas del proyecto en un solo lugar (RAIZ, CONFIG, DATOS, DOCS, VISOR)
     lanzar.py                   supervisor + dashboard (lo usa visor.bat)
     puertos.py                  puerto del visor (8765, PLANTA_PUERTO_VISOR o --puerto-visor; si otro programa lo tiene, el siguiente libre)
     supervisor.py               corre la simulación, escribe SQLite, sirve el visor
     servidor.py                 HTTP del supervisor: visor 3D + /api/estado (127.0.0.1); POST /api/orden solo JSON, sin CORS, tipos revisados
     visor3d/                    visor 3D en Three.js (vendor/ local, sin CDN; demo/ grabada); inventario en docs/interfaz-visor.md
-      index.html, visor.js      página y escena: cámara, render, optimización, animación
+      index.html, visor.js      página y escena: cámara, render, animación
+      optimizar.js              une las mallas quietas antes del primer cuadro (no es una pieza)
+      maqueta_impresa.js        lee maqueta_impresa.glb y carro_armado.glb (los escriben maqueta_impresa/ y chasis_impreso/)
       interfaz.js, estilo.css   el panel (pestañas, avisos, controles de prueba en un solo lugar) y su diseño
       piezas/                   piezas reutilizables (una por módulo; copia en Modelado 3D/piezas-threejs)
     dashboard/                  aplicación Streamlit (streamlit run app/dashboard/inicio.py); inventario en docs/interfaz-dashboard.md
@@ -453,9 +464,10 @@ y un índice de `docs/` (`docs/README.md`).
       dibujos.py                cintas, almacén y vasos en HTML
       pestanas/                 una por módulo; `pruebas.py` junta probar un filtro, colocar pieza, sabotajes y fin de turno
     chequeo.py                  revisión previa a la sustentación (python -m app.chequeo)
-    asistente.py                fase 7: DeepSeek (JSON), búsqueda en la documentación, estado en vivo, intérprete local, voz
+    asistente/                  fase 7 (paquete: entrada, conocimiento, estado, mensajes, ordenes, llm, reglas, respuestas, audio)
+    charla.py                   el asistente por consola, con reglas, sobre una copia de la base
     db.py                       esquema y acceso a SQLite
-    configuracion.py            carga de config/parametros.yaml
+    configuracion.py            ruta de la base; reexporta control/configuracion.py
     grabar_demo.py              graba una corrida para el modo demo del visor (y rehace el portable)
     portable.py                 arma visor-portable.html (three.js en data: URLs + visor + demo)
     documentos.py               genera los .md de docs/ (incluido costos.md)
@@ -467,13 +479,21 @@ y un índice de `docs/` (`docs/README.md`).
     fijo/  carro/  comun/       lógica pura (se prueba en el PC) + hw.py (pines) + main.py
     preparar.py, subir.py       arma salida/<placa>/ (pines y config generados, .mpy) y la sube con mpremote
   vision/                       fase 5: capturar_dataset.py y entrenar.py (dataset y modelos fuera de git)
+  maqueta_impresa/              la planta en PLA (ver su README.md y su CLAUDE.md): herramientas .py en la raíz
+    scad/                       fuentes OpenSCAD (estructura_gen.scad lo escribe estructura.py)
+    informes/                   material.md, auditoria.md, esfuerzos.md, estructura_resumen.md (generados)
+    salida/                     stl/, piezas.json, laminado.json, manual_maqueta.pdf (generados)
+    3mf/                        las tandas para Creality Print (el usuario imprime desde aquí)
+    img/                        imagen del README y renders del manual
+  chasis_impreso/               el carro en PLA, ya impreso y armado (ver su README.md y su CLAUDE.md)
+    salida/                     STL y 3MF con y sin membrana, piezas.json, lista_materiales.md, manual_armado.pdf, visor_carro.html
   tests/                        pruebas por capa, sin __init__.py (cada test_*.py con nombre único)
     conftest.py                 cierra los mundos de PyBullet que un archivo deje abiertos (si no, ensucian al siguiente)
-    control/                    reglas, linea, embalaje, registro, almacen, monedas, tiempos, protocolo, vehiculo
-    sim/                        planta, backend_sim, escenarios, conexiones, electrica, fisica_vs_3d
+    control/                    reglas, linea, embalaje, registro, almacen, carrusel, monedas, tiempos, protocolo, vehiculo
+    sim/                        planta, backend_sim, carrusel_planta, escenarios, conexiones, electrica, fisica_vs_3d, carro_impreso, maqueta_impresa
     visor/                      visualizacion (geometría, servidor HTTP, docs generados), portable
-    app/                        supervisor, db, dashboard, asistente, asistente_planta, voz, costos, masas, chequeo, pruebas_filtro
-    firmware/                   firmware (mpy-cross y las dos placas contra la estación emulada)
+    app/                        supervisor, db, dashboard, asistente, asistente_planta, voz, charla, costos, masas, chequeo, puertos, pruebas_filtro, puente_lineas, servidor_ordenes
+    firmware/                   firmware, carrusel_firmware, revision_firmware_0929 (mpy-cross y las dos placas contra la estación emulada)
 ```
 
 ---
@@ -799,7 +819,7 @@ Entrada de voz con el micrófono de Streamlit y transcripción local o por servi
 de voz con edge-tts o gTTS. Prevea un respaldo sin internet con Ollama y un modelo pequeño,
 porque el día de la sustentación la red del salón puede fallar.
 
-**Hecho (fase 7, 2026-09-27)** en `app/asistente.py`, con la lógica del tema 4 del repositorio
+**Hecho (fase 7, 2026-09-27)** en `app/asistente/` (un solo archivo hasta el 2026-10-26; hoy un paquete), con la lógica del tema 4 del repositorio
 (`4-chatbot-asistente-voz/comando_voz.py`): la frase va a DeepSeek (`deepseek-chat`,
 `response_format: json_object`) y vuelve un JSON `{"respuesta", "acciones"}`; las acciones pasan
 por una lista blanca con rangos y van a la tabla `ordenes`. "Lee todo el proyecto" por búsqueda:

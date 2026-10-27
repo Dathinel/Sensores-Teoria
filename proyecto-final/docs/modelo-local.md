@@ -1,6 +1,6 @@
 # El modelo de lenguaje local: Qwen2.5-3B en el portátil
 
-El asistente del proyecto (`app/asistente.py`, pestaña "Asistente" del dashboard y la pantalla de la
+El asistente del proyecto (`app/asistente/`, pestaña "Asistente" del dashboard y la pantalla de la
 laptop en el visor 3D) contesta preguntas sobre la corrida y le da órdenes a la línea y al carro. Tiene
 tres "cerebros", en este orden:
 
@@ -150,7 +150,7 @@ flowchart TB
 sequenceDiagram
     actor P as Persona
     participant D as Dashboard (Streamlit)
-    participant A as app/asistente.py
+    participant A as app/asistente (entrada.atender)
     participant R as Reglas (intérprete local)
     participant DOC as Búsqueda en la documentación
     participant O as Ollama (qwen2.5-proyecto, GPU)

@@ -69,7 +69,7 @@
       "nombre": "Visor 3D portable (demo grabada, sin Python)",
       "tipo": "html",
       "archivo": "visor-portable.html",
-      "descripcion": "Un solo archivo HTML (~2,5 MB) con Three.js, el visor y una corrida grabada: se ve la línea completa sin instalar nada. Arriba dice 'DEMO GRABADA'; si la simulación de este PC está corriendo, la pestaña pasa sola al visor en vivo.",
+      "descripcion": "Un solo archivo HTML (~9,4 MB) con Three.js, el visor y una corrida grabada: se ve la línea completa sin instalar nada. Arriba dice 'DEMO GRABADA'; si la simulación de este PC está corriendo, la pestaña pasa sola al visor en vivo.",
       "cubre": ["Entregables: arquitectura, diseño mecánico y electrónico (se acepta PyBullet con URDF), primeros módulos y app web"]
     },
     {
@@ -152,7 +152,7 @@
       "modulo": "pytest",
       "args": ["-q"],
       "cwd": ".",
-      "descripcion": "Corre las 937 pruebas de tests/ (control, simulación, visor, dashboard, asistente y firmware contra una estación emulada). Tarda unos 4 minutos; al final dice cuántas pasaron (probado el 2026-10-06 con el entorno del proyecto: 937 pasan).",
+      "descripcion": "Corre las 951 pruebas de tests/ (control, simulación, visor, dashboard, asistente y firmware contra una estación emulada). Tarda unos 4 minutos; al final dice cuántas pasaron (probado el 2026-10-26 con el entorno del proyecto: 951 pasan).",
       "cubre": ["Grupo 7 (elemento diferencial): detector de elementos de monedas y vasos, cada filtro demostrable por separado"],
       "duracion": "~4-5 min",
       "duracion_s": 270,

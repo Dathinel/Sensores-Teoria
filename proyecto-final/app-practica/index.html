@@ -254,7 +254,7 @@
         <img src="/repo/proyecto-final/docs/capturas/dashboard-carro-y-ruta.png" alt="Dashboard: pestaña Carro y ruta" loading="lazy">
         <img src="/repo/proyecto-final/docs/capturas/visor-asistente.png" alt="Visor 3D con el asistente" loading="lazy">
       </div>
-      <div class="app-aviso ok"><b>937 pruebas automáticas</b> (control, simulación, visor, dashboard, asistente y
+      <div class="app-aviso ok"><b>951 pruebas automáticas</b> (control, simulación, visor, dashboard, asistente y
         firmware contra una estación emulada), todas sin ventana. Se corren desde
         <a href="#" data-ir-programa="pruebas">Programas → Pruebas automáticas</a> (~4-5 min).</div>
     </section>
@@ -269,16 +269,18 @@
     <!-- ESTADO ================================================================================= -->
     <section class="pf-vista" data-vista="estado">
       <h2>Estado del proyecto, sin adornos</h2>
-      <div class="app-aviso atencion">Todo lo de esta app es <b>simulación y software</b>. El montaje físico no
-        existe todavía, la cámara aún no procesa imágenes reales (en la simulación las medidas las da PyBullet) y
-        la clave de DeepSeek que tenemos fue rechazada (responden el modelo local y las reglas).</div>
+      <div class="app-aviso atencion">Todo lo de esta app es <b>simulación y software</b>. Del montaje físico
+        solo está armado el carro impreso (falta imprimir y armar la maqueta de la planta), la cámara aún no
+        procesa imágenes reales (en la simulación las medidas las da PyBullet) y la clave de DeepSeek que tenemos fue rechazada (responden el modelo local y las reglas).</div>
       <div class="pf-docs">
         <a href="#" class="app-btn" data-abrir="README.md">README completo</a>
         <a href="#" class="app-btn" data-abrir="docs/especificacion.md">Especificación</a>
         <a href="#" class="app-btn" data-abrir="docs/paso-a-paso.md">Paso a paso</a>
         <a href="#" class="app-btn" data-abrir="docs/conexiones.md">Conexiones</a>
         <a href="#" class="app-btn" data-abrir="firmware/README.md">Firmware</a>
-        <a href="#" class="app-btn" data-abrir="docs/enunciado/segundo-parcial-umng.pdf">Enunciado (PDF)</a>
+        <!-- El lanzador no sirve los "*umng.pdf" (archivo_prohibido en _lanzador/lanzador.py): el enunciado se abre
+             con la acción "enunciado" de probar.json, en el lector de PDF del sistema. -->
+        <a href="#" class="app-btn" onclick="event.preventDefault(); App.accion('enunciado').catch((e) => App.aviso(e.message, 'error'));">Enunciado (PDF)</a>
       </div>
       <div id="estadoMd"></div>
       <details class="app-plegado app-tecnico"><summary>Detalles técnicos</summary>

@@ -80,7 +80,7 @@ def peso_montaje() -> str:
 
 
 def consumo_electrico() -> str:
-    """Consumo CALCULADO (sim/electrica.py -> docs/electrica.md), no medido. "" si no está el documento."""
+    """Consumo CALCULADO (sim/electrica_informe.py -> docs/electrica.md), no medido. "" si no está el documento."""
     ruta = RAIZ / "docs" / "electrica.md"
     if not ruta.exists():
         return ""

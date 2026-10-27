@@ -8,7 +8,7 @@ abrir.sh text eol=lf
 # que no se escribieron a mano: se marcan para que no cuenten (y sus diffs salgan plegados).
 # No cambian el contenido ni los fines de línea de nada.
 
-# Generado: el visor 3D del proyecto final en UN solo .html (2,6 MB, con Three.js y los datos
+# Generado: el visor 3D del proyecto final en UN solo .html (~9,4 MB, con Three.js, los dos GLB impresos y los datos
 # dentro), lo arma app/portable.py a partir de app/visor3d/.
 proyecto-final/visor-portable.html linguist-generated
 # Generado: la grabación y la geometría de la demo del visor (app/grabar_demo.py).

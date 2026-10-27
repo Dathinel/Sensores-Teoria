@@ -116,7 +116,7 @@ def generar_markdown(graficas: bool = True) -> str:
     L = []
     w = L.append
     w("# Parte eléctrica, punto por punto (simulada)\n")
-    w("> Generado por `python -m sim.electrica` desde `sim/electrica.py`, que lee el conexionado de "
+    w("> Generado por `python -m sim.electrica` desde `sim/electrica.py` (modelo) y `sim/electrica_informe.py` (informe), que lee el conexionado de "
       "`sim/conexiones.py` (la fuente única de cada hilo) y los tiempos de `config/parametros.yaml`. "
       "No editar a mano. Las corrientes son de hoja de datos (**PROVISIONALES** hasta medirlas con el "
       "multímetro en el montaje); la lista de lo que hay que medir está al final.\n")

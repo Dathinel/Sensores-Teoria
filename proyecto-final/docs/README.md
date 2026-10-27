@@ -22,7 +22,8 @@ Se rehacen todos con `entorno\Scripts\python -m app.documentos`:
   propuestos. Sale de `config/precios.yaml`.
 - `peso.md` — peso de todo el montaje y si cada motor alcanza. Sale de `config/masas.yaml`.
 - `electrica.md` — parte eléctrica simulada: corriente de cada riel en un ciclo real, cada hilo con
-  su voltaje y corriente, pasivos. Sale de `sim/electrica.py` (también `python -m sim.electrica`).
+  su voltaje y corriente, pasivos. Sale de `sim/electrica.py` (modelo) y `sim/electrica_informe.py`
+  (informe); también `python -m sim.electrica`, que además rehace sus gráficas de `capturas/`.
 
 Con su propio comando:
 
@@ -34,7 +35,7 @@ Con su propio comando:
 ## Escritos a mano
 
 - `especificacion.md` — la especificación del proyecto, secciones 1-19 (antes en el `CLAUDE.md` de la raíz).
-- `historial-pedidos.md` — pedidos del usuario ya cerrados (salieron de `CONTEXTO-SESION.md`).
+- `historial-pedidos.md` — pedidos ya cerrados, textuales; lo vigente está en `CONTEXTO-SESION.md`.
 - `paso-a-paso.yaml` — fuente única de los 17 puntos (de aquí salen `paso-a-paso.md` y parte de
   `sensores.md`).
 - `bitacora.md` — avance y decisiones sesión por sesión. Es el historial: las rutas viejas que
@@ -53,4 +54,5 @@ Con su propio comando:
 - `enunciado/` — la guía del parcial (`segundo-parcial-umng.pdf`) y sus figuras numeradas, con su
   propio `README.md`.
 - `videos/` — las simulaciones de PyBullet grabadas, con `python -m sim.ver.grabar`: un mp4 por escena y un GIF liviano de las tres que el README muestra en línea (`todo_junto` va solo en mp4).
-- `capturas/` — capturas del visor y del dashboard que usa el `README.md` del proyecto.
+- `capturas/` — capturas del visor, del dashboard y de la app que usa el `README.md` del proyecto, y las dos
+  gráficas de `electrica.md` (`electrica-ciclo-*.png`, generadas).

@@ -1,21 +1,25 @@
 # Piezas del visor 3D
 
 Cada pieza detallada del visor (sensores, placas, mecanismos) vive en un módulo de esta carpeta,
-no dentro de `visor.js` (4700 líneas). Así varias personas (o sesiones) pueden modelar a la vez
-sin tocar el mismo archivo, y la misma pieza se puede reutilizar en otro visor.
+no dentro de `visor.js` (~6300 líneas). Así varias personas (o sesiones) pueden modelar a la vez
+sin tocar el mismo archivo, y la misma pieza se puede reutilizar en otro visor. Aquí van solo
+piezas: el resto del visor (la escena, la interfaz, `optimizar.js`, el lector de los GLB impresos)
+está en la carpeta de arriba, [`app/visor3d/`](../README.md).
 
 ## Convención
 
-- **Un módulo por grupo de piezas**: `electronica.js`, `sensores.js`, `mecanismos.js`... Si el
+- **Un módulo por grupo de piezas**: `electronica.js`, `sensores.js`, `linea_vasos.js`... Si el
   grupo ya existe, se agregan funciones AL FINAL de ese archivo; no se crea uno por pieza.
-- **Importa solo `three` y `./base.js`**:
+- **Importa `three` y `./base.js`** (y, si reutiliza una pieza, el módulo de esta carpeta que la
+  tiene: `linea_vasos.js` toma el servo y el NEMA17 de `electronica.js` y la webcam de `sensores.js`):
   ```js
   import * as THREE from 'three';
   import { MM, COLOR, METAL, P, mat, caja, cilindro, ancla, instancias, planoDibujado, terminar } from './base.js';
   ```
   Nada de `visor.js` (ni `G`, ni `PIN`, ni `escena`): la pieza no sabe dónde se va a usar.
   Imports locales siempre con la forma `from './archivo.js'` (una ruta simple, sin subcarpetas):
-  `app/portable.py` los reescribe para el HTML de un solo archivo.
+  `app/portable.py` los reescribe para el HTML de un solo archivo, y `app/chequeo.py` solo mira
+  `piezas/*.js` (no subcarpetas) para saber si el portable quedó viejo.
 - **Exporta `crearX(opciones) → THREE.Group`**, con un comentario arriba que diga las medidas
   y DE DÓNDE salen (ficha técnica, `CATALOGO_COMPONENTES.md`, `config/parametros.yaml`).
 - **Metros**, y el marco de la simulación: x a lo largo, y a lo ancho, z hacia arriba.
@@ -69,13 +73,20 @@ sin tocar el mismo archivo, y la misma pieza se puede reutilizar en otro visor.
    }
    ```
    Ejemplo real: el ESP32 de las placas GVS, en `construirModulo` (busca `PIEZAS_ELECTRONICA`).
-3. Verificar: `node --check` de `visor.js` y del módulo, `python -m app.portable` y
-   `python -m pytest -q tests/visor/test_portable.py tests/visor/test_visualizacion.py`, y una captura del
+3. Verificar: `node --check` de `visor.js` y del módulo, `entorno\Scripts\python -m app.portable` y
+   `entorno\Scripts\python -m pytest -q tests/visor`, y una captura del
    visor (servido con `?demo` y el `visor-portable.html`) sin errores de consola.
 
-`app/portable.py` mete TODOS los `.js` de esta carpeta en el importmap del HTML de un solo
-archivo (como `piezas/<archivo>.js`, en data: URLs) y reescribe los imports locales; no hay que
-tocarlo al agregar un módulo nuevo.
+`app/portable.py` sigue los imports desde `visor.js` y mete cada módulo que alcanza en el
+importmap del HTML de un solo archivo (como `piezas/<archivo>.js`, en data: URLs), reescribiendo los
+imports locales: un módulo que nadie importa no entra, y no hay que tocar `portable.py` al agregar
+uno nuevo.
+
+Para que una pieza nueva se vea bien después de `optimizar.js` (que une las mallas quietas al
+terminar la escena; ver [el README del visor](../README.md#optimizarjs)): lo que se anima tiene que
+quedar referenciado (en `P`, en `userData` o con `name` buscado en vivo), si no se une con lo quieto
+y deja de moverse; y nada de caras en el MISMO plano con otra de distinto color (parpadean): separar
+0,2–0,5 mm o usar `polygonOffset` en calcomanías (`planoDibujado` ya lo trae).
 
 ## Copia fuera del repositorio
 
@@ -88,49 +99,12 @@ su fila en `CATALOGO_COMPONENTES.md`, sección "Piezas Three.js": función, qué
 
 | Módulo | Función | Qué es |
 |---|---|---|
-| `electronica.js` | `crearESP32DevKit({ pines: 30 \| 38 })`, `crearESP32DevKit30P`, `crearESP32DevKit38P` | ESP32 DevKit V1 con WROOM y antena, CP2102, AMS1117, EN/BOOT, micro-USB (o USB-C), LEDs, dos filas de pines con serigrafía y anclas `pin_ESP32_<PIN>` con el pinout real. Se usa en las dos placas GVS (caja de control y carro). |
+| `base.js` | `MM`, `COLOR`, `METAL`, `PLASTICO`, `P`, `mat`, `caja`, `cilindro`, `ancla`, `instancias`, `planoDibujado`, `terminar` | Lo común a todas las piezas (no dibuja nada): unidades, colores, el paso del marco de la simulación al de Three, materiales, primitivas con sombra, anclas, instancias y texto impreso. |
+| `sensores.js` | `crearFC51`, `crearCapacitivoLJC18A3`, `crearInductivoLJ18A3`, `crearWebcam`, `crearVL53L0X`, `crearHallKY003`, `crearIman6x3`, `crearHCSR04`, `crearArregloTCRT5000`, `crearIRCuna`, `crearEncoderH206`, `crearDiscoEncoder20`, `SENSORES` | Los sensores del catálogo (`sim/catalogos.py`) con medidas de ficha técnica; `SENSORES` dice cómo construir cada uno por su id. Los módulos en placa usan el mismo marco local que `construirModulo` de `visor.js`. Se usa en la planta (presencia, cámara, capacitivo, inductivo) y en el carro (`PIEZAS_SENSORES_CARRO`). |
+| `electronica.js` | `crearESP32DevKit({ pines: 30 \| 38 })` (y `…30P`/`…38P`), `crearPlacaGVS` (`…30P`/`…38P`); drivers: `crearTB6612FNG`, `crearDriverPasoAPaso`, `crearA4988`/`crearTMC2208`, `crearPlacaDriversPasoAPaso`, `crearPCA9685`, `crearULN2003`, `crearPlacaOptoPC817`; energía: `crearBuck*`, `crearFuente*`, `crearPortafusible*`, `crearInterruptorFusible`, `crearEntradaIEC`, `crearPortaBaterias18650x2`; cableado: `crearBorneraDIN16`, `crearRepartoI2C`, `crearHubUSB4`; motores: `crearNEMA17`, `crear28BYJ48`, `crearServo` (`crearServoSG90`, `crearServoMG996R`) | Placas, drivers, fuentes, motores y servos de la caja de control, la planta y el carro. El ESP32 DevKit V1 lleva WROOM y antena, CP2102, AMS1117, EN/BOOT, micro-USB (o USB-C), LEDs, dos filas de pines con serigrafía y anclas `pin_ESP32_<PIN>` con el pinout real; va en las dos placas GVS (caja de control y carro). |
 | `pista.js` | `crearPista(...)`, `crearMuroLadrillo`, `crearBanderaMeta` | Pista del carro sobre la línea central de la simulación (`G.pista.linea`, sin cambiarla): lámina blanca con borde, cinta de 19 mm con costuras, franjas de meta/giro de cinta, rótulos en el margen, muros de ladrillo 100×30×80, bandera de meta y piso de baldosa alrededor. Se usa en `construirPista`. |
 | `estructura.js` | `mallaPerfil2020`, `crearPerfil2020(largo, orientacion)`, `perfil2020Entre`, `crearEscuadra2020({ejeA, ejeB})`, `crearTornilloT`, `crearPieNivelador`, `crearMesaPerfil`, `crearPortico2020`, `crearRielCanaleta`, `crearCabezalRiel`, `crearSoporteCanaleta` | Perfil 2020 con su sección ranurada real (una geometría compartida; `perfil()` de visor.js la usa para todo perfil de 20 mm alineado), escuadras con tornillos M5, pies niveladores, mesa y pórtico de 2020, y la canaleta de entrega: varilla de 4 mm doblada con PTFE sobre postes 2020 con cabezal impreso inclinado. |
 | `control.js` | `crearGabineteControl(...)`, `crearPasoConBrida({ tipo })`, `crearPrensaestopas({ tipo })`, `crearVentilador4010`, `crearLaptopTUFA15`, `cajaRedonda` | Caja de control de acrílico 360 × 240 × 80 mm (placa de montaje, esquineros de aluminio, tapa de policarbonato atornillada, pasos de cable con brida —`conBridas: true`, ahorro 2026-10-24; antes prensaestopas PG7/PG9/PG16—, ventilador 40 mm, rejilla) y el portátil ASUS TUF A15 con la pantalla del asistente. Las placas de la caja son las de `electronica.js` (en `construirCajaControl`, con `conPieza`). |
 | `linea_monedas.js` | `crearRodilloCinta`, `crearCojinete608`, `crearAcople`, `crearSoporteNEMA17`, `crearPlatinaM18`, `crearCompuertaDesvio`, `crearOrejaBisagra`, `crearBridaServo`, `crearBandejaRechazo`, `crearPlacaFijaAlmacen`, `crearDiscoCarrusel`, `crearTuboMonedas`, `crearObturadorAlmacen`, `crearSoporteMotorCarrusel`, `crearListon`, `crearPosteCamaraCenital` | Cinta de monedas (rodillo motriz con goma y tensor, 608ZZ en bloques impresos, jaula del NEMA17 con acople flexible, platinas M18 bajo E1/E2), descarga (compuerta en Y coaxial con el SG90, bandeja de rechazo) y almacén revólver (placa fija con un agujero, disco de acrílico con imán, 6 tubos de policarbonato rotulados, obturador coaxial con su SG90, placa del 28BYJ-48). Se usa en `construirCintaMonedas`, `construirBanda` y `construirAlmacen`. |
 | `linea_vasos.js` | `crearVaso`, `crearTapa`, `crearTacoCasilla`, `crearTuboTapas`, `crearPrensaLeva`, `crearEmpujador`, `crearAccionamientoCinta`, `crearPanelLuz`, `crearPosteCamara`, `crearCamaraVasos`, `crearPortaVL53Interior` | Cinta de vasos: vaso con pestaña y cinta ArUco, tapa con cono (apilable), tacos de casilla, tubo de tapas con escape de SG90, prensa de leva en MG996R (resorte que se comprime en vivo), empujador biela-manivela, NEMA17 con acople, panel de luz, cámara de vasos en su poste, porta del VL53L0X del interior. Los que se mueven traen `userData.poner(u)`. |
-| `carro.js` | `disposicionCarro`, `crearChasisCarro`, `crearPerfboard`, `crearSeparadorM3`, `crearMotorTT`, `crearRuedaTT`, `crearRuedaLocaBola`, `crearRodilloGuia623`, `crearSoporteEncoder`, `crearEscuadraFrontal`, `crearCunaCarro`, `crearMuelleCarga` | Carro de entrega y muelle de carga: chasis de acrílico con hueco del vaso y ranuras, motorreductores TT en soportes en T, ruedas de 65 mm con dibujo, disco de encoder en el eje, rueda loca de bola, rodillos 623, escuadra de los sensores del frente, cuna (rieles con PTFE, mampara con espumas, lengüeta) y guías en V con topes. Cotas en `disposicionCarro` (placa 11,5 mm sobre el eje). **Desde el 2026-10-24 el carro se dibuja con el chasis impreso** (`carro_armado.glb`, abajo): de aquí siguen en uso `disposicionCarro` (las cotas que comparte con la física), `crearMotorTT` (sin soportes), `crearRuedaTT` y `crearMuelleCarga`; el resto queda de respaldo si el GLB no carga (`?sinmaqueta`). |
-
-## `maqueta_impresa.js` (no es una pieza)
-
-`leerMaquetaGLB(buffer)`: lee `app/visor3d/maqueta_impresa.glb` (lo genera `python maqueta_impresa/modelo_3d.py`
-desde los STL de la maqueta impresa) y devuelve un grupo con una malla por pieza de PLA, ya en su lugar y en
-metros, con las extras del GLB en `userData` (`movil`, `pivote`, `eje`, `recorrido` en las que se mueven).
-`visor.js` (`cargarMaqueta` / `montarMaqueta`) la pone en la escena, cuelga cada parte movil del objeto que ya
-anima (carrusel, aleta E4, dedos, leva, piston, paleta, manivela, biela, escape, separadores de vasos; el
-obturador gira en horizontal) y saca lo que la maqueta reemplaza (perfil 2020, escuadras, pies, aluminio,
-acrilico, soportes: lo marcado con `reemplazar()`). En `visor-portable.html` va en base64 (`window.__MAQUETA`).
-`?sinmaqueta` en la URL deja el modelo de antes.
-
-El GLB trae ademas los **310 remaches impresos** en su lugar (un nodo por subsistema, `rem_<sub>`,
-`userData.tipo = 'remache'`, rojo `#d1001f` como en los manuales): `visor.js` los junta en `REMACHES` y la
-casilla **Remaches** de la barra (`interfaz.js`, `iniciarRemaches`) los muestra u oculta.
-
-### `carro_armado.glb` (el carro impreso, 2026-10-24)
-
-El mismo lector lee `app/visor3d/carro_armado.glb` (lo genera `python chasis_impreso/modelo_3d.py`): las 20 piezas de PLA del carro (`userData.tipo = 'impresa'`), lo comprado en
-grupos `comp_*` y el nodo `remaches` (los 27 de `REM_LISTA`), ya en el marco del carro (origen en el piso bajo el
-centro del chasis, x adelante). `construirCarro` (`visor.js`) agrega las impresas (en `COLOR.impreso`), las
-espumas, la rueda loca, los rodamientos 623 y el interruptor/portafusible del GLB, cuelga la lengüeta de un
-grupo en su pivote (`extras.pivote`, la anima `abrirLengueta`) y pone lo que sigue dibujando el visor (ruedas,
-motores TT sin soportes, encoders, pack 2S, GVS con el ESP32, TB6612, TCRT5000, HC-SR04, VL53L0X, vaso) donde
-lo pone el chasis impreso, con las cotas de `chasis.scad` que vienen en `extras.funcional_mm` (mm). Sin GLB
-queda el carro dibujado a mano de `carro.js`. `tests/sim/test_carro_impreso.py` comprueba que esas cotas son
-las de `disposicionCarro` y de la simulación. En el portable va como `window.__CARRO`.
-
-## `optimizar.js` (no es una pieza)
-
-`optimizarEscena(escena, {...})`: el paso que `visor.js` corre al terminar de construir la escena.
-Une las mallas quietas que se ven igual (por ancla, componente y material; color y rugosidad por
-vértice) y deja una malla "solo sombra" por ancla: ~3.200 mallas → ~700 y de ~3.000 a < 500
-llamadas de dibujo, con el mismo detalle. Vive aquí porque `app/portable.py` embebe esta carpeta.
-Para una pieza nueva: lo que se anime tiene que quedar referenciado (en `P`, en `userData` o con
-`name` buscado en vivo); si no, se une con lo quieto y deja de moverse. `?sinoptimizar` en la URL
-deja la escena sin unir (para comparar) y `?auditar` revisa que nada toque las mallas unidas.
-Las piezas deben evitar caras en el MISMO plano con otra de distinto color (parpadean): separar
-0,2–0,5 mm o usar `polygonOffset` en calcomanías (`planoDibujado` ya lo trae).
+| `carro.js` | `disposicionCarro`, `crearChasisCarro`, `crearPerfboard`, `crearSeparadorM3`, `crearMotorTT`, `crearRuedaTT`, `crearRuedaLocaBola`, `crearRodilloGuia623`, `crearSoporteEncoder`, `crearEscuadraFrontal`, `crearCunaCarro`, `crearMuelleCarga` | Carro de entrega y muelle de carga: chasis de acrílico con hueco del vaso y ranuras, motorreductores TT en soportes en T, ruedas de 65 mm con dibujo, disco de encoder en el eje, rueda loca de bola, rodillos 623, escuadra de los sensores del frente, cuna (rieles con PTFE, mampara con espumas, lengüeta) y guías en V con topes. Cotas en `disposicionCarro` (placa 11,5 mm sobre el eje). **Desde el 2026-10-24 el carro se dibuja con el chasis impreso** (`carro_armado.glb`, ver [los GLB impresos](../README.md#los-glb-impresos-maqueta-y-carro)): de aquí siguen en uso `disposicionCarro` (las cotas que comparte con la física), `crearMotorTT` (sin soportes), `crearRuedaTT` y `crearMuelleCarga`; el resto queda de respaldo si el GLB no carga (`?sinmaqueta`). |

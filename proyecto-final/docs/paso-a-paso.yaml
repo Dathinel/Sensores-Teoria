@@ -645,7 +645,7 @@ pasos:
       conversación en la tabla `asistente`, que leen el dashboard y el visor.
     mensaje: '{"t":"cmd","id":57,"dst":"carro","act":"avanzar","distancia_m":0.3}'
     como_esta_hoy: >
-      app/asistente.py (búsqueda en la documentación, estado en vivo, DeepSeek con JSON, lista
+      app/asistente/ (búsqueda en la documentación, estado en vivo, DeepSeek con JSON, lista
       blanca, intérprete local, voz con SpeechRecognition y gTTS); control/vehiculo.py
       (`ordenar`, odometría, revisión del camino, atascado); pruebas en tests/app/test_asistente.py
       y tests/control/test_vehiculo.py, entre ellas un punto detrás de un muro (no lo toca) y, desde fuera

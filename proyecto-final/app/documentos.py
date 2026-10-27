@@ -7,7 +7,7 @@
 - docs/conexiones.md           <- sim/conexiones.py
 - docs/costos.md               <- config/precios.yaml (app/costos.py), con la estructura 3D contada
 - docs/peso.md                 <- config/masas.yaml + precios.yaml (app/masas.py), con las comprobaciones de par
-- docs/electrica.md            <- sim/electrica.py (si ya existe)
+- docs/electrica.md            <- sim/electrica_informe.py (el modelo está en sim/electrica.py)
 
 No editar esos .md a mano: se sobrescriben. Se corre despues de cambiar el
 YAML del paso a paso (por ejemplo, al aprobar un punto) o el catalogo:
@@ -338,7 +338,7 @@ def generar_todo() -> list[Path]:
     destino = DOCS / "peso.md"
     destino.write_text(masas.generar_md(), encoding="utf-8")
     escritos.append(destino)
-    # Parte eléctrica (consumos, fuentes, cables): el informe de sim/electrica.py.
+    # Parte eléctrica (consumos, fuentes, cables): el informe de sim/electrica_informe.py.
     from sim import electrica_informe
 
     destino = DOCS / "electrica.md"

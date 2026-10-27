@@ -1,6 +1,10 @@
 # Historial de pedidos del usuario (proyecto final)
 
-Pedidos ya cerrados, movidos tal cual desde la sección 0 y la sección 5 de `CONTEXTO-SESION.md` el 2026-10-02. El pedido en curso y las reglas permanentes siguen en `CONTEXTO-SESION.md`.
+Pedidos ya cerrados, con las palabras del usuario, en orden de fecha. Es historia: se movió tal cual desde
+`CONTEXTO-SESION.md` (secciones 0 y 5 el 2026-10-02; los de octubre el 2026-10-26) y no se corrige, así que nombra
+rutas, cifras y archivos de cuando se escribió (por ejemplo `app/asistente.py`, `control/hal/backend_sim.py`, los
+`.scad` sueltos de `maqueta_impresa/` o 937 pruebas). Lo vigente (pedido en curso, reglas, lo prohibido, restricciones
+y pendientes) está en [CONTEXTO-SESION.md](../CONTEXTO-SESION.md).
 
 **Pedido del 2026-09-27 (2):** "que el .bat abra un html y, si la simulación está (localhost),
 se abra sola sin hacer nada". Es decir: visor.bat abre `visor-portable.html` (un solo archivo:
@@ -263,6 +267,179 @@ que el carrusel se sature". → `tiempos_ms.pausa_casilla_vasos` de 800 a 1400 m
 
 **Pedido del 2026-09-29 (17):** "Súbalo a GitHub". Hecho: commit `cb7c86d` en `main` (155 archivos), push a
 github.com/Dathinel/Sensores-Teoria. Incluye los arreglos del tema 8 punto 1 de otra sesión (ljust, puerto).
+
+## Movidos de CONTEXTO-SESION.md el 2026-10-26 (del cierre del 2026-09-29 al 2026-10-24)
+
+**Cierre del 2026-09-29:** pedidos 10 a 17 TERMINADOS y subidos (commit `cb7c86d` en `main`). Solo quedó sin
+subir este archivo (el usuario dijo que no hace falta). App escondida corriendo con el código final.
+
+**Pedido EN CURSO del 2026-10-02:** "busque Plan orden contextos y haga todo lo que dice ahi" →
+`D:\cosas uni\Micros\PLAN-ORDEN-CONTEXTOS.md`. Punto A aprobado por el usuario (plan en
+`~\.claude\plans\busque-plan-orden-contextos-giggly-spindle.md`). - [x] A, B1-B5 y C1-C6 TERMINADOS (detalle en `docs/bitacora.md`, 2026-10-02). Sin commit: el usuario decide cuándo se sube.
+
+**Pedido EN CURSO del 2026-10-05 (agente P9 del plan `github\PLAN-APPS-PRACTICAS.md`).** Textual del usuario:
+> "corrija eso, y el tema de que se abran con un solo click tiene que ser por practica, y no que mire, un acceso
+> directo, tiene que ser mas amigable para un usuario, un tipo programa por practica que dentro tenga todos los
+> componentes que se piden de una forma amigable, cada interfaz tiene que ir acomodada a su logica de la practica, si
+> es investigacion simplemente leer o que lo mande el repo, si es la camara o asi que sea un tipo aplicacion que diga
+> que hace, como se conecta todo amigable y no, abra este .py para saber la simulacion, asi, mas amigable, que con un
+> click se puede ver todo lo que pide la practica y que se lleve al usuario mas de la mano igual el tema de los agentes"
+
+Puntos de este proyecto ("corrija eso" = hallazgos del proyecto final + su app):
+- [x] 1a. `visor.bat` sin `entorno\` abre la demo grabada sin avisar → que avise; README "Cómo verlo": instalar primero (qué y cuánto tarda); instalador mínimo vs completo.
+- [x] 1b. Puerto 8765 fijo (en este PC lo ocupa otro programa) → configurable y, si está ocupado, otro libre automático, dicho claro, y el navegador/dashboard usan el puerto real.
+- [x] 1c. Cifras que no coinciden (asistente 50/50, 39 preguntas, 60/60; "más de 850" / "590+" / 928 pruebas) → unificar con el dato real y su fuente.
+- [x] 2. App amigable del proyecto en `app-practica/index.html` (portada, recorrido de una moneda, Pruébalo, escenas, asistente, visor portable, resultados, estado honesto, checklist).
+  TERMINADOS (P9, 2026-10-05; detalle en `docs/bitacora.md`): `app/puertos.py` (8765 ocupado → siguiente libre, probado aquí: 8766),
+  `visor.bat` avisa sin entorno, `instalar.bat` mínima/completa (`requirements-minimo.txt`), cifras 60/60 y 936 pruebas,
+  `app/charla.py` + `app-practica/`. Sin commit. La app escondida NO se relanzó (lo hace la sesión principal).
+
+**Pedido EN CURSO del 2026-10-05 ~22:15 (agente P del plan `github\PLAN-ORGANIZAR-APPS.md`).** Textual del usuario:
+> "en ese puerto esta una app que hicimos hace tiempo, me gusto mucho el tema de apps para mostrar cada practica,
+> quitele peso en megabytes a cada practica y trate de hacerlas para que todo quede resumido en una app, que el readme
+> se base en, quiere saber como funciona, aqui esta todo, quiere probarlo, aqui esta, sin quitar el contenido que ya
+> tiene, ya que quien lo lee es el profe y si tiene que estar todo lo tecnico, pero meter todo en una app explicada paso
+> a paso esta muy bien, como un tipo docker, me gusta mucho, y organice el repo porque se ve desorganizado, puede cambiar
+> nombres y todo desde que todo quede funcionando, trate de organizar mejor los datos en la app igualmente, abrir en
+> pantalla completa, que no se solapen cosas etc, tener barras que cargan o cosas que digan se esta ejecutando se tarda
+> tanto en abrir, revise practicas mas complicadas de entender y haga pruebas mas claras como la de las hormigas o como
+> funciona el docker, cosas mas explicadas, pruebas visuales, un acompañamiento del tema con su prueba y quitar el probar
+> general, para eso esta en cada practica, junto a su logica, adecue todo eso, con los agentes que le di permiso, y haga
+> commit de todo"
+
+Puntos de este proyecto (el commit lo hace la sesión principal):
+- [x] 1. Peso: GIF de docs/videos re-codificados, sin duplicados gif/mp4 sin uso, imágenes optimizadas, PDF del enunciado, visor-portable.html (medir antes/después).
+- [x] 2. Organizar lo suelto sin romper imports/rutas (pytest al final).
+- [x] 3. README: "¿Quiere probarlo? → aquí está" y "¿Quiere saber cómo funciona? → aquí está todo" al principio, sin quitar lo técnico.
+- [x] 4. App `app-practica/` tipo Docker Desktop, sin solapes (1366x768 y 1920x1080), barras de carga, recorrido de la moneda animado junto al estado real del visor.
+- [x] 5. Probar con el lanzador y capturas; lanzar una acción desde la app.
+  TERMINADOS (P, 2026-10-05 noche; detalle en `docs/bitacora.md`): 29,0 → 17,0 MB versionados (GIF sin tramado,
+  sin `todo_junto.gif`, mp4 CRF 30, PDF y PNG comprimidos; visor portable igual a propósito); la estructura interna
+  ya era coherente (no se movió nada); README con las dos entradas al principio; app tipo Docker Desktop con la
+  prueba visual junto al estado real (`/api/estado`). Sin commit (lo hace la sesión principal). La app escondida
+  NO se relanzó.
+
+**Pedido EN CURSO del 2026-10-06 (agente Q9 del plan `github\PLAN-REVISION-PASOAPASO.md`).** Textual del usuario:
+> "ahora actualice los cambios y mejore el repositorio de github sin cambiar los nombres ya que los links se podrian
+> perder, igualmente paso por paso de todo y revisiones de multiples partes"
+
+Puntos de este proyecto (NO renombrar ni mover nada; sin git; la corrida escondida 8766/8501 no se toca):
+- [x] 1. Paso a paso: cómo se hizo (README conecta `docs/paso-a-paso.md` y la bitácora), cómo probarlo con la app
+  (sección por sección, botón por botón, qué hacer si falla), sin la app (comandos) y con el montaje real (qué falta).
+- [x] 2. Revisión del README y docs principales: exactitud contra el código, enlaces/anclas, imágenes, mermaid,
+  tablas, ortografía, cifras actuales (pytest).
+- [x] 3. Revisión de la app `app-practica` con el lanzador (puerto propio 8260-8279) y capturas a 1366x768 y 1920x1080.
+- [x] 4. Revisión del código reciente (`app/puertos.py`, `app/charla.py`, `app/lanzar.py`): bugs; `pytest -q` al final.
+  TERMINADOS (Q9, 2026-10-06; detalle en `docs/bitacora.md`): 937 pruebas pasan. Sin commit (lo hace la sesión principal).
+
+### Pedido EN CURSO del 2026-10-16 — auditoría de prácticas 1–11 y proyecto final
+
+Textual del usuario:
+> "codex, ud es el lider, revise en el disco D cosas uni, micros, organice esas carpetas actualice el repo en github si va a cambiar los nombres, y separe la carpeta y todo lo referente a modelado 3d fuera de la carpeta y coloquele un nombre acorde a todo el modelaje, arregle rutas dañadas de todas las practicas talleres etc, y arregle cualquier error que encuentre, organice tambien el repo con su logica respectiva, puede usar los agentes ia en el chat, exepto claude y modelos que usan claude de mi cuenta, tiene acceso a el github, si no lo tiene hagalo junto a las herramientas necesarias, recuerde arreglar cualquier ruta y si encuentra algun fallo lo arregla"
+>
+> Aclaración posterior: "no movio la carpeta de micros entorno de pruebas que le dije dentro de micros, y tampoco reviso las practicas de la 1 a la 11 con talleres y proyectos los errores logicos que pudierantener, por eso le dije que usara varios agentes por si acaso, es bastante trabajo"
+
+Puntos:
+- [x] Mover `D:\micros entorno de pruebas` dentro de `D:\cosas uni\Micros` (destino `Micros entorno de pruebas`); preservar su entorno y datos.
+- [x] Auditar prácticas 1–11, talleres y proyecto final por lógica y rutas con agentes que no usen Claude. Prácticas 1–8: enlaces locales Markdown verificados, sintaxis Python válida y revisión de flujos/rutas; 9–11: Compose válido, 40/40 pruebas de protocolo y enlaces Markdown; proyecto final: 937/937 tests pasaron en la ejecución desde `proyecto-final`. Sin ejecutar prácticas que requieren hardware/servicios externos.
+- [x] Corregir fallos reproducibles, revisar cambios y dejar registro de lo que quede pendiente. Se corrigió la ruta del activador del venv tras mover `Micros entorno de pruebas` y referencias operativas del nombre del modelado 3D. Un fallo adicional de pytest fue por ejecutar desde el directorio raíz; aislado desde `proyecto-final`, pasó. Tema 10 prueba 6 sigue documentada como 90% frente al criterio de 95%; no se cambió la configuración porque es un resultado conocido, no una ruta rota ni una regresión.
+
+### Pedido EN CURSO del 2026-10-20 — chasis impreso del carro (carpeta `chasis_impreso/`)
+
+Resumen fiel del pedido (texto completo en el transcript de la sesión): construir el carro de verdad imprimiendo
+chasis y soportes (Creality HI, cama 260x260x300, boquilla 0.4, CFS, PLA). Puntos:
+- [x] 1. Sacar del visor la disposición del carro (posiciones, alturas, carga, cables) solo como referencia.
+- [x] 2. Chasis paramétrico desde cero (OpenSCAD/CadQuery), medidas en variables; medidas dudosas → variable + cómo medir.
+- [x] 3. Liviano y rígido (nervaduras, vaciados, carga cerca de ejes) + masa estimada.
+- [x] 4. Piezas: soportes TT, porta 18650, base ESP32 (M3), soporte TB6612, HC-SR04, VL53L0X, barra 5 TCRT5000, interruptor+fusible, pasacables, carga.
+- [x] 5. Piezas que no quepan → cortes con cola de milano o pines + M3 con tuerca cautiva; tolerancia variable (0.2); sin soportes.
+- [x] 6. Tandas que quepan en cama → 3MF por tanda + STL por pieza.
+- [x] 7. Por pieza: material, capa, paredes, relleno, orientación, tiempo y gramos.
+- [x] 8. Pieza de prueba de tolerancias (cola de milano + M3 con tuerca).
+- [x] 9. Tornillería/insertos, orden de ensamble y render del carro completo.
+  HECHO (2026-10-20): `chasis_impreso/` (chasis.scad + exportar.py + README con decisiones, medidas MEDIR, tabla de impresion,
+  tornilleria y ensamble). 232 g / ~6,5 h estimados, sin choques. Falta imprimir la prueba y medir las piezas reales. Sin commit.
+
+### Pedido EN CURSO del 2026-10-24 — maqueta completa impresa (carpeta nueva `maqueta_impresa/`)
+
+Textual del usuario:
+> "Ahora también saque ordenadamente todo el tema del almacenamiento para la impresión en 3d y el chasis para montar toda la maqueta en 3d, como se haría sin con chasis, unidos, pero bien revisado, también cuanto material se gastaría y un manual inspirado en el que ya existe, y revise el modelado el proyecto final para que los modelos sean iguales tanto físicos como digitales, revise todo múltiples veces para no cometer el mismo error, otra instancia está trabajando a la par en el pc, si se cruzan avísele para que no se pisen"
+
+Respuestas del usuario a las preguntas de alcance: estructura **todo impreso, sin perfil 2020** (módulos que caben en la
+cama, unidos a presión: remaches impresos y colas de milano; MDF solo como piso); "almacenamiento" = **almacén de monedas**
+(carrusel tipo revólver: placa fija, disco, tubos —también impresos—, obturador, soporte del 28BYJ-48, embudo al vaso);
+si digital y físico difieren **mandan las piezas físicas** (después se corrigen visor y simulación, con prueba).
+Lección del carro (2026-10-24): los remaches salieron mal porque su agarre se sacó de fórmulas y nunca se midió el
+ensamble. Aquí TODA unión se mide en el ensamble con un revisor automático antes de entregar.
+Puntos:
+- [x] 1. Inventario geométrico de la planta (sim/mundo.py, geometria.py, parametros.yaml, visor) y discrepancias.
+- [x] 2. Almacén de monedas imprimible (carrusel, tubos, obturador, soporte 28BYJ-48, embudo).
+- [x] 3. Estructura impresa de toda la maqueta (mesas, patas, pórtico, canaleta...) en módulos unidos, sin aluminio.
+- [x] 4. Revisión automática: choques, voladizos (sin soportes), cada unión medida en el ensamble, que todo quepa en la cama.
+- [x] 5. Material: gramos, tiempo y rollos por pieza y total; tandas 3MF + STL por pieza.
+  HECHO (2026-10-24): `maqueta_impresa/` (comun.scad, estructura.py -> estructura_gen.scad, un .scad por subsistema
+  hecho por agentes, maqueta.scad, revisar.py, probar_revisor.py 39/39, exportar.py). Revisión completa en TODO OK:
+  310 remaches medidos, 170 piezas sin choques, 13 móviles barridos (74 pares), sin soportes, todo cabe. 2,74 kg de PLA
+  (4 rollos), ~82 h, 25 tandas (material.md). Diferencias funcionales a llevar al visor/sim: paleta 56 de ancho con
+  esquina cortada; embudo E4 salida Ø29 y aleta nueva; obturador gira en horizontal; 28BYJ girado 90°; embudo de carga
+  termina en z 335; vaso retenido por el escape ~17 mm más abajo que el visor; separadores de vasos recortados 3 mm.
+- [x] 6. Manual de armado inspirado en el del carro (tandas, dónde va cada pieza, remaches, componentes y cables).
+- [x] 7. Visor y simulación iguales a las piezas físicas (corregir y dejar prueba).
+- [x] 8. Ahorro de costos (usuario, 2026-10-24: "entre más se ahorre mejor, tanto para lo impreso como para el proyecto
+  final"): sin bornera, sin IEC, un solo fusible, fuente de 5 A, buck XL4015 5 A, sin optoacopladores (M18 con diodo +
+  pull-up), sin hub USB, sin reparto I2C en placa, sin canaletas, sin MDF; PCA9685 y webcam 1080p se quedan; el carro no
+  se toca. PLA: aligerar manteniendo rigidez.
+  HECHO (2026-10-24): manual_maqueta.pdf (27 págs., comprobado: 170 piezas, 310 remaches y 19 dispositivos en un paso);
+  visor con maqueta_impresa.glb + tests/sim/test_maqueta_impresa.py; costo $1.998.921 -> $1.387.143 (ahorro $611.778,
+  calculado en app/costos.py), diodo Schottky BAT85 en los M18 (con 1N4148 el ESP32 no leía el 0), ventilador se queda;
+  maqueta aligerada 2,74 -> 2,68 kg (3 rollos) con revisión completa en TODO OK y probar_revisor 39/39.
+  HECHO (2026-10-24): commits 6006bae y 8de40b8 en main (940 pruebas en verde; .gitattributes con PDF/STL/3MF/GLB binarios).
+- [x] 9. Actualizar TODA la carpeta proyecto-final (README, docs, contexto) y SUBIRLA a GitHub.
+- [x] 11. (usuario, 2026-10-24) "los 3mf... se está levantando la primera capa en los círculos chicos... la membrana es
+  horrible, esa no es solución... haga otra vez una auditoría completa y arréglelo": cara de apoyo maciza y agujeros a los
+  costados (CONVENCIONES.md "Primera capa"), tubos con hueco octogonal y giro automático, primera_capa.py + auditar.py
+  (todos los criterios por pieza) y perfiles nuevos de Creality Print "... maqueta" (una pared en la primera capa, sin wipe).
+  EN CURSO (2026-10-25, "dejelo supremamente corregido en todo aspecto"; ultracode; límite de agentes quitado "pero que la
+  cpu no se cargue tanto"): auditoría de 10 lentes con 2 verificadores por hallazgo (scratchpad wf/r1_*.md) y 2 rondas de
+  arreglos con un agente por subsistema, trabajando en una COPIA (scratchpad pf/maqueta_impresa) que se pasa a la carpeta
+  real al final. Causa de alm_1: se laminó con el filamento 2 (sistema) y el proceso "sin saltos" (wipe_on_loops 1, wipe
+  con retracción 100 %, Slope Lift) y la placa vieja tenía una rejilla abajo con un puente de 3646 mm² en z 2,4 (el "mismo
+  z"). La interfaz de Creality Print (abierta por un agente con --help) borró los perfiles "maqueta" al sincronizar con la
+  nube: restaurados con sync_info = create, y ahora cada 3MF trae la configuración ADENTRO (exportar.py + perfil_creality.json)
+  y laminar.py lo comprueba con el CLI.
+  HECHO (2026-10-25): copia pasada a la carpeta real; segunda opinión aplicada entera (usuario: "A, cambiarlas, B
+  cambiarlas, C cambiarlos, todo"): revisión capa por capa (voladizos.capas), islas de mon_e4/tap_pre_placa/vas_lat_s_b
+  y postes en V de vas_lat_s_a corregidos, rodillo C quitado, canaleta amarrada, 11 separadores en la banda de vasos,
+  precios de lo que el manual manda comprar. Única excepción (usuario: "Acepta el puente de 30 mm de mon_e4 como
+  excepción documentada"): voladizos.PUENTES_ACEPTADOS, sale como aviso. Revisión completa en TODO OK (183 piezas, 316
+  remaches), probar_revisor 128/128, auditoría 0 fallas de 183, esfuerzos todo cumple, 26 tandas laminadas bien
+  (Creality Print: 2,95 kg y 101 h; exportar estima 2,98 kg y 91 h), costo $1.586.033, peso 8,08 kg. No se tocó
+  la orientación en Y ni los agujeros ciegos (usuario: "Déjelo como esta", "Déjalos así").
+- [x] 10. (usuario, 2026-10-24) El carro del visor igual al impreso; los remaches como parte del modelo (con casilla);
+  verificar esfuerzo, deformación permanente (fluencia) y calor del PLA: maqueta_impresa/esfuerzos.py -> esfuerzos.md
+  (todo cumple; condiciones nuevas: NEMA 17 con separadores de nailon, tira LED sobre cinta de aluminio a media potencia).
+  HECHO: carro_armado.glb en el visor (cotas funcionales = física, tests/sim/test_carro_impreso.py), 337 remaches en los GLB
+  con casilla "Remaches", demo regrabada (app.grabar_demo) y portable regenerado (9,3 MB); 945 pruebas. (README, docs, contexto) y SUBIRLA a GitHub (usuario, 2026-10-24:
+  "junto a su github no se le olvide"): commit y push al terminar, con la suite en verde.
+- Coordinación: la sesión "cambios en general de la carpeta" trabaja en paralelo; se le avisó (mensaje retenido sin leer,
+  2026-10-24). Esta sesión solo crea `maqueta_impresa/` y lee lo demás; antes de editar visor/sim/config, avisar.
+
+### Pedido EN CURSO del 2026-10-24 (tarde) — ahorros de costo aprobados (agente de ahorros)
+
+Textual del usuario:
+> "también el tema de ahorrar costos pueden ser la eliminación de borneras y swiches, al final es un proyecto universitario, no un sistema industrial, entre más se ahorre mejor, tanto para lo impreso como para el proyecto final"
+
+Eligió: sí buck de 5 A para servos, sí sin optoacopladores, sí sin hub USB; NO cambiar la webcam cenital; DEJAR el
+PCA9685; "el carro ya no lo toque"; un solo ESP32 fijo alcanza (19 de 24 GPIO). Puntos (en todas las capas):
+- [x] 1. Bornera X2 → empalmes soldados con termoencogible (GND en estrella igual).
+- [x] 2. IEC → cable de la fuente a una multitoma con interruptor; 4 fusibles → 1 fusible principal en el +12 V.
+- [x] 3. Fuente 12 V 10 A → 12 V 5 A. 4. XL4016 → XL4015 5 A (pico ≈3,9 A; prensa y empujador nunca a la vez).
+- [x] 5. Sin optoacopladores: M18 directo al GPIO con diodo + pull-up 10 kΩ (sigue activo en bajo).
+- [x] 6. Sin hub USB (ESP32 y 2 webcams al portátil). 7. Reparto I2C → hilos con 2 pull-ups 2,2 kΩ en línea.
+- [x] 8. Canaletas y prensaestopas → bridas; ventilador según la térmica. 9. Sin base MDF.
+- [x] 10. Estructura = maqueta impresa (gramos × PLA + energía). 11-13. Documentos, visor y pruebas en verde.
+HECHO (2026-10-24): total $1.393.790 (antes $1.998.921), peso 7,92 kg; detalle en docs/bitacora.md.
+No se toca `maqueta_impresa/`, `chasis_impreso/` ni nada del carro. Sin git.
 
 ## Sección 4 de CONTEXTO-SESION (superada, movida el 2026-10-02)
 

@@ -522,7 +522,7 @@ errores_sensores:
   # (error_fondo se quito el 2026-09-28: no lo leia nadie. Era el error de ver
   # monedas en el fondo de un vaso vacio o no verlas en uno lleno, para la
   # confirmacion del lote (`lote_no_confirmado`, paso 10), que la simulacion todavia
-  # NO modela: cuando se modele, vuelve aqui y lo aplica control/hal/backend_sim.py.)
+  # NO modela: cuando se modele, vuelve aqui y lo aplica sim/backend_sim.py.)
   camara_vasos: {no_lee: 0.02, no_ve_tapa: 0.005, falso_negativo: 0.002, falso_positivo: 0.001}
   camara:
     ruido_diametro_mm: 0.08           # calibracion de escala + borde difuso (1 px ~ 0,1 mm)
@@ -612,7 +612,7 @@ firmware:
   i2c_bus_largo_hz: 100000
   # Servos por el PCA9685 (canal = el del conexionado). reposo = posicion segura (la que toma en
   # la parada segura). Cada pieza va directo en la estria o en el cuerno del servo, asi que
-  # activo - reposo ES el recorrido de la pieza impresa (mandan las piezas, maqueta_impresa/*.scad;
+  # activo - reposo ES el recorrido de la pieza impresa (mandan las piezas, maqueta_impresa/scad/*.scad;
   # el visor anima lo mismo). Antes eran 30/90/60/180/120/45 y con eso el escape de tapas se trababa,
   # el de la canaleta pegaba en el carro y el empujador no sacaba el vaso de la banda:
   # - desvio 90: aleta de +45 (rechazo, punta a -y) a -45 (almacen), cinta_monedas.scad mon_reposo;

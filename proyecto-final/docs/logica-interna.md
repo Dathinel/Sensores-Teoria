@@ -27,11 +27,11 @@ flowchart TB
     end
     HAL{{control/hal/interfaces.py}}
     Control --> HAL
-    HAL --> SIM[backend_sim.py<br/>PyBullet: rayTest, cuerpos]
-    HAL --> REAL[backend_real.py<br/>ESP32 por USB serial]
+    HAL --> SIM[sim/backend_sim.py<br/>PyBullet: rayTest, cuerpos]
+    HAL --> REAL[control/hal/backend_real.py<br/>ESP32 por USB serial]
 ```
 
-Por eso la misma lógica corre en la simulación, en las 936 pruebas automáticas (2026-10-05) y (fase 8) contra el
+Por eso la misma lógica corre en la simulación, en las 951 pruebas automáticas (2026-10-26) y (fase 8) contra el
 hardware real cambiando una sola línea de configuración (`hardware.backend: real`). Lo que se ve en
 el visor no es una animación aparte: es esta lógica decidiendo sobre sensores simulados.
 
