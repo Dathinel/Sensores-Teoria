@@ -1,0 +1,255 @@
+﻿========================================================================
+Almacén de monedas  (10 STL distintos, 10 unidades)   capa 0.2 mm / 4 paredes / 15 % relleno
+========================================================================
+Archivo                      Cantidad   Tanda
+alm_columna_1.stl                   1   alm_3
+alm_columna_2.stl                   1   alm_3
+alm_disco.stl                       1   alm_2
+alm_embudo.stl                      1   alm_2
+alm_obturador.stl                   1   alm_3
+alm_palanca.stl                     1   alm_3
+alm_placa_fija.stl                  1   alm_1
+alm_puente.stl                      1   alm_3
+alm_tambor.stl                      1   alm_2
+alm_tolva.stl                       1   alm_3
+
+========================================================================
+Canaleta y muelle  (17 STL distintos, 17 unidades)   capa 0.2 mm / 4 paredes / 15 % relleno
+========================================================================
+Archivo                      Cantidad   Tanda
+can_amarre.stl                      1   can_2
+can_balancin.stl                    1   can_1
+can_cabezal_c1.stl                  1   can_1
+can_cabezal_c2.stl                  1   can_1
+can_cabezal_c3.stl                  1   can_1
+can_cabezal_c4.stl                  1   can_1
+can_guia_recta_xn.stl               1   can_1
+can_guia_recta_xp.stl               1   can_2
+can_guia_v_xn.stl                   1   can_2
+can_guia_v_xp.stl                   1   can_2
+can_plantilla.stl                   1   can_3
+can_prisionero_c1.stl               1   can_1
+can_prisionero_c2.stl               1   can_1
+can_prisionero_c3.stl               1   can_1
+can_prisionero_c4.stl               1   can_1
+can_soporte_escape.stl              1   can_1
+can_topes.stl                       1   can_1
+
+========================================================================
+Estructura: nodos  (22 STL distintos, 22 unidades)   capa 0.2 mm / 4 paredes / 20 % relleno
+========================================================================
+Archivo                      Cantidad   Tanda
+C1.stl                              1   est_nodos_1
+C2.stl                              1   est_nodos_1
+C3.stl                              1   est_nodos_1
+C4.stl                              1   est_nodos_2
+F1.stl                              1   est_nodos_1
+F2.stl                              1   est_nodos_1
+F3.stl                              1   est_nodos_1
+F4.stl                              1   est_nodos_1
+F5.stl                              1   est_nodos_1
+F6.stl                              1   est_nodos_1
+K0.stl                              1   est_nodos_1
+K1.stl                              1   est_nodos_2
+M1.stl                              1   est_nodos_2
+M2.stl                              1   est_nodos_2
+P1.stl                              1   est_nodos_2
+P2.stl                              1   est_nodos_2
+Q2.stl                              1   est_nodos_2
+T1.stl                              1   est_nodos_2
+T2.stl                              1   est_nodos_2
+T3.stl                              1   est_nodos_2
+V2.stl                              1   est_nodos_1
+V4.stl                              1   est_nodos_1
+
+========================================================================
+Estructura: tubos  (46 STL distintos, 46 unidades)   capa 0.2 mm / 4 paredes / 15 % relleno
+========================================================================
+Archivo                      Cantidad   Tanda
+t_C1-C2.stl                         1   est_tubos_1
+t_C1-C3.stl                         1   est_tubos_1
+t_C1-L.stl                          1   est_tubos_4
+t_C2-C4.stl                         1   est_tubos_2
+t_C2-L.stl                          1   est_tubos_4
+t_C3-C4.stl                         1   est_tubos_2
+t_C3-L.stl                          1   est_tubos_4
+t_C3-M1.stl                         1   est_tubos_2
+t_C4-L.stl                          1   est_tubos_4
+t_C4-M2.stl                         1   est_tubos_2
+t_F1-F2.stl                         1   est_tubos_1
+t_F1-F4.stl                         1   est_tubos_1
+t_F1-T1_1.stl                       1   est_tubos_2
+t_F1-T1_2.stl                       1   est_tubos_2
+t_F2-F3.stl                         1   est_tubos_1
+t_F2-T2_1.stl                       1   est_tubos_2
+t_F2-T2_2.stl                       1   est_tubos_2
+t_F3-F6.stl                         1   est_tubos_1
+t_F3-T3_1.stl                       1   est_tubos_2
+t_F3-T3_2.stl                       1   est_tubos_2
+t_F4-F6.stl                         1   est_tubos_1
+t_F4-P1_1.stl                       1   est_tubos_3
+t_F4-P1_2.stl                       1   est_tubos_3
+t_F5-P2_1.stl                       1   est_tubos_3
+t_F5-P2_2.stl                       1   est_tubos_3
+t_F5-V4.stl                         1   est_tubos_1
+t_F6-F5_1.stl                       1   est_tubos_1
+t_F6-F5_2.stl                       1   est_tubos_1
+t_F6-L.stl                          1   est_tubos_4
+t_K0-K1_1.stl                       1   est_tubos_1
+t_K0-K1_2.stl                       1   est_tubos_1
+t_K0-V4.stl                         1   est_tubos_1
+t_K1-L.stl                          1   est_tubos_4
+t_M1-M2.stl                         1   est_tubos_2
+t_P1-P2_1.stl                       1   est_tubos_3
+t_P1-P2_2.stl                       1   est_tubos_4
+t_Q2-L.stl                          1   est_tubos_3
+t_T1-L_1.stl                        1   est_tubos_3
+t_T1-L_2.stl                        1   est_tubos_3
+t_T1-T2.stl                         1   est_tubos_3
+t_T2-T3.stl                         1   est_tubos_3
+t_T3-L.stl                          1   est_tubos_3
+t_T3-Q2.stl                         1   est_tubos_2
+t_V2-K0.stl                         1   est_tubos_1
+t_V2-L.stl                          1   est_tubos_4
+t_V4-L.stl                          1   est_tubos_4
+
+========================================================================
+Estructura: empalmes y tacos  (11 STL distintos, 11 unidades)   capa 0.2 mm / 4 paredes / 20 % relleno
+========================================================================
+Archivo                      Cantidad   Tanda
+e_F1-T1_1.stl                       1   est_uniones_1
+e_F2-T2_1.stl                       1   est_uniones_1
+e_F3-T3_1.stl                       1   est_uniones_1
+e_F4-P1_1.stl                       1   est_uniones_1
+e_F5-P2_1.stl                       1   est_uniones_1
+e_F6-F5_1.stl                       1   est_uniones_1
+e_K0-K1_1.stl                       1   est_uniones_1
+e_P1-P2_1.stl                       1   est_uniones_1
+e_T1-L_1.stl                        1   est_uniones_1
+taco_1.stl                          1   est_uniones_1
+taco_2.stl                          1   est_uniones_1
+
+========================================================================
+Cinta de monedas  (20 STL distintos, 20 unidades)   capa 0.2 mm / 4 paredes / 15 % relleno
+========================================================================
+Archivo                      Cantidad   Tanda
+mon_aleta.stl                       1   mon_3
+mon_bancada.stl                     1   mon_1
+mon_bandeja.stl                     1   mon_3
+mon_camara.stl                      1   mon_2
+mon_canal_b.stl                     1   mon_3
+mon_casq_a_m.stl                    1   mon_2
+mon_casq_a_p.stl                    1   mon_2
+mon_e4.stl                          1   mon_3
+mon_fc51.stl                        1   mon_2
+mon_guia_m.stl                      1   mon_1
+mon_guia_p.stl                      1   mon_1
+mon_jaula_nema.stl                  1   mon_2
+mon_platina_e1.stl                  1   mon_1
+mon_platina_e2.stl                  1   mon_1
+mon_ret_b_m.stl                     1   mon_2
+mon_ret_b_p.stl                     1   mon_2
+mon_rod_mot_m.stl                   1   mon_1
+mon_rod_ten_m.stl                   1   mon_2
+mon_rod_ten_p.stl                   1   mon_2
+mon_soporte_b.stl                   1   mon_3
+
+========================================================================
+Remaches  (24 STL distintos, 382 unidades)   capa 0.12 mm / 4 paredes / 100 % relleno
+========================================================================
+Archivo                      Imprimir  Se usan   Tanda
+rem_10_2.stl                        4        2   rem_2
+rem_11_2.stl                       11        9   rem_2
+rem_12_6.stl                        6        4   rem_2
+rem_13_0.stl                        4        2   rem_2
+rem_13_1.stl                        6        4   rem_2
+rem_14_6.stl                        4        2   rem_2
+rem_15_0.stl                        3        1   rem_2
+rem_15_3.stl                        4        2   rem_2
+rem_18_4.stl                        6        4   rem_2
+rem_19_2.stl                        4        2   rem_2
+rem_3_6.stl                         4        2   rem_1
+rem_4_4.stl                       203      184   rem_1
+rem_4_6.stl                        27       24   rem_1
+rem_4_8.stl                         4        2   rem_1
+rem_5_0.stl                        10        8   rem_1
+rem_5_6.stl                        18       16   rem_1
+rem_5_8.stl                        14       12   rem_1
+rem_6_2.stl                         6        4   rem_1
+rem_6_8.stl                         4        2   rem_1
+rem_7_2.stl                         6        4   rem_1
+rem_7_4.stl                        13       11   rem_1, rem_2
+rem_7_8.stl                        11        9   rem_2
+rem_9_4.stl                         6        4   rem_2
+rem_9_6.stl                         4        2   rem_2
+(Imprimir = los que se usan + 10 % de repuesto, mínimo 2.)
+
+========================================================================
+Tapas, prensa y empujador  (23 STL distintos, 23 unidades)   capa 0.2 mm / 4 paredes / 15 % relleno
+========================================================================
+Archivo                      Cantidad   Tanda
+tap_abr_servo.stl                   1   tap_1
+tap_abr_sup.stl                     1   tap_1
+tap_colgante.stl                    1   tap_2
+tap_dedo_a.stl                      1   tap_2
+tap_dedo_b.stl                      1   tap_2
+tap_emp_biela.stl                   1   tap_3
+tap_emp_carro.stl                   1   tap_3
+tap_emp_manivela.stl                1   tap_3
+tap_emp_paleta.stl                  1   tap_3
+tap_emp_placa_servo.stl             1   tap_3
+tap_emp_soporte.stl                 1   tap_3
+tap_pre_buje.stl                    1   tap_2
+tap_pre_horquilla.stl               1   tap_2
+tap_pre_leva.stl                    1   tap_2
+tap_pre_placa.stl                   1   tap_2
+tap_pre_plato.stl                   1   tap_2
+tap_pre_rodillo.stl                 1   tap_2
+tap_pre_suplemento_05.stl           1   tap_2
+tap_pre_suplemento_10.stl           1   tap_3
+tap_puntal_inf.stl                  1   tap_4
+tap_puntal_sup.stl                  1   tap_4
+tap_sens_porta.stl                  1   tap_4
+tap_tubo.stl                        1   tap_1
+
+========================================================================
+Cinta de vasos  (34 STL distintos, 34 unidades)   capa 0.2 mm / 4 paredes / 15 % relleno
+========================================================================
+Archivo                      Cantidad   Tanda
+vas_bancada_a.stl                   1   vas_1
+vas_bancada_b.stl                   1   vas_2
+vas_bandeja.stl                     1   vas_4
+vas_cortina.stl                     1   vas_3
+vas_lat_n_a.stl                     1   vas_1
+vas_lat_n_b.stl                     1   vas_1
+vas_lat_s_a.stl                     1   vas_1
+vas_lat_s_b.stl                     1   vas_1
+vas_panel_a.stl                     1   vas_3
+vas_panel_b.stl                     1   vas_3
+vas_placa_camara.stl                1   vas_3
+vas_placa_motor.stl                 1   vas_2
+vas_taco_10_a.stl                   1   vas_3
+vas_taco_10_b.stl                   1   vas_3
+vas_taco_11_a.stl                   1   vas_3
+vas_taco_11_b.stl                   1   vas_3
+vas_taco_1_a.stl                    1   vas_2
+vas_taco_1_b.stl                    1   vas_2
+vas_taco_2_a.stl                    1   vas_2
+vas_taco_2_b.stl                    1   vas_2
+vas_taco_3_a.stl                    1   vas_2
+vas_taco_3_b.stl                    1   vas_2
+vas_taco_4_a.stl                    1   vas_2
+vas_taco_4_b.stl                    1   vas_2
+vas_taco_5_a.stl                    1   vas_2
+vas_taco_5_b.stl                    1   vas_2
+vas_taco_6_a.stl                    1   vas_2
+vas_taco_6_b.stl                    1   vas_2
+vas_taco_7_a.stl                    1   vas_2
+vas_taco_7_b.stl                    1   vas_2
+vas_taco_8_a.stl                    1   vas_2
+vas_taco_8_b.stl                    1   vas_2
+vas_taco_9_a.stl                    1   vas_3
+vas_taco_9_b.stl                    1   vas_3
+
+========================================================================
+TOTAL: 207 STL distintos, 565 unidades a imprimir  (~2979 g, ~91.0 h)

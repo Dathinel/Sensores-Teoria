@@ -104,8 +104,11 @@ def config_tanda(g):
     capa, paredes, relleno = PARAM.get(g, PARAM_DEF)
     # filter_out_gap_fill (2026-10-25, segunda opinion): sin el, la primera capa de alm_1 llevaba 93 rellenos de hueco de
     # 0,1-0,3 mm, 83 con retraccion y salto; los de menos de 0,5 mm no rellenan nada y con PLA humedo dejan babas
+    # min_width_top_surface (2026-10-29): con 300 % las caras inclinadas (cabezales de la canaleta a 15 grados, soporte
+    # del escape) dejan franjas de 0,75 mm por capa, mas angostas que el limite: salian sin superficie superior y con el
+    # relleno ralo a la vista, siempre en la misma cara (medido en el G-code de can_1)
     cambios = {"layer_height": f"{capa:g}", "wall_loops": str(paredes), "sparse_infill_density": f"{relleno}%",
-               "filter_out_gap_fill": "0.5"}
+               "filter_out_gap_fill": "0.5", "min_width_top_surface": "0%"}
     if g == "rem":   # 3,2 de alto sobre 1,6-6 de base: no se tumban; con la pata de elefante sus patas de 0,77 se pierden
         cambios.update(brim_type="no_brim", elefant_foot_compensation="0")
     for k, v in cambios.items():

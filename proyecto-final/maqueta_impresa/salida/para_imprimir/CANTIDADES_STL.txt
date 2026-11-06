@@ -1,0 +1,179 @@
+﻿PIEZAS GRANDES - maqueta impresa del proyecto final (las que imprime la universidad)
+Sin los remaches ni las piezas de menos de 5 g (van aparte, en salida/piezas_pequenas/),
+sin el almacén (ya impreso) ni el carro.
+
+Si laminas un STL suelto (sin el 3MF), en Creality Print pon «Ancho mínimo de superficie superior» = 0 %
+(con 300 % las caras inclinadas salen sin capa de arriba).
+
+========================================================================
+Canaleta y muelle  (12 STL distintos, 12 unidades)   capa 0.2 mm / 4 paredes / 15 % relleno
+========================================================================
+Archivo                      Cantidad
+can_amarre.stl                      1
+can_cabezal_c1.stl                  1
+can_cabezal_c2.stl                  1
+can_cabezal_c3.stl                  1
+can_cabezal_c4.stl                  1
+can_guia_recta_xn.stl               1
+can_guia_recta_xp.stl               1
+can_guia_v_xn.stl                   1
+can_guia_v_xp.stl                   1
+can_plantilla.stl                   1
+can_soporte_escape.stl              1
+can_topes.stl                       1
+
+========================================================================
+Estructura: nodos  (22 STL distintos, 22 unidades)   capa 0.2 mm / 4 paredes / 20 % relleno
+========================================================================
+Archivo                      Cantidad
+C1.stl                              1
+C2.stl                              1
+C3.stl                              1
+C4.stl                              1
+F1.stl                              1
+F2.stl                              1
+F3.stl                              1
+F4.stl                              1
+F5.stl                              1
+F6.stl                              1
+K0.stl                              1
+K1.stl                              1
+M1.stl                              1
+M2.stl                              1
+P1.stl                              1
+P2.stl                              1
+Q2.stl                              1
+T1.stl                              1
+T2.stl                              1
+T3.stl                              1
+V2.stl                              1
+V4.stl                              1
+
+========================================================================
+Estructura: tubos  (46 STL distintos, 46 unidades)   capa 0.2 mm / 4 paredes / 15 % relleno
+========================================================================
+Archivo                      Cantidad
+t_C1-C2.stl                         1
+t_C1-C3.stl                         1
+t_C1-L.stl                          1
+t_C2-C4.stl                         1
+t_C2-L.stl                          1
+t_C3-C4.stl                         1
+t_C3-L.stl                          1
+t_C3-M1.stl                         1
+t_C4-L.stl                          1
+t_C4-M2.stl                         1
+t_F1-F2.stl                         1
+t_F1-F4.stl                         1
+t_F1-T1_1.stl                       1
+t_F1-T1_2.stl                       1
+t_F2-F3.stl                         1
+t_F2-T2_1.stl                       1
+t_F2-T2_2.stl                       1
+t_F3-F6.stl                         1
+t_F3-T3_1.stl                       1
+t_F3-T3_2.stl                       1
+t_F4-F6.stl                         1
+t_F4-P1_1.stl                       1
+t_F4-P1_2.stl                       1
+t_F5-P2_1.stl                       1
+t_F5-P2_2.stl                       1
+t_F5-V4.stl                         1
+t_F6-F5_1.stl                       1
+t_F6-F5_2.stl                       1
+t_F6-L.stl                          1
+t_K0-K1_1.stl                       1
+t_K0-K1_2.stl                       1
+t_K0-V4.stl                         1
+t_K1-L.stl                          1
+t_M1-M2.stl                         1
+t_P1-P2_1.stl                       1
+t_P1-P2_2.stl                       1
+t_Q2-L.stl                          1
+t_T1-L_1.stl                        1
+t_T1-L_2.stl                        1
+t_T1-T2.stl                         1
+t_T2-T3.stl                         1
+t_T3-L.stl                          1
+t_T3-Q2.stl                         1
+t_V2-K0.stl                         1
+t_V2-L.stl                          1
+t_V4-L.stl                          1
+
+========================================================================
+Estructura: empalmes y tacos  (11 STL distintos, 11 unidades)   capa 0.2 mm / 4 paredes / 20 % relleno
+========================================================================
+Archivo                      Cantidad
+e_F1-T1_1.stl                       1
+e_F2-T2_1.stl                       1
+e_F3-T3_1.stl                       1
+e_F4-P1_1.stl                       1
+e_F5-P2_1.stl                       1
+e_F6-F5_1.stl                       1
+e_K0-K1_1.stl                       1
+e_P1-P2_1.stl                       1
+e_T1-L_1.stl                        1
+taco_1.stl                          1
+taco_2.stl                          1
+
+========================================================================
+Cinta de monedas  (17 STL distintos, 17 unidades)   capa 0.2 mm / 4 paredes / 15 % relleno
+========================================================================
+Archivo                      Cantidad
+mon_bancada.stl                     1
+mon_bandeja.stl                     1
+mon_camara.stl                      1
+mon_canal_b.stl                     1
+mon_e4.stl                          1
+mon_fc51.stl                        1
+mon_guia_m.stl                      1
+mon_guia_p.stl                      1
+mon_jaula_nema.stl                  1
+mon_platina_e1.stl                  1
+mon_platina_e2.stl                  1
+mon_ret_b_m.stl                     1
+mon_ret_b_p.stl                     1
+mon_rod_mot_m.stl                   1
+mon_rod_ten_m.stl                   1
+mon_rod_ten_p.stl                   1
+mon_soporte_b.stl                   1
+
+========================================================================
+Tapas, prensa y empujador  (15 STL distintos, 15 unidades)   capa 0.2 mm / 4 paredes / 15 % relleno
+========================================================================
+Archivo                      Cantidad
+tap_abr_servo.stl                   1
+tap_abr_sup.stl                     1
+tap_colgante.stl                    1
+tap_emp_carro.stl                   1
+tap_emp_paleta.stl                  1
+tap_emp_placa_servo.stl             1
+tap_emp_soporte.stl                 1
+tap_pre_buje.stl                    1
+tap_pre_leva.stl                    1
+tap_pre_placa.stl                   1
+tap_pre_plato.stl                   1
+tap_puntal_inf.stl                  1
+tap_puntal_sup.stl                  1
+tap_sens_porta.stl                  1
+tap_tubo.stl                        1
+
+========================================================================
+Cinta de vasos  (12 STL distintos, 12 unidades)   capa 0.2 mm / 4 paredes / 15 % relleno
+========================================================================
+Archivo                      Cantidad
+vas_bancada_a.stl                   1
+vas_bancada_b.stl                   1
+vas_bandeja.stl                     1
+vas_cortina.stl                     1
+vas_lat_n_a.stl                     1
+vas_lat_n_b.stl                     1
+vas_lat_s_a.stl                     1
+vas_lat_s_b.stl                     1
+vas_panel_a.stl                     1
+vas_panel_b.stl                     1
+vas_placa_camara.stl                1
+vas_placa_motor.stl                 1
+
+========================================================================
+TOTAL: 135 STL distintos, 135 unidades a imprimir  (~2615 g, ~72.9 h)

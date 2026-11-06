@@ -1,183 +1,192 @@
 [
  {
   "tanda": "alm_1",
-  "problemas": [],
+  "problemas": [
+   "proceso 0.20mm Standard @Creality Hi 0.4 nozzle",
+   "filamento \"Hyper PLA @Creality Hi 0.4 nozzle\";\"Hyper PLA @dathi 0.4 humedo maqueta(alm_1.3mf)\";\"Hyper PLA @dathi 0.4 humedo maqueta(alm_1.3mf)\""
+  ],
   "tiempo": "1h 16m 51s",
   "gramos": 34.72,
   "retracciones_capa1": 94
  },
  {
   "tanda": "alm_2",
-  "problemas": [],
+  "problemas": [
+   "proceso 0.20mm Standard @Creality Hi 0.4 nozzle",
+   "filamento \"Hyper PLA @Creality Hi 0.4 nozzle\";\"Hyper PLA @dathi 0.4 humedo maqueta(alm_2.3mf)\";\"Hyper PLA @dathi 0.4 humedo maqueta(alm_2.3mf)\""
+  ],
   "tiempo": "2h 38m 12s",
   "gramos": 73.87,
   "retracciones_capa1": 135
  },
  {
   "tanda": "alm_3",
-  "problemas": [],
-  "tiempo": "3h 1m 57s",
-  "gramos": 84.51,
-  "retracciones_capa1": 90
+  "problemas": [
+   "proceso 0.20mm Standard @Creality Hi 0.4 nozzle",
+   "filamento \"Hyper PLA @Creality Hi 0.4 nozzle\";\"Hyper PLA @dathi 0.4 humedo maqueta(alm_3.3mf)\""
+  ],
+  "tiempo": "2h 19m 29s",
+  "gramos": 67.37,
+  "retracciones_capa1": 47
  },
  {
   "tanda": "can_1",
   "problemas": [],
-  "tiempo": "5h 11m 24s",
-  "gramos": 127.5,
+  "tiempo": "5h 39m 4s",
+  "gramos": 130.7,
   "retracciones_capa1": 37
  },
  {
   "tanda": "can_2",
   "problemas": [],
-  "tiempo": "2h 16m 10s",
-  "gramos": 80.54,
+  "tiempo": "2h 16m 19s",
+  "gramos": 80.53,
   "retracciones_capa1": 28
  },
  {
   "tanda": "can_3",
   "problemas": [],
-  "tiempo": "12m 24s",
-  "gramos": 5.44,
+  "tiempo": "12m 45s",
+  "gramos": 5.52,
   "retracciones_capa1": 1
  },
  {
   "tanda": "est_nodos_1",
   "problemas": [],
-  "tiempo": "7h 9m 26s",
-  "gramos": 229.75,
+  "tiempo": "7h 11m 41s",
+  "gramos": 229.76,
   "retracciones_capa1": 56
  },
  {
   "tanda": "est_nodos_2",
   "problemas": [],
-  "tiempo": "5h 19m 4s",
+  "tiempo": "5h 20m 36s",
   "gramos": 171.69,
   "retracciones_capa1": 41
  },
  {
   "tanda": "est_tubos_1",
   "problemas": [],
-  "tiempo": "5h 50m 53s",
-  "gramos": 187.59,
+  "tiempo": "5h 52m 14s",
+  "gramos": 187.6,
   "retracciones_capa1": 39
  },
  {
   "tanda": "est_tubos_2",
   "problemas": [],
-  "tiempo": "7h 5m 51s",
-  "gramos": 236.54,
+  "tiempo": "7h 7m 1s",
+  "gramos": 236.55,
   "retracciones_capa1": 39
  },
  {
   "tanda": "est_tubos_3",
   "problemas": [],
-  "tiempo": "6h 4m 36s",
-  "gramos": 190.77,
+  "tiempo": "6h 6m 50s",
+  "gramos": 190.79,
   "retracciones_capa1": 44
  },
  {
   "tanda": "est_tubos_4",
   "problemas": [],
-  "tiempo": "4h 42m 14s",
+  "tiempo": "4h 43m 17s",
   "gramos": 153.2,
   "retracciones_capa1": 27
  },
  {
   "tanda": "est_uniones_1",
   "problemas": [],
-  "tiempo": "3h 57m 27s",
+  "tiempo": "3h 58m 44s",
   "gramos": 122.01,
   "retracciones_capa1": 31
  },
  {
   "tanda": "mon_1",
   "problemas": [],
-  "tiempo": "3h 17m 16s",
-  "gramos": 92.89,
+  "tiempo": "3h 19m 35s",
+  "gramos": 92.97,
   "retracciones_capa1": 34
  },
  {
   "tanda": "mon_2",
   "problemas": [],
-  "tiempo": "4h 23m 7s",
-  "gramos": 105.05,
+  "tiempo": "4h 28m 23s",
+  "gramos": 105.31,
   "retracciones_capa1": 95
  },
  {
   "tanda": "mon_3",
   "problemas": [],
-  "tiempo": "5h 6m 50s",
-  "gramos": 114.82,
+  "tiempo": "5h 8m 32s",
+  "gramos": 114.88,
   "retracciones_capa1": 30
  },
  {
   "tanda": "rem_1",
   "problemas": [],
-  "tiempo": "4h 24m 57s",
-  "gramos": 30.59,
+  "tiempo": "4h 23m 37s",
+  "gramos": 30.57,
   "retracciones_capa1": 597
  },
  {
   "tanda": "rem_2",
   "problemas": [],
-  "tiempo": "1h 31m 59s",
-  "gramos": 14.64,
+  "tiempo": "1h 32m 5s",
+  "gramos": 14.63,
   "retracciones_capa1": 131
  },
  {
   "tanda": "tap_1",
   "problemas": [],
-  "tiempo": "2h 13m 8s",
-  "gramos": 80.12,
+  "tiempo": "2h 13m 32s",
+  "gramos": 80.13,
   "retracciones_capa1": 31
  },
  {
   "tanda": "tap_2",
   "problemas": [],
-  "tiempo": "4h 20m 30s",
-  "gramos": 111.7,
+  "tiempo": "4h 21m 24s",
+  "gramos": 111.77,
   "retracciones_capa1": 81
  },
  {
   "tanda": "tap_3",
   "problemas": [],
-  "tiempo": "2h 1m 55s",
-  "gramos": 52.2,
+  "tiempo": "2h 4m 20s",
+  "gramos": 52.53,
   "retracciones_capa1": 44
  },
  {
   "tanda": "tap_4",
   "problemas": [],
-  "tiempo": "2h 1m 43s",
-  "gramos": 65.71,
+  "tiempo": "2h 2m 11s",
+  "gramos": 65.72,
   "retracciones_capa1": 25
  },
  {
   "tanda": "vas_1",
   "problemas": [],
-  "tiempo": "6h 39m 38s",
-  "gramos": 220.87,
+  "tiempo": "6h 43m 28s",
+  "gramos": 221.25,
   "retracciones_capa1": 23
  },
  {
   "tanda": "vas_2",
   "problemas": [],
-  "tiempo": "4h 7m 58s",
-  "gramos": 137.3,
+  "tiempo": "4h 8m 50s",
+  "gramos": 137.32,
   "retracciones_capa1": 64
  },
  {
   "tanda": "vas_3",
   "problemas": [],
-  "tiempo": "4h 13m 46s",
-  "gramos": 143.55,
+  "tiempo": "4h 14m 37s",
+  "gramos": 143.66,
   "retracciones_capa1": 38
  },
  {
   "tanda": "vas_4",
   "problemas": [],
-  "tiempo": "2h 15m 0s",
+  "tiempo": "2h 15m 11s",
   "gramos": 78.3,
   "retracciones_capa1": 1
  }

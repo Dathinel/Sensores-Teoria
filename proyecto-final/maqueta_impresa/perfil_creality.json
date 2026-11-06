@@ -854,7 +854,7 @@
     ],
     "min_length_factor": "0.5",
     "min_skirt_length": "0",
-    "min_width_top_surface": "300%",
+    "min_width_top_surface": "0%",
     "minimum_sparse_infill_area": "15",
     "minimum_support_area": "5",
     "mixed_color_layer_height_a": "0",

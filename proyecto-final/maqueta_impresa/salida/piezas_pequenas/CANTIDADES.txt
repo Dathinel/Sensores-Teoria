@@ -1,0 +1,106 @@
+﻿PIEZAS PEQUEÑAS - maqueta impresa del proyecto final (para imprimir fuera de la universidad)
+Remaches y piezas de menos de 5 g. Sin el almacén (ya impreso) ni el carro.
+3mf/ = todas las piezas pequeñas ya repartidas en camas llenas (Creality Hi, 260 x 260 mm),
+con la configuración de Creality Print adentro. Abrir el 3MF como PROYECTO (no «solo geometría»).
+
+------------------------------------------------------------------------
+RESUMEN: 62 piezas distintas, 420 unidades, 4 archivos 3MF (~157 g, ~12.6 h estimadas)
+------------------------------------------------------------------------
+
+ARCHIVOS 3MF (una cama cada uno)
+3MF          Piezas   Gramos   Tiempo (Creality)   Capa
+rem_1.3mf       299     30.6   4h 23m 37s         0.12 mm, sin brim
+rem_2.3mf        83     14.6   1h 32m 5s          0.12 mm, sin brim
+peq_1.3mf        29     92.2   3h 9m 14s          0.2 mm
+peq_2.3mf         9     19.0   1h 14m 0s          0.2 mm
+
+PIEZAS Y EN QUÉ 3MF VA CADA UNA
+
+========================================================================
+Canaleta y muelle  (5 piezas distintas, 5 unidades)   capa 0.2 mm / 4 paredes / 15 % relleno
+========================================================================
+Pieza                        Cantidad   3MF
+can_balancin                        1   peq_2.3mf
+can_prisionero_c1                   1   peq_2.3mf
+can_prisionero_c2                   1   peq_2.3mf
+can_prisionero_c3                   1   peq_2.3mf
+can_prisionero_c4                   1   peq_2.3mf
+
+========================================================================
+Cinta de monedas  (3 piezas distintas, 3 unidades)   capa 0.2 mm / 4 paredes / 15 % relleno
+========================================================================
+Pieza                        Cantidad   3MF
+mon_aleta                           1   peq_1.3mf
+mon_casq_a_m                        1   peq_1.3mf
+mon_casq_a_p                        1   peq_1.3mf
+
+========================================================================
+Remaches  (24 piezas distintas, 382 unidades)   capa 0.12 mm / 4 paredes / 100 % relleno
+========================================================================
+Pieza                        Imprimir  Se usan   3MF
+rem_10_2                            4        2   rem_2.3mf (4)
+rem_11_2                           11        9   rem_2.3mf (11)
+rem_12_6                            6        4   rem_2.3mf (6)
+rem_13_0                            4        2   rem_2.3mf (4)
+rem_13_1                            6        4   rem_2.3mf (6)
+rem_14_6                            4        2   rem_2.3mf (4)
+rem_15_0                            3        1   rem_2.3mf (3)
+rem_15_3                            4        2   rem_2.3mf (4)
+rem_18_4                            6        4   rem_2.3mf (6)
+rem_19_2                            4        2   rem_2.3mf (4)
+rem_3_6                             4        2   rem_1.3mf (4)
+rem_4_4                           203      184   rem_1.3mf (203)
+rem_4_6                            27       24   rem_1.3mf (27)
+rem_4_8                             4        2   rem_1.3mf (4)
+rem_5_0                            10        8   rem_1.3mf (10)
+rem_5_6                            18       16   rem_1.3mf (18)
+rem_5_8                            14       12   rem_1.3mf (14)
+rem_6_2                             6        4   rem_1.3mf (6)
+rem_6_8                             4        2   rem_1.3mf (4)
+rem_7_2                             6        4   rem_1.3mf (6)
+rem_7_4                            13       11   rem_1.3mf (3), rem_2.3mf (10)
+rem_7_8                            11        9   rem_2.3mf (11)
+rem_9_4                             6        4   rem_2.3mf (6)
+rem_9_6                             4        2   rem_2.3mf (4)
+(Imprimir = los que se usan + 10 % de repuesto, mínimo 2.)
+
+========================================================================
+Tapas, prensa y empujador  (8 piezas distintas, 8 unidades)   capa 0.2 mm / 4 paredes / 15 % relleno
+========================================================================
+Pieza                        Cantidad   3MF
+tap_dedo_a                          1   peq_1.3mf
+tap_dedo_b                          1   peq_1.3mf
+tap_emp_biela                       1   peq_2.3mf
+tap_emp_manivela                    1   peq_2.3mf
+tap_pre_horquilla                   1   peq_1.3mf
+tap_pre_rodillo                     1   peq_1.3mf
+tap_pre_suplemento_05               1   peq_2.3mf
+tap_pre_suplemento_10               1   peq_2.3mf
+
+========================================================================
+Cinta de vasos  (22 piezas distintas, 22 unidades)   capa 0.2 mm / 4 paredes / 15 % relleno
+========================================================================
+Pieza                        Cantidad   3MF
+vas_taco_10_a                       1   peq_1.3mf
+vas_taco_10_b                       1   peq_1.3mf
+vas_taco_11_a                       1   peq_1.3mf
+vas_taco_11_b                       1   peq_1.3mf
+vas_taco_1_a                        1   peq_1.3mf
+vas_taco_1_b                        1   peq_1.3mf
+vas_taco_2_a                        1   peq_1.3mf
+vas_taco_2_b                        1   peq_1.3mf
+vas_taco_3_a                        1   peq_1.3mf
+vas_taco_3_b                        1   peq_1.3mf
+vas_taco_4_a                        1   peq_1.3mf
+vas_taco_4_b                        1   peq_1.3mf
+vas_taco_5_a                        1   peq_1.3mf
+vas_taco_5_b                        1   peq_1.3mf
+vas_taco_6_a                        1   peq_1.3mf
+vas_taco_6_b                        1   peq_1.3mf
+vas_taco_7_a                        1   peq_1.3mf
+vas_taco_7_b                        1   peq_1.3mf
+vas_taco_8_a                        1   peq_1.3mf
+vas_taco_8_b                        1   peq_1.3mf
+vas_taco_9_a                        1   peq_1.3mf
+vas_taco_9_b                        1   peq_1.3mf
+
