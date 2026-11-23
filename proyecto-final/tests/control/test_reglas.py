@@ -54,6 +54,16 @@ def test_coherencia_dentro_de_tolerancia_continua():
     assert causa is None
 
 
+def test_lecturas_no_finitas_y_material_descartado():
+    for lectura in (float("nan"), float("inf"), float("-inf")):
+        assert reglas.evaluar_clasificacion("500_nueva", lectura) == reglas.CAUSA_NO_RECONOCIDA
+        assert reglas.evaluar_geometria(23.7, lectura, 0) == reglas.CAUSA_NO_CIRCULAR
+        assert reglas.evaluar_coherencia("500_nueva", lectura) == reglas.CAUSA_INCOHERENTE
+    v = reglas.evaluar_moneda(metal=False, diametro_mm=23.7, circularidad=0.98,
+                              contornos_internos=0, clase="500_nueva", confianza=0.95)
+    assert v.causa == reglas.CAUSA_NO_METALICO
+
+
 def test_evaluar_moneda_aceptada():
     veredicto = reglas.evaluar_moneda(
         metal=True,
