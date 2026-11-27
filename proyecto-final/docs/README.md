@@ -34,6 +34,8 @@ Con su propio comando:
 
 ## Escritos a mano
 
+- `entrega-final.md` — informe de la entrega final y del avance del módulo de monedas: lo construido, por qué
+  solo se entregó una parte, cómo funciona, flujos, conexiones, reconocimiento de monedas y lo aprendido.
 - `especificacion.md` — la especificación del proyecto, secciones 1-19 (antes en el `CLAUDE.md` de la raíz).
 - `historial-pedidos.md` — pedidos ya cerrados, textuales; lo vigente está en `CONTEXTO-SESION.md`.
 - `paso-a-paso.yaml` — fuente única de los 17 puntos (de aquí salen `paso-a-paso.md` y parte de

@@ -23,6 +23,14 @@ Qué hay en cada sección de la app y qué pasa con cada botón, y qué hacer si
 
 ![La app del proyecto: la prueba visual, con el recorrido animado de una pieza junto a la simulación en marcha](docs/capturas/app-practica.png)
 
+## Entrega final → aquí está el informe
+
+El informe de la entrega final y el avance del módulo de monedas están en
+**[`docs/entrega-final.md`](docs/entrega-final.md)**: lo que se construyó en físico, con fotos del carro armado; por qué
+solo se entregó una parte, por falta de tiempo de impresión de la maqueta y mala calidad en otras piezas; cómo funciona
+cada etapa a nivel mecánico, eléctrico y de software, con sus diagramas de flujo; las conexiones; el comparador LM393;
+la lógica para reconocer monedas y su justificación con monedas reales; la importancia del ESP32 y lo que aprendimos.
+
 ## ¿Quiere saber cómo funciona? → aquí está todo
 
 Todo lo técnico sigue abajo, completo, en este orden:
@@ -171,7 +179,7 @@ comandos con `entorno\Scripts\python`:
 
 ### 4. Con el montaje real, paso a paso (lo que falta)
 
-**Hoy el proyecto se entrega en simulación**: el montaje físico no está construido. El software para las placas sí
+**Hoy la planta se entrega en simulación**: de lo físico solo está el carro, impreso y armado; la maqueta de la planta quedó impresa en parte (por qué, en [`docs/entrega-final.md`](docs/entrega-final.md#3-por-qué-solo-se-entregó-una-parte)). El software para las placas sí
 está, así que el camino es este, y cada paso dice si ya está hecho:
 
 1. **Comprar y construir** (falta): la lista de materiales con precios está en [`docs/componentes.md`](docs/componentes.md)
