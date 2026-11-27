@@ -552,3 +552,40 @@ def test_la_descripcion_del_recorrido_automatico_no_es_una_promesa(conexion):
     # La promesa de hacerlo AHORA si se quita.
     texto, quito = asistente.quitar_promesas("Lo muevo a la meta. El carro se moverá a la meta.")
     assert quito and texto == ""
+
+
+def test_si_el_modelo_contesta_en_portugues_se_le_pide_de_nuevo_en_espanol():
+    from app.asistente import llm
+
+    respuestas = iter([{"respuesta": "O carro não está na pista, então ele é carregado."},
+                       {"respuesta": "El carro no está en la pista."}])
+    llamadas = []
+
+    def crear(**kwargs):
+        llamadas.append(kwargs["messages"])
+        mensaje = SimpleNamespace(content=json.dumps(next(respuestas)))
+        return SimpleNamespace(choices=[SimpleNamespace(message=mensaje)])
+
+    cliente = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=crear)))
+    r = llm.preguntar_llm(cliente, "qwen", "¿dónde está el carro?", {}, [], con_readme=False)
+    assert r["respuesta"] == "El carro no está en la pista." and len(llamadas) == 2
+    assert "español" in llamadas[0][-1]["content"].splitlines()[-1]
+    assert not llm.es_portugues("La cinta avanza y el sensor detecta la moneda.")
+
+
+def test_una_frase_en_portugues_se_quita_y_las_repetidas_tambien():
+    from app.asistente import llm
+
+    texto = ("El costo no aparece. Hay datos de peso. O proyecto não especifica o custo. "
+             "El costo no aparece. Hay datos de peso.")
+    assert llm.limpiar(texto) == "El costo no aparece. Hay datos de peso."
+
+
+@pytest.mark.parametrize("frase", ["cuanto se gasto aproximadamente", "¿cuánto se gastó en el proyecto?",
+                                   "cuánta plata se invirtió"])
+def test_cuanto_se_gasto_es_pregunta_de_costo(frase):
+    from app.asistente.conocimiento import normalizar
+    from app.asistente.respuestas import PREGUNTA_COSTO, responder_local
+
+    assert PREGUNTA_COSTO.search(normalizar(frase))
+    assert responder_local(frase, {}).startswith("El proyecto cuesta")

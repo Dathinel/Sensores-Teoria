@@ -80,7 +80,7 @@ def pestana() -> None:
         with st.container(border=True, key="panel_voz"):
             seccion("Cómo hablarle", primera=True)
             audio = st.audio_input("🎤 Dígale algo", key="microfono",
-                                   help="Con internet lo oye Google (como el tema 4); sin internet, Whisper en este PC.")
+                                   help="Lo oye Whisper en este PC (con o sin internet); Google solo de respaldo.")
             if not st.session_state.get("voz_precargada"):
                 # Whisper tarda unos segundos en cargarse: se carga por detrás al abrir la pestaña.
                 st.session_state["voz_precargada"] = True
@@ -92,12 +92,15 @@ def pestana() -> None:
                     with st.spinner("Escuchando…"):
                         texto, detalle = asistente.transcribir(crudo)
                     if texto:
-                        st.session_state["frase_pendiente"] = texto
+                        # Queda ESCRITO en la caja del chat para revisarlo y mandarlo con Enter (usuario,
+                        # 2026-11-24); antes se mandaba solo. La caja se dibuja después (columna izquierda).
+                        st.session_state["frase_chat"] = texto
                         st.session_state["oido_por"] = detalle
                     else:
                         st.warning(detalle)
             if st.session_state.get("oido_por"):
-                st.caption(f"Última frase oída con: {st.session_state['oido_por']}")
+                st.caption(f"Última frase oída con: {st.session_state['oido_por']}. Quedó escrita en la caja "
+                           "del chat: revísela y presione Enter.")
             st.toggle("🔊 Responder en voz alta", key="hablar")
             st.selectbox("Quién responde", list(PROVEEDORES), key="proveedor", format_func=PROVEEDORES.get,
                          help="Automático: DeepSeek (en la nube, con internet); si no hay, el modelo local "
@@ -122,7 +125,7 @@ def pestana() -> None:
         # contenedor y la librería ya no encuentra el viejo. Con un texto que cabe en una línea incluso
         # en la columna más angosta, no cambia de diseño al montarse y el aviso desaparece. Los ejemplos
         # de frases están en la nota de arriba y en los botones de "Ejemplos".
-        frase = st.chat_input("Escríbale al asistente…")
+        frase = st.chat_input("Escríbale al asistente…", key="frase_chat")
         frase = frase or st.session_state.pop("frase_pendiente", None)
         if frase:
             _atender_frase(frase)

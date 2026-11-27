@@ -33,13 +33,14 @@ st.set_page_config(page_title="Monedas inteligentes", page_icon="🪙", layout="
 from app.dashboard import estilo  # noqa: E402
 from app.dashboard.cabecera import cabecera  # noqa: E402
 from app.dashboard.controles import barra_lateral  # noqa: E402
-from app.dashboard.pestanas import (asistente, ayuda, calidad, carro, linea, monedas, montaje,  # noqa: E402
-                                    pruebas, resumen)
+from app.dashboard.pestanas import (asistente, ayuda, calidad, carro, detector, linea, monedas,  # noqa: E402
+                                    montaje, pruebas, resumen)
 
 # (etiqueta, módulo, claves de ?pestana= que la abren)
 PESTANAS = [
     (":material/dashboard: Resumen", resumen, ("resumen",)),
     (":material/paid: Monedas y vasos", monedas, ("monedas", "produccion")),
+    (":material/photo_camera: Detector de monedas", detector, ("detector", "yolo")),
     (":material/verified: Calidad del filtro", calidad, ("calidad", "rechazos", "inspeccion")),
     (":material/conveyor_belt: Línea en vivo", linea, ("linea",)),
     (":material/science: Pruebas", pruebas, ("pruebas",)),
@@ -56,7 +57,7 @@ def main() -> None:
     barra_lateral()
     pedida = st.query_params.get("pestana", "")
     etiqueta_pedida = next((e for e, _, claves in PESTANAS if pedida in claves), PESTANAS[0][0])
-    # on_change="rerun": solo la pestaña abierta se dibuja (y se refresca), no las nueve.
+    # on_change="rerun": solo la pestaña abierta se dibuja (y se refresca), no las diez.
     tabs = st.tabs([e for e, _, _ in PESTANAS], default=etiqueta_pedida, key="pestana_abierta", on_change="rerun")
     for tab, (_, modulo, _) in zip(tabs, PESTANAS):
         # `.open` es None si Streamlit no sabe cuál está abierta: entonces se dibujan todas.

@@ -8,6 +8,7 @@ anterior.
 """
 
 from dataclasses import dataclass
+from math import isfinite
 
 from . import monedas
 
@@ -73,7 +74,7 @@ def evaluar_geometria(
     cerrados (arandelas, botones con ojales)."""
     if not (params.diametro_min_mm <= diametro_mm <= params.diametro_max_mm):
         return CAUSA_FUERA_DE_RANGO
-    if circularidad < params.circularidad_minima:
+    if not isfinite(circularidad) or circularidad < params.circularidad_minima:
         return CAUSA_NO_CIRCULAR
     if contornos_internos > 0:
         return CAUSA_PERFORADO
@@ -84,7 +85,7 @@ def evaluar_clasificacion(
     clase: str, confianza: float, params: ParametrosFiltrado = _PARAMETROS_POR_DEFECTO
 ) -> str | None:
     """Estacion 5. Clase 'otro' o confianza insuficiente se rechaza."""
-    if clase == monedas.CLASE_OTRO or confianza < params.confianza_minima:
+    if clase == monedas.CLASE_OTRO or not isfinite(confianza) or confianza < params.confianza_minima:
         return CAUSA_NO_RECONOCIDA
     return None
 
@@ -99,7 +100,7 @@ def evaluar_coherencia(
     nominal = monedas.diametro_nominal_mm(clase)
     if nominal is None:
         return CAUSA_NO_RECONOCIDA
-    if abs(nominal - diametro_medido_mm) > params.tolerancia_coherencia_mm:
+    if not abs(nominal - diametro_medido_mm) <= params.tolerancia_coherencia_mm:
         return CAUSA_INCOHERENTE
     return None
 
@@ -117,7 +118,9 @@ def evaluar_moneda(
     """Encadena las cuatro etapas de la seccion 7 sobre un elemento que ya
     llego a la estacion de vision (es decir, que ya paso la estacion de
     material). Devuelve el veredicto final."""
-    causa = evaluar_geometria(diametro_mm, circularidad, contornos_internos, params)
+    causa = evaluar_material(metal)
+    if causa is None:
+        causa = evaluar_geometria(diametro_mm, circularidad, contornos_internos, params)
     if causa is None:
         causa = evaluar_clasificacion(clase, confianza, params)
     if causa is None:
@@ -155,7 +158,7 @@ def combinar_fotos(
     Una clase mal reconocida en UNA sola foto la sigue atajando la regla de
     coherencia con el diametro medido.
     """
-    reconocidas = [(c, p) for c, p in vistas if c != monedas.CLASE_OTRO and p >= params.confianza_minima]
+    reconocidas = [(c, p) for c, p in vistas if evaluar_clasificacion(c, p, params) is None]
     clases = {c for c, _ in reconocidas}
     if len(clases) == 1:
         clase = clases.pop()

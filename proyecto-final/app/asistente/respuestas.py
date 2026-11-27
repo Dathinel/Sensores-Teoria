@@ -107,10 +107,15 @@ def _denominacion_nombrada(t: str) -> int | None:
     return {"mil": 1000, "quinientos": 500, "doscientos": 200, "cien": 100}.get(palabra) or int(palabra)
 
 
+# "cuánto se gastó" también es una pregunta de costo (usuario, 2026-11-24: el modelo local no la encontraba).
+PREGUNTA_COSTO = re.compile(r"\b(costo|costos|cuesta|cuestan|precio|precios|presupuesto|barato|abaratar|ahorrar|"
+                            r"ahorro|gast[oaeo]\w*|invert\w*|invirti\w*|inversion|plata|vale el proyecto)")
+
+
 def responder_local(frase: str, estado: dict) -> str:
     """Preguntas basicas con las cifras del estado (sin DeepSeek)."""
     t = normalizar(frase)
-    if re.search(r"\b(costo|costos|cuesta|cuestan|precio|precios|presupuesto|barato|abaratar|ahorrar|ahorro)", t):
+    if PREGUNTA_COSTO.search(t):
         try:
             from app import costos
 

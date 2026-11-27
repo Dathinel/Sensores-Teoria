@@ -14,12 +14,13 @@ from app.supervisor import TERMINADA, Supervisor
 
 RAIZ = Path(__file__).resolve().parents[2]
 SCRIPT = str(RAIZ / "app" / "dashboard" / "inicio.py")
-PESTANAS = ["Resumen", "Monedas y vasos", "Calidad del filtro", "Línea en vivo", "Pruebas", "Carro y ruta",
+PESTANAS = ["Resumen", "Monedas y vasos", "Detector de monedas", "Calidad del filtro", "Línea en vivo", "Pruebas", "Carro y ruta",
             "Montaje real", "Asistente", "Ayuda"]
 # ?pestana=<clave> → lo que tiene que aparecer en esa pestaña (y no en las demás, que no se dibujan).
 CONTENIDO = {
     "resumen": ["Recorrido de las piezas", "Qué está pasando", "Valor aceptado"],
     "monedas": ["Monedas aceptadas por denominación", "Valor acumulado en el tiempo", "Almacén: cuánto hay en cada tubo"],
+    "detector": ["Detector de monedas colombianas (YOLO)"],
     "calidad": ["Decisiones correctas", "Qué era cada pieza y qué decidió la línea", "Por qué se rechaza cada cosa"],
     "linea": ["Cinta de monedas", "Almacén tipo revólver", "Cinta de vasos", "Bitácora detallada"],
     "pruebas": ["Probar un filtro", "Colocar una pieza", "Sabotajes", "Fin de turno", "Qué contestó la línea"],

@@ -18,7 +18,7 @@ from .ordenes import describir_ordenes, validar_accion
 from .reglas import (PIDE_MOVIMIENTO, RESPUESTA_ATRAVESAR, SIN_SENSOR, corregir_giros, destino_imposible, es_consulta,
                      interpretar_orden_local, limpiar_markdown, pide_atravesar, pide_mover_carro, pide_paro,
                      quitar_promesas)
-from .respuestas import _denominacion_nombrada, responder_local
+from .respuestas import PREGUNTA_COSTO, _denominacion_nombrada, responder_local
 
 
 @dataclass
@@ -64,6 +64,12 @@ def atender(frase: str, conexion: sqlite3.Connection, *, usar: str = "auto", usa
                 modo = "deepseek"
             except Exception as error:  # red caida, clave rechazada, JSON roto...
                 avisos.append(f"DeepSeek no respondió ({type(error).__name__}: {str(error)[:90]}).")
+    if crudo is None and usar in ("auto", "ollama") and PREGUNTA_COSTO.search(normalizar(frase)) \
+            and not interpretar_orden_local(frase):
+        # El costo es una cifra calculada (app/costos.py): el modelo local chico decía que "no está en
+        # la documentación" y mezclaba portugués (usuario, 2026-11-24).
+        crudo = {"respuesta": responder_local(frase, estado), "acciones": [], "documentos": ["docs/costos.md"]}
+        modo = "local"
     if crudo is None and usar in ("auto", "ollama") and SIN_SENSOR.search(normalizar(frase)):
         # Medidas que ningun sensor toma: las reglas lo dicen sin inventar (el modelo local
         # contestaba "7,4 V en este momento", que es el valor nominal, no una medicion).

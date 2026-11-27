@@ -18,7 +18,7 @@ tabla `ordenes`; no importa PyBullet ni abre el puerto serial; se refresca con
 | G2 | `visor.bat` → `app.lanzar --abrir-dashboard` | sin cambios | `tests/visor/test_portable.py` |
 | G3 | `?pestana=<clave>` abre directo una pestaña (resumen, produccion/monedas, calidad/rechazos/inspeccion, linea, ruta/carro, replicacion, asistente, ayuda) | `inicio.py` (+ clave nueva `pruebas`) | `test_query_pestana` |
 | G4 | Título de la página "Monedas inteligentes", ícono 🪙, ancho completo | `inicio.py` | — |
-| G5 | Tema oscuro (fondo #0e1116, paneles #161b22, ámbar como color principal); las 9 pestañas siempre a la vista: si no caben en una fila (~900 px) pasan a una segunda, sin flecha de desplazamiento | `.streamlit/config.toml` + `estilo.py` | — |
+| G5 | Tema oscuro (fondo #0e1116, paneles #161b22, ámbar como color principal); las 10 pestañas siempre a la vista: si no caben en una fila (~900 px) pasan a una segunda, sin flecha de desplazamiento | `.streamlit/config.toml` + `estilo.py` | — |
 | G6 | `PLANTA_BD` apunta a otra base (pruebas) | `datos.py` (vía `configuracion.ruta_bd`) | todas |
 
 ## Cabecera (se refresca sola)
@@ -167,7 +167,7 @@ las órdenes al carro en un desplegable cerrado arriba del mapa. Ahora:
 
 ## Verificación (2026-09-28)
 
-- **Pruebas** (`tests/app/test_dashboard.py`, 38 casos con AppTest): cada una de las 9 pestañas carga
+- **Pruebas** (`tests/app/test_dashboard.py`, 38 casos con AppTest): cada una de las 10 pestañas carga
   sin excepción con la base vacía y con una corrida completa, y muestra su contenido; los alias
   viejos de `?pestana=` abren la correcta; solo se dibuja la pestaña abierta; avisos SIN INTERNET,
   NO ES EN VIVO, ESP32 EMULADO y prueba de un filtro; barra lateral completa (botones, velocidad,

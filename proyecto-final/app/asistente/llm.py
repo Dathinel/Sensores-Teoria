@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 
 from app.rutas import RAIZ
@@ -159,6 +160,29 @@ def preguntar_deepseek(cliente, pregunta: str, estado: dict, historial: list[dic
     return preguntar_llm(cliente, MODELO, pregunta, estado, historial)
 
 
+_PORTUGUES = re.compile(r"\b(não|você|vocês|também|isso|está sendo|são|muito|então|obrigad[oa]|ele é|ela é)\b|ção\b|ções\b",
+                        re.IGNORECASE)
+
+
+def es_portugues(texto: str) -> bool:
+    """Marcas que no existen en español ("não", "ção", "você"...): con una basta (se vio una sola
+    frase en portugués metida en una respuesta en español, usuario 2026-11-24)."""
+    return bool(_PORTUGUES.search(texto or ""))
+
+
+def limpiar(texto: str) -> str:
+    """Quita las oraciones repetidas (el modelo chico dice lo mismo dos veces) y las que sigan en
+    portugués después del reintento, si queda algo en español."""
+    vistas, salida = set(), []
+    for oracion in re.split(r"(?<=[.!?])\s+", (texto or "").strip()):
+        clave = re.sub(r"\W+", " ", oracion.lower()).strip()
+        if clave and clave not in vistas:
+            vistas.add(clave)
+            salida.append(oracion)
+    en_espanol = [o for o in salida if not es_portugues(o)]
+    return " ".join(en_espanol or salida)
+
+
 def preguntar_llm(cliente, modelo: str, pregunta: str, estado: dict, historial: list[dict],
                   limite_docs: int = MAX_CARACTERES_DOCS, con_readme: bool = True, dato_verificado: str = "") -> dict:
     """Una pregunta a un modelo con API de OpenAI (DeepSeek u Ollama). `dato_verificado`: la
@@ -178,17 +202,27 @@ def preguntar_llm(cliente, modelo: str, pregunta: str, estado: dict, historial: 
         + "\n\nESTADO_EN_VIVO (cifras reales de la corrida):\n" + json.dumps(estado, ensure_ascii=False)
         + ("\n\nDATO VERIFICADO (cifras exactas, úsalas tal cual y amplía la explicación):\n" + dato_verificado
            if dato_verificado else "")
-        + "\n\nFRASE DE LA PERSONA:\n" + pregunta)})
-    r = cliente.chat.completions.create(model=modelo, messages=mensajes, response_format={"type": "json_object"},
-                                        temperature=0.2, max_tokens=900)
-    datos = json.loads(r.choices[0].message.content or "{}")
-    if not isinstance(datos, dict):
-        datos = {}
-    texto = datos.get("respuesta")
-    if not isinstance(texto, str) or not texto.strip():
-        # Un modelo chico a veces cambia el nombre de la clave: el primer texto que traiga.
-        texto = next((v for v in datos.values() if isinstance(v, str) and v.strip()), "")
-    return {"respuesta": texto.strip() or "(sin respuesta)",
+        + "\n\nFRASE DE LA PERSONA:\n" + pregunta
+        # La regla del idioma va también AL FINAL: el modelo chico olvida lo que quedó al principio
+        # de un texto largo y a veces contestaba en portugués (usuario, 2026-11-24).
+        + "\n\nResponde SOLO en español de Colombia, nunca en portugués ni en inglés. No repitas frases y no "
+          "nombres las palabras DOCUMENTACION ni ESTADO_EN_VIVO.")})
+    for intento in range(2):
+        r = cliente.chat.completions.create(model=modelo, messages=mensajes, response_format={"type": "json_object"},
+                                            temperature=0.2, max_tokens=900)
+        datos = json.loads(r.choices[0].message.content or "{}")
+        if not isinstance(datos, dict):
+            datos = {}
+        texto = datos.get("respuesta")
+        if not isinstance(texto, str) or not texto.strip():
+            # Un modelo chico a veces cambia el nombre de la clave: el primer texto que traiga.
+            texto = next((v for v in datos.values() if isinstance(v, str) and v.strip()), "")
+        if not es_portugues(texto):
+            break
+        mensajes.append({"role": "assistant", "content": r.choices[0].message.content or ""})
+        mensajes.append({"role": "user", "content": "Eso está en portugués. Repite la misma respuesta en español, "
+                                                    "con el mismo JSON."})
+    return {"respuesta": limpiar(texto) or "(sin respuesta)",
             "acciones": datos.get("acciones") or [], "documentos": [f"{s.archivo} · {s.titulo}" for s in docs[:6]]}
 
 

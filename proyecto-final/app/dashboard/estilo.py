@@ -69,7 +69,7 @@ CSS = f"""
 [data-testid="stHeader"] {{ background:transparent; }}
 
 /* --- pestañas ------------------------------------------------------------ */
-/* Las 9 pestañas tienen que verse todas, también a ~900 px: si no caben en una fila pasan a una
+/* Las 10 pestañas tienen que verse todas, también a ~900 px: si no caben en una fila pasan a una
    segunda (antes quedaban 4 a la vista y el resto detrás de una flecha de desplazamiento). La barra
    ámbar que Streamlit mueve bajo la pestaña activa se calcula para UNA fila, así que se oculta y la
    activa se marca con su propio borde inferior. */

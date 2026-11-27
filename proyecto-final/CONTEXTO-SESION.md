@@ -12,7 +12,29 @@ transcript de Claude Code: `~/.claude/projects/D--cosas-uni*/<sesion>.jsonl` (la
 abrió la sesión; la del pedido del 2026-10-26 está en `D--cosas-uni`)
 (líneas con `"type":"user"`; el más reciente por fecha de modificación).
 
-### Pedido EN CURSO del 2026-10-26 — orden de carpetas, nombres y código de todo el proyecto
+### Pedido EN CURSO del 2026-11-24 — detector YOLO de monedas colombianas con el celular
+
+Textual del usuario:
+> "con visión computacional detectar monedas colombianas omitiendo si son de plástico o no, con conexión inalámbrica o bluetooth, por prueba y error de yolo, conectado directamente a la pagina de streamlit con la conexión de el celular s24 ultra, y descargase las imágenes de las monedas, y mida el dimatreo junto con la figura y detalles a destacar, solo colombianas y integrelo para que funcione por aparte de todo los sensores y se pueda ver en la pagina"
+> Respuesta a las dudas: "no, descargelas, no hay tiempo de tomar las fotos, esta generacion y la antigua, y si, abro el stremlit y tomo la foto para que no sea mas tedioso, lo mas rapido posible"
+
+- [x] 1. Descargar un dataset público de monedas colombianas (nueva y antigua), sin fotos propias.
+  Elegido: Roboflow `lladinog-unal-edu-co/monedas-colombianas-ins-seg` v1 (CC BY 4.0, 9 clases). Roboflow pide cuenta:
+  falta que el usuario lo baje (YOLOv8 zip) a `vision/dataset/yolo_monedas/`.
+- [x] 2. YOLO por prueba y error (varias variantes, se queda la mejor; métricas guardadas).
+- [x] 3. Medir diámetro (mm), forma y detalles (bimetálica, color); plástico o metal no importa; solo colombianas.
+- [x] 4. Pestaña aparte en Streamlit (no toca sensores ni `control/`): foto desde el S24 Ultra por Wi-Fi y descarga de recortes.
+
+### Pedido CERRADO del 2026-11-11 — justificación de componentes
+
+Textual del usuario (tras pedir la lista de componentes electrónicos):
+> "ademas, justifique el porque el componenete y la referencia o referencias que existen, por el uso de corriente etc y asi"
+
+- [x] 1. Documento nuevo `docs/justificacion-componentes.md`: por cada componente, para qué está, por qué ese modelo,
+  referencias alternativas y consumo de corriente (cifras del repo; hoja de datos solo si es valor conocido).
+- [x] 2. Verificar cifras contra docs/electrica.md, docs/peso.md y hojas de datos; mandarlo al usuario. Sin commit.
+
+### Pedido CERRADO del 2026-10-26 — orden de carpetas, nombres y código de todo el proyecto
 
 Textual del usuario:
 > "haga un orden tanto de código como de nombres en todas las carpetas de el proyecto, revisando que ninguna ruta se rompa al cambiar el nombre y la ubicación, hay demasiadas carpetas con demasiadas cosas, deje los .md de el general y el .md de cada carpeta para que claude también sepa de forma ordenada y organizar de forma profesional tanto los archivos como el código, deje el paso a paso por si se corta a mitad de la tarea, después los borra"

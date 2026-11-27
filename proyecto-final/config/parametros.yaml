@@ -679,3 +679,34 @@ firmware:
 hardware:
   backend: sim
   puerto: auto          # o "COM5"
+
+# ---------------------------------------------------------------------
+# Detector YOLO de monedas con el celular (vision/yolo_monedas, pedido del
+# 2026-11-24). Va APARTE de la linea: no lee sensores ni manda ordenes.
+# ---------------------------------------------------------------------
+yolo_monedas:
+  confianza_min: 0.25        # por debajo no cuenta (medido en test: con los 2 modelos juntos, 31/33 monedas y 2 falsas)
+  tamano_imagen: 640         # imgsz con que se entrena y se infiere
+  aruco_lado_mm: 50.0        # lado del cuadrado ArUco impreso (DICT_4X4_50); si no hay, escala por las monedas
+  bimetalica_delta_e: 10.0   # diferencia de color (a,b de Lab, mediana) centro vs anillo; medido: bimetalicas 17-21, demas 0-3
+  clase_conf_min: 0.50       # el clasificador de recortes debe pasar de esto; si no, "no reconocida" (extranjera, ficha...)
+  circularidad_min: 0.80     # 4*pi*A/P^2 por debajo de esto la figura no es un disco limpio
+  puerto: 8510               # pagina para el celular (python -m vision.yolo_monedas), en la red Wi-Fi
+  # Asignacion conjunta (detector.ajustar_clases): escala + color + modelo, medido con la foto real del S24.
+  redonda_circularidad_min: 0.55   # por debajo (o elongacion > redonda_elongacion_max) no es una moneda
+  redonda_elongacion_max: 1.30
+  dorado_croma_min: 24.0     # croma (a,b de Lab) del metal: dorada 33, plateadas 7-16 con luz calida
+  tolerancia_diametro: 0.03  # error relativo de diametro que cuesta 1 punto
+  castigo_color: 4.0         # puntos si el color medido no es el de la clase
+  ajuste_error_max: 0.03     # si con la mejor escala el diametro medio no cuadra a menos de 3 %, no se corrige
+  castigo_modelo: 0.8        # puntos si la clase no es la que dijo el modelo (0,4 si estaba en su top 3)
+  # El dataset de Roboflow (monedas-colombianas-ins-seg v1) tiene 6 de 9 etiquetas cruzadas: se vio
+  # mirando 8 recortes de cada una (vision/resultados/yolo_monedas/etiquetas_dataset.jpg). Nombre del
+  # dataset -> moneda real. Se aplica a lo que dice YOLO y al armar los recortes del clasificador.
+  correccion_etiquetas:
+    "1000": 50_antigua
+    100_nueva: 200_nueva
+    200_nueva: 500_nueva
+    500_nueva: 50_nueva
+    50_antigua: 1000_nueva
+    50_nueva: 100_nueva

@@ -69,10 +69,21 @@ def transcribir_local(audio_wav: bytes) -> str:
 def transcribir(audio_wav: bytes) -> tuple[str | None, str]:
     """Audio del microfono (WAV, lo que da st.audio_input) -> texto.
     Devuelve (texto, quien lo reconocio) o (None, motivo si fallo).
-    Con internet, Google (como el tema 4); sin internet o si falla, Whisper local."""
+    SIEMPRE Whisper en este PC (usuario, 2026-11-24): escribe mejor que Google (signos, frases
+    separadas; probado con la misma frase) y no depende de la red. Google solo si Whisper no esta
+    instalado o falla, y hay internet."""
     import io
 
     motivos = []
+    try:
+        texto = transcribir_local(audio_wav)
+        if texto:
+            return texto, "Whisper (en este PC)"
+        motivos.append("Whisper no entendió el audio")
+    except ImportError:
+        motivos.append("falta faster-whisper")
+    except Exception as error:
+        motivos.append(f"Whisper: {str(error)[:80]}")
     if hay_internet():
         try:
             import speech_recognition as sr
@@ -81,20 +92,12 @@ def transcribir(audio_wav: bytes) -> tuple[str | None, str]:
             reconocedor.operation_timeout = 8
             with sr.AudioFile(io.BytesIO(audio_wav)) as fuente:
                 audio = reconocedor.record(fuente)
-            return reconocedor.recognize_google(audio, language="es-CO"), "Google"
+            return reconocedor.recognize_google(audio, language="es-CO"), "Google (respaldo)"
         except ImportError:
             motivos.append("falta SpeechRecognition")
         except Exception as error:  # sin respuesta de Google, audio que no entendio...
             motivos.append(f"Google: {type(error).__name__}")
-    try:
-        texto = transcribir_local(audio_wav)
-    except ImportError:
-        return None, "Sin internet y sin el reconocimiento local (pip install faster-whisper)."
-    except Exception as error:
-        return None, f"No se pudo transcribir ({'; '.join(motivos + [str(error)[:80]])})."
-    if not texto:
-        return None, "No se entendió el audio."
-    return texto, "Whisper local (sin internet)"
+    return None, f"No se entendió el audio ({'; '.join(motivos)})."
 
 
 def _limpiar_para_voz(texto: str) -> str:

@@ -849,7 +849,7 @@ defecto de Ollama (~4000 tokens) un prompt largo se cortaba por el principio y e
 instrucciones. En una RTX 3050 de 4 GB responde en unos 5,5 s. Mientras piensa, en el visor se ilumina
 el teclado del portátil; si piensa DeepSeek, en cambio, se anima la nube.
 
-**Voz sin internet.** Con internet, el micrófono lo transcribe Google y la respuesta la lee gTTS
+**Voz sin internet.** El micrófono lo transcribe SIEMPRE **Whisper** en el mismo PC (desde el 2026-11-24; Google solo de respaldo) y la respuesta la lee gTTS
 (como en el tema 4). Sin internet: **Whisper** (`faster-whisper`, modelo `small`) oye en el mismo PC
 y responde una **voz de Windows** en español. El modelo de Whisper (~480 MB) se descarga una vez,
 también fuera del proyecto: `python -m app.asistente --preparar-voz`. Probado: "avanza 20

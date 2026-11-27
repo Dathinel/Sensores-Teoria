@@ -42,6 +42,8 @@ Con su propio comando:
   menciona se dejan como estaban en su fecha.
 - `logica-interna.md` — cómo decide el sistema, con el código real; primero el filtrado de monedas.
 - `modelo-local.md` — el modelo de lenguaje local (Qwen2.5-3B): arquitectura, cómo se usa y por qué.
+- `justificacion-componentes.md` — por qué cada componente y referencia: alternativas del mercado y consumo de
+  corriente (cifras de `electrica.md` y `peso.md`; si cambia la lista de materiales, revisarlo a mano).
 - `revision-final.md` — revisión total del diseño antes del protocolo (espacio físico, alcance de
   cada sensor).
 - `interfaz-visor.md` — inventario de todas las funciones de la interfaz del visor 3D (lista de

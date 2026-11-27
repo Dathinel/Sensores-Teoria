@@ -7,7 +7,7 @@ from app import asistente, db
 def test_sin_internet_oye_con_whisper_local(monkeypatch):
     monkeypatch.setattr(asistente.audio, "hay_internet", lambda *a, **k: False)
     monkeypatch.setattr(asistente.audio, "transcribir_local", lambda audio: "avanza 20 centímetros")
-    assert asistente.transcribir(b"RIFF...") == ("avanza 20 centímetros", "Whisper local (sin internet)")
+    assert asistente.transcribir(b"RIFF...") == ("avanza 20 centímetros", "Whisper (en este PC)")
 
 
 def test_sin_internet_y_audio_mudo_lo_dice(monkeypatch):
@@ -53,3 +53,9 @@ def test_hay_internet_recuerda_la_respuesta(monkeypatch):
     n = len(llamadas)
     assert asistente.hay_internet() is False and len(llamadas) == n   # no vuelve a probar enseguida
     monkeypatch.setitem(asistente.audio._internet, "t", 0.0)
+
+
+def test_con_internet_tambien_oye_whisper_y_no_google(monkeypatch):
+    monkeypatch.setattr(asistente.audio, "hay_internet", lambda *a, **k: True)
+    monkeypatch.setattr(asistente.audio, "transcribir_local", lambda audio: "¿cuántos vasos hay?")
+    assert asistente.transcribir(b"RIFF...") == ("¿cuántos vasos hay?", "Whisper (en este PC)")
